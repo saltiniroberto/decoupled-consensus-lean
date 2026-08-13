@@ -5,15 +5,20 @@ Run it with `make index`, never by hand — it needs the library built, because 
 from the compiled environment rather than from the sources.
 
 Imported from the first attempt on 2026-08-13 and adapted. Four changes, all so that it runs
-before there is any Lean: `import Lean` instead of the project's own modules; `modPrefix` and
+before there is any Lean: `import Lean` instead of the project's own modules; `modRoots` and
 the stripped prefixes point at this project; the row list is only appended when it is
 non-empty, so an empty index has no trailing blank line; and the header says what is going on
 when the count is zero.
 
 **How it indexes anything.** `collect` walks the compiled environment and keeps the
-declarations whose defining module starts with `modPrefix`. A module is in that environment
-only if this file imports it, so the import list below is what the index covers: add a line
-when a new module root lands.
+declarations whose defining module starts with one of `modRoots`. A module is in that
+environment only if this file imports it, so the import list below is what the index covers:
+add a line when a new module root lands, and the same root to `modRoots`.
+
+`modRoots` is a list rather than one prefix because this project has no single module prefix
+over both halves: the specification is rooted at `Spec` and the analysis will be rooted at
+`Analysis`. Missing a root here is silent — its declarations are simply absent from the
+index.
 
 Not part of any `lean_lib`, so `lake build` never sees it. Self-contained by the usual rule for
 independent attempts: a project that wants an index should copy this and let the copy disagree,
@@ -21,12 +26,13 @@ rather than sharing it.
 -/
 import Lean
 
--- One line per module root the index should cover. `Decoupled.Spec` pulls in every figure
--- file and the vocabulary they read; uncomment the analysis ones with the first statements.
-import Decoupled.Spec
--- import Decoupled.Analysis.Lemmas
--- import Decoupled.Analysis.Theorems
--- import Decoupled.Analysis.Corollaries
+-- One line per module root the index should cover. `Spec` pulls in every figure file and the
+-- vocabulary they read; uncomment the analysis ones with the first statements, and add
+-- "Analysis" to `modRoots` below at the same time.
+import Spec
+-- import Analysis.Lemmas
+-- import Analysis.Theorems
+-- import Analysis.Corollaries
 
 open Lean Lean.Meta
 
@@ -35,8 +41,9 @@ namespace Decoupled.DeclIndex
 /-- Where the index is written, relative to the repository root. -/
 def outPath : System.FilePath := "INDEX.tsv"
 
-/-- Only modules under this prefix are indexed. -/
-def modPrefix : String := "Decoupled"
+/-- Only modules under one of these roots are indexed. One entry per `lean_lib` root; see the
+    file header on why this is a list. -/
+def modRoots : List String := ["Spec"]
 
 /-- Name fragments that only ever occur in declarations the elaborator generated. -/
 def noiseFragments : List String :=
@@ -109,7 +116,10 @@ def collect : MetaM (Array String) := do
     if env.isProjectionFn n then continue
     let some idx := env.getModuleIdxFor? n | continue
     let modName := env.header.moduleNames[idx.toNat]!
-    unless (toString modName).startsWith modPrefix do continue
+    -- An explicit lambda, not `.startsWith` partially applied: `String.startsWith` takes a
+    -- pattern with an instance argument, so the point-free form does not unify with
+    -- `String → Bool`.
+    unless modRoots.any (fun r => (toString modName).startsWith r) do continue
     let loc ← match ← findDeclarationRanges? n with
       | some r => pure s!"{modName}:{r.range.pos.line}"
       | none => pure (toString modName)
