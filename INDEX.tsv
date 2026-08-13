@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 108 declarations.
+# 110 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -50,14 +50,16 @@ def	HeightPair.empty.elim	Spec.Defs.Basic:212	motive_3 t	HeightPair Node Root �
 def	HeightPair.target.elim	Spec.Defs.Basic:208	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_3 (HeightPair.target h T)
 def	HeightPair.timeout.elim	Spec.Defs.Basic:210	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 1 | (h : ℕ) → motive_3 (HeightPair.timeout h)
 inductive	Params	Spec.Defs.Basic:157	Type	
+inductive	PositiveWeight	Analysis.Proofs.Weights:23	Prop	
+theorem	PositiveWeight.ofFaultBound	Analysis.Proofs.Weights:37	PositiveWeight Node	0 < k | k * b < W Node
 def	Prec	Spec.Defs.Basic:465	Prop	Blk Node Root | Blk Node Root
 def	Preceq	Spec.Defs.Basic:453	Prop	Blk Node Root | Blk Node Root
 inductive	Proofs.Settled	Analysis.Proofs.SlotClosure:134	Prop	ChainState Node Root
 theorem	Proofs.advanceHeight_s	Analysis.Proofs.SlotClosure:87	(advanceHeight σ j st).s = σ.s	
 def	Proofs.closeSlots	Analysis.Proofs.SlotClosure:118	ChainState Node Root	ℕ | ChainState Node Root
 theorem	Proofs.closeSlots_of_settled	Analysis.Proofs.SlotClosure:201	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ Proofs.closeSlots n σ = { L := σ.L, s := σ.s + n, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (Proofs.closeSlots n σ)	Proofs.Settled σ | 0 < q Node
-theorem	Proofs.emptySlotNoop	Analysis.Proofs.SlotClosure:235	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ | 0 < W Node
-theorem	Proofs.integerThresholds	Analysis.Proofs.Weights:46	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	Proofs.emptySlotNoop	Analysis.Proofs.SlotClosure:235	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	Proofs.integerThresholds	Analysis.Proofs.Weights:64	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
 theorem	Proofs.processHeightEvents_of_settled	Analysis.Proofs.SlotClosure:152	processHeightEvents σ st = σ	Proofs.Settled σ
 theorem	Proofs.processHeightEvents_s	Analysis.Proofs.SlotClosure:92	(processHeightEvents σ st).s = σ.s	
 theorem	Proofs.processSlot_of_settled	Analysis.Proofs.SlotClosure:181	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ processSlot σ = { L := σ.L, s := σ.s + 1, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (processSlot σ)	Proofs.Settled σ | 0 < q Node
@@ -65,13 +67,13 @@ theorem	Proofs.processSlot_s	Analysis.Proofs.SlotClosure:97	(processSlot σ).s =
 theorem	Proofs.processSlots_eq_closeSlots	Analysis.Proofs.SlotClosure:124	processSlots σ t = Proofs.closeSlots (t - σ.s) σ	
 theorem	Proofs.processSlots_eq_loop	Analysis.Proofs.SlotClosure:102	processSlots σ t = { }.forIn σ fun x s => if s.s < t then pure (ForInStep.yield (processSlot s)) else pure (ForInStep.done s)	
 theorem	Proofs.processSlots_step	Analysis.Proofs.SlotClosure:111	processSlots σ t = if σ.s < t then processSlots (processSlot σ) t else σ	
-theorem	Proofs.q_pos	Analysis.Proofs.Weights:37	0 < q Node	0 < W Node
-theorem	Proofs.quorumIntersection	Analysis.Proofs.Weights:54	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
-theorem	Proofs.quorumIntersectionNonByzantine	Analysis.Proofs.Weights:63	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
+theorem	Proofs.q_pos	Analysis.Proofs.Weights:58	0 < q Node	
+theorem	Proofs.quorumIntersection	Analysis.Proofs.Weights:72	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
+theorem	Proofs.quorumIntersectionNonByzantine	Analysis.Proofs.Weights:81	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
 theorem	Proofs.settled_bump	Analysis.Proofs.SlotClosure:174	Proofs.Settled { L := σ.L, s := n, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ
-theorem	Proofs.settled_of_blockPostState	Analysis.Proofs.SlotClosure:222	Proofs.Settled σ	BlockPostState σ | 0 < W Node
+theorem	Proofs.settled_of_blockPostState	Analysis.Proofs.SlotClosure:222	Proofs.Settled σ	BlockPostState σ
 theorem	Proofs.settled_setTarget	Analysis.Proofs.SlotClosure:160	Proofs.Settled { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ | 0 < q Node | σ.T_h = ⊥
-theorem	Proofs.weightInterGe	Analysis.Proofs.Weights:25	weight Q + weight Q' ≤ W Node + weight (Q ∩ Q')	Q ⊆ Electorate.V | Q' ⊆ Electorate.V
+theorem	Proofs.weightInterGe	Analysis.Proofs.Weights:46	weight Q + weight Q' ≤ W Node + weight (Q ∩ Q')	Q ⊆ Electorate.V | Q' ⊆ Electorate.V
 def	Quorum	Spec.Defs.Basic:132	Prop	Finset Node
 def	StrictMajority	Spec.Defs.Basic:142	Prop	Finset Node
 inductive	TransitionResult	Spec.Defs.Basic:593	Type	
@@ -97,8 +99,8 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
-theorem	lemEmptySlotNoop	Analysis.Lemmas:181	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ | 0 < W Node
-theorem	lemEmptySlotNoopFields	Analysis.Lemmas:214	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ | 0 < W Node
+theorem	lemEmptySlotNoop	Analysis.Lemmas:181	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	lemEmptySlotNoopFields	Analysis.Lemmas:215	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
 theorem	lemIntegerThresholds	Analysis.Lemmas:129	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
 theorem	lemQuorumIntersection	Analysis.Lemmas:150	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
 theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:168	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node

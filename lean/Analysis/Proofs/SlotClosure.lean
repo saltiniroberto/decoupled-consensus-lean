@@ -25,10 +25,10 @@ conjunct the paper never states**: with no target stored, no target bit is set. 
 `process_slot`'s `T_h ← L` write unblocks the second branch, and the invariant is not preserved.
 
 `Settled` also needs a **positive threshold**. On an empty electorate `q = ⌈2W/3⌉` is `0`, every
-set is a quorum, and nothing is ever blocked. The machinery below takes that as `0 < q` so it does
-not depend on where the electorate's weight comes from; the outward-facing statements take
-`0 < W` and discharge it with `q_pos`. `0 < W` is **not** an extra assumption — Assumption 1
-(`ass:fixed-electorate`)'s `3 * b < W` gives it outright.
+set is a quorum, and nothing is ever blocked. The machinery below takes that as a plain `0 < q` so it
+does not depend on where the electorate's weight comes from; the outward-facing statements carry
+the `PositiveWeight` class instead and discharge it with `q_pos`. That class is **not** an extra
+assumption — either of the paper's fault bounds gives it, via `PositiveWeight.ofFaultBound`.
 
 **What is outstanding is one fact: every block post-state is `Settled`.** That is where
 `process_block` and `process_height_events` have to be analysed, and the invariant does not survive
@@ -228,8 +228,8 @@ theorem closeSlots_of_settled (n : Nat) {σ : ChainState Node Root} (hs : Settle
     transition, with `process_height_events` re-establishing the rest at the end.
 
     `0 < q` will come from the same place it does elsewhere: any electorate member gives it. -/
-theorem settled_of_blockPostState {σ : ChainState Node Root} (h : BlockPostState σ)
-    (hW : 0 < W Node) : Settled σ := by
+theorem settled_of_blockPostState [PositiveWeight Node] {σ : ChainState Node Root}
+    (h : BlockPostState σ) : Settled σ := by
   sorry
 
 /-- Lemma 3 (`lem:empty-slot-noop`), as a record equation: closing slots up to `t` moves `s` to
@@ -237,12 +237,12 @@ theorem settled_of_blockPostState {σ : ChainState Node Root} (h : BlockPostStat
 
     `T_h` is left open rather than pinned exactly. Pinning it needs the induction to split `n = 0`
     from `n ≥ 1`, and nothing yet needs to know *which* target was named. -/
-theorem emptySlotNoop {σ : ChainState Node Root} (t : Time) (h : BlockPostState σ)
-    (hW : 0 < W Node) :
+theorem emptySlotNoop [PositiveWeight Node] {σ : ChainState Node Root} (t : Time)
+    (h : BlockPostState σ) :
     ∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧
       actionState σ t = { σ with s := max σ.s t, T_h := Th } := by
   obtain ⟨Th, hTh, heq, -⟩ :=
-    closeSlots_of_settled (t - σ.s) (settled_of_blockPostState h hW) (q_pos hW)
+    closeSlots_of_settled (t - σ.s) (settled_of_blockPostState h) q_pos
   refine ⟨Th, hTh, ?_⟩
   rw [actionState, processSlots_eq_closeSlots, heq]
   by_cases hle : σ.s ≤ t

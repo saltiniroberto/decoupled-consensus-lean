@@ -18,9 +18,30 @@ paper's phrase without the `lem` prefix.
 
 set_option autoImplicit false
 
-namespace Decoupled.Proofs
+namespace Decoupled
 
-open Decoupled
+/-- The electorate carries weight. Named because several results need it and none of them needs
+    more: it is what makes `q ≥ 1`, so that an empty tally cannot clear a threshold.
+
+    **Not an assumption beyond the paper's.** Assumption 1 (`ass:fixed-electorate`)'s `3 * b < W`
+    gives it outright, as does Assumption 2 (`ass:sg-fault-bound`)'s `2 * b < W`; `ofFaultBound`
+    below is that step. Asking for this rather than for a fault bound is asking for less, so a
+    result stated over it is correspondingly stronger.
+
+    A class rather than a hypothesis so that it is inferred instead of threaded through every
+    signature, which is how `Electorate` and `Params` are already carried. -/
+class PositiveWeight (Node : Type) [Electorate Node] : Prop where
+  /-- `0 < W`. -/
+  posW : 0 < W Node
+
+/-- Either fault bound supplies `PositiveWeight`, `b` being a `Nat`. Stated over an arbitrary
+    bound `k * b < W` with `0 < k` so it covers Assumptions 1 and 2 at once, and anything else of
+    that shape. -/
+theorem PositiveWeight.ofFaultBound {Node : Type} [Electorate Node] {k b : Nat} (hk : 0 < k)
+    (hb : k * b < W Node) : PositiveWeight Node :=
+  ⟨by omega⟩
+
+namespace Proofs
 
 /-- A union and an intersection together weigh what the two sets weigh, and the union sits inside
     the electorate. Both halves of Lemma 2 rest on this. -/
@@ -35,12 +56,9 @@ theorem weightInterGe {Node : Type} [DecidableEq Node] [Electorate Node] {Q Q' :
   omega
 
 /-- A positive electorate weight gives a positive finality threshold. `q = (2W + 2) / 3`, so this
-    is `omega` seeing through division by a literal.
-
-    Worth stating separately because several proofs need a threshold no set can reach for free, and
-    it is not an extra assumption: Assumption 1 (`ass:fixed-electorate`)'s `3 * b < W` gives
-    `0 < W` outright. -/
-theorem q_pos {Node : Type} [Electorate Node] (hW : 0 < W Node) : 0 < q Node := by
+    is `omega` seeing through division by a literal. -/
+theorem q_pos {Node : Type} [Electorate Node] [PositiveWeight Node] : 0 < q Node := by
+  have h : 0 < W Node := PositiveWeight.posW
   unfold q; omega
 
 /-- Lemma 1 (`lem:integer-thresholds`). Pure `Nat` arithmetic once `q` and `m` are unfolded: `q` is
@@ -71,4 +89,6 @@ theorem quorumIntersectionNonByzantine {Node : Type} [DecidableEq Node] [Elector
   simp only [q] at hQ hQ'
   omega
 
-end Decoupled.Proofs
+end Proofs
+
+end Decoupled
