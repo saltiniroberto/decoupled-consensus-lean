@@ -193,32 +193,35 @@ theorem lemQuorumIntersectionNonByzantine {Node : Type} [DecidableEq Node] [Elec
     Figure 3 nor Definition 20 as an argument. `BlockPostState` and `actionState` are declared in
     `Analysis/Proofs/SlotClosure.lean`.
 
-    **Two hypotheses the paper does not write.** `BlockPostState σ` is the reachability its prose
-    leaves implicit — over an arbitrary state the claim is false, since the height-event check can
-    fire. And `0 < q` is real: on an empty electorate `q = ⌈2W/3⌉` is `0`, every set is a quorum,
-    and nothing is ever blocked. Against that, `BlockPostState` admits more states than `σ[·]`, so
-    in that respect the statement is stronger than the paper's.
+    **One hypothesis the paper does not write, and one it implies.** `BlockPostState σ` is the
+    reachability its prose leaves implicit — over an arbitrary state the claim is false, since the
+    height-event check can fire. `0 < W` is needed too, because on an empty electorate
+    `q = ⌈2W/3⌉` is `0`, every set is a quorum and no branch is ever blocked — but that one is not
+    an addition: Assumption 1 (`ass:fixed-electorate`)'s `3 * b < W` gives it outright.
+
+    Against those, `BlockPostState` admits more states than `σ[·]`, so in that respect the
+    statement is stronger than the paper's.
 
     `T_h` is left open rather than pinned exactly. Pinning it needs the induction to split `n = 0`
     from `n ≥ 1`, and nothing yet needs to know *which* target was named. -/
 theorem lemEmptySlotNoop {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] {σ : ChainState Node Root} (t : Time)
-    (h : BlockPostState σ) (hq : 0 < q Node) :
+    (h : BlockPostState σ) (hW : 0 < W Node) :
     ∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧
       actionState σ t = { σ with s := max σ.s t, T_h := Th } :=
-  Proofs.emptySlotNoop t h hq
+  Proofs.emptySlotNoop t h hW
 
 /-- **Lemma 3** in the paper's own phrasing: the fields it lists as unchanged. Derived from the
     record equation above, and kept so a reader checking the Lean against the `.tex` finds the
     list. -/
 theorem lemEmptySlotNoopFields {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] {σ : ChainState Node Root} (t : Time)
-    (h : BlockPostState σ) (hq : 0 < q Node) :
+    (h : BlockPostState σ) (hW : 0 < W Node) :
     let σa := actionState σ t
     σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧
     σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧
     σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress := by
-  obtain ⟨Th, -, heq⟩ := lemEmptySlotNoop t h hq
+  obtain ⟨Th, -, heq⟩ := lemEmptySlotNoop t h hW
   rw [heq]
   exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 

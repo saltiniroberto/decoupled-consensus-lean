@@ -34,6 +34,15 @@ theorem weightInterGe {Node : Type} [DecidableEq Node] [Electorate Node] {Q Q' :
     exact Finset.sum_le_sum_of_subset (Finset.union_subset hQV hQ'V)
   omega
 
+/-- A positive electorate weight gives a positive finality threshold. `q = (2W + 2) / 3`, so this
+    is `omega` seeing through division by a literal.
+
+    Worth stating separately because several proofs need a threshold no set can reach for free, and
+    it is not an extra assumption: Assumption 1 (`ass:fixed-electorate`)'s `3 * b < W` gives
+    `0 < W` outright. -/
+theorem q_pos {Node : Type} [Electorate Node] (hW : 0 < W Node) : 0 < q Node := by
+  unfold q; omega
+
 /-- Lemma 1 (`lem:integer-thresholds`). Pure `Nat` arithmetic once `q` and `m` are unfolded: `q` is
     `(2W + 2) / 3` and `m` is `W / 2 + 1`, and `omega` handles division by a literal. -/
 theorem integerThresholds {Node : Type} [Electorate Node] (b : Nat) (hb : 3 * b < W Node) :
