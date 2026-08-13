@@ -61,6 +61,12 @@ theorem q_pos {Node : Type} [Electorate Node] [PositiveWeight Node] : 0 < q Node
   have h : 0 < W Node := PositiveWeight.posW
   unfold q; omega
 
+/-- The empty set is not a quorum. Every use of `Settled`'s `emptyTarget` conjunct ends in this,
+    which is why it is named rather than re-derived at each site. -/
+theorem not_quorum_empty {Node : Type} [Electorate Node] (hq : 0 < q Node) :
+    ¬ w((∅ : Finset Node))≥q := by
+  simp only [Quorum, weight, Finset.sum_empty]; omega
+
 /-- Lemma 1 (`lem:integer-thresholds`). Pure `Nat` arithmetic once `q` and `m` are unfolded: `q` is
     `(2W + 2) / 3` and `m` is `W / 2 + 1`, and `omega` handles division by a literal. -/
 theorem integerThresholds {Node : Type} [Electorate Node] (b : Nat) (hb : 3 * b < W Node) :

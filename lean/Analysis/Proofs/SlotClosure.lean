@@ -165,10 +165,9 @@ theorem settled_setTarget {σ : ChainState Node Root} (hs : Settled σ) (hq : 0 
   have hQ : σ.Qtarget = ∅ := hs.emptyTarget hT
   refine ⟨hs.fin, ?_, hs.prog, ?_⟩
   · rintro ⟨-, -, hw⟩
-    have hz : weight (σ.Qtarget) = 0 := by rw [hQ]; simp [weight]
-    unfold Quorum at hw
-    simp only [ChainState.Qtarget] at hw hz
-    omega
+    have hQe : ({ σ with T_h := some σ.L } : ChainState Node Root).Qtarget = σ.Qtarget := rfl
+    rw [hQe, hQ] at hw
+    exact not_quorum_empty hq hw
   · intro h; exact absurd h (by simp)
 
 /-- `Settled` survives a move of the cursor: no branch condition mentions `s`. -/
@@ -216,6 +215,97 @@ theorem closeSlots_of_settled (n : Nat) {σ : ChainState Node Root} (hs : Settle
         · rw [h, heq₁]; exact Or.inr rfl
       · rw [closeSlots, heq₂, heq₁]
         simp [Nat.add_assoc, Nat.add_comm 1 n]
+
+/-! ### Figure 2's routines, as far as `Settled` needs them
+
+`process_block` cannot preserve `Settled`: it is where the target and progress tallies are built,
+which is the routine doing its job. What it does preserve is `emptyTarget`, and the reason is
+visible only in Figure 2 — line 778 is the only writer of a target bit, and it needs `T_h ≠ ⊥`.
+-/
+
+/-- `process_attestation` never touches `T_h`. -/
+theorem processAttestation_T_h (σ : ChainState Node Root) (a : Attestation Node Root)
+    (A : Blk Node Root) : (processAttestation σ a A).T_h = σ.T_h := by
+  simp only [processAttestation]; repeat' split
+  all_goals rfl
+
+/-- …and it sets no target bit while no target is named. Figure 2, line 778.
+
+    `hT` has to be restated as `σ.T_h = none` before it can be used: `⊥` is a `Bot (Option _)`
+    instance rather than a constructor, so `simp only` with it leaves a `match …, ⊥ with` that
+    `split` cannot reduce. The coercion is definitional, so `have` accepts it with no proof. -/
+theorem processAttestation_target {σ : ChainState Node Root} (a : Attestation Node Root)
+    (A : Blk Node Root) (hT : σ.T_h = ⊥) :
+    (processAttestation σ a A).targetParticipation = σ.targetParticipation := by
+  have hT' : σ.T_h = none := hT
+  cases hp : a.heightPair <;>
+    simp only [processAttestation, hT', hp] <;> (repeat' split) <;> rfl
+
+theorem processAttestations_cons (σ : ChainState Node Root) (a : Attestation Node Root)
+    (as : List (Attestation Node Root)) (A : Blk Node Root) :
+    processAttestations σ (a :: as) A = processAttestations (processAttestation σ a A) as A := by
+  simp [processAttestations]
+
+/-- The fold, by induction on the list: while no target is named it sets no target bit and leaves
+    `T_h` alone. -/
+theorem processAttestations_target {σ : ChainState Node Root}
+    (as : List (Attestation Node Root)) (A : Blk Node Root) (hT : σ.T_h = ⊥) :
+    (processAttestations σ as A).targetParticipation = σ.targetParticipation ∧
+      (processAttestations σ as A).T_h = σ.T_h := by
+  induction as generalizing σ with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons a as ih =>
+      have hT1 : (processAttestation σ a A).T_h = ⊥ := by rw [processAttestation_T_h]; exact hT
+      obtain ⟨h1, h2⟩ := ih (σ := processAttestation σ a A) hT1
+      rw [processAttestations_cons]
+      exact ⟨by rw [h1, processAttestation_target a A hT],
+             by rw [h2, processAttestation_T_h]⟩
+
+/-! ### `advance_height` resets both tallies and the target
+
+Which is what re-establishes `Settled` after a height transition: with `T_h` back to `⊥` and both
+arrays back to `false^V`, the target and progress branches are blocked again and `emptyTarget`
+holds afresh.
+-/
+
+theorem advanceHeight_T_h (σ : ChainState Node Root) (j : Option (Blk Node Root)) (st : Time) :
+    (advanceHeight σ j st).T_h = ⊥ := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_target (σ : ChainState Node Root) (j : Option (Blk Node Root)) (st : Time) :
+    (advanceHeight σ j st).targetParticipation = fun _ => false := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_progress (σ : ChainState Node Root) (j : Option (Blk Node Root))
+    (st : Time) : (advanceHeight σ j st).progress = fun _ => false := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_Qtarget (σ : ChainState Node Root) (j : Option (Blk Node Root))
+    (st : Time) : (advanceHeight σ j st).Qtarget = ∅ := by
+  simp [ChainState.Qtarget, advanceHeight_target]
+
+theorem advanceHeight_Qprog (σ : ChainState Node Root) (j : Option (Blk Node Root))
+    (st : Time) : (advanceHeight σ j st).Qprog = ∅ := by
+  simp [ChainState.Qprog, advanceHeight_progress]
+
+/-- `Settled` holds at genesis. Both tallies are `V.filter (fun _ => false)`, so the target and
+    progress branches are blocked by `not_quorum_empty`; the finality branch fails on
+    `h_j = h_F = 0`; and `emptyTarget` is vacuous, genesis being its own current-height target. -/
+theorem settled_gen [PositiveWeight Node] :
+    Settled (ChainState.gen (Node := Node) (Root := Root)) := by
+  have hq : 0 < q Node := q_pos
+  have hQt : (ChainState.gen (Node := Node) (Root := Root)).Qtarget = ∅ := by
+    simp [ChainState.Qtarget, ChainState.gen]
+  have hQp : (ChainState.gen (Node := Node) (Root := Root)).Qprog = ∅ := by
+    simp [ChainState.Qprog, ChainState.gen]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rintro ⟨h1, -, -⟩; simp [ChainState.gen] at h1
+  · rintro ⟨-, -, hw⟩; rw [hQt] at hw; exact not_quorum_empty hq hw
+  · intro hw; rw [hQp] at hw; exact not_quorum_empty hq hw
+  · intro h; simp [ChainState.gen] at h
 
 /-! ## Lemma 3 -/
 
