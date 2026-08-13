@@ -368,7 +368,7 @@ def build(rs: list[dict], leans: dict[str, dict], texs: dict[str, tuple[Path, in
 <body>
 <h1>Paper ↔ Lean mapping — numbered results</h1>
 <p class="note">Generated from <code>MAPPING.md</code> (the source of truth) by
-<code>mapping_html.py</code>; regenerate with <code>make decoupled-mapping</code>.
+<code>mapping_html.py</code>; regenerate with <code>make mapping</code>.
 {counts["proved"]} proved · {counts["partial"]} partial · {counts["stated"]} stated ·
 {counts["absent"]} absent.
 Click a column header to sort; buttons and the search box filter. The

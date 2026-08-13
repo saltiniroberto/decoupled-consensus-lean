@@ -456,9 +456,12 @@ Characterizing an imperative rule (`finalityPair`, `heightPair`) end to end:
 
 ## 18. `Step.elim` proofs: stuck `if`s and `protocol.step` vs the step relation
 
-Framework-level invariant proofs (`Analysis/Proofs/Exec.lean`)
-hit two frictions that will recur in every lemma proved by `Step.elim` over
-`Framework.Sts2MX` executions.
+Framework-level invariant proofs hit two frictions that will recur in every lemma proved by
+`Step.elim` over an execution of the STS framework.
+
+**Measured in the earlier formalization, against a different flavour of the STS framework**
+from the one this project uses. This project builds on `Framework.StsMultisetLog`, so check that
+the two frictions still take this shape before relying on the fixes below.
 
 **Stuck `if q = q`.** `Config.setNode` builds `fun q' => if q = q' then … else …`
 over the section's opaque `[DecidableEq Node]`, so after `subst` the condition
@@ -721,15 +724,13 @@ Section 6 says to iterate in the scratchpad with `lake env lean <file>`. That is
 small file that imports the library. It is **wrong for checking a file of the library
 itself**, and the failure mode is expensive: false timeouts.
 
-Measured 2026-08-12 on `Analysis/Proofs/Exec.lean`, one source file, three invocations:
+Measured 2026-08-12 in the earlier formalization, on one source file of its analysis, three
+invocations of the same file. The numbers are that project's, not this one's:
 
-    lean FILE                                   -> 5 errors: whnf timeouts in
-                                                   rootAdmitted_cross,
-                                                   firstJustificationAdmitted_of_h_j_lt,
-                                                   firstJustificationAdmitted_of_h_j_gt,
-                                                   plus a kernel "unknown constant" cascade
-    lean FILE --setup <module>.setup.json        -> 0 errors
-    lake build Sts2MX.Analysis.Proofs.Exec       -> 0 errors, 214s
+    lean FILE                                -> 5 errors: whnf timeouts in three lemmas,
+                                                plus a kernel "unknown constant" cascade
+    lean FILE --setup <module>.setup.json     -> 0 errors
+    lake build <module>                       -> 0 errors, 214s
 
 So `--setup` is necessary and sufficient. Lake generates it per module at
 `.lake/build/ir/<Module path>/<Name>.setup.json`; it carries `importArts`, an exact olean
@@ -739,12 +740,12 @@ is unmeasured — do not repeat the mistake of reasoning about it instead of tes
 
 To check one library file faithfully, without Lake's trace machinery:
 
-    lake env lean Protocols/decoupled-consensus/Sts2MX/Analysis/Proofs/Exec.lean \
-      --setup .lake/build/ir/Sts2MX/Analysis/Proofs/Exec.setup.json
+    lake env lean lean/Analysis/Lemmas.lean \
+      --setup .lake/build/ir/Analysis/Lemmas.setup.json
 
-The setup file has to exist already, so this works only after that module has been built
-once. Otherwise use `lake build <module>` — for one module of this library that is minutes,
-not the ten of `make decoupled`.
+The setup file has to exist already, so this works only after that module has been built once.
+Otherwise use `lake build <module>` — `lake build Analysis.Lemmas`, which is far cheaper than a
+full `make dev`.
 
 **Also: a green `lake build` is not proof that a file elaborated.** Lake is trace-driven; on
 a hash hit it replays stored warnings and still prints `Built X`. Confirm real work by the
