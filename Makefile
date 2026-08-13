@@ -1,12 +1,27 @@
-.PHONY: help check sorry build cache cites mapping index paper submodules
+.PHONY: help check dev sorry sorries nodecide build cache cites mapping index paper submodules
 
-# Anything that would let a claim escape the kernel. Mentions inside backticks are exempt,
-# which is why the pattern requires the token not to be preceded by one.
-BANNED_RE := (^|[^`[:alnum:]_])(sorry|admit|native_decide)([^`[:alnum:]_]|$$)
+# `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
+# which no amount of later work discharges. Every target refuses it.
+NEVER_RE := (^|[^`[:alnum:]_])native_decide([^`[:alnum:]_]|$$)
+
+# `sorry` and `admit` are placeholders for a proof not yet written. `make dev` allows them and
+# counts them; `make check` refuses them. Mentions inside backticks are exempt, which is why
+# each pattern requires the token not to be preceded by one.
+WIP_RE := (^|[^`[:alnum:]_])(sorry|admit)([^`[:alnum:]_]|$$)
+
+# Excludes deps/, another project's sources and not ours to police.
+SCAN := --include=*.lean . --exclude-dir=deps --exclude-dir=.lake
 
 help:
+	@echo 'The two targets that matter:'
+	@echo
+	@echo 'make dev        - working target: native_decide check, count the outstanding'
+	@echo '                  sorry/admit, citation check, then build. Allows sorry.'
+	@echo 'make check      - strict target: the same, except that any sorry/admit fails it.'
+	@echo '                  Nothing may be outstanding. Use before committing a proof.'
+	@echo
 	@echo 'make cache      - fetch prebuilt Mathlib artefacts (do this before a first build)'
-	@echo 'make check      - sorry/admit check, citation check, then build'
+	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
 	@echo 'make build      - build this project'
 	@echo 'make cites      - check every citation of the paper against its .aux'
 	@echo 'make mapping    - regenerate mapping.html from MAPPING.md'
@@ -14,23 +29,41 @@ help:
 	@echo 'make paper      - build latex-specs/height_filter_healing.pdf and its .aux'
 	@echo 'make submodules - report the pinned revision of each submodule'
 	@echo
-	@echo 'Both index and mapping run now and produce empty output, since nothing is'
-	@echo 'formalized yet. mapping.html'"'"'s figures column stays empty until there is a'
-	@echo 'FigureDeps.lean to run against a built library.'
+	@echo 'mapping.html'"'"'s figures column stays empty until there is a FigureDeps.lean to'
+	@echo 'run against a built library.'
 
-check: sorry cites build
+# The strict target: no sorry, no admit, no native_decide, citations agree, build is green.
+check: nodecide sorry cites build
 
-# Excludes deps/, another project's sources and not ours to police.
+# The working target: everything `check` does except the sorry-free requirement, with the
+# outstanding count reported instead.
+dev: nodecide sorries cites build
+
+nodecide:
+	@if grep -rnE '$(NEVER_RE)' $(SCAN); then \
+		echo 'FAIL: native_decide found'; exit 1; \
+	else \
+		echo 'native_decide check passed'; \
+	fi
+
 sorry:
-	@if grep -rnE '$(BANNED_RE)' --include='*.lean' . \
-	    --exclude-dir=deps --exclude-dir=.lake; then \
-		echo 'FAIL: sorry/admit/native_decide found'; exit 1; \
+	@if grep -rnE '$(WIP_RE)' $(SCAN); then \
+		echo 'FAIL: sorry/admit found. `make dev` allows these; `make check` does not'; \
+		exit 1; \
 	else \
 		echo 'sorry/admit check passed'; \
 	fi
 
-# Warns "no targets specified and no default targets configured" until this project's
-# `lean_lib` is uncommented in lakefile.toml. That is expected, not a fault.
+# Reports rather than fails: the count is the work left to do.
+sorries:
+	@n=$$(grep -rnE '$(WIP_RE)' $(SCAN) | wc -l); \
+	if [ "$$n" -eq 0 ]; then \
+		echo 'no sorry/admit outstanding'; \
+	else \
+		echo "$$n sorry/admit outstanding:"; \
+		grep -rnE '$(WIP_RE)' $(SCAN); \
+	fi
+
 build:
 	lake build
 
@@ -44,7 +77,7 @@ cache:
 cites:
 	@python3 tools/check_citations.py
 
-# Neither of these is part of `check`: each rewrites a committed file.
+# Neither of these is part of `check` or `dev`: each rewrites a committed file.
 mapping:
 	@python3 tools/mapping_html.py
 

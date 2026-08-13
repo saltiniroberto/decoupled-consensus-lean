@@ -50,9 +50,29 @@ Changing which revision this project builds against needs no push: check out the
 
 ## Proof discipline
 
-No `sorry`, no `admit`, no new `axiom`s, no `native_decide`. If a statement cannot be proved,
-do not state it. A paper result that is stated but unproved stays a `def … : Prop`, so that
-nothing claims what has not been proved and the build cannot go green on a gap.
+Never, at any point: no new `axiom`s, no `native_decide`. Both move a claim off the kernel
+permanently, and no later work discharges them. `make check` and `make dev` both refuse
+`native_decide`.
+
+**`sorry` and `admit` are allowed while a proof is being developed**, and only then. They are
+placeholders with a counter attached, not a resting state:
+
+- `make dev` is the working target. It allows them and reports how many are outstanding.
+- `make check` is the strict target. Any `sorry` or `admit` fails it.
+- `make sorries` lists them with `file:line`, without failing.
+
+So a `theorem … := sorry` is a legitimate intermediate state, and `make check` is what says the
+work is finished. Do not leave one behind silently: if a `sorry` is going to stay for a while,
+say so where it is and in `CONTEXT.md`, with what is missing.
+
+The checks are a `grep`, so **write the word in backticks whenever a comment or docstring talks
+about one** — the pattern exempts a backticked mention and counts a bare one. A docstring
+explaining why a proof is outstanding otherwise adds to the count and fails `make check`.
+
+A paper result whose *statement* cannot yet be written — because it quantifies over something
+this project has not modelled — is different from one whose proof is missing. That one stays a
+`def … : Prop`, or takes the absent notion as an explicit parameter, so that nothing claims a
+shape the paper has not been checked to support.
 
 **Invoke the `lean-proof-idioms` skill before starting a proof over a definition written in
 the paper's imperative shape** — `Id.run do`, `let mut`, `while`. The obvious tactics fail on
@@ -66,7 +86,9 @@ wrong for this rendering.
 
     make            # list the available targets
     make cache      # fetch prebuilt Mathlib artifacts -- do this before a first build
-    make check      # sorry/admit/axiom check, then build
+    make dev        # working target: allows sorry, counts what is outstanding
+    make check      # strict target: any sorry/admit fails it
+    make sorries    # list the outstanding sorry/admit, without failing
     make build      # build this project's lib
 
 The toolchain is pinned in [lean-toolchain](lean-toolchain) (Lean 4.32.2). Mathlib's rev in
