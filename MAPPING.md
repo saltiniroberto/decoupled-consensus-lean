@@ -35,8 +35,8 @@ in this column. A file that renders no figure has no such prefix.
 
 | Paper | № | Lean file | Lean declarations |
 | --- | --- | --- | --- |
-| `alg:state-replay` | Fig. 1 | `lean/specs/Decoupled/Spec/Fig1SlotReplay.lean` | `processSlot`, `processSlots`, `stateTransition` |
-| `alg:attestation-processing` | Fig. 2 | `lean/specs/Decoupled/Spec/Fig2AttestationProcessing.lean` | `processAttestation`, `processAttestations`, `processBlock`, `advanceHeight`, `processHeightEvents` |
+| `alg:state-replay` | Fig. 1 | `lean/Spec/Fig1SlotReplay.lean` | `processSlot`, `processSlots`, `stateTransition` |
+| `alg:attestation-processing` | Fig. 2 | `lean/Spec/Fig2AttestationProcessing.lean` | `processAttestation`, `processAttestations`, `processBlock`, `advanceHeight`, `processHeightEvents` |
 | `alg:store` | Fig. 3 | — | — |
 | `alg:fork-choice-state` | Fig. 4 | — | — |
 | `alg:recovery-action` | Fig. 5 | — | — |

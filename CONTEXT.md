@@ -129,7 +129,7 @@ Moving this project to a different framework revision needs no push: check out t
 `lakefile.toml` declared the two requires and had this project's `lean_lib` **commented out**: a
 glob with no matching module makes `lake build` fail rather than do nothing.
 
-Superseded the same day by the first source files — see "The layout: `lean/specs`" below for
+Superseded the same day by the first source files — see "The layout: `lean/Spec`" below for
 what the `lean_lib` became.
 
 ### The mapping and the citation check, wired up with everything absent
@@ -176,7 +176,7 @@ environment only by being imported, so the file's own import list is the coverag
 per module root. The analysis imports are still commented out, there being no statements.
 
 It is tooling, not formalization: it is in no `lean_lib`, so `lake build` never sees it, and
-`make index` runs it with `lake env lean`. Its `import Decoupled.Spec` line was uncommented
+`make index` runs it with `lake env lean`. Its `import Spec` line was uncommented
 when that module landed, and the index now has rows.
 
 Adapted from the first attempt's copy in four ways, listed at the top of the file. Two worth
@@ -217,25 +217,58 @@ says where.
 
 ## 2026-08-13 — Figures 1 and 2, and the first source files
 
-### The layout: `lean/specs`, modules `Decoupled.Spec.…`
+### The layout: `lean/Spec`, modules `Spec.…`
 
-On instruction, the specification goes in `lean/specs`. `lakefile.toml` now declares
+**Superseded once the same day.** It was first `lean/specs` with modules `Decoupled.Spec.…`,
+so the files sat at `lean/specs/Decoupled/Spec/…` — `specs` and `Spec` both in the path, and
+two directory levels below `srcDir`. Roberto asked for the files one level from `lean`, and
+then for the module names to be changed to allow it. The current form:
 
     [[lean_lib]]
-    name = "DecoupledSpec"
-    srcDir = "lean/specs"
-    globs = ["Decoupled.Spec", "Decoupled.Spec.+"]
+    name = "Spec"
+    srcDir = "lean"
+    globs = ["Spec", "Spec.+"]
 
-so a module `Decoupled.Spec.Basic` is the file `lean/specs/Decoupled/Spec/Basic.lean`. The
-directory name repeats inside `srcDir` because Lake derives a module's path from its name and
-nothing else.
+so a module `Spec.Basic` is the file `lean/Spec/Basic.lean`.
 
-`defaultTargets = ["DecoupledSpec"]` was needed too: with a `lean_lib` declared but no default
-target, `lake build` still says "no targets specified" and builds nothing.
+`defaultTargets = ["Spec"]` is needed too: with a `lean_lib` declared but no default target,
+`lake build` says "no targets specified" and builds nothing.
 
-The module root stays `Decoupled`, which is what `tools/decl_index.lean` filters on
-(`modPrefix`). The analysis is expected to become a second `lean_lib` over `lean/analysis`,
-with modules `Decoupled.Analysis.…`.
+**Lake derives a module's path from its name and nothing else, and there is no remapping.**
+Measured in a throwaway package, not assumed. With `srcDir = "src"` and a module `Root.Mid.Leaf`,
+a file at `src/Leaf.lean` is not merely rejected but never looked for:
+
+    error: no such file or directory
+      file: …/src/Root/Mid
+
+The same file with the module renamed flat to `Leaf` builds. So the directory under `srcDir`
+always repeats the module root, and the only way to shorten the path is to shorten the name.
+That is why the root is now `Spec` rather than `Decoupled.Spec`.
+
+Two alternatives were rejected. A **lowercase root** `specs` keeps the directory literally
+`lean/specs` and does build — verified, `✔ Built specs.Leaf` — but `import specs.Basic` is not
+how Lean modules are spelled. **Flat modules** (`Basic`, `Pseudocode`, …) with `srcDir` at
+`lean/specs` put the files exactly where asked, at the cost of no prefix at all: the module
+namespace is global across every dependency, so an unprefixed `Basic` collides with anything a
+package adds later, every new file has to be listed in `globs` by hand, and the index filter has
+nothing to match.
+
+**What the shorter root cost: there is no longer one module prefix over both halves.** The
+analysis is expected to become a second `lean_lib` over the same `srcDir` with root `Analysis`,
+so `lean/Analysis/…`; the two globs stay disjoint because the roots differ. But
+`tools/decl_index.lean` used to filter on the single prefix `Decoupled`, and now filters on a
+**list**, `modRoots`, currently `["Spec"]`. Adding a module root without adding it there is
+silent — those declarations are simply absent from `INDEX.tsv`. The import list and `modRoots`
+have to grow together, and the file says so.
+
+Lean note while making that change: `modRoots.any (toString modName).startsWith` does not
+elaborate. `String.startsWith` takes a pattern with a `Pattern.ForwardPattern` instance, so the
+point-free form has type `(pat : ?m) → [inst] → Bool` and will not unify with `String → Bool`.
+Write the lambda: `fun r => (toString modName).startsWith r`.
+
+Declaration names were untouched by all of this. `namespace Decoupled` inside the files is
+independent of the module name, so every declaration is still `Decoupled.…` and `INDEX.tsv` has
+the same 81 rows, with only the module column changed.
 
 **Two scripts still point at the old guess.** `tools/check_citations.py` has
 `LEMMAS = ROOT/"Decoupled"/"Analysis"/"Lemmas.lean"` and `tools/mapping_html.py` has the same
@@ -248,10 +281,10 @@ nothing. Fix them when the analysis lands and its directory is decided.
 On instruction, 2026-08-13: a file rendering one of the paper's five algorithm figures carries
 the figure's printed number in its own name, not only in its module docstring. So
 `SlotReplay.lean` became `Fig1SlotReplay.lean` and `AttestationProcessing.lean` became
-`Fig2AttestationProcessing.lean`, with the module names following (`Decoupled.Spec.Fig1SlotReplay`).
+`Fig2AttestationProcessing.lean`, with the module names following (`Spec.Fig1SlotReplay`).
 The remaining three will be `Fig3Store`, `Fig4ForkChoiceState` and `Fig5RecoveryAction`.
 
-The number leads so that a listing of `lean/specs/Decoupled/Spec/` sorts in the paper's figure
+The number leads so that a listing of `lean/Spec/` sorts in the paper's figure
 order. Spellings rejected: `Figure1SlotReplay` (same order, longer for nothing);
 `SlotReplayFig1` (sorts by subject, which is the order the figure number exists to override);
 and a `Figures/` subdirectory holding `Fig1.lean`…`Fig5.lean`, which drops the subject from the
@@ -259,7 +292,7 @@ name entirely.
 
 **A file that renders no figure takes no prefix.** `Basic.lean` holds the numbered definitions
 the figures read and `Pseudocode.lean` holds notation; each already says in its own docstring
-that it is not a figure. The convention is stated in `Decoupled/Spec.lean`'s docstring and above
+that it is not a figure. The convention is stated in `Spec.lean`'s docstring and above
 the figure table in `MAPPING.md`.
 
 The number is the printed one at the pinned revision `e4375c5`. It is therefore the same kind of
@@ -268,7 +301,7 @@ decision above, it does not.
 
 ### `alg:recovery-round` was not a label; `make cites` did not catch it
 
-`Decoupled/Spec.lean` named Figure 5 `alg:recovery-round`. The paper's label is
+`Spec.lean` named Figure 5 `alg:recovery-round`. The paper's label is
 `alg:recovery-action` (`recovery_core.tex:2083`, and `height_filter_healing.aux:171`).
 `MAPPING.md` had it right, so the invented one was in one place only. Fixed 2026-08-13.
 
@@ -296,9 +329,8 @@ definitions those two read: 3 (`def:validator-weights`), 4 (`def:height`),
 5 (`def:block-chain`), 8 (`def:fg-message`), 9 (`def:valid-attestation-inclusion`),
 13 (`def:chain-state`), 14 (`def:nonjustifiable`), 15 (`def:participation-state`), and the
 "a state or `invalid`" of 24 (`def:total-raw-replay`). Four files under
-`lean/specs/Decoupled/Spec/`: `Basic.lean`, `Pseudocode.lean`,
-`Fig2AttestationProcessing.lean`, `Fig1SlotReplay.lean`, plus `Decoupled/Spec.lean`
-importing them.
+`lean/Spec/`: `Basic.lean`, `Pseudocode.lean`, `Fig2AttestationProcessing.lean`,
+`Fig1SlotReplay.lean`, plus `lean/Spec.lean` importing them.
 
 **Nothing is proved.** These are definitions; no numbered result is stated yet.
 
