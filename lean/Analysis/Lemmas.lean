@@ -21,15 +21,22 @@ lemma, so it is not one of these.
 
 | № | `\label` | Lines | Statable today? |
 | --- | --- | --- | --- |
-| 3 | `lem:empty-slot-noop` | 879–891 | no — needs Def. 20 |
-| 4 | `lem:finalized-before-justified` | 920–931 | in part — block post-states only |
-| 5 | `lem:target-uniqueness` | 967–973 | no — needs Defs. 21 and 11 |
-| 6 | `lem:height-progression` | 987–994 | in part — the increment half only |
-| 7 | `lem:height-target-freshness` | 1002–1009 | yes |
-| 8 | `lem:chain-target-uniqueness` | 1029–1041 | in part — conflicting-branch half only |
+| 3 | `lem:empty-slot-noop` | 879–891 | no — `σ[B]`, and Def. 20 |
+| 4 | `lem:finalized-before-justified` | 920–931 | no — `σ[B]`; Def. 20 for the full sentence |
+| 5 | `lem:target-uniqueness` | 967–973 | no — Defs. 21 and 11 |
+| 6 | `lem:height-progression` | 987–994 | **in part, and nothing is missing** — see below |
+| 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[B]`, twice |
+| 8 | `lem:chain-target-uniqueness` | 1029–1041 | no — `σ[B]`, on two chains |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
-| 10 | `lem:past-finalized` | 1092–1101 | no — needs Defs. 21, 11 and 20 |
-| 11 | `lem:finalized-chain` | 1139–1146 | no — needs Def. 21 and Ass. 1's fault bound |
+| 10 | `lem:past-finalized` | 1092–1101 | no — `σ[B]`, and Defs. 21, 11, 20 |
+| 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 and Ass. 1's fault bound |
+
+**Exactly one statement can be written today: the increment half of Lemma 6.** "Every height
+transition increments the height by exactly one" is a claim about `advanceHeight`, which Figure 2
+makes the only routine that changes `h`, and it mentions nothing absent. The lemma's other half —
+that a transition *requires* a justification or progress certificate — needs Definition 21.
+
+Everything else waits, and five of the nine wait on `σ[B]` alone: Lemmas 3, 4, 7, 8 and 10.
 
 ## What the specification does not yet carry
 
@@ -39,7 +46,7 @@ lemma, so it is not one of these.
 | certificates, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 5, 6, 10, 11 |
 | the slashing conditions E1 and E2 | Def. 11 (`def:slashing`) | 5, 10 |
 | Assumption 1's Byzantine weight `b` and `3b < W` | Ass. 1 (`ass:fixed-electorate`) | 11 |
-| the replayed state `σ[B]` | Figure 3 (`alg:store`), `derive_block_states` | 3, 4, 7, 10 |
+| the replayed state `σ[B]` | Figure 3 (`alg:store`), `derive_block_states` | 3, 4, 7, 8, 10 |
 
 `Electorate` carries `V`, `w` and `w_pos` only, which is why the fault bound is on that list.
 
@@ -65,7 +72,8 @@ An earlier note in this file and in `CONTEXT.md` said the replay "belongs in `Sp
 Definition 24". That was wrong — Definition 24 governs *when* `state_transition` is called and
 that it is total; the map itself is Figure 3's. So the four lemmas that quantify over `σ[B]` wait
 on Figure 3, on a state-root function, and on the store of Definitions 22 and 23, none of which is
-modelled. Lemma 7 is the only one of the nine that needs none of it.
+modelled. Five of the nine quantify over it — Lemmas 3, 4, 7, 8 and 10 — so it is the single
+largest thing standing between this file and the paper's Sections 3 and 4.
 
 ## Two shapes, when statements do start landing
 

@@ -626,8 +626,13 @@ stated over a replay the paper does not have.
 **Consequence for the order of work.** Those four lemmas wait on Figure 3, on a state-root function
 (`CONTEXT.md` already recorded that none is modelled), and on the store of Definitions 22 and 23.
 They are not unblocked by any small addition, and there is nothing to put in `Spec` under
-Definition 24 today beyond the `TransitionResult` already there. **Lemma 7 is the only one of the
-nine that needs none of it**, so it is the one that can land first.
+Definition 24 today beyond the `TransitionResult` already there. **The increment half of Lemma 6
+is the only statement that needs nothing absent**, so it is the one that can land first. Five of
+the nine quantify over `σ[B]`: Lemmas 3, 4, 7, 8 and 10.
+
+Corrected within the hour: this entry first said Lemma 7 was the unblocked one. It is not — Lemma 7
+names `σ[B]` twice, once for the chain ending at `B` and once for the post-state at `T`. Checked
+against the withdrawn statements in `e42ef9b` rather than against the note.
 
 ### `MAPPING.md` and `mapping.html` gained one status, after briefly having two
 
@@ -697,8 +702,9 @@ warns.
 
 ## Next
 
-1. **Lemma 7 (`lem:height-target-freshness`) first**, being the only one of the nine that needs
-   nothing the specification lacks. One commit, with its `MAPPING.md` row.
+1. **The increment half of Lemma 6 (`lem:height-progression`) first**, being the only statement of
+   the nine that needs nothing the specification lacks: `(advanceHeight σ justify start).h = σ.h + 1`.
+   One commit, with its `MAPPING.md` row marked 🔨 and a note that it is the increment half only.
    `make check` will then fail on its `sorry`, which is the intended signal.
 2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Lemma 7
    is the one statable in full today; Lemmas 4, 6 and 8 are statable in part. Read the
