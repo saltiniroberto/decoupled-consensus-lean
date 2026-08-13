@@ -1,3 +1,5 @@
+import Analysis.Proofs.Weights
+import Analysis.Proofs.SlotClosure
 import Analysis.Lemmas
 
 /-!
@@ -6,11 +8,15 @@ import Analysis.Lemmas
 One import per file under `Analysis/`. The paper's numbered results, stated and proved against
 the specification in `Spec`.
 
-Present: `Lemmas.lean`, holding the nine lemmas of Section 3 "Deterministic finality state
-machine" and Section 4 "Accountable safety" — printed numbers 3 to 11. `Theorems.lean` and
-`Corollaries.lean` are absent, as is everything Section 5 onward states.
+Present: `Lemmas.lean`, the statements of record, and `Proofs/`, which holds the arguments.
+`Theorems.lean` and `Corollaries.lean` are absent.
 
-**Nothing is proved yet.** Read `Analysis/Lemmas.lean`'s own docstring first: it explains why
-some lemmas are a `theorem … := sorry` and others a `def … : Prop`, which turns on whether the
-paper's sentence can be written in the vocabulary the specification currently has.
+**A statement in `Lemmas.lean` is proved by a one-line call into `Proofs/`**, so that a statement
+can be read against the paper without a proof between it and the reader. `Lemmas.lean` also holds
+no `variable` at section level: every declaration spells out its own binders.
+
+Read `Analysis/Lemmas.lean`'s own docstring first. It lists every lemma of Sections 2 to 4 with
+what each still waits on, and explains the one distinction that decides a statement's shape: a
+missing *proof* is a `sorry` in `Proofs/`, while a statement that cannot yet be *written*, because
+it names something the specification does not have, is a `def … : Prop` there instead.
 -/
