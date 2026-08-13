@@ -806,41 +806,81 @@ to know. And `actionState` is `processSlots`, sitting in `Analysis/Proofs/SlotCl
 Definition 20 (`def:finality-action-state`) is not modelled, so the name is the paper's σ_a and
 nothing more.
 
-## 2026-08-14 — Lemma 4 written down, proof outstanding
+## 2026-08-14 — Lemma 4 is proved
 
-`lemFinalizedBeforeJustified` in `Analysis/Lemmas.lean`, proved by a one-line call into
-`Analysis/Proofs/Ancestry.lean`, where the proof is a `sorry`. That is the project's only one, so
-`make dev` reports 1 outstanding and `make check` fails, which is the intended signal.
+`lemFinalizedBeforeJustified`, over a block post-state: `F ⪯ J ⪯ L` and `h_F ≤ h_j < h`. Proved in
+the new `Analysis/Proofs/Ancestry.lean`, named for the phrase the paper's own proof uses for what
+it establishes. `make check` passes with no `sorry`.
 
-`Ancestry.lean` is a new file. The paper's own proof of this lemma calls its content "ancestry and
-height inequalities", which is where the name comes from.
+### `Chained` needs no threshold hypothesis, where `Settled` did
 
-**What the statement says.** For a block post-state, `F ⪯ J ⪯ L` and `h_F ≤ h_j < h`. No
-`PositiveWeight` and no quorum reasoning: every branch of the height-event check preserves these
-whether or not it fires, so thresholds do not enter.
+The invariant is `Chained`: the lemma's four claims plus
 
-**What the proof is missing.** Genesis is immediate. The step needs a further invariant about the
-named target, which the paper asserts in prose inside its own proof (lines 939–940, "the
+    targetOnChain : ∀ T, σ.T_h = some T → σ.J ⪯ T ∧ T ⪯ σ.L
+
+and it takes **no** `PositiveWeight` and no quorum fact anywhere. The reason is worth keeping,
+because it is the difference between this lemma and Lemma 3. `Settled` is the claim that the
+height-event branches *stay blocked*, which fails outright when `q = 0`. `Chained` is preserved by
+every branch whether or not the branch fires, so thresholds never enter.
+
+Consequently every phase of `state_transition` preserves all five conjuncts, and there is no split
+of the kind `Settled` needed.
+
+### The fifth conjunct, again from the paper's prose
+
+Needed because the target branch sets `J ← T_h`. The paper asserts it inside its own proof — "the
 justification branch sets `J = T_h`, which lies on the current chain and already contains the
-previous `J`"):
+previous `J`" (lines 939–940) — and states it nowhere. It is true because `process_slot` is the
+only routine that names a target and it writes `some σ.L`; `advance_height` writes `⊥`.
 
-    σ.T_h = some T → σ.J ⪯ T ∧ T ⪯ σ.L
+This is the second invariant here whose statement needs a conjunct the paper does not write. Worth
+expecting a third.
 
-So this will be proved from a strengthened invariant in the same style as `Settled`, with the
-argument for the new conjuncts coming from the two writers of `T_h` — `process_slot`, which writes
-`some σ.L`, and `advance_height`, which writes `⊥`. The `J ⪯ L` conjunct additionally needs
-`process_block`'s `parent = σ.L` check, which `processBlock_state` makes usable.
+### Definition 5's ancestry had no lemmas at all
 
-**Narrower than the paper in one respect, deliberately.** The paper says "every reachable block
-post-state *and finality action state*". The second half is a corollary of Lemma 3 once this is
-proved — `actionState` moves only `s` and `T_h`, so it moves none of the six fields named here —
-and it is left for then rather than guessed at now.
+`Preceq` is `a ∈ ancestors b` and nothing had been proved about it. Three facts were needed and are
+now in `Ancestry.lean`, in namespace `Decoupled` rather than `Decoupled.Proofs` so that
+`Preceq.refl` and `Preceq.trans` sit under the definition's own name and dot notation works:
+
+* `Preceq.refl`, from `ancestors` putting the block at the head of its own list;
+* `ancestors_subset`, "an ancestor's ancestors are ancestors", by structural recursion on the
+  descendant — the content of `Preceq.trans`;
+* `parent_preceq`, a block's parent precedes it, which is what turns `process_block`'s
+  `parent = σ.L` check into an ancestry fact.
+
+None needs `DecidableEq`: walking the chain compares nothing. Only deciding membership does, which
+is what the existing `DecidableRel` instance is for.
+
+### The first attempt was consulted first, on instruction, and the check paid off
+
+Read before starting: its `Analysis/Proofs/Chained.lean` and the `INDEX.tsv` row for its
+`lemFinalizedBeforeJustified`. Two things came out of it, neither of which was a proof.
+
+**Its Lemma 4 carries no threshold class either.** That answered the question asked — whether more
+assumptions were needed — before any Lean was written here, and the answer was no.
+
+**Its `Chained` has the same five conjuncts**, including `targetOnChain` verbatim. That was already
+predicted here from the paper's proof text and written into the `sorry`'s docstring, so the check
+confirmed a prediction rather than supplying one.
+
+What did not transfer: `Preceq.refl`'s proof there is `cases a <;> simp [Preceq, ancestors]`, which
+works here too, but `parent_preceq`'s closing `simp` does not — it leaves
+`p = p.mk s n a r ∨ p ∈ ancestors p`, and `List.mem_cons_of_mem _ (Preceq.refl p)` is what closes
+it. Everything else was re-derived and compiled first time.
+
+### One earlier note here was wrong and is deleted
+
+It said the finality-action-state half of the lemma would come "as a corollary of Lemma 3". That
+route works but drags in `PositiveWeight`, which this lemma does not otherwise need.
+`Chained.processSlots` gives the same half with no assumption at all. The half is still not stated
+— that is a statement to widen, not a proof to find, and `MAPPING.md` marks the row 🟡 partial for
+exactly that reason.
 
 ## Next
 
-1. **Prove Lemma 4**, which is written down and `sorry`. The section above says what it needs: the
-   `T_h` conjuncts, and `processBlock_state` for `J ⪯ L`. Then its finality-action-state half, two
-   lines from Lemma 3.
+1. **Widen Lemma 4 to the paper's second subject**, the finality action state. No new assumption:
+   `Chained.processSlots` is the whole proof. It is left undone only because it changes a statement
+   that has already been reviewed.
 2. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
    lacks: `(advanceHeight σ justify start).h = σ.h + 1`. Its `MAPPING.md` row gets 🔨 and a note
    that it is the increment half only, "requires a certificate" being the half that waits on
