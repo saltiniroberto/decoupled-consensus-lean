@@ -48,6 +48,22 @@ repository, and then move the submodule pointer here.
 Changing which revision this project builds against needs no push: check out the commit in
 `deps/lean-sts`, then commit the submodule pointer here.
 
+## One step at a time, and no decision that depends on unwritten code
+
+Roberto, 2026-08-13. Decide what the step in front of you needs, and nothing further. A choice
+that only makes sense given a definition, figure or proof that does not exist yet is not ready to
+be made, and making it early means making it twice — first on a guess, then again when the thing
+lands and the guess turns out not to fit.
+
+So: do not move a declaration because of where a *future* file will want it. Do not shape a
+statement around a definition that is still absent. Do not pick a directory layout for files that
+are not written. When one of those questions comes up, say what the step needs, note the question,
+and leave it.
+
+**The one exception is deciding which of the paper's results to skip**, which does need looking
+ahead: whether a lemma is worth translating turns on what it depends on and on whether anything
+else cites it, and both are known from the paper without writing any Lean.
+
 ## Proof discipline
 
 Never, at any point: no new `axiom`s, no `native_decide`. Both move a claim off the kernel

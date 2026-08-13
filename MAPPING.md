@@ -68,7 +68,7 @@ column names the declarations that render each one.
 | `def:vote-contribution` | Def. 10 | `processAttestation` — the two height tests, no separate declaration |
 | `def:block-attestation-processing` | Def. 16 | `processAttestation`, `processAttestations` |
 | `def:height-outcome` | Def. 18 | `processHeightEvents`, `advanceHeight` |
-| `def:finality-action-state` | Def. 20 | `finalityActionState` — over a block post-state rather than `σ[X]` |
+| `def:finality-action-state` | Def. 20 | `actionState` — over a block post-state rather than `σ[X]` |
 
 ### Store and fork choice
 

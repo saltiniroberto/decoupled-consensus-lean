@@ -13,7 +13,7 @@ the paper by itself. `CONTEXT.md` records that decision. The groundwork below is
 pass, because re-deriving it is the expensive part.
 
 **Present so far: Lemma 3, and the two notions it needed — `BlockPostState` and
-Definition 20's `finalityActionState`.**
+Definition 20's `actionState`.**
 
 ## The nine lemmas, and what each waits on
 
@@ -140,12 +140,9 @@ inductive BlockPostState : ChainState Node Root → Prop
     The definition is that one application of `process_slots`, so this renders all of it. Written
     over a block post-state rather than over `σ[X]`, for the reason in `BlockPostState`.
 
-    Definition 20's side condition `X.slot ≤ slot(a)` is `σ.L.slot ≤ t` here, and it is carried by
-    the lemmas that use this rather than by the definition, which is where the paper puts it.
-
-    It sits in the analysis rather than in `Spec` only because it reads a figure's routine, and
-    `Spec/Defs/` is for what the figures read. Move it if that layering is settled otherwise. -/
-def finalityActionState (σ : ChainState Node Root) (t : Time) : ChainState Node Root :=
+    Definition 20's side condition `X.slot ≤ slot(a)` is `σ.L.slot ≤ t` here, and the lemmas that
+    use this carry it rather than the definition, which is where the paper puts it. -/
+def actionState (σ : ChainState Node Root) (t : Time) : ChainState Node Root :=
   processSlots σ t
 
 /-! ## Section 3 — deterministic finality state machine -/
@@ -177,17 +174,17 @@ def finalityActionState (σ : ChainState Node Root) (t : Time) : ChainState Node
 theorem lemEmptySlotNoop :
     ∀ (σ : ChainState Node Root) (t : Time),
       BlockPostState σ → σ.L.slot ≤ t →
-        (finalityActionState σ t).L = σ.L ∧
-        (finalityActionState σ t).h = σ.h ∧
-        (finalityActionState σ t).s_h = σ.s_h ∧
-        (finalityActionState σ t).nj = σ.nj ∧
-        (finalityActionState σ t).J = σ.J ∧
-        (finalityActionState σ t).h_j = σ.h_j ∧
-        (finalityActionState σ t).F = σ.F ∧
-        (finalityActionState σ t).h_F = σ.h_F ∧
-        (finalityActionState σ t).P = σ.P ∧
-        (finalityActionState σ t).targetParticipation = σ.targetParticipation ∧
-        (finalityActionState σ t).progress = σ.progress := by
+        (actionState σ t).L = σ.L ∧
+        (actionState σ t).h = σ.h ∧
+        (actionState σ t).s_h = σ.s_h ∧
+        (actionState σ t).nj = σ.nj ∧
+        (actionState σ t).J = σ.J ∧
+        (actionState σ t).h_j = σ.h_j ∧
+        (actionState σ t).F = σ.F ∧
+        (actionState σ t).h_F = σ.h_F ∧
+        (actionState σ t).P = σ.P ∧
+        (actionState σ t).targetParticipation = σ.targetParticipation ∧
+        (actionState σ t).progress = σ.progress := by
   sorry
 
 end
