@@ -7,22 +7,25 @@ import Spec
 (`height_filter_healing.tex`). Statements of record, one per numbered lemma, proved against the
 specification in `Spec`.
 
-**Being added one at a time.** The nine lemmas of Sections 3 and 4 were written in one pass on
-2026-08-13 and withdrawn the same day, on instruction: each returns on its own, audited against
-the paper by itself. `CONTEXT.md` records that decision. The groundwork below is kept from that
-pass, because re-deriving it is the expensive part.
+**Being added one at a time**, each audited against the paper by itself. Nine of them were written
+in one pass on 2026-08-13 and withdrawn the same day, on instruction; `CONTEXT.md` records that.
+The groundwork below is kept from that pass, because re-deriving it is the expensive part.
 
-**Present so far: Lemma 3, and the two notions it needed — `BlockPostState` and
-Definition 20's `actionState`.**
+**Declarations are ordered by the paper's lemma number**, not by when they landed.
 
-## The nine lemmas, and what each waits on
+**Present so far: Lemmas 1 and 3**, plus the two notions Lemma 3 needed — `BlockPostState` and
+Definition 20's `actionState`.
 
-Section 3 "Deterministic finality state machine" (lines 535–980) and Section 4 "Accountable
-safety" (lines 981–1197). Theorem 5 (`thm:accountable-safety`) is in Section 4 too but is not a
-lemma, so it is not one of these.
+## The lemmas, and what each waits on
+
+Section 2 "Model and quorum weights" (lines 196–534), Section 3 "Deterministic finality state
+machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
+(`thm:accountable-safety`) is in Section 4 too but is not a lemma, so it is not one of these.
 
 | № | `\label` | Lines | Statable today? |
 | --- | --- | --- | --- |
+| 1 | `lem:integer-thresholds` | 313–322 | **yes, and proved** — landed |
+| 2 | `lem:quorum-intersection` | 342–347 | yes, it appears: `Quorum`, `weight`, `q`, `W` are all present |
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
 | 4 | `lem:finalized-before-justified` | 920–931 | likely yes — see below |
 | 5 | `lem:target-uniqueness` | 967–973 | no — Defs. 21 and 11 |
@@ -31,7 +34,7 @@ lemma, so it is not one of these.
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
-| 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 and Ass. 1's fault bound |
+| 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 |
 
 **`BlockPostState` replaces `σ[B]` in most places, which is what unblocked Lemma 3.** The paper
 writes `σ[B]` where it needs "the state of the chain ending at `B`". A block post-state *is* such a
@@ -55,10 +58,18 @@ assumed here. Lemma 6's increment half remains independently statable, needing o
 | --- | --- | --- |
 | certificates, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 5, 6, 10, 11 |
 | the slashing conditions E1 and E2 | Def. 11 (`def:slashing`) | 5, 10 |
-| Assumption 1's Byzantine weight `b` and `3b < W` | Ass. 1 (`ass:fixed-electorate`) | 11 |
 | `σ[·]` as a map, for a *named earlier* block's state | Figure 3 (`alg:store`), `derive_block_states` | 7 |
 
-`Electorate` carries `V`, `w` and `w_pos` only, which is why the fault bound is on that list.
+**Assumption 1's Byzantine weight `b` is not on that list, and Lemma 1 is why.** `Electorate`
+carries `V`, `w` and `w_pos` only, so `b` has no rendering — but a *quantity* arrives with its
+defining inequality, and quantifying over every `b` with `3 * b < W` is both faithful and stronger
+than the paper's sentence about the one actual Byzantine weight. So it costs a hypothesis, not a
+`def … : Prop`.
+
+That is the line to keep in mind for the rest: an absent **definition** — certificates, the
+slashing conditions, `σ[·]` — has no properties to quantify over, so a statement naming it can only
+be a `def … : Prop`. An absent **quantity with a stated bound** is just a universally quantified
+variable, and the statement stays a `theorem`.
 
 **Two notions the paper numbers are not on it**, because the state machine already pins them
 down: state-height (Def. 6, `def:state-height`) and the current-height target (Def. 7,
@@ -144,6 +155,39 @@ inductive BlockPostState : ChainState Node Root → Prop
     use this carry it rather than the definition, which is where the paper puts it. -/
 def actionState (σ : ChainState Node Root) (t : Time) : ChainState Node Root :=
   processSlots σ t
+
+end
+
+/-! ## Section 2 — model and quorum weights -/
+
+section
+variable [Electorate Node]
+
+/-- **Lemma 1** (`lem:integer-thresholds`, lines 313–322): the honest weight reaches every protocol
+    threshold.
+
+    Read aloud: all honest validators together can form either threshold, while the Byzantine
+    validators alone can form neither.
+
+    `b` is Assumption 1 (`ass:fixed-electorate`)'s Byzantine weight, and `3 * b < W` is that
+    assumption's bound. `Electorate` carries no `b`, so it is a parameter here — but unlike an
+    absent *definition*, a number arrives with its defining inequality, so this is a `theorem` and
+    not a `def … : Prop`. Quantifying over every `b` under the bound is stronger than the paper's
+    sentence about the one actual Byzantine weight, and implies it.
+
+    Two notes on `Nat`. Both subtractions are truncated, which is harmless: `3 * b < W` forces
+    `b < W`, and `2 * q ≥ W` holds for every `W ≥ 1`. And `W = 0` is excluded by the same
+    hypothesis — at `W = 0` the claim `q ≥ m` is false, since `q = 0` while `m = 1`. -/
+theorem lemIntegerThresholds (b : Nat) (hb : 3 * b < W Node) :
+    W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧
+      2 * q Node - W Node > b := by
+  simp only [q, m]
+  omega
+
+end
+
+section
+variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
 
 /-! ## Section 3 — deterministic finality state machine -/
 
