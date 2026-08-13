@@ -277,17 +277,6 @@ theorem chained_of_blockPostState {σ : ChainState Node Root} (h : BlockPostStat
   | gen => exact chained_gen
   | step _ hst ih => exact ih.stateTransition hst
 
-/-- **Lemma 4** over a block post-state. Read aloud: the finalized block is the justified block or
-    an ancestor of it, the justified block is the latest block or an ancestor of it, and the
-    finalized height is at most the justified height, which is below the state height.
-
-    The four conjuncts read straight off `Chained`. The fifth, `targetOnChain`, is what carries
-    the induction and is not part of the paper's sentence. -/
-theorem finalizedBeforeJustified {σ : ChainState Node Root} (h : BlockPostState σ) :
-    σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h :=
-  let c := chained_of_blockPostState h
-  ⟨c.finJust, c.justLatest, c.hF_le_hj, c.hj_lt_h⟩
-
 /-- A finality action state is `Chained` too. `actionState` is `process_slots`, so this is
     `Chained.processSlots` applied to the block post-state it starts from — and it needs no
     threshold hypothesis, where routing the same claim through Lemma 3 would have needed one. -/
@@ -295,13 +284,21 @@ theorem chained_actionState {σ : ChainState Node Root} (h : BlockPostState σ) 
     Chained (actionState σ t) :=
   (chained_of_blockPostState h).processSlots t
 
-/-- **Lemma 4**'s second subject: the finality action state satisfies the same four claims. -/
-theorem finalizedBeforeJustifiedActionState {σ : ChainState Node Root} (h : BlockPostState σ)
-    (t : Time) :
+/-- **Lemma 4**, both of the subjects its sentence names. Read aloud: in a block post-state and in
+    any of its finality action states alike, the finalized block is the justified block or an
+    ancestor of it, the justified block is the latest block or an ancestor of it, and the finalized
+    height is at most the justified height, which is below the state height.
+
+    The four conjuncts read straight off `Chained`, twice. The fifth, `targetOnChain`, is what
+    carries the induction and is not part of the paper's sentence. -/
+theorem finalizedBeforeJustified {σ : ChainState Node Root} (h : BlockPostState σ) (t : Time) :
     let σa := actionState σ t
-    σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h :=
-  let c := chained_actionState h t
-  ⟨c.finJust, c.justLatest, c.hF_le_hj, c.hj_lt_h⟩
+    (σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧
+      (σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h) :=
+  let c := chained_of_blockPostState h
+  let ca := chained_actionState h t
+  ⟨⟨c.finJust, c.justLatest, c.hF_le_hj, c.hj_lt_h⟩,
+    ca.finJust, ca.justLatest, ca.hF_le_hj, ca.hj_lt_h⟩
 
 end
 

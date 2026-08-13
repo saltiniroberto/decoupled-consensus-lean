@@ -868,13 +868,20 @@ works here too, but `parent_preceq`'s closing `simp` does not — it leaves
 `p = p.mk s n a r ∨ p ∈ ancestors p`, and `List.mem_cons_of_mem _ (Preceq.refl p)` is what closes
 it. Everything else was re-derived and compiled first time.
 
-### Both of the lemma's subjects are covered, and one earlier note here was wrong
+### Both of the lemma's subjects are in one theorem, and one earlier note here was wrong
 
-The paper says "every reachable block post-state *and finality action state*".
-`lemFinalizedBeforeJustifiedActionState` is the second, three lines from `Chained.processSlots`,
-quantified over every `t` rather than the one action slot.
+The paper says "every reachable block post-state *and finality action state*", so
+`lemFinalizedBeforeJustified` is a conjunction of the two, quantified over every `t` rather than the
+one action slot Definition 20 fixes. The action-state half is three lines from
+`Chained.processSlots`.
 
-The note this replaces said that half would come "as a corollary of Lemma 3". That route works but
+**Roberto, 2026-08-14: one theorem, not two.** It landed first as two declarations, following
+Lemma 2, whose two sentences are two theorems. Wrong call here: Lemma 2 has two *sentences*, the
+second needing an assumption the first does not, while Lemma 4 has one sentence with two subjects
+and one set of assumptions. So `Lemmas.lean` carries exactly one theorem per such sentence, and
+`Proofs/` keeps whatever intermediate pieces the proof wants.
+
+The note this replaces said the action-state half would come "as a corollary of Lemma 3". That route works but
 drags in `PositiveWeight`, which nothing else in this lemma needs. `Chained` survives slot closure
 whatever the tallies hold, so the assumption never enters — the same distinction as above, in the
 one place where it would have cost something.

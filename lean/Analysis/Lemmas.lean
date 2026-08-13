@@ -21,9 +21,14 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1, 2, 3 and 4**, all proved, and Lemmas 2 and 4 over both of the two
-subjects their sentences name. Two notions came with Lemma 3: `BlockPostState` and Definition 20's
-`actionState`.
+**Present so far: Lemmas 1, 2, 3 and 4**, all proved and each covering its paper sentence in full.
+Two notions came with Lemma 3: `BlockPostState` and Definition 20's `actionState`.
+
+**One theorem per lemma sentence.** Where a sentence names two subjects — Lemma 4's block
+post-state and finality action state — they are conjuncts of one theorem, not two declarations. A
+second declaration is for a second *sentence*, as with Lemma 2's "consequently", which needs an
+assumption its first sentence does not, or for the paper's own alternative phrasing of a statement
+already made, as with `lemEmptySlotNoopFields`.
 
 ## The lemmas, and what each waits on
 
@@ -231,46 +236,31 @@ theorem lemEmptySlotNoopFields {Node Root : Type} [DecidableEq Node] [DecidableE
 /-- **Lemma 4** (`lem:finalized-before-justified`, lines 920–931): the finalized block precedes the
     justified and latest blocks.
 
-    Read aloud: the finalized block is the justified block or an ancestor of it, the justified
-    block is the latest block or an ancestor of it, and the finalized height is at most the
-    justified height, which is below the state height. Or, in the paper's own summary: finality
-    never moves off the current chain or ahead of its latest justification.
+    Read aloud: in a block post-state and in any of its finality action states alike, the finalized
+    block is the justified block or an ancestor of it, the justified block is the latest block or an
+    ancestor of it, and the finalized height is at most the justified height, which is below the
+    state height. Or, in the paper's own summary: finality never moves off the current chain or
+    ahead of its latest justification.
 
-    Proved in `Analysis/Proofs/Ancestry.lean`, from `Chained`: these four claims plus a fifth,
-    that a named target lies between `J` and `L`. The fifth is what makes the induction go through
-    and is not part of the paper's sentence — the paper asserts it in prose inside its own proof.
+    **Both subjects the paper names**, "every reachable block post-state *and finality action
+    state*", in one theorem — the second conjunct is the action state's. `actionState` is
+    Definition 20 (`def:finality-action-state`)'s state, which is `process_slots` of a block
+    post-state; quantifying over every `t` is stronger than the paper's sentence about the one
+    action slot, and implies it.
+
+    Proved in `Analysis/Proofs/Ancestry.lean`, from `Chained`: these four claims plus a fifth, that
+    a named target lies between `J` and `L`. The fifth is what makes the induction go through and is
+    not part of the paper's sentence — the paper asserts it in prose inside its own proof.
 
     **No threshold hypothesis, where Lemma 3 needs one.** `Chained` is preserved by every branch of
-    the height-event check whether or not the branch fires, so no quorum and no `PositiveWeight`
-    enters. Lemma 3's `Settled` is different: it is a claim that the branches *stay blocked*, which
-    fails outright when `q = 0`.
-
-    The paper names two subjects, "every reachable block post-state *and finality action state*".
-    This is the first; `lemFinalizedBeforeJustifiedActionState` below is the second. They are
-    separate declarations for the same reason Lemma 2's two sentences are: one reads against one
-    part of the paper's sentence without the other in the way. -/
+    the height-event check whether or not the branch fires, and survives slot closure whatever the
+    tallies hold, so no quorum and no `PositiveWeight` enters. Lemma 3's `Settled` is different: it
+    is a claim that the branches *stay blocked*, which fails outright when `q = 0`. -/
 theorem lemFinalizedBeforeJustified {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] {σ : ChainState Node Root} (h : BlockPostState σ) :
-    σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h :=
-  Proofs.finalizedBeforeJustified h
-
-/-- **Lemma 4**'s second subject: a finality action state satisfies the same four claims.
-
-    Read aloud: closing the slots up to any later time leaves the finalized block preceding the
-    justified block, which precedes the latest block, and leaves the heights ordered the same way.
-
-    `actionState` is Definition 20 (`def:finality-action-state`)'s state, which is `process_slots`
-    of a block post-state. Quantifying over every `t` is stronger than the paper's sentence about
-    the one action slot, and implies it.
-
-    **No threshold hypothesis here either**, unlike Lemma 3, which is about the same routine.
-    `Chained` survives slot closure whatever the tallies hold, so `PositiveWeight` is not needed —
-    whereas Lemma 3 claims the height-event branches do not fire, which is false when `q = 0`. -/
-theorem lemFinalizedBeforeJustifiedActionState {Node Root : Type} [DecidableEq Node]
-    [DecidableEq Root] [Electorate Node] [Params] {σ : ChainState Node Root}
-    (h : BlockPostState σ) (t : Time) :
+    [Electorate Node] [Params] {σ : ChainState Node Root} (h : BlockPostState σ) (t : Time) :
     let σa := actionState σ t
-    σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h :=
-  Proofs.finalizedBeforeJustifiedActionState h t
+    (σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧
+      (σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h) :=
+  Proofs.finalizedBeforeJustified h t
 
 end Decoupled
