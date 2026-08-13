@@ -1,4 +1,4 @@
-.PHONY: help check dev sorry sorries nodecide build cache cites mapping index paper submodules
+.PHONY: help check dev sorry sorries nodecide orphans build cache cites mapping index paper submodules
 
 # `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
 # which no amount of later work discharges. Every target refuses it.
@@ -22,6 +22,7 @@ help:
 	@echo
 	@echo 'make cache      - fetch prebuilt Mathlib artefacts (do this before a first build)'
 	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
+	@echo 'make orphans    - find .lean files under lean/ that no lean_lib glob claims'
 	@echo 'make build      - build this project'
 	@echo 'make cites      - check every citation of the paper against its .aux'
 	@echo 'make mapping    - regenerate mapping.html from MAPPING.md'
@@ -33,11 +34,27 @@ help:
 	@echo 'run against a built library.'
 
 # The strict target: no sorry, no admit, no native_decide, citations agree, build is green.
-check: nodecide sorry cites build
+check: nodecide orphans sorry cites build
 
 # The working target: everything `check` does except the sorry-free requirement, with the
 # outstanding count reported instead.
-dev: nodecide sorries cites build
+dev: nodecide orphans sorries cites build
+
+# A .lean file under lean/ that no lean_lib glob claims is always a mistake: Lake never reads
+# it, so it can be stale or outright broken while every other target stays green. That has
+# happened -- an editor tab left open on a path two layout moves out of date was saved and
+# recreated lean/specs/Decoupled/Spec/ as an untracked copy, invisible to the build.
+orphans:
+	@bad=`find lean -name '*.lean' \
+	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' \
+	    ! -path 'lean/Analysis.lean' ! -path 'lean/Analysis/*'`; \
+	if [ -n "$$bad" ]; then \
+		echo "$$bad"; \
+		echo 'FAIL: .lean under lean/ claimed by no lean_lib glob in lakefile.toml'; \
+		exit 1; \
+	else \
+		echo 'no orphaned .lean files'; \
+	fi
 
 nodecide:
 	@if grep -rnE '$(NEVER_RE)' $(SCAN); then \

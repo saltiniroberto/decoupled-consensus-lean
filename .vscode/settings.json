@@ -1,0 +1,16 @@
+{
+  // Autosave off for this workspace.
+  //
+  // Why, concretely: on 2026-08-13 a tab still open on `lean/specs/Decoupled/Spec/…`, a path
+  // two layout moves out of date, was saved automatically and recreated that whole directory
+  // chain as an untracked stale copy. Nothing was lost that time, because the file it wrote
+  // was in no `lean_lib` glob and so invisible to `lake build` -- which is also why it went
+  // unnoticed while `make check` stayed green.
+  //
+  // The same tab open on a file that still exists would have reverted real work instead. This
+  // repository moves files often (the specification changed layout three times in one day) and
+  // carries generated files that `make index` and `make mapping` rewrite, so a buffer holding a
+  // previous version is a normal state here rather than a rare one. Saving is therefore worth
+  // making deliberate.
+  "files.autoSave": "off"
+}

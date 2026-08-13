@@ -499,8 +499,11 @@ signed by `p`. **Decide it there rather than inheriting this.**
 **Scope discipline in `Basic.lean`.** Only what the two figures read. `Params` carries `K` and
 `Ddebt` and their two inequalities and nothing else — no `slotStart`, which belongs to
 Definition 24 (`def:total-raw-replay`). No `assignedProposer`, no state-root function, no
-tiebreak hash: Figures 1 and 2 read none of them. `m`, `StrictMajority` and `∼` are in, unused,
-because each is part of a definition that is otherwise needed.
+tiebreak hash: Figures 1 and 2 read none of them. `m`, `StrictMajority`, `∼` and `≺` are in,
+unused, because each is part of a definition that is otherwise needed. Measured 2026-08-13 by a
+reference scan over the compiled environment: in the two figure files `⪯` appears 4 times and
+`w(·)` 3 times, while `≺` and `∼` appear 0 times. `≺` joined that list when the nine lemmas were
+withdrawn — Lemma 7's `T ≺ B` was its only user.
 
 **Two deviations from the figures' own spelling**, both noted in the files:
 
@@ -647,6 +650,33 @@ in the legend and in `mapping_html.py` for the first lemma that lands.
 re-check; this is the first concrete case where it hides something a reader wants. Not fixed, so
 that `INDEX.tsv` stays a search key rather than a signature — but do not read a parameterized
 `def : Prop` row as complete.
+
+### An editor tab resurrected a dead path, and nothing caught it
+
+2026-08-13. `lean/specs/Decoupled/Spec/Fig2AttestationProcessing.lean` reappeared as an untracked
+file, recreating a directory chain two layout moves out of date. Cause: a VS Code tab still open
+on the old path, saved by autosave.
+
+**Nothing in the build noticed, and could not have.** `srcDir` is `lean` with globs `Spec`,
+`Spec.+`, `Analysis`, `Analysis.+`; that path is module `specs.Decoupled.Spec.…`, which matches
+none of them, so Lake never read it. `make check` stayed green with a stale, uncompilable file in
+the tree. Its content differed from the tracked file in exactly two lines, both the import and a
+docstring path from before the moves, which is what made it easy to mistake for the real one.
+
+Two fixes, both landed:
+
+* `.vscode/settings.json` sets `files.autoSave: "off"` for this workspace. The hazard is a
+  property of this repository rather than of one machine — the specification changed layout three
+  times in one day, and `make index` and `make mapping` rewrite committed files — so a buffer
+  holding a previous version is a normal state here. Gitignore `.vscode/` instead if that setting
+  should stay personal.
+* `make orphans`, in both `check` and `dev`: any `.lean` under `lean/` that is not `Spec.lean`,
+  `Analysis.lean`, or under `Spec/` or `Analysis/` fails the target. Tested both ways — it passes
+  on the clean tree and catches a planted file.
+
+The near miss worth remembering: the same tab open on a file that still exists would have reverted
+real work rather than adding a dead copy, silently, exactly as `CLAUDE.local.md`'s Commits section
+warns.
 
 ## Next
 
