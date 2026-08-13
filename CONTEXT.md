@@ -806,26 +806,59 @@ to know. And `actionState` is `processSlots`, sitting in `Analysis/Proofs/SlotCl
 Definition 20 (`def:finality-action-state`) is not modelled, so the name is the paper's σ_a and
 nothing more.
 
+## 2026-08-14 — Lemma 4 written down, proof outstanding
+
+`lemFinalizedBeforeJustified` in `Analysis/Lemmas.lean`, proved by a one-line call into
+`Analysis/Proofs/Ancestry.lean`, where the proof is a `sorry`. That is the project's only one, so
+`make dev` reports 1 outstanding and `make check` fails, which is the intended signal.
+
+`Ancestry.lean` is a new file. The paper's own proof of this lemma calls its content "ancestry and
+height inequalities", which is where the name comes from.
+
+**What the statement says.** For a block post-state, `F ⪯ J ⪯ L` and `h_F ≤ h_j < h`. No
+`PositiveWeight` and no quorum reasoning: every branch of the height-event check preserves these
+whether or not it fires, so thresholds do not enter.
+
+**What the proof is missing.** Genesis is immediate. The step needs a further invariant about the
+named target, which the paper asserts in prose inside its own proof (lines 939–940, "the
+justification branch sets `J = T_h`, which lies on the current chain and already contains the
+previous `J`"):
+
+    σ.T_h = some T → σ.J ⪯ T ∧ T ⪯ σ.L
+
+So this will be proved from a strengthened invariant in the same style as `Settled`, with the
+argument for the new conjuncts coming from the two writers of `T_h` — `process_slot`, which writes
+`some σ.L`, and `advance_height`, which writes `⊥`. The `J ⪯ L` conjunct additionally needs
+`process_block`'s `parent = σ.L` check, which `processBlock_state` makes usable.
+
+**Narrower than the paper in one respect, deliberately.** The paper says "every reachable block
+post-state *and finality action state*". The second half is a corollary of Lemma 3 once this is
+proved — `actionState` moves only `s` and `T_h`, so it moves none of the six fields named here —
+and it is left for then rather than guessed at now.
+
 ## Next
 
-1. **The increment half of Lemma 6 (`lem:height-progression`) first**, being the only statement of
-   the nine that needs nothing the specification lacks: `(advanceHeight σ justify start).h = σ.h + 1`.
-   One commit, with its `MAPPING.md` row marked 🔨 and a note that it is the increment half only.
-   `make check` will then fail on its `sorry`, which is the intended signal.
-2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Lemma 7
+1. **Prove Lemma 4**, which is written down and `sorry`. The section above says what it needs: the
+   `T_h` conjuncts, and `processBlock_state` for `J ⪯ L`. Then its finality-action-state half, two
+   lines from Lemma 3.
+2. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
+   lacks: `(advanceHeight σ justify start).h = σ.h + 1`. Its `MAPPING.md` row gets 🔨 and a note
+   that it is the increment half only, "requires a certificate" being the half that waits on
+   Definition 21.
+3. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Lemma 7
    is the one statable in full today; Lemmas 4, 6 and 8 are statable in part. Read the
    `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
    the paper's imperative shape, so `sorry` is not the only obstacle.
-3. **Model what the rest wait on**, in the order that unblocks most:
+4. **Model what the rest wait on**, in the order that unblocks most:
    Definition 21 (`def:certificates`) is needed by four results, Definition 11 (`def:slashing`)
    by two, Definition 20 (`def:finality-action-state`) by three, and Assumption 1's `b` with
    `3b < W` by one. Each one landed turns a `def … : Prop` into a `theorem`, and each is a
    modelling decision to record here.
-4. The parts of Lemmas 4, 6, 8 and 10 that are currently narrower than the paper's sentence, and
+5. The parts of Lemmas 4, 6, 8 and 10 that are currently narrower than the paper's sentence, and
    Lemma 9, which needs a formulation decided before it can be written at all.
-5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+6. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-7. Figures 3 to 5, and the definitions Sections 5 onward add.
+7. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+8. Figures 3 to 5, and the definitions Sections 5 onward add.
