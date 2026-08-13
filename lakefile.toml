@@ -1,5 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
+defaultTargets = ["DecoupledSpec"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -21,10 +22,12 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.32.2"
 
-# This project's own sources. Commented out until there are any — a glob with no matching
-# module makes `lake build` fail rather than do nothing. Uncomment with the first file,
-# `Decoupled.lean` plus `Decoupled/`.
-#
-# [[lean_lib]]
-# name = "Decoupled"
-# globs = ["Decoupled", "Decoupled.+"]
+# This project's own sources. `srcDir` is `lean/specs`, so the specification's modules are
+# `Decoupled.Spec.…` and its files are `lean/specs/Decoupled/Spec/…`. The analysis will be a
+# second `lean_lib` over `lean/analysis`, keeping the two halves in separate directories
+# while both stay under the one `Decoupled` module root that `tools/decl_index.lean` filters
+# on.
+[[lean_lib]]
+name = "DecoupledSpec"
+srcDir = "lean/specs"
+globs = ["Decoupled.Spec", "Decoupled.Spec.+"]

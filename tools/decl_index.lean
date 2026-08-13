@@ -12,9 +12,8 @@ when the count is zero.
 
 **How it indexes anything.** `collect` walks the compiled environment and keeps the
 declarations whose defining module starts with `modPrefix`. A module is in that environment
-only if this file imports it. So with the imports below commented out the answer is
-necessarily zero rows, and the one-line change that fixes that is uncommenting them once
-`Decoupled/` exists.
+only if this file imports it, so the import list below is what the index covers: add a line
+when a new module root lands.
 
 Not part of any `lean_lib`, so `lake build` never sees it. Self-contained by the usual rule for
 independent attempts: a project that wants an index should copy this and let the copy disagree,
@@ -22,7 +21,9 @@ rather than sharing it.
 -/
 import Lean
 
--- Uncomment with the first statements, one line per statement file, and the index fills in.
+-- One line per module root the index should cover. `Decoupled.Spec` pulls in every figure
+-- file and the vocabulary they read; uncomment the analysis ones with the first statements.
+import Decoupled.Spec
 -- import Decoupled.Analysis.Lemmas
 -- import Decoupled.Analysis.Theorems
 -- import Decoupled.Analysis.Corollaries
