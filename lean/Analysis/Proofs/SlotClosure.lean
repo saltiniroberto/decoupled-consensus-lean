@@ -261,6 +261,27 @@ theorem processAttestations_target {σ : ChainState Node Root}
       exact ⟨by rw [h1, processAttestation_target a A hT],
              by rw [h2, processAttestation_T_h]⟩
 
+/-- `T_h` survives the fold whatever the attestations say, which is what lets the block phase
+    be analysed without knowing whether a target is named. -/
+theorem processAttestations_T_h {σ : ChainState Node Root}
+    (as : List (Attestation Node Root)) (A : Blk Node Root) :
+    (processAttestations σ as A).T_h = σ.T_h := by
+  induction as generalizing σ with
+  | nil => rfl
+  | cons a as ih => rw [processAttestations_cons, ih, processAttestation_T_h]
+
+/-- The fold preserves `emptyTarget`. Read: if the fold left no target named, then it set no
+    target bit either, so the target tally is still empty. -/
+theorem processAttestations_emptyTarget {σ : ChainState Node Root}
+    (as : List (Attestation Node Root)) (A : Blk Node Root)
+    (hET : σ.T_h = ⊥ → σ.Qtarget = ∅) :
+    (processAttestations σ as A).T_h = ⊥ → (processAttestations σ as A).Qtarget = ∅ := by
+  intro h
+  rw [processAttestations_T_h] at h
+  obtain ⟨hp, -⟩ := processAttestations_target as A h
+  simp only [ChainState.Qtarget, hp]
+  exact hET h
+
 /-! ### `advance_height` resets both tallies and the target
 
 Which is what re-establishes `Settled` after a height transition: with `T_h` back to `⊥` and both
@@ -362,31 +383,105 @@ theorem settled_advanceHeight {σ : ChainState Node Root} (hq : 0 < q Node)
   · intro hw; rw [advanceHeight_Qprog] at hw; exact not_quorum_empty hq hw
   · intro _; exact advanceHeight_Qtarget σ j st
 
+/-- **The height-event check lands in a `Settled` state, whatever it does.** Read: after
+    `process_height_events` all three of Definition 18's branches are blocked, and the target
+    tally is empty if no target is named — and the only thing needed of the state beforehand is
+    that last part.
+
+    The three branches close three different ways. A target or progress transition is
+    `settled_advanceHeight`. The fall-through is `Settled` by construction, taking the negations
+    of the three conditions that did not fire. And whenever the finality sub-step *did* fire, the
+    finality branch is blocked afterwards for a reason of its own: that step sets `h_F ← h_j`, so
+    `h_j > h_F` is `h_j > h_j`.
+
+    Two things make the tactic work, both measured. `Id.run` has to be in the `simp only` set or
+    the goals keep a `pure (…).run` wrapper and `split_ifs` cannot see the `if`s underneath. And
+    the six leaves are closed by `first | …` on hypotheses found by `assumption` rather than by
+    name: `split_ifs` discharges the branches that contradict, so which name lands on which leaf
+    is not stable. -/
+theorem settled_processHeightEvents {σ : ChainState Node Root} (hq : 0 < q Node) (st : Time)
+    (hET : σ.T_h = ⊥ → σ.Qtarget = ∅) : Settled (processHeightEvents σ st) := by
+  simp only [processHeightEvents, Id.run]
+  split_ifs <;>
+    first
+      | exact settled_advanceHeight hq _ _
+          (by rintro ⟨hlt, -, -⟩; exact absurd hlt (Nat.lt_irrefl _))
+      | exact settled_advanceHeight hq _ _ (by assumption)
+      | exact ⟨by rintro ⟨hlt, -, -⟩; exact absurd hlt (Nat.lt_irrefl _),
+               by assumption, by assumption, hET⟩
+      | exact ⟨by assumption, by assumption, by assumption, hET⟩
+
+/-! ### The two figures' `invalid` branches, inverted
+
+Both `process_block` and `state_transition` return `invalid` on a failed check, so a hypothesis
+`… = .state σ'` says which branch ran. `split_ifs at h` and `split at h` discharge the
+contradictory branches themselves — `pure invalid = .state σ'` is closed by `injection` — so what
+is left is the successful path, in the shape the invariant needs.
+-/
+
+/-- On the successful path `process_block` is the attestation fold, run on the state whose latest
+    block is already `B`, against the parent as the ancestor argument. -/
+theorem processBlock_state {σ σ' : ChainState Node Root} {B : Blk Node Root}
+    (h : processBlock σ B = .state σ') :
+    σ' = processAttestations { σ with L := B } B.attestations σ.L := by
+  simp only [processBlock, Id.run] at h
+  split_ifs at h
+  injection h with h
+  exact h.symm
+
+/-- `process_block` preserves `emptyTarget`. The `L ← B` update is invisible to it: `T_h` and the
+    target tally are read off the other fields, so the fold's own lemma is the whole proof. -/
+theorem processBlock_emptyTarget {σ σ' : ChainState Node Root} {B : Blk Node Root}
+    (h : processBlock σ B = .state σ') (hET : σ.T_h = ⊥ → σ.Qtarget = ∅) :
+    σ'.T_h = ⊥ → σ'.Qtarget = ∅ := by
+  rw [processBlock_state h]
+  exact processAttestations_emptyTarget _ _ hET
+
+/-- On the successful path `state_transition` closes the slots up to `B.slot`, processes the block,
+    and ends in `process_height_events`. -/
+theorem stateTransition_state {σ σ' : ChainState Node Root} {B : Blk Node Root}
+    (h : stateTransition σ B = .state σ') :
+    ∃ σ₂, processBlock (processSlots σ B.slot) B = .state σ₂ ∧
+      σ' = processHeightEvents σ₂ B.slot := by
+  simp only [stateTransition, Id.run] at h
+  split_ifs at h
+  split at h
+  · injection h
+  · rename_i σ₂ hb
+    injection h with h
+    exact ⟨σ₂, hb, h.symm⟩
+
 /-! ## Lemma 3 -/
 
-/-- Every block post-state is `Settled`.
+/-- **A whole transition lands in a `Settled` state.** This is the split the invariant needs, and
+    the three phases each play a different part:
 
-    **Outstanding**, and it is the only gap left in Lemma 3. Everything it composes now exists:
+    * `process_slots` preserves all of `Settled` (`closeSlots_of_settled`);
+    * `process_block` preserves `emptyTarget` and nothing else, because building the target and
+      progress tallies is what that routine is for;
+    * `process_height_events` re-establishes the rest from `emptyTarget` alone
+      (`settled_processHeightEvents`).
 
-    * `closeSlots_of_settled` — `process_slots` preserves the invariant;
-    * `processAttestations_target` — `process_block` preserves `emptyTarget`, and only that;
-    * `settled_advanceHeight` — a height transition lands settled.
+    So `Settled` is not preserved phase by phase. Only `emptyTarget` is threaded end to end, and
+    the last phase rebuilds the other three conjuncts. -/
+theorem settled_stateTransition {σ σ' : ChainState Node Root} (hs : Settled σ) (hq : 0 < q Node)
+    {B : Blk Node Root} (h : stateTransition σ B = .state σ') : Settled σ' := by
+  obtain ⟨σ₂, hb, rfl⟩ := stateTransition_state h
+  obtain ⟨-, -, -, hs₁⟩ := closeSlots_of_settled (B.slot - σ.s) hs hq
+  rw [← processSlots_eq_closeSlots] at hs₁
+  exact settled_processHeightEvents hq _ (processBlock_emptyTarget hb hs₁.emptyTarget)
 
-    Two steps remain. First, `Settled (processHeightEvents σ st)` from `emptyTarget` alone, by cases
-    on that routine's three branches: a target or progress branch reduces to
-    `settled_advanceHeight`, and a no-branch case is `Settled` directly, its `noFinalize` coming
-    either from the finality sub-step having set `h_F = h_j` or from that branch's condition having
-    been false. Then those compose along `state_transition`'s three phases, and the induction over
-    `BlockPostState` closes this, with `settled_gen` at the base.
+/-- **Every block post-state is `Settled`.** The induction over `BlockPostState`: `settled_gen` at
+    genesis, `settled_stateTransition` at each accepted block.
 
-    **Measured obstacle for the branch analysis**: after `simp only [processHeightEvents]` the goals
-    carry `pure (…).run` wrappers and `split_ifs` cannot see the `if`s underneath. `Id.run` has to
-    join the `simp only` set — the skill's section 16 — and the no-branch case then needs the
-    record-projection bridge (`{σ with F := …}.Qtarget = σ.Qtarget := rfl`) that `settled_setTarget`
-    already uses. -/
+    `0 < q` comes from `PositiveWeight` here, at the one place the assumption is needed; the
+    machinery above takes it as a plain hypothesis so that it does not depend on where the
+    assumption is defined. -/
 theorem settled_of_blockPostState [PositiveWeight Node] {σ : ChainState Node Root}
     (h : BlockPostState σ) : Settled σ := by
-  sorry
+  induction h with
+  | gen => exact settled_gen
+  | step _ hst ih => exact settled_stateTransition ih q_pos hst
 
 /-- Lemma 3 (`lem:empty-slot-noop`), as a record equation: closing slots up to `t` moves `s` to
     `max σ.s t` and may fill `T_h` with `σ.L`, and moves nothing else.
