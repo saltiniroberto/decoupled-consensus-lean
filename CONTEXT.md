@@ -344,54 +344,72 @@ stay representable.
 
 and it is the nesting through `List` and `Option` that causes it, not the `mutual` — the two
 are unavoidable together, since a block carries attestations and an attestation names blocks.
-So equality is classical: the four instances are `Classical.propDecidable`, and they are the
-**only** source of `noncomputable` in the whole spec.
+Confirmed by de-nesting: replacing `List (Attestation …)` with a mutual `AttList` and
+`Option (Blk …)` with a mutual `OptBlk` makes the same `deriving` line succeed, with no axioms
+at all.
 
-**Verified 2026-08-13, and more precise than "every routine reached by `⪯`."** Three distinct
-instances force the keyword, and each does so on its own — measured by stripping a routine down
-to one test at a time:
+**Resolved 2026-08-13. The procedure is written out, and nothing in the spec is
+`noncomputable`.** The four `Classical.propDecidable` instances are gone. `Basic.lean` now
+carries, under "Decidable equality, written out": six mutual `Bool` functions — `blkBeq`,
+`attBeq`, `attListBeq`, `optBlkBeq`, `heightPairBeq`, `finalityPairBeq` — then six mutual
+soundness theorems `… = true ↔ a = b`, then the four instances via `decidable_of_iff`.
+Termination is inferred, with no `termination_by`. `attListBeq` and `optBlkBeq` carry the nesting
+and are exactly what the deriving handler will not generate.
 
-| The test | The instance it needs |
+Equality between blocks was never undecidable. A block is a finite tree and comparing two is a
+structural recursion; `propDecidable` has type `(a : Prop) → Decidable a` and asserts a decision
+exists without providing one. So the old `noncomputable` traced to a missing deriving handler
+plus a stopgap, not to anything about the model. Worth keeping in mind when reading "equality is
+classical" in an older note: it is easy to misread as the stronger claim.
+
+Alternative rejected: de-nest the datatype, which is three lines of `deriving` and no proofs.
+`List` is what Definition 5's "finite canonically ordered set of signed attestations" reads as,
+and `Option` is where `⊥` for `head` comes from, so that bends the model to suit the tooling.
+
+**It runs.** `stateTransition` on `ChainState.gen` and a slot-1 block whose three attestations
+target genesis at height 1 evaluates to `s=1 h=2 h_j=1 h_F=0 |P|=0`; a block that does not extend
+the latest one evaluates to `invalid`; `decide (.genesis ⪯ b1)` is `true`. Executing the figures
+is not a goal of this project, but it is now available as a check that a rendering is not vacuous.
+
+**What it cost: `[DecidableEq Root]`.** A block carries a `claimedRoot`, so deciding block
+equality decides root equality. The three `DecidableRel` instances and both figure files'
+`variable` lines now assume it. No routine body changed.
+
+**`by decide` still does not work, and did not before.** The mutual block compiles through
+`blkBeq._mutual` over a `PSum` — well-founded, not structural — so `blkBeq .genesis .genesis` is
+not definitionally `true`, and `by decide` reports "did not reduce to `isTrue` or `isFalse`".
+Proofs go through the equation lemmas, `simp [blkBeq]`, which is what the soundness theorems do.
+Nothing reduced under `propDecidable` either, so this is not a regression. De-nesting is the only
+route that would buy reduction, and it was rejected above.
+
+#### What used to force `noncomputable`, kept as the map of the dependency
+
+Measured before the fix by stripping a routine down to one test at a time. Three instances forced
+it, and each did so on its own:
+
+| The test | The instance it needed |
 | --- | --- |
 | `σ.F ⪯ σ.J` | `instDecidableRelBlkPreceq` |
 | `a.finalityPair = .commit σ.h_j σ.J` | `instDecidableEqFinalityPair` |
 | `T = Th`, and `σ.T_h = ⊥` through `Option.decEq` | `instDecidableEqBlk` |
 
-So `⪯` is not the only path. `processSlot` uses no `⪯` at all; it is `σ.T_h = ⊥` on line 739 of
-the figure that forces it. A routine with no block comparison — `Time` arithmetic, `Finset Node`
-inserts, array writes — compiles without the keyword.
+So `⪯` was never the only path, and "every routine reached by `⪯`" was too narrow: `processSlot`
+uses no `⪯` at all, and it was `σ.T_h = ⊥` on line 739 of the figure. The mechanism is that
+`Preceq` returns a `Prop`, so `if σ.F ⪯ σ.J then` elaborates to `ite`, whose `Decidable` argument
+the elaborator supplies — printed explicitly it is
+`@ite Nat (@Preceq Node Root a b) (@instDecidableRelBlkPreceq Node Root a b) 1 0`. The instance is
+in the term, never in the source. `ancestors` was always clean and depends on no axioms: walking
+the chain never compared blocks.
 
-`nonjustifiable`, `ChainState.Qtarget`, `ValidInclusion`, `ancestors` and the `Blk` projections
-are all clean; `ancestors` depends on no axioms at all. The ancestry *walk* is computable, it is
-deciding block equality that is not.
+`advanceHeight` never needed the keyword at all — `if let some T := justify` is a pattern match,
+not a comparison. Its keyword was dropped separately, before this work.
 
-**`advanceHeight` never needed the keyword, and no longer carries it.** Its body tests no block
-equality: `if let some T := justify` is a pattern match, not a comparison. `#print axioms` gives
-`[propext, Quot.sound]` and no `Classical.choice`. Dropped 2026-08-13; `make check` stayed green.
-That leaves seven `noncomputable def`s, three in `Fig1SlotReplay.lean` and four in
-`Fig2AttestationProcessing.lean`, and every one of the seven is forced.
-
-**`#print axioms` does not decide computability.** A `Classical.choice` sitting only inside erased
-proof terms costs nothing; what blocks compilation is choice in *data* position, which is what
-`propDecidable` does — it builds the `Decidable` value itself out of choice. Whether Lean demands
-the `noncomputable` keyword is the test, not the axiom list. Measured while prototyping the
-hand-written equality below, where the instance reports `Classical.choice` and is still computable.
-
-**A hand-written mutual decidable equality works.** Prototyped 2026-08-13, not merely conjectured;
-neither version is in the project, since nothing executes the figures.
-
-* Datatype unchanged, about 110 lines: six mutual `Bool`-valued functions — one per type plus
-  `attListBeq` and `blkOptBeq` for the nesting, which is exactly what the derive handler will not
-  generate — then six mutual soundness theorems `beq a b = true ↔ a = b`, then `decidable_of_iff`.
-  Termination inference accepted the block with no `termination_by`. It is computable and `#eval`
-  runs it. Cost: the block compiles through `blkBeq._mutual` over a `PSum`, so it does **not**
-  kernel-reduce — `rfl` fails on `blkBeq .genesis .genesis = true` and `by decide` fails with "did
-  not reduce to `isTrue` or `isFalse`". Proofs go through the equation lemmas instead. Not a
-  regression: nothing reduces under `propDecidable` either.
-* Replacing `List (Attestation …)` with a mutual `AttList` and `Option (Blk …)` with a mutual
-  `OptBlk` makes `deriving DecidableEq` succeed outright, with **no axioms at all** and working
-  `by decide`. This is the direct confirmation that the nesting is the obstruction. Cost: the
-  `List`/`Option` API on `attestations` and `head`, and `⊥` for `head` coming free.
+**`#print axioms` does not decide computability.** Choice inside erased proof terms costs nothing;
+what blocks compilation is choice in *data* position, which is what `propDecidable` did — it built
+the `Decidable` value itself out of choice. Whether Lean demands the keyword is the test, not the
+axiom list. A live example survives the fix: `processSlots` and `stateTransition` still report
+`Classical.choice` and both run, because core Lean's `while` does — `Lean.Loop.forIn` itself
+depends on it. The other six routines report `[propext, Quot.sound]`.
 
 **The two pairs are inductive types**, not pairs of `Option`s. Definition 8
 (`def:fg-message`) admits `(h, T)`, `(h, ⊥)` and `(⊥, ⊥)` and not `(⊥, T)`; an inductive type

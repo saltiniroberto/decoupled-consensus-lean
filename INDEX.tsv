@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 69 declarations.
+# 81 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -16,57 +16,69 @@
 #
 # An earlier formalization of the same paper has its own index of 975 declarations.
 # It is not in this repository; REFERENCES_LOCAL.md says where to read it.
-inductive	Attestation	Decoupled.Spec.Basic:188	Type	
-def	Attestation.finalizeHeight	Decoupled.Spec.Basic:292	Option ℕ	Attestation Node Root
-def	Attestation.finalizeTarget	Decoupled.Spec.Basic:298	Option (Blk Node Root)	Attestation Node Root
-def	Attestation.height	Decoupled.Spec.Basic:278	Option ℕ	Attestation Node Root
-def	Attestation.target	Decoupled.Spec.Basic:285	Option (Blk Node Root)	Attestation Node Root
-inductive	Blk	Decoupled.Spec.Basic:173	Type	
-def	Blk.attestations	Decoupled.Spec.Basic:263	List (Attestation Node Root)	Blk Node Root
-def	Blk.claimedRoot	Decoupled.Spec.Basic:268	Option Root	Blk Node Root
-def	Blk.ctorElim	Decoupled.Spec.Basic:173	motive_1 t	Blk Node Root → Sort u | ℕ | Blk Node Root | ctorIdx = t.ctorIdx | Blk.ctorElimType ctorIdx
+inductive	Attestation	Decoupled.Spec.Basic:189	Type	
+def	Attestation.finalizeHeight	Decoupled.Spec.Basic:428	Option ℕ	Attestation Node Root
+def	Attestation.finalizeTarget	Decoupled.Spec.Basic:434	Option (Blk Node Root)	Attestation Node Root
+def	Attestation.height	Decoupled.Spec.Basic:414	Option ℕ	Attestation Node Root
+def	Attestation.target	Decoupled.Spec.Basic:421	Option (Blk Node Root)	Attestation Node Root
+inductive	Blk	Decoupled.Spec.Basic:174	Type	
+def	Blk.attestations	Decoupled.Spec.Basic:399	List (Attestation Node Root)	Blk Node Root
+def	Blk.claimedRoot	Decoupled.Spec.Basic:404	Option Root	Blk Node Root
+def	Blk.ctorElim	Decoupled.Spec.Basic:174	motive_1 t	Blk Node Root → Sort u | ℕ | Blk Node Root | ctorIdx = t.ctorIdx | Blk.ctorElimType ctorIdx
 def	Blk.ctorElimType	Decoupled.Spec.Basic	Sort (max 1 u)	Blk Node Root → Sort u | ℕ
-def	Blk.genesis.elim	Decoupled.Spec.Basic:182	motive_1 t	Blk Node Root → Sort u | Blk Node Root | t.ctorIdx = 0 | motive_1 Blk.genesis
-def	Blk.mk.elim	Decoupled.Spec.Basic:184	motive_1 t	Blk Node Root → Sort u | Blk Node Root | t.ctorIdx = 1 | (parent : Blk Node Root) → (slot : ℕ) → (proposer : Node) → (attestations : List (Attestation Node Root)) → (claimedRoot : Root) → motive_1 (parent.mk slot proposer attestations claimedRoot)
-def	Blk.parent	Decoupled.Spec.Basic:247	Option (Blk Node Root)	Blk Node Root
-def	Blk.proposer	Decoupled.Spec.Basic:258	Option Node	Blk Node Root
-def	Blk.slot	Decoupled.Spec.Basic:252	ℕ	Blk Node Root
-inductive	ChainState	Decoupled.Spec.Basic:365	Type	
-def	ChainState.Qprog	Decoupled.Spec.Basic:427	Finset Node	ChainState Node Root
-def	ChainState.Qtarget	Decoupled.Spec.Basic:421	Finset Node	ChainState Node Root
-def	ChainState.gen	Decoupled.Spec.Basic:402	ChainState Node Root	
-def	Compatible	Decoupled.Spec.Basic:333	Prop	Blk Node Root | Blk Node Root
-inductive	Electorate	Decoupled.Spec.Basic:89	Type	
-inductive	FinalityPair	Decoupled.Spec.Basic:215	Type	
-def	FinalityPair.commit.elim	Decoupled.Spec.Basic:218	motive_4 t	FinalityPair Node Root → Sort u | FinalityPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_4 (FinalityPair.commit h T)
-def	FinalityPair.ctorElim	Decoupled.Spec.Basic:215	motive_4 t	FinalityPair Node Root → Sort u | ℕ | FinalityPair Node Root | ctorIdx = t.ctorIdx | FinalityPair.ctorElimType ctorIdx
+def	Blk.genesis.elim	Decoupled.Spec.Basic:183	motive_1 t	Blk Node Root → Sort u | Blk Node Root | t.ctorIdx = 0 | motive_1 Blk.genesis
+def	Blk.mk.elim	Decoupled.Spec.Basic:185	motive_1 t	Blk Node Root → Sort u | Blk Node Root | t.ctorIdx = 1 | (parent : Blk Node Root) → (slot : ℕ) → (proposer : Node) → (attestations : List (Attestation Node Root)) → (claimedRoot : Root) → motive_1 (parent.mk slot proposer attestations claimedRoot)
+def	Blk.parent	Decoupled.Spec.Basic:383	Option (Blk Node Root)	Blk Node Root
+def	Blk.proposer	Decoupled.Spec.Basic:394	Option Node	Blk Node Root
+def	Blk.slot	Decoupled.Spec.Basic:388	ℕ	Blk Node Root
+inductive	ChainState	Decoupled.Spec.Basic:507	Type	
+def	ChainState.Qprog	Decoupled.Spec.Basic:569	Finset Node	ChainState Node Root
+def	ChainState.Qtarget	Decoupled.Spec.Basic:563	Finset Node	ChainState Node Root
+def	ChainState.gen	Decoupled.Spec.Basic:544	ChainState Node Root	
+def	Compatible	Decoupled.Spec.Basic:473	Prop	Blk Node Root | Blk Node Root
+inductive	Electorate	Decoupled.Spec.Basic:90	Type	
+inductive	FinalityPair	Decoupled.Spec.Basic:216	Type	
+def	FinalityPair.commit.elim	Decoupled.Spec.Basic:219	motive_4 t	FinalityPair Node Root → Sort u | FinalityPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_4 (FinalityPair.commit h T)
+def	FinalityPair.ctorElim	Decoupled.Spec.Basic:216	motive_4 t	FinalityPair Node Root → Sort u | ℕ | FinalityPair Node Root | ctorIdx = t.ctorIdx | FinalityPair.ctorElimType ctorIdx
 def	FinalityPair.ctorElimType	Decoupled.Spec.Basic	Sort (max 1 u)	FinalityPair Node Root → Sort u | ℕ
-def	FinalityPair.empty.elim	Decoupled.Spec.Basic:220	motive_4 t	FinalityPair Node Root → Sort u | FinalityPair Node Root | t.ctorIdx = 1 | motive_4 FinalityPair.empty
-inductive	HeightPair	Decoupled.Spec.Basic:203	Type	
-def	HeightPair.ctorElim	Decoupled.Spec.Basic:203	motive_3 t	HeightPair Node Root → Sort u | ℕ | HeightPair Node Root | ctorIdx = t.ctorIdx | HeightPair.ctorElimType ctorIdx
+def	FinalityPair.empty.elim	Decoupled.Spec.Basic:221	motive_4 t	FinalityPair Node Root → Sort u | FinalityPair Node Root | t.ctorIdx = 1 | motive_4 FinalityPair.empty
+inductive	HeightPair	Decoupled.Spec.Basic:204	Type	
+def	HeightPair.ctorElim	Decoupled.Spec.Basic:204	motive_3 t	HeightPair Node Root → Sort u | ℕ | HeightPair Node Root | ctorIdx = t.ctorIdx | HeightPair.ctorElimType ctorIdx
 def	HeightPair.ctorElimType	Decoupled.Spec.Basic	Sort (max 1 u)	HeightPair Node Root → Sort u | ℕ
-def	HeightPair.empty.elim	Decoupled.Spec.Basic:211	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 2 | motive_3 HeightPair.empty
-def	HeightPair.target.elim	Decoupled.Spec.Basic:207	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_3 (HeightPair.target h T)
-def	HeightPair.timeout.elim	Decoupled.Spec.Basic:209	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 1 | (h : ℕ) → motive_3 (HeightPair.timeout h)
-inductive	Params	Decoupled.Spec.Basic:156	Type	
-def	Prec	Decoupled.Spec.Basic:325	Prop	Blk Node Root | Blk Node Root
-def	Preceq	Decoupled.Spec.Basic:316	Prop	Blk Node Root | Blk Node Root
-def	Quorum	Decoupled.Spec.Basic:131	Prop	Finset Node
-def	StrictMajority	Decoupled.Spec.Basic:141	Prop	Finset Node
-inductive	TransitionResult	Decoupled.Spec.Basic:451	Type	
-def	TransitionResult.ctorElim	Decoupled.Spec.Basic:451	motive t	TransitionResult Node Root → Sort u | ℕ | TransitionResult Node Root | ctorIdx = t.ctorIdx | TransitionResult.ctorElimType ctorIdx
+def	HeightPair.empty.elim	Decoupled.Spec.Basic:212	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 2 | motive_3 HeightPair.empty
+def	HeightPair.target.elim	Decoupled.Spec.Basic:208	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_3 (HeightPair.target h T)
+def	HeightPair.timeout.elim	Decoupled.Spec.Basic:210	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 1 | (h : ℕ) → motive_3 (HeightPair.timeout h)
+inductive	Params	Decoupled.Spec.Basic:157	Type	
+def	Prec	Decoupled.Spec.Basic:465	Prop	Blk Node Root | Blk Node Root
+def	Preceq	Decoupled.Spec.Basic:453	Prop	Blk Node Root | Blk Node Root
+def	Quorum	Decoupled.Spec.Basic:132	Prop	Finset Node
+def	StrictMajority	Decoupled.Spec.Basic:142	Prop	Finset Node
+inductive	TransitionResult	Decoupled.Spec.Basic:593	Type	
+def	TransitionResult.ctorElim	Decoupled.Spec.Basic:593	motive t	TransitionResult Node Root → Sort u | ℕ | TransitionResult Node Root | ctorIdx = t.ctorIdx | TransitionResult.ctorElimType ctorIdx
 def	TransitionResult.ctorElimType	Decoupled.Spec.Basic	Sort (max 1 u)	TransitionResult Node Root → Sort u | ℕ
-def	TransitionResult.invalid.elim	Decoupled.Spec.Basic:467	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 1 | motive TransitionResult.invalid
-def	TransitionResult.state.elim	Decoupled.Spec.Basic:465	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 0 | (σ : ChainState Node Root) → motive (TransitionResult.state σ)
-def	ValidInclusion	Decoupled.Spec.Basic:350	Bool	Attestation Node Root
-def	W	Decoupled.Spec.Basic:115	ℕ	
+def	TransitionResult.invalid.elim	Decoupled.Spec.Basic:609	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 1 | motive TransitionResult.invalid
+def	TransitionResult.state.elim	Decoupled.Spec.Basic:607	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 0 | (σ : ChainState Node Root) → motive (TransitionResult.state σ)
+def	ValidInclusion	Decoupled.Spec.Basic:492	Bool	Attestation Node Root
+def	W	Decoupled.Spec.Basic:116	ℕ	
 def	advanceHeight	Decoupled.Spec.Fig2AttestationProcessing:106	ChainState Node Root	ChainState Node Root | Option (Blk Node Root) | ℕ
-def	ancestors	Decoupled.Spec.Basic:310	List (Blk Node Root)	Blk Node Root
+def	ancestors	Decoupled.Spec.Basic:446	List (Blk Node Root)	Blk Node Root
+def	attBeq	Decoupled.Spec.Basic:269	Bool	Attestation Node Root | Attestation Node Root
+theorem	attBeq_iff	Decoupled.Spec.Basic:316	attBeq a b = true ↔ a = b	
+def	attListBeq	Decoupled.Spec.Basic:275	Bool	List (Attestation Node Root) | List (Attestation Node Root)
+theorem	attListBeq_iff	Decoupled.Spec.Basic:325	attListBeq a b = true ↔ a = b	
+def	blkBeq	Decoupled.Spec.Basic:262	Bool	Blk Node Root | Blk Node Root
+theorem	blkBeq_iff	Decoupled.Spec.Basic:304	blkBeq a b = true ↔ a = b	
+def	finalityPairBeq	Decoupled.Spec.Basic:294	Bool	FinalityPair Node Root | FinalityPair Node Root
+theorem	finalityPairBeq_iff	Decoupled.Spec.Basic:356	finalityPairBeq a b = true ↔ a = b	
+def	heightPairBeq	Decoupled.Spec.Basic:287	Bool	HeightPair Node Root | HeightPair Node Root
+theorem	heightPairBeq_iff	Decoupled.Spec.Basic:342	heightPairBeq a b = true ↔ a = b	
 def	idxAssign	Decoupled.Spec.Pseudocode:87	ParserDescr	
-def	instBotOption_decoupled	Decoupled.Spec.Basic:83	Bot (Option α)	
-def	instCoeChainStateTransitionResult	Decoupled.Spec.Basic:472	Coe (ChainState Node Root) (TransitionResult Node Root)	
-def	m	Decoupled.Spec.Basic:123	ℕ	
-def	nonjustifiable	Decoupled.Spec.Basic:439	Bool	ℕ | ℕ
+def	instBotOption_decoupled	Decoupled.Spec.Basic:84	Bot (Option α)	
+def	instCoeChainStateTransitionResult	Decoupled.Spec.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
+def	m	Decoupled.Spec.Basic:124	ℕ	
+def	nonjustifiable	Decoupled.Spec.Basic:581	Bool	ℕ | ℕ
+def	optBlkBeq	Decoupled.Spec.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
+theorem	optBlkBeq_iff	Decoupled.Spec.Basic:335	optBlkBeq a b = true ↔ a = b	
 def	pairAssign	Decoupled.Spec.Pseudocode:76	ParserDescr	
 def	processAttestation	Decoupled.Spec.Fig2AttestationProcessing:50	ChainState Node Root	ChainState Node Root | Attestation Node Root | Blk Node Root
 def	processAttestations	Decoupled.Spec.Fig2AttestationProcessing:77	ChainState Node Root	ChainState Node Root | List (Attestation Node Root) | Blk Node Root
@@ -74,14 +86,14 @@ def	processBlock	Decoupled.Spec.Fig2AttestationProcessing:88	TransitionResult No
 def	processHeightEvents	Decoupled.Spec.Fig2AttestationProcessing:125	ChainState Node Root	ChainState Node Root | ℕ
 def	processSlot	Decoupled.Spec.Fig1SlotReplay:44	ChainState Node Root	ChainState Node Root
 def	processSlots	Decoupled.Spec.Fig1SlotReplay:62	ChainState Node Root	ChainState Node Root | ℕ
-def	q	Decoupled.Spec.Basic:118	ℕ	
+def	q	Decoupled.Spec.Basic:119	ℕ	
 def	stateAssign	Decoupled.Spec.Pseudocode:57	ParserDescr	
 def	stateTransition	Decoupled.Spec.Fig1SlotReplay:70	TransitionResult Node Root	ChainState Node Root | Blk Node Root
-def	termInvalid	Decoupled.Spec.Basic:470	ParserDescr	
-def	weight	Decoupled.Spec.Basic:108	ℕ	Finset Node
-def	«termW(_)»	Decoupled.Spec.Basic:111	ParserDescr	
-def	«termW(_)≥m»	Decoupled.Spec.Basic:145	ParserDescr	
-def	«termW(_)≥q»	Decoupled.Spec.Basic:139	ParserDescr	
-def	«term_∼_»	Decoupled.Spec.Basic:338	TrailingParserDescr	
-def	«term_≺_»	Decoupled.Spec.Basic:328	TrailingParserDescr	
-def	«term_⪯_»	Decoupled.Spec.Basic:320	TrailingParserDescr	
+def	termInvalid	Decoupled.Spec.Basic:612	ParserDescr	
+def	weight	Decoupled.Spec.Basic:109	ℕ	Finset Node
+def	«termW(_)»	Decoupled.Spec.Basic:112	ParserDescr	
+def	«termW(_)≥m»	Decoupled.Spec.Basic:146	ParserDescr	
+def	«termW(_)≥q»	Decoupled.Spec.Basic:140	ParserDescr	
+def	«term_∼_»	Decoupled.Spec.Basic:478	TrailingParserDescr	
+def	«term_≺_»	Decoupled.Spec.Basic:468	TrailingParserDescr	
+def	«term_⪯_»	Decoupled.Spec.Basic:457	TrailingParserDescr	
