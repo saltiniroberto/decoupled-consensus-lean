@@ -700,6 +700,112 @@ The near miss worth remembering: the same tab open on a file that still exists w
 real work rather than adding a dead copy, silently, exactly as `CLAUDE.local.md`'s Commits section
 warns.
 
+## 2026-08-14 — Lemma 3 is proved, and the invariant it needed
+
+### The paper's Lemma 3 is false over an arbitrary state
+
+`lem:empty-slot-noop` says closing empty slots moves nothing but the cursor and, possibly, the
+current-height target. Over an arbitrary `ChainState` that is plainly false: a state whose
+progress tally already holds a quorum takes a height transition on the first `process_slot`, and a
+height transition moves ten fields. The paper means it over states a block can actually produce,
+with the reachability left in the prose.
+
+So the Lean statement quantifies over block post-states — `BlockPostState σ`, an inductive
+predicate with `ChainState.gen` at the base and one step per accepted `state_transition` — rather
+than over an invented `Reachable`. That is what the paper's own hypothesis says, and the induction
+then supplies the invariant.
+
+### `Settled` has four conjuncts, and the paper states three
+
+`Settled σ` (`Analysis/Proofs/SlotClosure.lean`) is the negation of each of Definition 18's three
+branches, plus
+
+    emptyTarget : σ.T_h = ⊥ → σ.Qtarget = ∅
+
+The fourth is what makes the invariant survive `process_slot`, which writes `T_h ← L` and so flips
+a condition the target branch relied on to stay blocked. It is true for a reason visible only in
+Figure 2: line 778 is the only writer of a target bit, and it needs a target to be named.
+
+The paper does not state it. Nothing here suggests the paper is wrong — its argument is about
+states the protocol produces, where the fourth conjunct holds — but the Lean proof does not go
+through without it.
+
+### `Settled` is not preserved phase by phase, and that is the shape of the proof
+
+    Settled σ ──process_slots──▸ Settled            closeSlots_of_settled
+              ──process_block──▸ emptyTarget only   processBlock_emptyTarget
+      ──process_height_events──▸ Settled            settled_processHeightEvents
+
+Only `emptyTarget` is threaded end to end. `process_block` cannot preserve the other three: it is
+where the target and progress tallies are built, so asking it to keep the quorum branches blocked
+is asking attestations not to do their job. The last phase rebuilds them from `emptyTarget` alone.
+`settled_stateTransition` composes the three, and `settled_of_blockPostState` is the induction,
+with `settled_gen` at the base.
+
+### Threshold positivity is a real hypothesis, and it is `PositiveWeight`
+
+`q = ⌈2W/3⌉` is `(2 * W + 2) / 3` in `Nat`, which is `0` when the electorate is empty — and then
+every set is a quorum, every branch fires, and genesis itself fails the invariant. So `0 < W` is
+needed, as a class:
+
+    class PositiveWeight (Node : Type) [Electorate Node] : Prop where
+      posW : 0 < W Node
+
+`Proofs/Weights.lean` also carries `PositiveWeight.ofFaultBound`, so a later file that has
+Assumption 1's `3b < W` gets the instance without restating anything.
+
+Named as a class, and named after what it says, following the first attempt. The machinery lemmas
+take `(hq : 0 < q Node)` as a plain hypothesis instead, and only the two public entry points
+(`settled_of_blockPostState`, `lemEmptySlotNoop`) require the class — so the machinery does not
+depend on where the assumption is defined.
+
+### Lean facts measured while proving it
+
+Four, all in the imperative rendering, all now in the `lean-proof-idioms` skill:
+
+* **`Id.run` has to be in the `simp only` set.** `simp only [processHeightEvents]` alone leaves
+  the goals carrying a `pure (…).run` wrapper, and `split_ifs` cannot see the `if`s underneath.
+  With `simp only [processHeightEvents, Id.run]` all six leaves of that routine's branch tree come
+  out reachable.
+* **A hand-written `if`-shaped bridge is not `rfl`.** Restating `process_height_events` as a
+  readable nest of `if`s and proving the equation by `rfl` fails: the `if`s in the statement
+  elaborate their own `Decidable` instances, and `Decidable` is data, so the two terms are not
+  definitionally equal. Section 3's `rfl` bridge works for `Lean.Loop.forIn` because that one
+  restates the *same* term at a different projection; this is a different term.
+* **`split_ifs at h` discharges the contradictory branches itself.** A `h : … = .state σ'` against
+  a routine that returns `invalid` on the failed check comes out with the invalid leaves already
+  closed, so a bullet for them is an error ("no goals"). Same for `split at h` on the `match`.
+* **Do not name `split_ifs` hypotheses positionally here.** Because some leaves are discharged,
+  which name lands on which leaf is not stable, and a positional `with h1 h2 h3 …` names
+  hypotheses that do not exist. `first | exact … (by assumption) | …` closes all six leaves and
+  keeps working if the branch tree changes.
+
+One more, in Figure 2: `⊥` is a `Bot (Option _)` instance rather than a constructor, so a
+hypothesis `σ.T_h = ⊥` has to be restated as `σ.T_h = none` before `split` can reduce a `match`
+against it. The coercion is definitional, so `have` accepts it with no proof.
+
+### The first attempt was consulted, on instruction, and nothing was copied
+
+Read before starting the assembly: its `Analysis/Proofs/Settled.lean`. Its `Settled` has the same
+four conjuncts, and its `Settled.stateTransition` exists — so the step case was known to be
+provable there, which lowered the risk of discovering a fifth conjunct halfway through. What
+carried across is that much: the decomposition and the `PositiveWeight` name. Every lemma here is
+re-derived and machine-checked, the definitions and the framework flavour being different.
+
+### Where it stands
+
+`make check` passes with no `sorry`. Lemma 3 is `lemEmptySlotNoop` (the record equation) and
+`lemEmptySlotNoopFields` (the paper's field list, three lines from it), and `MAPPING.md` marks it
+✅ proved. `Analysis/Proofs/SlotClosure.lean` holds 41 declarations: `BlockPostState`, `Settled`,
+`closeSlots`, `actionState`, Lemma 3's own proof `emptySlotNoop`, and 36 supporting lemmas, each
+either `Settled` machinery or a field lemma about a Figure 1 or Figure 2 routine.
+
+Two things it leaves open, deliberately. `T_h` is pinned only up to "`σ.T_h` or `some σ.L`",
+because pinning which one needs the induction to split `n = 0` from `n ≥ 1` and nothing yet needs
+to know. And `actionState` is `processSlots`, sitting in `Analysis/Proofs/SlotClosure.lean`:
+Definition 20 (`def:finality-action-state`) is not modelled, so the name is the paper's σ_a and
+nothing more.
+
 ## Next
 
 1. **The increment half of Lemma 6 (`lem:height-progression`) first**, being the only statement of
