@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 158 declarations.
+# 164 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -32,11 +32,13 @@ def	Blk.parent	Spec.Defs.Basic:383	Option (Blk Node Root)	Blk Node Root
 def	Blk.proposer	Spec.Defs.Basic:394	Option Node	Blk Node Root
 def	Blk.slot	Spec.Defs.Basic:388	ℕ	Blk Node Root
 inductive	BlockPostState	Analysis.Proofs.SlotClosure:47	Prop	ChainState Node Root
-inductive	ChainState	Spec.Defs.Basic:507	Type	
-def	ChainState.Qprog	Spec.Defs.Basic:569	Finset Node	ChainState Node Root
-def	ChainState.Qtarget	Spec.Defs.Basic:563	Finset Node	ChainState Node Root
-def	ChainState.gen	Spec.Defs.Basic:544	ChainState Node Root	
+inductive	ChainState	Spec.Defs.Basic:515	Type	
+def	ChainState.Qprog	Spec.Defs.Basic:577	Finset Node	ChainState Node Root
+def	ChainState.Qtarget	Spec.Defs.Basic:571	Finset Node	ChainState Node Root
+def	ChainState.gen	Spec.Defs.Basic:552	ChainState Node Root	
 def	Compatible	Spec.Defs.Basic:473	Prop	Blk Node Root | Blk Node Root
+def	Conflicts	Spec.Defs.Basic:483	Prop	Blk Node Root | Blk Node Root
+def	E2	Analysis.Vocabulary:46	Prop	Attestation Node Root | Attestation Node Root
 inductive	Electorate	Spec.Defs.Basic:90	Type	
 inductive	FinalityPair	Spec.Defs.Basic:216	Type	
 def	FinalityPair.commit.elim	Spec.Defs.Basic:219	motive_4 t	FinalityPair Node Root → Sort u | FinalityPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_4 (FinalityPair.commit h T)
@@ -49,6 +51,8 @@ def	HeightPair.ctorElimType	Spec.Defs.Basic	Sort (max 1 u)	HeightPair Node Root 
 def	HeightPair.empty.elim	Spec.Defs.Basic:212	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 2 | motive_3 HeightPair.empty
 def	HeightPair.target.elim	Spec.Defs.Basic:208	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_3 (HeightPair.target h T)
 def	HeightPair.timeout.elim	Spec.Defs.Basic:210	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 1 | (h : ℕ) → motive_3 (HeightPair.timeout h)
+def	IncludedOn	Analysis.Vocabulary:65	Prop	Attestation Node Root | Blk Node Root
+def	JustificationCertificate	Analysis.Vocabulary:74	Prop	Blk Node Root | ℕ | Blk Node Root
 inductive	Params	Spec.Defs.Basic:157	Type	
 inductive	PositiveWeight	Analysis.Proofs.Weights:23	Prop	
 theorem	PositiveWeight.ofFaultBound	Analysis.Proofs.Weights:37	PositiveWeight Node	0 < k | k * b < W Node
@@ -118,15 +122,16 @@ theorem	Proofs.settled_processHeightEvents	Analysis.Proofs.SlotClosure:386	Proof
 theorem	Proofs.settled_setTarget	Analysis.Proofs.SlotClosure:160	Proofs.Settled { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ | 0 < q Node | σ.T_h = ⊥
 theorem	Proofs.settled_stateTransition	Analysis.Proofs.SlotClosure:456	Proofs.Settled σ'	Proofs.Settled σ | 0 < q Node | stateTransition σ B = TransitionResult.state σ'
 theorem	Proofs.stateTransition_state	Analysis.Proofs.SlotClosure:440	∃ σ₂, processBlock (processSlots σ B.slot) B = TransitionResult.state σ₂ ∧ σ' = processHeightEvents σ₂ B.slot	stateTransition σ B = TransitionResult.state σ'
+theorem	Proofs.targetUniqueness	Analysis.Proofs.Certificates:27	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
 theorem	Proofs.weightInterGe	Analysis.Proofs.Weights:46	weight Q + weight Q' ≤ W Node + weight (Q ∩ Q')	Q ⊆ Electorate.V | Q' ⊆ Electorate.V
 def	Quorum	Spec.Defs.Basic:132	Prop	Finset Node
 def	StrictMajority	Spec.Defs.Basic:142	Prop	Finset Node
-inductive	TransitionResult	Spec.Defs.Basic:593	Type	
-def	TransitionResult.ctorElim	Spec.Defs.Basic:593	motive t	TransitionResult Node Root → Sort u | ℕ | TransitionResult Node Root | ctorIdx = t.ctorIdx | TransitionResult.ctorElimType ctorIdx
+inductive	TransitionResult	Spec.Defs.Basic:601	Type	
+def	TransitionResult.ctorElim	Spec.Defs.Basic:601	motive t	TransitionResult Node Root → Sort u | ℕ | TransitionResult Node Root | ctorIdx = t.ctorIdx | TransitionResult.ctorElimType ctorIdx
 def	TransitionResult.ctorElimType	Spec.Defs.Basic	Sort (max 1 u)	TransitionResult Node Root → Sort u | ℕ
-def	TransitionResult.invalid.elim	Spec.Defs.Basic:609	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 1 | motive TransitionResult.invalid
-def	TransitionResult.state.elim	Spec.Defs.Basic:607	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 0 | (σ : ChainState Node Root) → motive (TransitionResult.state σ)
-def	ValidInclusion	Spec.Defs.Basic:492	Bool	Attestation Node Root
+def	TransitionResult.invalid.elim	Spec.Defs.Basic:617	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 1 | motive TransitionResult.invalid
+def	TransitionResult.state.elim	Spec.Defs.Basic:615	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 0 | (σ : ChainState Node Root) → motive (TransitionResult.state σ)
+def	ValidInclusion	Spec.Defs.Basic:500	Bool	Attestation Node Root
 def	W	Spec.Defs.Basic:116	ℕ	
 def	actionState	Analysis.Proofs.SlotClosure:69	ChainState Node Root	ChainState Node Root | ℕ
 def	advanceHeight	Spec.Fig2AttestationProcessing:106	ChainState Node Root	ChainState Node Root | Option (Blk Node Root) | ℕ
@@ -144,15 +149,16 @@ def	heightPairBeq	Spec.Defs.Basic:287	Bool	HeightPair Node Root | HeightPair Nod
 theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b	
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
-def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
-theorem	lemEmptySlotNoop	Analysis.Lemmas:188	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
-theorem	lemEmptySlotNoopFields	Analysis.Lemmas:222	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
-theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:236	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
-theorem	lemIntegerThresholds	Analysis.Lemmas:136	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
-theorem	lemQuorumIntersection	Analysis.Lemmas:157	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
-theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:175	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
+def	instCoeChainStateTransitionResult	Spec.Defs.Basic:622	Coe (ChainState Node Root) (TransitionResult Node Root)	
+theorem	lemEmptySlotNoop	Analysis.Lemmas:197	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	lemEmptySlotNoopFields	Analysis.Lemmas:231	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
+theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:245	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
+theorem	lemIntegerThresholds	Analysis.Lemmas:145	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	lemQuorumIntersection	Analysis.Lemmas:166	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
+theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:184	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
+theorem	lemTargetUniqueness	Analysis.Lemmas:275	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
 def	m	Spec.Defs.Basic:124	ℕ	
-def	nonjustifiable	Spec.Defs.Basic:581	Bool	ℕ | ℕ
+def	nonjustifiable	Spec.Defs.Basic:589	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
 theorem	optBlkBeq_iff	Spec.Defs.Basic:335	optBlkBeq a b = true ↔ a = b	
 def	pairAssign	Spec.Defs.Notation:76	ParserDescr	
@@ -166,7 +172,7 @@ def	processSlots	Spec.Fig1SlotReplay:60	ChainState Node Root	ChainState Node Roo
 def	q	Spec.Defs.Basic:119	ℕ	
 def	stateAssign	Spec.Defs.Notation:57	ParserDescr	
 def	stateTransition	Spec.Fig1SlotReplay:68	TransitionResult Node Root	ChainState Node Root | Blk Node Root
-def	termInvalid	Spec.Defs.Basic:612	ParserDescr	
+def	termInvalid	Spec.Defs.Basic:620	ParserDescr	
 def	weight	Spec.Defs.Basic:109	ℕ	Finset Node
 def	«termW(_)»	Spec.Defs.Basic:112	ParserDescr	
 def	«termW(_)≥m»	Spec.Defs.Basic:146	ParserDescr	

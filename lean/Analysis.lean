@@ -1,6 +1,8 @@
+import Analysis.Vocabulary
 import Analysis.Proofs.Weights
 import Analysis.Proofs.SlotClosure
 import Analysis.Proofs.Ancestry
+import Analysis.Proofs.Certificates
 import Analysis.Lemmas
 
 /-!
@@ -9,7 +11,8 @@ import Analysis.Lemmas
 One import per file under `Analysis/`. The paper's numbered results, stated and proved against
 the specification in `Spec`.
 
-Present: `Lemmas.lean`, the statements of record, and `Proofs/`, which holds the arguments.
+Present: `Lemmas.lean`, the statements of record; `Vocabulary.lean`, the paper's definitions that
+no figure reads and a statement needs; and `Proofs/`, which holds the arguments.
 `Theorems.lean` and `Corollaries.lean` are absent.
 
 **A statement in `Lemmas.lean` is proved by a one-line call into `Proofs/`**, so that a statement

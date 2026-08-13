@@ -480,6 +480,14 @@ def Compatible (a b : Blk Node Root) : Prop := a ⪯ b ∨ b ⪯ a
 instance : DecidableRel (Compatible (Node := Node) (Root := Root)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
 
+/-- `B` and `C` conflict: Definition 5 (`def:block-chain`)'s "otherwise they conflict",
+    which is the negation of `∼`. Two blocks conflict exactly when they lie on different
+    branches. Read by no figure, and named because the paper's results are stated over it. -/
+def Conflicts (a b : Blk Node Root) : Prop := ¬ (a ∼ b)
+
+instance : DecidableRel (Conflicts (Node := Node) (Root := Root)) :=
+  fun _ _ => inferInstanceAs (Decidable (¬ _))
+
 end Decide
 
 end Tree

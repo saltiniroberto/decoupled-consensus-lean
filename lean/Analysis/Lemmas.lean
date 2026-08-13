@@ -1,6 +1,8 @@
+import Analysis.Vocabulary
 import Analysis.Proofs.Weights
 import Analysis.Proofs.SlotClosure
 import Analysis.Proofs.Ancestry
+import Analysis.Proofs.Certificates
 
 /-!
 # The paper's numbered lemmas
@@ -21,8 +23,10 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1, 2, 3 and 4**, all proved and each covering its paper sentence in full.
-Two notions came with Lemma 3: `BlockPostState` and Definition 20's `actionState`.
+**Present so far: Lemmas 1 to 5.** Lemmas 1 to 4 are proved, each covering its paper sentence in
+full; Lemma 5 is stated with its proof outstanding. Two notions came with Lemma 3,
+`BlockPostState` and Definition 20's `actionState`, and Lemma 5 brought the first entries of
+`Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification certificate.
 
 **One theorem per lemma sentence.** Where a sentence names two subjects — Lemma 4's block
 post-state and finality action state — they are conjuncts of one theorem, not two declarations. A
@@ -42,7 +46,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 2 | `lem:quorum-intersection` | 342–352 | **yes, and proved** — landed, both sentences |
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
-| 5 | `lem:target-uniqueness` | 967–973 | no — Defs. 21 and 11 |
+| 5 | `lem:target-uniqueness` | 967–973 | **yes** — landed, proof outstanding; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **in part, and nothing is missing** — see below |
 | 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
@@ -70,9 +74,14 @@ reached rather than assumed here. Lemma 6's increment half remains independently
 
 | Absent | Paper | Waited on by |
 | --- | --- | --- |
-| certificates, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 5, 6, 10, 11 |
-| the slashing conditions E1 and E2 | Def. 11 (`def:slashing`) | 5, 10 |
+| the progress and finality certificates | Def. 21 (`def:certificates`) | 6, 10, 11 |
+| the slashing condition E1 | Def. 11 (`def:slashing`) | 10 |
 | `σ[·]` as a map, for a *named earlier* block's state | Figure 3 (`alg:store`), `derive_block_states` | 7 |
+
+Definition 21's justification certificate and Definition 11's E2 are no longer on that list:
+Lemma 5 needed them and they are in `Analysis/Vocabulary.lean`. The rest of each definition stays
+absent until a statement needs it, for the reason that file's docstring gives — a declaration no
+statement mentions is an unaudited claim about what the paper means.
 
 **Assumption 1's Byzantine weight `b` is not on that list, and Lemma 1 is why.** `Electorate`
 carries `V`, `w` and `w_pos` only, so `b` has no rendering — but a *quantity* arrives with its
@@ -262,5 +271,35 @@ theorem lemFinalizedBeforeJustified {Node Root : Type} [DecidableEq Node] [Decid
     (σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧
       (σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h) :=
   Proofs.finalizedBeforeJustified h t
+
+/-- **Lemma 5** (`lem:target-uniqueness`, lines 967–973): one height cannot justify two targets.
+
+    Read aloud: if two conflicting blocks each have a justification certificate at the same height,
+    then some set of validators of weight at least `2q - W` each signed both of those targets at
+    that height, which is E2. Or, in the paper's own summary: one finality height cannot justify two
+    forks without exposing one quorum intersection.
+
+    **The "unless" of the paper's sentence is the conclusion, not a hypothesis.** The paper says the
+    two certificates cannot both exist "unless validators of total weight at least `2q - W` violate
+    E2", and that is what this returns: the set, its weight, and the pair of attestations from each
+    validator in it. Nothing is assumed about the fault bound, so nothing has to be — the claim is
+    that the evidence exists, not that it is impossible.
+
+    **The evidence is `IncludedOn` the two chains**, `x` on `B` and `y` on `B'`. A bare attestation
+    value proves nothing to a consumer that only ever sees blocks, so the conclusion says where each
+    one was carried.
+
+    `JustificationCertificate`, `IncludedOn` and `E2` are in `Analysis/Vocabulary.lean`, which
+    records what each renders and what it leaves out. The proof is outstanding, a `sorry` in
+    `Analysis/Proofs/Certificates.lean`, which says what it needs — nothing absent from the
+    specification. -/
+theorem lemTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] (B B' T T' : Blk Node Root) (h : Nat)
+    (hJC : JustificationCertificate B h T) (hJC' : JustificationCertificate B' h T')
+    (hconf : Conflicts T T') :
+    ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
+      ∀ i ∈ S, ∃ x y : Attestation Node Root,
+        x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y :=
+  Proofs.targetUniqueness B B' T T' h hJC hJC' hconf
 
 end Decoupled
