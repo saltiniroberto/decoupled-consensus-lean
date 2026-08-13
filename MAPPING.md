@@ -4,9 +4,10 @@ One row per part of the paper that this project will render, and one row per Lea
 that renders it. Keyed on the paper's `\label`, because that is what survives renumbering; the
 printed number is given too, because it is what a human reading the PDF sees.
 
-**Nothing is formalized yet, so every Lean cell reads `—` and every status is absent.** The row
-set is the paper's, not a plan: a row appearing here says the paper has that result, not that
-this project intends to state it. Fill a row in when its statement lands.
+**What is rendered so far: Figures 1 and 2, and the numbered definitions those two read.**
+Every other Lean cell is `—`, and every numbered result is still absent — nothing is proved.
+The row set is the paper's, not a plan: a row appearing here says the paper has that result,
+not that this project intends to state it. Fill a row in when its statement lands.
 
 **Source**: the `latex-specs` submodule, pinned — `height_filter_healing.tex` (Sections 1–5)
 and its `\input`, `recovery_core.tex` (Sections 6–13). `git submodule status` is the authority
@@ -29,10 +30,13 @@ says where to read it.
 
 ## The five algorithm figures
 
+A file rendering one of these is named `Fig<n><Subject>.lean`, `<n>` being the printed number
+in this column. A file that renders no figure has no such prefix.
+
 | Paper | № | Lean file | Lean declarations |
 | --- | --- | --- | --- |
-| `alg:state-replay` | Fig. 1 | — | — |
-| `alg:attestation-processing` | Fig. 2 | — | — |
+| `alg:state-replay` | Fig. 1 | `lean/specs/Decoupled/Spec/Fig1SlotReplay.lean` | `processSlot`, `processSlots`, `stateTransition` |
+| `alg:attestation-processing` | Fig. 2 | `lean/specs/Decoupled/Spec/Fig2AttestationProcessing.lean` | `processAttestation`, `processAttestations`, `processBlock`, `advanceHeight`, `processHeightEvents` |
 | `alg:store` | Fig. 3 | — | — |
 | `alg:fork-choice-state` | Fig. 4 | — | — |
 | `alg:recovery-action` | Fig. 5 | — | — |
@@ -46,14 +50,14 @@ column names the declarations that render each one.
 
 | Paper | № | Lean |
 | --- | --- | --- |
-| `def:validator-weights` | Def. 3 | — |
-| `def:height` | Def. 4 | — |
-| `def:block-chain` | Def. 5 | — |
-| `def:fg-message` | Def. 8 | — |
-| `def:valid-attestation-inclusion` | Def. 9 | — |
-| `def:chain-state` | Def. 13 | — |
-| `def:nonjustifiable` | Def. 14 | — |
-| `def:participation-state` | Def. 15 | — |
+| `def:validator-weights` | Def. 3 | `Electorate`, `weight`, `W`, `q`, `m`, `Quorum`, `StrictMajority` |
+| `def:height` | Def. 4 | `Params` |
+| `def:block-chain` | Def. 5 | `Blk`, `Blk.parent`, `Blk.slot`, `Blk.proposer`, `Blk.attestations`, `Blk.claimedRoot`, `ancestors`, `Preceq`, `Prec`, `Compatible` |
+| `def:fg-message` | Def. 8 | `Attestation`, `HeightPair`, `FinalityPair`, `Attestation.height`, `Attestation.target`, `Attestation.finalizeHeight`, `Attestation.finalizeTarget` |
+| `def:valid-attestation-inclusion` | Def. 9 | `ValidInclusion` — membership in `V` only; signatures are the `validator` field |
+| `def:chain-state` | Def. 13 | `ChainState`, `ChainState.gen` |
+| `def:nonjustifiable` | Def. 14 | `nonjustifiable` |
+| `def:participation-state` | Def. 15 | `ChainState.Qtarget`, `ChainState.Qprog` |
 | `def:total-raw-replay` (slot eligibility half) | Def. 24 | — |
 | `def:valid-block` (assigned proposer half) | Def. 19 | — |
 
@@ -61,9 +65,9 @@ column names the declarations that render each one.
 
 | Paper | № | Lean |
 | --- | --- | --- |
-| `def:vote-contribution` | Def. 10 | — |
-| `def:block-attestation-processing` | Def. 16 | — |
-| `def:height-outcome` | Def. 18 | — |
+| `def:vote-contribution` | Def. 10 | `processAttestation` — the two height tests, no separate declaration |
+| `def:block-attestation-processing` | Def. 16 | `processAttestation`, `processAttestations` |
+| `def:height-outcome` | Def. 18 | `processHeightEvents`, `advanceHeight` |
 | `def:finality-action-state` | Def. 20 | — |
 
 ### Store and fork choice
