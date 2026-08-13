@@ -8,10 +8,27 @@ block precedes the justified block, which precedes the latest block, and the fin
 at most the justified height, which is below the state height.
 
 The paper's own proof (lines 933–943) calls these "ancestry and height inequalities", which is
-what names this file.
+what names this file. It holds three parts:
 
-**The proof is outstanding** — a `sorry`, and the only one in the project. What it needs is below,
-at the theorem.
+* the basic facts about `⪯`, which Definition 5 (`def:block-chain`) defines but nothing had yet
+  proved anything about: reflexivity, transitivity, and that a block's parent precedes it;
+* `Chained`, the invariant, which is the lemma's four claims plus a fifth about the named target;
+* the step lemmas, one per routine of Figures 1 and 2, and the induction that closes the lemma.
+
+## `Chained` needs no threshold hypothesis, where `Settled` did
+
+`Settled` (`Analysis/Proofs/SlotClosure.lean`) carries `0 < q` through every step, because on an
+empty electorate every set is a quorum and no branch of the height-event check is ever blocked.
+`Chained` needs no such thing: every branch preserves it *whether or not it fires*, so no
+threshold and no quorum enters this file. That is why Lemma 4 has no `PositiveWeight` where
+Lemma 3 does.
+
+## `Chained.of_fields` is what keeps the step lemmas short
+
+The congruence lemma: a state agreeing with a chained one on the seven fields `Chained` mentions
+is chained. The attestation loop and the cursor bump change none of them, so
+`of_fields h rfl rfl rfl rfl rfl rfl rfl` discharges those in one line — even though the goal is
+a fully expanded record literal that is not syntactically the source.
 -/
 
 set_option autoImplicit false
@@ -21,36 +38,257 @@ namespace Decoupled
 open scoped Decoupled
 open Framework.StsMultisetLog
 
+variable {Node Root : Type}
+
+/-! ## Definition 5 (`def:block-chain`)'s ancestry, as a preorder
+
+`⪯` is `a ∈ ancestors b`, so these are list-membership facts about the chain `ancestors` walks.
+Neither needs `DecidableEq`: walking the chain compares nothing.
+-/
+
+/-- `⪯` is reflexive. Definition 5 (`def:block-chain`) makes "descendant" reflexive, and
+    `ancestors` puts the block itself at the head of its own list. -/
+theorem Preceq.refl (a : Blk Node Root) : a ⪯ a := by
+  cases a <;> simp [Preceq, ancestors]
+
+/-- An ancestor's ancestors are ancestors: the content of transitivity, by structural recursion
+    on the descendant. -/
+theorem ancestors_subset : ∀ {b c : Blk Node Root}, b ⪯ c →
+    ∀ x, x ∈ ancestors b → x ∈ ancestors c
+  | _, .genesis, h, x, hx => by
+      simp only [Preceq, ancestors, List.mem_singleton] at h
+      subst h; exact hx
+  | _, .mk p s n a r, h, x, hx => by
+      simp only [Preceq, ancestors, List.mem_cons] at h
+      rcases h with rfl | h
+      · exact hx
+      · exact List.mem_cons_of_mem _ (ancestors_subset h x hx)
+
+/-- `⪯` is transitive. -/
+theorem Preceq.trans {a b c : Blk Node Root} (hab : a ⪯ b) (hbc : b ⪯ c) : a ⪯ c :=
+  ancestors_subset hbc a hab
+
+/-- A block's parent precedes it. This is what turns `process_block`'s `parent = σ.L` check into
+    an ancestry fact, and it is the only place the check is used. -/
+theorem parent_preceq : ∀ {B P : Blk Node Root}, B.parent = some P → P ⪯ B
+  | .genesis, _, h => by simp [Blk.parent] at h
+  | .mk p _ _ _ _, _, h => by
+      simp only [Blk.parent, Option.some.injEq] at h
+      subst h
+      exact List.mem_cons_of_mem _ (Preceq.refl p)
+
 namespace Proofs
 
-variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
+/-! ## The invariant -/
+
+/-- The invariant Lemma 4 is proved from. The first four fields are the lemma's own claims; the
+    fifth is not in its statement.
+
+    **`targetOnChain` is the conjunct the paper does not state.** It is needed because the target
+    branch of the height-event check sets `J ← T_h`, so keeping `F ⪯ J ⪯ L` across that branch
+    needs the named target to sit between `J` and `L`. The paper asserts exactly this inside its
+    own proof — "the justification branch sets `J = T_h`, which lies on the current chain and
+    already contains the previous `J`" (lines 939–940) — without recording it as a hypothesis of
+    anything. It is true because `process_slot` is the only routine that names a target and it
+    writes `some σ.L`, `advance_height` writing `⊥`. -/
+structure Chained (σ : ChainState Node Root) : Prop where
+  /-- The finalized block precedes the justified block. -/
+  finJust : σ.F ⪯ σ.J
+  /-- The justified block precedes the latest block. -/
+  justLatest : σ.J ⪯ σ.L
+  /-- The finalized height is at most the justified height. -/
+  hF_le_hj : σ.h_F ≤ σ.h_j
+  /-- The justified height is below the state height. -/
+  hj_lt_h : σ.h_j < σ.h
+  /-- Not in the paper's statement. See the structure's docstring. -/
+  targetOnChain : ∀ T, σ.T_h = some T → σ.J ⪯ T ∧ T ⪯ σ.L
+
+/-- The finality sub-step of the height-event check copies `(J, h_j)` into `(F, h_F)`, which makes
+    the first two claims equalities. -/
+theorem Chained.finalizeStep {σ : ChainState Node Root} (h : Chained σ) :
+    Chained { σ with F := σ.J, h_F := σ.h_j } :=
+  { finJust := Preceq.refl _, justLatest := h.justLatest,
+    hF_le_hj := le_refl _, hj_lt_h := h.hj_lt_h, targetOnChain := h.targetOnChain }
+
+/-- The congruence lemma. See the file docstring: this is what makes the steps that touch none of
+    the seven fields one line each. -/
+theorem Chained.of_fields {σ τ : ChainState Node Root} (h : Chained σ)
+    (hF : τ.F = σ.F) (hJ : τ.J = σ.J) (hL : τ.L = σ.L) (hhF : τ.h_F = σ.h_F)
+    (hhj : τ.h_j = σ.h_j) (hh : τ.h = σ.h) (hT : τ.T_h = σ.T_h) : Chained τ :=
+  { finJust := by rw [hF, hJ]; exact h.finJust
+    justLatest := by rw [hJ, hL]; exact h.justLatest
+    hF_le_hj := by rw [hhF, hhj]; exact h.hF_le_hj
+    hj_lt_h := by rw [hhj, hh]; exact h.hj_lt_h
+    targetOnChain := by
+      intro T hTT; rw [hT] at hTT; rw [hJ, hL]; exact h.targetOnChain T hTT }
+
+/-- Naming a target keeps the invariant, and this is where `targetOnChain` comes from: the target
+    written is `σ.L` itself, which `justLatest` puts after `J` and reflexivity puts at `L`. -/
+theorem Chained.setTarget {σ : ChainState Node Root} (h : Chained σ) :
+    Chained { σ with T_h := some σ.L } :=
+  { finJust := h.finJust, justLatest := h.justLatest, hF_le_hj := h.hF_le_hj,
+    hj_lt_h := h.hj_lt_h,
+    targetOnChain := by
+      intro T hT
+      simp only [Option.some.injEq] at hT
+      subst hT
+      exact ⟨h.justLatest, Preceq.refl _⟩ }
+
+/-- `Chained` holds at genesis: all three blocks are `genesis`, and `h_F = h_j = 0 < 1 = h`. -/
+theorem chained_gen : Chained (ChainState.gen (Node := Node) (Root := Root)) :=
+  { finJust := Preceq.refl _, justLatest := Preceq.refl _,
+    hF_le_hj := le_refl _, hj_lt_h := Nat.zero_lt_one,
+    targetOnChain := by
+      intro T hT
+      simp only [ChainState.gen, Option.some.injEq] at hT
+      subst hT
+      exact ⟨Preceq.refl _, Preceq.refl _⟩ }
+
+section
+variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
+
+/-! ## The step lemmas, one per routine
+
+Each is stated with `_root_.Decoupled.` on the routine it is about: inside `theorem Chained.foo`
+the namespace `Chained` joins the resolution path, so a bare `advanceHeight` in the body would
+resolve to `Chained.advanceHeight` — the theorem itself — and `simp only` would report no progress.
+-/
+
+/-- A height transition keeps the invariant. `hj` is the fact about the justification being
+    installed that `targetOnChain` supplies at the call site: whatever is justified lies between
+    `J` and `L`. -/
+theorem Chained.advanceHeight {σ : ChainState Node Root} (h : Chained σ)
+    (justify : Option (Blk Node Root)) (start : Time)
+    (hj : ∀ T, justify = some T → σ.J ⪯ T ∧ T ⪯ σ.L) :
+    Chained (_root_.Decoupled.advanceHeight σ justify start) := by
+  have h3 := h.hF_le_hj
+  have h4 := h.hj_lt_h
+  cases justify with
+  | none =>
+      refine { finJust := ?_, justLatest := ?_, hF_le_hj := ?_, hj_lt_h := ?_,
+               targetOnChain := ?_ } <;>
+        simp only [_root_.Decoupled.advanceHeight] <;>
+        simp [h.finJust, h.justLatest] <;> omega
+  | some T =>
+      obtain ⟨hJT, hTL⟩ := hj T rfl
+      refine { finJust := ?_, justLatest := ?_, hF_le_hj := ?_, hj_lt_h := ?_,
+               targetOnChain := ?_ } <;>
+        simp only [_root_.Decoupled.advanceHeight] <;>
+        simp [Preceq.trans h.finJust hJT, hTL]
+      all_goals omega
+
+/-- The height-event check keeps the invariant, whichever of Definition 18's branches it takes.
+    `Id.run` is in the `simp only` set so that `split_ifs` reaches the `if`s. -/
+theorem Chained.processHeightEvents {σ : ChainState Node Root} (h : Chained σ) (start : Time) :
+    Chained (_root_.Decoupled.processHeightEvents σ start) := by
+  simp only [_root_.Decoupled.processHeightEvents, Id.run]
+  split_ifs
+  all_goals
+    first
+      | exact h.finalizeStep.advanceHeight _ start (fun T hT => h.targetOnChain T hT)
+      | exact h.advanceHeight _ start (fun T hT => h.targetOnChain T hT)
+      | exact h.finalizeStep.advanceHeight ⊥ start (by simp)
+      | exact h.advanceHeight ⊥ start (by simp)
+      | exact h.finalizeStep
+      | exact h
+
+/-- Closing one slot keeps the invariant: it may name a target, may run the height check, and
+    bumps the cursor, which is not one of the seven fields. -/
+theorem Chained.processSlot {σ : ChainState Node Root} (h : Chained σ) :
+    Chained (_root_.Decoupled.processSlot σ) := by
+  simp only [_root_.Decoupled.processSlot, Id.run]
+  split_ifs
+  all_goals
+    first
+      | exact Chained.of_fields (h.setTarget.processHeightEvents _) rfl rfl rfl rfl rfl rfl rfl
+      | exact Chained.of_fields (h.processHeightEvents _) rfl rfl rfl rfl rfl rfl rfl
+      | exact Chained.of_fields h.setTarget rfl rfl rfl rfl rfl rfl rfl
+      | exact Chained.of_fields h rfl rfl rfl rfl rfl rfl rfl
+
+theorem Chained.closeSlots :
+    ∀ (n : Nat) {σ : ChainState Node Root}, Chained σ →
+      Chained (_root_.Decoupled.Proofs.closeSlots n σ)
+  | 0, _, h => by rw [_root_.Decoupled.Proofs.closeSlots]; exact h
+  | n + 1, _, h => by
+      rw [_root_.Decoupled.Proofs.closeSlots]; exact Chained.closeSlots n h.processSlot
+
+/-- Closing slots up to `t` keeps the invariant, through `closeSlots` rather than the `while`. -/
+theorem Chained.processSlots {σ : ChainState Node Root} (h : Chained σ) (t : Time) :
+    Chained (_root_.Decoupled.processSlots σ t) := by
+  rw [processSlots_eq_closeSlots]; exact Chained.closeSlots _ h
+
+/-- Attestation processing touches none of the six block and height fields: it writes
+    participation bits, `P`, and the tallies. -/
+theorem processAttestation_chainFields (σ : ChainState Node Root) (a : Attestation Node Root)
+    (A : Blk Node Root) :
+    (processAttestation σ a A).L = σ.L ∧ (processAttestation σ a A).J = σ.J ∧
+      (processAttestation σ a A).F = σ.F ∧ (processAttestation σ a A).h = σ.h ∧
+      (processAttestation σ a A).h_j = σ.h_j ∧ (processAttestation σ a A).h_F = σ.h_F := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  all_goals
+    · simp only [processAttestation]
+      repeat' split
+      all_goals rfl
+
+theorem Chained.processAttestation {σ : ChainState Node Root} (h : Chained σ)
+    (a : Attestation Node Root) (A : Blk Node Root) :
+    Chained (_root_.Decoupled.processAttestation σ a A) := by
+  obtain ⟨hL, hJ, hF, hh, hhj, hhF⟩ := processAttestation_chainFields σ a A
+  exact h.of_fields hF hJ hL hhF hhj hh (processAttestation_T_h σ a A)
+
+theorem Chained.processAttestations :
+    ∀ (as : List (Attestation Node Root)) {σ : ChainState Node Root} (A : Blk Node Root),
+      Chained σ → Chained (_root_.Decoupled.processAttestations σ as A)
+  | [], _, _, h => h
+  | a :: as, _, A, h => by
+      rw [processAttestations_cons]
+      exact Chained.processAttestations as A (h.processAttestation a A)
+
+/-- The block phase keeps the invariant. This is the one step that needs an ancestry fact rather
+    than a field lemma: `L` is replaced by the block, and `J ⪯ L` survives because
+    `process_block` has already checked `B.parent = some σ.L`, so `σ.L ⪯ B`. -/
+theorem Chained.processBlock {σ σ' : ChainState Node Root} {B : Blk Node Root}
+    (h : Chained σ) (he : processBlock σ B = .state σ') : Chained σ' := by
+  have hpar : B.parent = some σ.L := by
+    simp only [_root_.Decoupled.processBlock, Id.run] at he
+    split_ifs at he with hc
+    simp only [not_or, ne_eq, not_not] at hc
+    exact hc.1
+  have hLB : σ.L ⪯ B := parent_preceq hpar
+  have hext : Chained { σ with L := B } :=
+    { finJust := h.finJust, justLatest := Preceq.trans h.justLatest hLB,
+      hF_le_hj := h.hF_le_hj, hj_lt_h := h.hj_lt_h,
+      targetOnChain := fun T hT =>
+        ⟨(h.targetOnChain T hT).1, Preceq.trans (h.targetOnChain T hT).2 hLB⟩ }
+  rw [processBlock_state he]
+  exact hext.processAttestations _ _
+
+/-- A whole transition keeps the invariant, the three phases composed. Unlike `Settled`, every
+    phase keeps all five conjuncts, so nothing has to be re-established at the end. -/
+theorem Chained.stateTransition {σ σ' : ChainState Node Root} {B : Blk Node Root}
+    (h : Chained σ) (he : _root_.Decoupled.stateTransition σ B = .state σ') : Chained σ' := by
+  obtain ⟨σ₂, hb, rfl⟩ := stateTransition_state he
+  exact ((h.processSlots B.slot).processBlock hb).processHeightEvents _
+
+/-- Every block post-state is `Chained`, by induction. -/
+theorem chained_of_blockPostState {σ : ChainState Node Root} (h : BlockPostState σ) :
+    Chained σ := by
+  induction h with
+  | gen => exact chained_gen
+  | step _ hst ih => exact ih.stateTransition hst
 
 /-- **Lemma 4** over a block post-state. Read aloud: the finalized block is the justified block or
     an ancestor of it, the justified block is the latest block or an ancestor of it, and the
     finalized height is at most the justified height, which is below the state height.
 
-    **Outstanding.** A `sorry`. The shape is another induction over `BlockPostState`, and genesis
-    is immediate: `F = J = L = genesis` makes both `⪯` reflexive, and `h_F = h_j = 0 < 1 = h`.
-
-    What the step needs, and does not have. The target branch of `process_height_events` sets
-    `J ← T_h` and then increments `h`, so preserving `F ⪯ J ⪯ L` there needs two facts about the
-    named target that this statement does not mention:
-
-        σ.T_h = some T → σ.J ⪯ T ∧ T ⪯ σ.L
-
-    The paper asserts exactly that, in prose, inside its own proof: "the justification branch sets
-    `J = T_h`, which lies on the current chain and already contains the previous `J`"
-    (lines 939–940). It is a further invariant, and the argument for it has to come from the two
-    writers of `T_h` — `process_slot`, which writes `some σ.L`, and `advance_height`, which writes
-    `⊥`. So this lemma will be proved from a strengthened invariant in the same style as `Settled`,
-    not from the four conjuncts alone.
-
-    Also missing, and cheaper: `process_block` replaces `L` by the block, so the `J ⪯ L` conjunct
-    needs the block's `parent = σ.L` check — which `state_transition` has already made, and
-    `processBlock_state` is where that becomes usable. -/
+    The four conjuncts read straight off `Chained`. The fifth, `targetOnChain`, is what carries
+    the induction and is not part of the paper's sentence. -/
 theorem finalizedBeforeJustified {σ : ChainState Node Root} (h : BlockPostState σ) :
-    σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h := by
-  sorry
+    σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h :=
+  let c := chained_of_blockPostState h
+  ⟨c.finJust, c.justLatest, c.hF_le_hj, c.hj_lt_h⟩
+
+end
 
 end Proofs
 

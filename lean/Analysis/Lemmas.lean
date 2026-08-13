@@ -21,9 +21,8 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1, 2, 3 and 4.** Lemmas 1 to 3 are proved; Lemma 4 is stated with its
-proof outstanding. Two notions came with Lemma 3: `BlockPostState` and Definition 20's
-`actionState`.
+**Present so far: Lemmas 1, 2, 3 and 4**, all proved — Lemma 4 over the block post-state half of
+its sentence. Two notions came with Lemma 3: `BlockPostState` and Definition 20's `actionState`.
 
 ## The lemmas, and what each waits on
 
@@ -36,7 +35,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 1 | `lem:integer-thresholds` | 313–322 | **yes, and proved** — landed |
 | 2 | `lem:quorum-intersection` | 342–352 | **yes, and proved** — landed, both sentences |
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
-| 4 | `lem:finalized-before-justified` | 920–931 | **yes, over a block post-state** — landed, proof outstanding |
+| 4 | `lem:finalized-before-justified` | 920–931 | **yes, over a block post-state** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | no — Defs. 21 and 11 |
 | 6 | `lem:height-progression` | 987–994 | **in part, and nothing is missing** — see below |
 | 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
@@ -236,14 +235,19 @@ theorem lemEmptySlotNoopFields {Node Root : Type} [DecidableEq Node] [DecidableE
     justified height, which is below the state height. Or, in the paper's own summary: finality
     never moves off the current chain or ahead of its latest justification.
 
-    **The proof is outstanding**, a `sorry` in `Analysis/Proofs/Ancestry.lean`, which says what it
-    needs: a further invariant about the named target, which the paper asserts in prose inside its
-    own proof.
+    Proved in `Analysis/Proofs/Ancestry.lean`, from `Chained`: these four claims plus a fifth,
+    that a named target lies between `J` and `L`. The fifth is what makes the induction go through
+    and is not part of the paper's sentence — the paper asserts it in prose inside its own proof.
+
+    **No threshold hypothesis, where Lemma 3 needs one.** `Chained` is preserved by every branch of
+    the height-event check whether or not the branch fires, so no quorum and no `PositiveWeight`
+    enters. Lemma 3's `Settled` is different: it is a claim that the branches *stay blocked*, which
+    fails outright when `q = 0`.
 
     **Narrower than the paper's sentence in one respect.** The paper says "every reachable block
-    post-state *and finality action state*"; this covers the block post-state. The other half is a
-    corollary of Lemma 3 once this is proved — `actionState` moves only `s` and `T_h`, so it moves
-    none of the six fields named here — and it will be added then rather than guessed at now. -/
+    post-state *and finality action state*"; this covers the block post-state. The other half needs
+    no new assumption either — `Chained.processSlots` carries the invariant through slot closure —
+    so it is a statement to widen rather than a proof to find. -/
 theorem lemFinalizedBeforeJustified {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] {σ : ChainState Node Root} (h : BlockPostState σ) :
     σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h :=

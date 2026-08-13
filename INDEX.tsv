@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 137 declarations.
+# 157 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -54,6 +54,21 @@ inductive	PositiveWeight	Analysis.Proofs.Weights:23	Prop
 theorem	PositiveWeight.ofFaultBound	Analysis.Proofs.Weights:37	PositiveWeight Node	0 < k | k * b < W Node
 def	Prec	Spec.Defs.Basic:465	Prop	Blk Node Root | Blk Node Root
 def	Preceq	Spec.Defs.Basic:453	Prop	Blk Node Root | Blk Node Root
+theorem	Preceq.refl	Analysis.Proofs.Ancestry:49	Preceq a a	
+theorem	Preceq.trans	Analysis.Proofs.Ancestry:67	Preceq a c	Preceq a b | Preceq b c
+inductive	Proofs.Chained	Analysis.Proofs.Ancestry:84	Prop	ChainState Node Root
+theorem	Proofs.Chained.advanceHeight	Analysis.Proofs.Ancestry:157	Proofs.Chained (advanceHeight σ justify start)	Proofs.Chained σ | ∀ (T : Blk Node Root), justify = some T → Preceq σ.J T ∧ Preceq T σ.L
+theorem	Proofs.Chained.closeSlots	Analysis.Proofs.Ancestry:208	Proofs.Chained (Proofs.closeSlots n σ)	Proofs.Chained σ
+theorem	Proofs.Chained.finalizeStep	Analysis.Proofs.Ancestry:106	Proofs.Chained { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.J, h_F := σ.h_j, P := σ.P }	Proofs.Chained σ
+theorem	Proofs.Chained.of_fields	Analysis.Proofs.Ancestry:113	Proofs.Chained τ	Proofs.Chained σ | τ.F = σ.F | τ.J = σ.J | τ.L = σ.L | τ.h_F = σ.h_F | τ.h_j = σ.h_j | τ.h = σ.h | τ.T_h = σ.T_h
+theorem	Proofs.Chained.processAttestation	Analysis.Proofs.Ancestry:233	Proofs.Chained (processAttestation σ a A)	Proofs.Chained σ
+theorem	Proofs.Chained.processAttestations	Analysis.Proofs.Ancestry:239	Proofs.Chained (processAttestations σ as A)	Proofs.Chained σ
+theorem	Proofs.Chained.processBlock	Analysis.Proofs.Ancestry:247	Proofs.Chained σ'	Proofs.Chained σ | processBlock σ B = TransitionResult.state σ'
+theorem	Proofs.Chained.processHeightEvents	Analysis.Proofs.Ancestry:180	Proofs.Chained (processHeightEvents σ start)	Proofs.Chained σ
+theorem	Proofs.Chained.processSlot	Analysis.Proofs.Ancestry:195	Proofs.Chained (processSlot σ)	Proofs.Chained σ
+theorem	Proofs.Chained.processSlots	Analysis.Proofs.Ancestry:215	Proofs.Chained (processSlots σ t)	Proofs.Chained σ
+theorem	Proofs.Chained.setTarget	Analysis.Proofs.Ancestry:125	Proofs.Chained { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Chained σ
+theorem	Proofs.Chained.stateTransition	Analysis.Proofs.Ancestry:266	Proofs.Chained σ'	Proofs.Chained σ | stateTransition σ B = TransitionResult.state σ'
 inductive	Proofs.Settled	Analysis.Proofs.SlotClosure:134	Prop	ChainState Node Root
 theorem	Proofs.advanceHeight_F	Analysis.Proofs.SlotClosure:333	(advanceHeight σ j st).F = σ.F	
 theorem	Proofs.advanceHeight_P_some	Analysis.Proofs.SlotClosure:343	(advanceHeight σ (some T) st).P = ∅	
@@ -67,13 +82,16 @@ theorem	Proofs.advanceHeight_none_h_j	Analysis.Proofs.SlotClosure:354	(advanceHe
 theorem	Proofs.advanceHeight_progress	Analysis.Proofs.SlotClosure:302	(advanceHeight σ j st).progress = fun x => false	
 theorem	Proofs.advanceHeight_s	Analysis.Proofs.SlotClosure:87	(advanceHeight σ j st).s = σ.s	
 theorem	Proofs.advanceHeight_target	Analysis.Proofs.SlotClosure:297	(advanceHeight σ j st).targetParticipation = fun x => false	
+theorem	Proofs.chained_gen	Analysis.Proofs.Ancestry:137	Proofs.Chained ChainState.gen	
+theorem	Proofs.chained_of_blockPostState	Analysis.Proofs.Ancestry:273	Proofs.Chained σ	BlockPostState σ
 def	Proofs.closeSlots	Analysis.Proofs.SlotClosure:118	ChainState Node Root	ℕ | ChainState Node Root
 theorem	Proofs.closeSlots_of_settled	Analysis.Proofs.SlotClosure:200	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ Proofs.closeSlots n σ = { L := σ.L, s := σ.s + n, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (Proofs.closeSlots n σ)	Proofs.Settled σ | 0 < q Node
 theorem	Proofs.emptySlotNoop	Analysis.Proofs.SlotClosure:486	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
-theorem	Proofs.finalizedBeforeJustified	Analysis.Proofs.Ancestry:28	Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h	BlockPostState σ
+theorem	Proofs.finalizedBeforeJustified	Analysis.Proofs.Ancestry:280	Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h	BlockPostState σ
 theorem	Proofs.integerThresholds	Analysis.Proofs.Weights:70	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
 theorem	Proofs.not_quorum_empty	Analysis.Proofs.Weights:64	¬Quorum ∅	0 < q Node
 theorem	Proofs.processAttestation_T_h	Analysis.Proofs.SlotClosure:226	(processAttestation σ a A).T_h = σ.T_h	
+theorem	Proofs.processAttestation_chainFields	Analysis.Proofs.Ancestry:220	(processAttestation σ a A).L = σ.L ∧ (processAttestation σ a A).J = σ.J ∧ (processAttestation σ a A).F = σ.F ∧ (processAttestation σ a A).h = σ.h ∧ (processAttestation σ a A).h_j = σ.h_j ∧ (processAttestation σ a A).h_F = σ.h_F	
 theorem	Proofs.processAttestation_target	Analysis.Proofs.SlotClosure:232	(processAttestation σ a A).targetParticipation = σ.targetParticipation	σ.T_h = ⊥
 theorem	Proofs.processAttestations_T_h	Analysis.Proofs.SlotClosure:264	(processAttestations σ as A).T_h = σ.T_h	
 theorem	Proofs.processAttestations_cons	Analysis.Proofs.SlotClosure:244	processAttestations σ (a :: as) A = processAttestations (processAttestation σ a A) as A	
@@ -112,6 +130,7 @@ def	W	Spec.Defs.Basic:116	ℕ
 def	actionState	Analysis.Proofs.SlotClosure:69	ChainState Node Root	ChainState Node Root | ℕ
 def	advanceHeight	Spec.Fig2AttestationProcessing:106	ChainState Node Root	ChainState Node Root | Option (Blk Node Root) | ℕ
 def	ancestors	Spec.Defs.Basic:446	List (Blk Node Root)	Blk Node Root
+theorem	ancestors_subset	Analysis.Proofs.Ancestry:54	x ∈ ancestors c	Preceq b c | x ∈ ancestors b
 def	attBeq	Spec.Defs.Basic:269	Bool	Attestation Node Root | Attestation Node Root
 theorem	attBeq_iff	Spec.Defs.Basic:316	attBeq a b = true ↔ a = b	
 def	attListBeq	Spec.Defs.Basic:275	Bool	List (Attestation Node Root) | List (Attestation Node Root)
@@ -125,17 +144,18 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
-theorem	lemEmptySlotNoop	Analysis.Lemmas:183	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
-theorem	lemEmptySlotNoopFields	Analysis.Lemmas:217	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
-theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:231	Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h	BlockPostState σ
-theorem	lemIntegerThresholds	Analysis.Lemmas:131	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
-theorem	lemQuorumIntersection	Analysis.Lemmas:152	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
-theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:170	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
+theorem	lemEmptySlotNoop	Analysis.Lemmas:182	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	lemEmptySlotNoopFields	Analysis.Lemmas:216	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
+theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:230	Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h	BlockPostState σ
+theorem	lemIntegerThresholds	Analysis.Lemmas:130	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	lemQuorumIntersection	Analysis.Lemmas:151	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
+theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:169	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:581	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
 theorem	optBlkBeq_iff	Spec.Defs.Basic:335	optBlkBeq a b = true ↔ a = b	
 def	pairAssign	Spec.Defs.Notation:76	ParserDescr	
+theorem	parent_preceq	Analysis.Proofs.Ancestry:71	Preceq P B	B.parent = some P
 def	processAttestation	Spec.Fig2AttestationProcessing:50	ChainState Node Root	ChainState Node Root | Attestation Node Root | Blk Node Root
 def	processAttestations	Spec.Fig2AttestationProcessing:77	ChainState Node Root	ChainState Node Root | List (Attestation Node Root) | Blk Node Root
 def	processBlock	Spec.Fig2AttestationProcessing:88	TransitionResult Node Root	ChainState Node Root | Blk Node Root
