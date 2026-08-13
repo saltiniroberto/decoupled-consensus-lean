@@ -62,9 +62,18 @@ here moves the paper with it. To change it: check out the commit inside `latex-s
 
 **The paper is four commits ahead of the pin** as of 2026-08-13: `5853db7` folds erratum E3,
 `ebca523` E4–E5, `799c608` E6, and `eb9a71c` adds a licence. Those errata look like the ones
-that attempt recorded, folded upstream. Bumping the pin would change the `.tex` line
-spans and printed numbers that `make cites` validates, so it is a decision of its own and has
-not been taken.
+that attempt recorded, folded upstream.
+
+**2026-08-13, Roberto: the pin stays at `e4375c5`.** Not "not yet decided" — decided. So the
+paper this project formalizes is `e4375c5` and nothing later, and the three errata folded
+upstream are not in it. Two consequences to keep in mind:
+
+* `\label`s, printed numbers and `.tex` line spans in `MAPPING.md` and in docstrings are
+  against `e4375c5`, and `make cites` checks them against that revision's `.aux`. They stay
+  valid.
+* Where the pinned text is wrong and an upstream erratum fixes it, the fix is **not** in what
+  this project reads. Record the discrepancy here when one is hit; do not bump the pin to
+  resolve it.
 
 The printed numbers come from `height_filter_healing.aux`, a LaTeX **build artefact** the
 submodule does not carry. Build the paper to get them:
@@ -117,14 +126,16 @@ Moving this project to a different framework revision needs no push: check out t
 
 ### No Lean yet, on instruction
 
-`lakefile.toml` declares the two requires and has this project's `lean_lib` **commented out**: a
-glob with no matching module makes `lake build` fail rather than do nothing. Uncomment it with
-the first source file.
+`lakefile.toml` declared the two requires and had this project's `lean_lib` **commented out**: a
+glob with no matching module makes `lake build` fail rather than do nothing.
+
+Superseded the same day by the first source files — see "The layout: `lean/specs`" below for
+what the `lean_lib` became.
 
 ### The mapping and the citation check, wired up with everything absent
 
-`MAPPING.md` and `mapping.html` exist and every row is absent, on instruction. `make cites` and
-`make mapping` run; `make check` is now sorry, cites, build.
+`MAPPING.md` and `mapping.html` were wired up with every row absent, on instruction. `make cites`
+and `make mapping` run; `make check` is now sorry, cites, build.
 
 `MAPPING.md` was derived from that attempt's own table, keeping only the paper-level
 columns — the `\label`, the printed number, and how often the paper's own proofs cite each
@@ -154,20 +165,19 @@ Python note: `mapping_html.py`'s original used a multi-line expression inside an
 needs Python 3.12. It raised `SyntaxError: unterminated string literal` here. Compute the cell
 before the f-string instead.
 
-### The declaration index, generating an empty file
+### The declaration index
 
-`tools/decl_index.lean` and `make index`. It writes `INDEX.tsv`: 0 declarations, with a header
-saying why.
+`tools/decl_index.lean` and `make index`, which write `INDEX.tsv`. It generated an empty file
+until the first modules landed; it now has 69 rows.
 
-The mechanism is worth knowing, because it is what makes an empty index possible at all.
-`collect` walks the **compiled environment** and keeps declarations whose defining module name
-starts with `Decoupled`. A module reaches that environment only by being imported. So the file
-imports `Lean` alone, with `import Decoupled.Analysis.Lemmas` and its two siblings commented
-out, and the answer is necessarily zero. Uncommenting those lines with the first statements is
-the whole change needed.
+The mechanism is what decides the row set. `collect` walks the **compiled environment** and
+keeps declarations whose defining module name starts with `Decoupled`. A module reaches that
+environment only by being imported, so the file's own import list is the coverage: add a line
+per module root. The analysis imports are still commented out, there being no statements.
 
-This is the one piece of Lean in the repository. It is tooling, not formalization: it is in no
-`lean_lib`, so `lake build` never sees it, and `make index` runs it with `lake env lean`.
+It is tooling, not formalization: it is in no `lean_lib`, so `lake build` never sees it, and
+`make index` runs it with `lake env lean`. Its `import Decoupled.Spec` line was uncommented
+when that module landed, and the index now has rows.
 
 Adapted from the first attempt's copy in four ways, listed at the top of the file. Two worth
 knowing: an empty row list writes no trailing blank line, and `suppressed` still drops a
@@ -205,12 +215,226 @@ The history was then squashed to a single commit, so the copies are not in this 
 all — not in a tree, not in a commit. Read those files where they live; `REFERENCES_LOCAL.md`
 says where.
 
+## 2026-08-13 — Figures 1 and 2, and the first source files
+
+### The layout: `lean/specs`, modules `Decoupled.Spec.…`
+
+On instruction, the specification goes in `lean/specs`. `lakefile.toml` now declares
+
+    [[lean_lib]]
+    name = "DecoupledSpec"
+    srcDir = "lean/specs"
+    globs = ["Decoupled.Spec", "Decoupled.Spec.+"]
+
+so a module `Decoupled.Spec.Basic` is the file `lean/specs/Decoupled/Spec/Basic.lean`. The
+directory name repeats inside `srcDir` because Lake derives a module's path from its name and
+nothing else.
+
+`defaultTargets = ["DecoupledSpec"]` was needed too: with a `lean_lib` declared but no default
+target, `lake build` still says "no targets specified" and builds nothing.
+
+The module root stays `Decoupled`, which is what `tools/decl_index.lean` filters on
+(`modPrefix`). The analysis is expected to become a second `lean_lib` over `lean/analysis`,
+with modules `Decoupled.Analysis.…`.
+
+**Two scripts still point at the old guess.** `tools/check_citations.py` has
+`LEMMAS = ROOT/"Decoupled"/"Analysis"/"Lemmas.lean"` and `tools/mapping_html.py` has the same
+three paths in `STATEMENT_FILES`. Under this layout no such file can exist. Both treat a
+missing file as "no statements", so both pass today and would go on passing while checking
+nothing. Fix them when the analysis lands and its directory is decided.
+
+### A figure file is named `Fig<n><Subject>`
+
+On instruction, 2026-08-13: a file rendering one of the paper's five algorithm figures carries
+the figure's printed number in its own name, not only in its module docstring. So
+`SlotReplay.lean` became `Fig1SlotReplay.lean` and `AttestationProcessing.lean` became
+`Fig2AttestationProcessing.lean`, with the module names following (`Decoupled.Spec.Fig1SlotReplay`).
+The remaining three will be `Fig3Store`, `Fig4ForkChoiceState` and `Fig5RecoveryAction`.
+
+The number leads so that a listing of `lean/specs/Decoupled/Spec/` sorts in the paper's figure
+order. Spellings rejected: `Figure1SlotReplay` (same order, longer for nothing);
+`SlotReplayFig1` (sorts by subject, which is the order the figure number exists to override);
+and a `Figures/` subdirectory holding `Fig1.lean`…`Fig5.lean`, which drops the subject from the
+name entirely.
+
+**A file that renders no figure takes no prefix.** `Basic.lean` holds the numbered definitions
+the figures read and `Pseudocode.lean` holds notation; each already says in its own docstring
+that it is not a figure. The convention is stated in `Decoupled/Spec.lean`'s docstring and above
+the figure table in `MAPPING.md`.
+
+The number is the printed one at the pinned revision `e4375c5`. It is therefore the same kind of
+fact as the numbers in the docstrings, and would move if the pin ever moved — which, per the
+decision above, it does not.
+
+### `alg:recovery-round` was not a label; `make cites` did not catch it
+
+`Decoupled/Spec.lean` named Figure 5 `alg:recovery-round`. The paper's label is
+`alg:recovery-action` (`recovery_core.tex:2083`, and `height_filter_healing.aux:171`).
+`MAPPING.md` had it right, so the invented one was in one place only. Fixed 2026-08-13.
+
+Worth knowing because `make cites` reported 0 problems with it in the tree. The text was
+`Figures 3 (\`alg:store\`), 4 (\`alg:fork-choice-state\`) and 5 (\`alg:recovery-round\`)`, and
+none of those three was checked. `check_citations.py`'s `PROSE` pattern is
+`({KINDS}) (\d+) \(\`({LABEL})\`` with `KINDS` the **singular** words, so it needs the kind word
+and a space immediately before the number. Two shapes defeat it, and the plural list uses both:
+
+* the plural — `Figures 3` is `Figure` followed by `s`, not a space, so the first item of a list
+  is unchecked as well as the later ones;
+* the elided kind word — `and 5 (\`alg:recovery-round\`)` has no kind word at all.
+
+Verified against the script, not assumed. The fix in `Spec.lean` was to write `Figure` out in
+the singular on each item, which brings all three under the check. **Other citations in the tree
+are in the unchecked shape** — five in `Basic.lean` (lines 124, 334, 457, 462) and the prose in
+this file — and they are correct, merely invisible to `make cites`. Closing the blind spot means
+either rewriting those to the singular form or teaching `PROSE` the plural and the elided item;
+undecided as of 2026-08-13.
+
+### What is rendered
+
+Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`), and the numbered
+definitions those two read: 3 (`def:validator-weights`), 4 (`def:height`),
+5 (`def:block-chain`), 8 (`def:fg-message`), 9 (`def:valid-attestation-inclusion`),
+13 (`def:chain-state`), 14 (`def:nonjustifiable`), 15 (`def:participation-state`), and the
+"a state or `invalid`" of 24 (`def:total-raw-replay`). Four files under
+`lean/specs/Decoupled/Spec/`: `Basic.lean`, `Pseudocode.lean`,
+`Fig2AttestationProcessing.lean`, `Fig1SlotReplay.lean`, plus `Decoupled/Spec.lean`
+importing them.
+
+**Nothing is proved.** These are definitions; no numbered result is stated yet.
+
+`make check` is green, `make index` reports 69 declarations, and `make cites` reports 222
+citations in 14 files with 0 problems — so every printed number in the new docstrings agrees
+with `height_filter_healing.aux` at the pinned revision.
+
+### The notation layer is the one part taken from the first attempt
+
+On instruction: the `do` semantics and the notation come from that attempt's
+`Spec/Pseudocode.lean`, everything else was re-derived from the paper. What came across is
+three `scoped` macros — `σ.f ← e`, `σ.f, σ.g ← e`, `σ.arr[i] ← e` — each expanding to a
+reassignment of the enclosing block's `let mut`, and the decision that a routine is a plain
+`def … : T := Id.run do` with no `function` command and no loop macro.
+
+The macros claim **bare** identifiers as well as dotted ones, so `σ ← process_slots(σ, B.slot)`
+is written with the same arrow as `σ.s ← σ.s + 1`. The cost is that `x ← someMonadicAction`
+becomes unwritable while the namespace is open; nothing here wants it, and a mistake is a type
+error rather than a silent one.
+
+Checked by `#print` rather than assumed:
+
+* `advance_height` expands with `h_j := σ.h` reading the **pre**-increment `h` and
+  `nj := nonjustifiable σ.h σ.h_F` reading the **post**-increment one — which is what
+  Definition 14 (`def:nonjustifiable`) and the figure's line order mean.
+* `process_slots`' bare `while` elaborates to `forIn Lean.Loop.mk`, so no bound and no macro
+  are needed to write it.
+
+### Modelling decisions
+
+**A block is its content.** `Blk` is an inductive type with `genesis` and `mk`, so two blocks
+are equal exactly when their contents are — Definition 5 (`def:block-chain`)'s "we identify
+the block with its root", made structural. Alternative rejected: an abstract type with
+`parent`/`slot` accessors supplied by a class, which needs `ancestors` to carry a
+`termination_by` and a hypothesis that a block's slot exceeds its parent's — and that slot
+condition is a *check* in Definition 24 (`def:total-raw-replay`), so a block failing it must
+stay representable.
+
+**Measured, not inherited**: `deriving DecidableEq` does not reach the family. The error is
+
+    None of the deriving handlers for class `DecidableEq` applied to
+    `Blk`, `Attestation`, and `HeightPair`
+
+and it is the nesting through `List` and `Option` that causes it, not the `mutual` — the two
+are unavoidable together, since a block carries attestations and an attestation names blocks.
+So equality is classical: the four instances are `Classical.propDecidable`, and they are the
+**only** source of `noncomputable` in the whole spec.
+
+**Verified 2026-08-13, and more precise than "every routine reached by `⪯`."** Three distinct
+instances force the keyword, and each does so on its own — measured by stripping a routine down
+to one test at a time:
+
+| The test | The instance it needs |
+| --- | --- |
+| `σ.F ⪯ σ.J` | `instDecidableRelBlkPreceq` |
+| `a.finalityPair = .commit σ.h_j σ.J` | `instDecidableEqFinalityPair` |
+| `T = Th`, and `σ.T_h = ⊥` through `Option.decEq` | `instDecidableEqBlk` |
+
+So `⪯` is not the only path. `processSlot` uses no `⪯` at all; it is `σ.T_h = ⊥` on line 739 of
+the figure that forces it. A routine with no block comparison — `Time` arithmetic, `Finset Node`
+inserts, array writes — compiles without the keyword.
+
+`nonjustifiable`, `ChainState.Qtarget`, `ValidInclusion`, `ancestors` and the `Blk` projections
+are all clean; `ancestors` depends on no axioms at all. The ancestry *walk* is computable, it is
+deciding block equality that is not.
+
+**`advanceHeight` never needed the keyword, and no longer carries it.** Its body tests no block
+equality: `if let some T := justify` is a pattern match, not a comparison. `#print axioms` gives
+`[propext, Quot.sound]` and no `Classical.choice`. Dropped 2026-08-13; `make check` stayed green.
+That leaves seven `noncomputable def`s, three in `Fig1SlotReplay.lean` and four in
+`Fig2AttestationProcessing.lean`, and every one of the seven is forced.
+
+**`#print axioms` does not decide computability.** A `Classical.choice` sitting only inside erased
+proof terms costs nothing; what blocks compilation is choice in *data* position, which is what
+`propDecidable` does — it builds the `Decidable` value itself out of choice. Whether Lean demands
+the `noncomputable` keyword is the test, not the axiom list. Measured while prototyping the
+hand-written equality below, where the instance reports `Classical.choice` and is still computable.
+
+**A hand-written mutual decidable equality works.** Prototyped 2026-08-13, not merely conjectured;
+neither version is in the project, since nothing executes the figures.
+
+* Datatype unchanged, about 110 lines: six mutual `Bool`-valued functions — one per type plus
+  `attListBeq` and `blkOptBeq` for the nesting, which is exactly what the derive handler will not
+  generate — then six mutual soundness theorems `beq a b = true ↔ a = b`, then `decidable_of_iff`.
+  Termination inference accepted the block with no `termination_by`. It is computable and `#eval`
+  runs it. Cost: the block compiles through `blkBeq._mutual` over a `PSum`, so it does **not**
+  kernel-reduce — `rfl` fails on `blkBeq .genesis .genesis = true` and `by decide` fails with "did
+  not reduce to `isTrue` or `isFalse`". Proofs go through the equation lemmas instead. Not a
+  regression: nothing reduces under `propDecidable` either.
+* Replacing `List (Attestation …)` with a mutual `AttList` and `Option (Blk …)` with a mutual
+  `OptBlk` makes `deriving DecidableEq` succeed outright, with **no axioms at all** and working
+  `by decide`. This is the direct confirmation that the nesting is the obstruction. Cost: the
+  `List`/`Option` API on `attestations` and `head`, and `⊥` for `head` coming free.
+
+**The two pairs are inductive types**, not pairs of `Option`s. Definition 8
+(`def:fg-message`) admits `(h, T)`, `(h, ⊥)` and `(⊥, ⊥)` and not `(⊥, T)`; an inductive type
+is how the missing combination is made unrepresentable.
+
+**`TransitionResult`, not `Option (ChainState …)`.** `Option.none` already renders the paper's
+`⊥` (absent target, height, head), and `invalid` is a different symbol. A `Coe` lets a routine
+of that return type end with the paper's bare `return σ`.
+
+**A signature is the `validator` field — a hole, left open deliberately.** Definition 5
+(`def:block-chain`) has a block carry *signed* attestations and Definition 9
+(`def:valid-attestation-inclusion`) asks each to verify under the named validator's key. Here
+`Attestation` has a plain `validator` field, so a block naming a validator that never signed is
+representable and `ValidInclusion` checks only membership in `V`. Nothing in Figures 1 and 2
+depends on which shape is chosen; what closes it is the execution layer, where
+`Framework.StsMultisetLog.SignedMsg` makes sending under `sender = p` the same thing as being
+signed by `p`. **Decide it there rather than inheriting this.**
+
+**Scope discipline in `Basic.lean`.** Only what the two figures read. `Params` carries `K` and
+`Ddebt` and their two inequalities and nothing else — no `slotStart`, which belongs to
+Definition 24 (`def:total-raw-replay`). No `assignedProposer`, no state-root function, no
+tiebreak hash: Figures 1 and 2 read none of them. `m`, `StrictMajority` and `∼` are in, unused,
+because each is part of a definition that is otherwise needed.
+
+**Two deviations from the figures' own spelling**, both noted in the files:
+
+* `σ.` is written out on every field write. The figure elides it inside a routine; recovering
+  that would need the assignment macro to know which bare identifiers are fields of the state
+  record, which it cannot without elaboration.
+* `process_block` binds `A := σ.L` where the figure writes `A ← B.parent`. The two are the same
+  block at that point — the preceding check has already returned `invalid` unless
+  `B.parent = σ.L` — and `σ.L` is a block where `B.parent` is an `Option`.
+* `process_slots`' second parameter is `target`, not the figure's `slot`, which would shadow
+  the `Blk.slot` projection inside that one routine.
+
 ## Next
 
-1. Decide the module and namespace root, and land the first source file. `lakefile.toml`
-   suggests lib `Decoupled`, modules `Decoupled.*`.
-2. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+1. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it is the first thing that wants auditing rather than
-   assuming.
-3. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+   assuming. Settling the signing question above is part of it.
+2. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+3. Figures 3 to 5, and the definitions Sections 4 onward add.
+4. When the analysis directory is decided: re-point `tools/check_citations.py` and
+   `tools/mapping_html.py`, which still name `Decoupled/Analysis/*.lean` at the repository
+   root.
