@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["DecoupledSpec"]
+defaultTargets = ["Spec"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -22,12 +22,18 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.32.2"
 
-# This project's own sources. `srcDir` is `lean/specs`, so the specification's modules are
-# `Decoupled.Spec.…` and its files are `lean/specs/Decoupled/Spec/…`. The analysis will be a
-# second `lean_lib` over `lean/analysis`, keeping the two halves in separate directories
-# while both stay under the one `Decoupled` module root that `tools/decl_index.lean` filters
-# on.
+# This project's own sources. `srcDir` is `lean` and the module root is `Spec`, so a module
+# `Spec.Basic` is the file `lean/Spec/Basic.lean`. Lake derives a module's path from its name
+# and nothing else — measured, not assumed — so the directory under `srcDir` has to repeat
+# the root. Naming the root `Spec` rather than `Decoupled.Spec` is what keeps that to one
+# level.
+#
+# The analysis will be a second `lean_lib` over the same `srcDir` with root `Analysis`, so
+# `lean/Analysis/…`. The two globs stay disjoint because the roots differ.
+#
+# `tools/decl_index.lean` filters on module roots, and its list is what has to grow when a
+# second root lands — there is no longer one shared prefix over both halves.
 [[lean_lib]]
-name = "DecoupledSpec"
-srcDir = "lean/specs"
-globs = ["Decoupled.Spec", "Decoupled.Spec.+"]
+name = "Spec"
+srcDir = "lean"
+globs = ["Spec", "Spec.+"]

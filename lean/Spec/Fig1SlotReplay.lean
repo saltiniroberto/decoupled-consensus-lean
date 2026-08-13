@@ -1,17 +1,17 @@
-import Decoupled.Spec.Fig2AttestationProcessing
+import Spec.Fig2AttestationProcessing
 
 /-!
 # Figure 1 (`alg:state-replay`) — deterministic slot replay
 
 `height_filter_healing.tex`, Figure 1 (`alg:state-replay`), lines 711–746: `state_transition`,
 `process_slots` and `process_slot`. The figure's **Genesis** block is `ChainState.gen`, in
-`Decoupled/Spec/Basic.lean` beside Definition 13 (`def:chain-state`), which states the same
+`Spec/Basic.lean` beside Definition 13 (`def:chain-state`), which states the same
 values.
 
 Figure 1 calls into Figure 2 (`alg:attestation-processing`) twice, `process_block` and
 `process_height_events`, and Figure 2 never calls back.
 
-All notation comes from `Decoupled/Spec/Pseudocode.lean`; read that first.
+All notation comes from `Spec/Pseudocode.lean`; read that first.
 
 ## The `while` is Lean's own
 
@@ -23,7 +23,7 @@ path, so each turn advances `s` by one.
 ## Two deviations from the figure's own spelling
 
 **`σ.` is written out**, for the reason given in
-`Decoupled/Spec/Fig2AttestationProcessing.lean`.
+`Spec/Fig2AttestationProcessing.lean`.
 
 **`process_slots`' second parameter is `target`, not the figure's `slot`.** `Blk.slot` is a
 projection, so `B.slot` is the figure's own spelling; a parameter named `slot` would shadow

@@ -1,4 +1,4 @@
-import Decoupled.Spec.Basic
+import Spec.Basic
 
 /-!
 # Notation for rendering the paper's figures as pseudocode

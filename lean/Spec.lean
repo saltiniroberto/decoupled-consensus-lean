@@ -1,12 +1,12 @@
-import Decoupled.Spec.Basic
-import Decoupled.Spec.Pseudocode
-import Decoupled.Spec.Fig2AttestationProcessing
-import Decoupled.Spec.Fig1SlotReplay
+import Spec.Basic
+import Spec.Pseudocode
+import Spec.Fig2AttestationProcessing
+import Spec.Fig1SlotReplay
 
 /-!
 # The specification
 
-One import per file under `Decoupled/Spec/`. The paper's figures, and the numbered
+One import per file under `Spec/`. The paper's figures, and the numbered
 definitions they read.
 
 A file that renders one of the paper's five algorithm figures is named `Fig<n><Subject>`,
