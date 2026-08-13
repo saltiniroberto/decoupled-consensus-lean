@@ -5,13 +5,13 @@ import Spec.Fig2AttestationProcessing
 
 `height_filter_healing.tex`, Figure 1 (`alg:state-replay`), lines 711–746: `state_transition`,
 `process_slots` and `process_slot`. The figure's **Genesis** block is `ChainState.gen`, in
-`Spec/Basic.lean` beside Definition 13 (`def:chain-state`), which states the same
+`Spec/Defs/Basic.lean` beside Definition 13 (`def:chain-state`), which states the same
 values.
 
 Figure 1 calls into Figure 2 (`alg:attestation-processing`) twice, `process_block` and
 `process_height_events`, and Figure 2 never calls back.
 
-All notation comes from `Spec/Pseudocode.lean`; read that first.
+All notation comes from `Spec/Defs/Notation.lean`; read that first.
 
 ## The `while` is Lean's own
 

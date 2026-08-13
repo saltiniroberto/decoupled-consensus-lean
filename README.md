@@ -6,20 +6,33 @@ Variant*, built section by section and audited as it goes.
 ## Where the Lean specification is
 
 Everything is under `lean/`. The Lake library is called `Spec`, `srcDir` is `lean`, and the
-module root is `Spec`, so a module `Spec.Basic` is the file `lean/Spec/Basic.lean`.
+module root is `Spec`, so a module `Spec.Defs.Basic` is the file `lean/Spec/Defs/Basic.lean`.
+
+**`lean/Spec/` holds the figure translations and nothing else**, so listing it is the list of
+figures rendered so far:
+
+    lean/Spec/Fig1SlotReplay.lean
+    lean/Spec/Fig2AttestationProcessing.lean
+
+Each renders one of the paper's five algorithm figures and is named `Fig<n><Subject>`, where
+`<n>` is the figure's printed number at the pinned revision of the paper.
 
 | File | Module | What it renders |
 | --- | --- | --- |
-| `lean/Spec.lean` | `Spec` | the library root: one import per file below, and nothing else |
-| `lean/Spec/Basic.lean` | `Spec.Basic` | the numbered definitions the two figures read — Definitions 3, 4, 5, 8, 9, 13, 14, 15, and the "a state or `invalid`" of 24 |
-| `lean/Spec/Pseudocode.lean` | `Spec.Pseudocode` | notation only. No protocol content: the three assignment macros that let a figure file carry the paper's own `σ.h ← σ.h + 1` |
 | `lean/Spec/Fig1SlotReplay.lean` | `Spec.Fig1SlotReplay` | Figure 1, `alg:state-replay` — `stateTransition`, `processSlots`, `processSlot` |
 | `lean/Spec/Fig2AttestationProcessing.lean` | `Spec.Fig2AttestationProcessing` | Figure 2, `alg:attestation-processing` — `processBlock`, `processAttestation`, `processAttestations`, `advanceHeight`, `processHeightEvents` |
 
-A file that renders one of the paper's five algorithm figures is named `Fig<n><Subject>`,
-where `<n>` is the figure's printed number at the pinned revision of the paper. A file that
-renders no figure carries no such prefix, which is why `Basic.lean` and `Pseudocode.lean` do
-not have one.
+What the figures are written in terms of sits one level down, and the library root ties the
+whole thing together:
+
+| File | Module | What it holds |
+| --- | --- | --- |
+| `lean/Spec.lean` | `Spec` | the library root: one import per file, and nothing else |
+| `lean/Spec/Defs/Basic.lean` | `Spec.Defs.Basic` | the paper's numbered definitions the two figures read — Definitions 3, 4, 5, 8, 9, 13, 14, 15, and the "a state or `invalid`" of 24 |
+| `lean/Spec/Defs/Notation.lean` | `Spec.Defs.Notation` | notation only, no protocol content: the three assignment macros that let a figure file carry the paper's own `σ.h ← σ.h + 1` |
+
+`Spec/Defs/` is where the definitions of Section 6 onward will go as they land, which is why it
+is a directory rather than two files beside the figures.
 
 Module names and declaration names are separate. Every file opens `namespace Decoupled`, so
 the declarations are `Decoupled.processSlot`, `Decoupled.Blk` and so on regardless of which

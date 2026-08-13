@@ -1,4 +1,4 @@
-import Spec.Pseudocode
+import Spec.Defs.Notation
 
 /-!
 # Figure 2 (`alg:attestation-processing`) — direct attestation and height-event processing
@@ -8,7 +8,7 @@ four routines `process_block`, `process_attestation`, `process_height_events` an
 `advance_height`. Figure 1 (`alg:state-replay`) is the caller; nothing here calls back into
 it, so the import between the two files is one-way.
 
-All notation comes from `Spec/Pseudocode.lean`; read that first. Each routine
+All notation comes from `Spec/Defs/Notation.lean`; read that first. Each routine
 takes `σ` and returns it, as the figure writes it, and its body is a `do` block over a local
 mutable `σ`.
 

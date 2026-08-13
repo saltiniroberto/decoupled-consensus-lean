@@ -1,4 +1,4 @@
-import Spec.Basic
+import Spec.Defs.Basic
 
 /-!
 # Notation for rendering the paper's figures as pseudocode

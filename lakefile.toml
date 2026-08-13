@@ -23,10 +23,14 @@ scope = "leanprover-community"
 rev = "v4.32.2"
 
 # This project's own sources. `srcDir` is `lean` and the module root is `Spec`, so a module
-# `Spec.Basic` is the file `lean/Spec/Basic.lean`. Lake derives a module's path from its name
-# and nothing else — measured, not assumed — so the directory under `srcDir` has to repeat
-# the root. Naming the root `Spec` rather than `Decoupled.Spec` is what keeps that to one
-# level.
+# `Spec.Defs.Basic` is the file `lean/Spec/Defs/Basic.lean`. Lake derives a module's path from
+# its name and nothing else — measured, not assumed — so every directory under `srcDir`
+# repeats a module component. Naming the root `Spec` rather than `Decoupled.Spec` is what
+# keeps that short.
+#
+# `Spec/` itself holds only the figure translations, `Fig<n><Subject>.lean`. What they are
+# written in terms of is one level down in `Spec/Defs/`, so listing `Spec/*.lean` is the list
+# of figures rendered so far.
 #
 # The analysis will be a second `lean_lib` over the same `srcDir` with root `Analysis`, so
 # `lean/Analysis/…`. The two globs stay disjoint because the roots differ.

@@ -229,7 +229,7 @@ then for the module names to be changed to allow it. The current form:
     srcDir = "lean"
     globs = ["Spec", "Spec.+"]
 
-so a module `Spec.Basic` is the file `lean/Spec/Basic.lean`.
+so a module `Spec.Defs.Basic` is the file `lean/Spec/Defs/Basic.lean`.
 
 `defaultTargets = ["Spec"]` is needed too: with a `lean_lib` declared but no default target,
 `lake build` says "no targets specified" and builds nothing.
@@ -276,6 +276,41 @@ three paths in `STATEMENT_FILES`. Under this layout no such file can exist. Both
 missing file as "no statements", so both pass today and would go on passing while checking
 nothing. Fix them when the analysis lands and its directory is decided.
 
+### `Spec/` holds only the figure translations; everything else is in `Spec/Defs/`
+
+On instruction, 2026-08-13, third and last layout change of the day. The goal Roberto gave: a
+reader looking for the pseudocode translations should find them in one directory with nothing
+else in it. So `ls lean/Spec/*.lean` is now exactly the figures, and the two files the figures
+are written in terms of moved down:
+
+    lean/Spec.lean                            Spec
+    lean/Spec/Fig1SlotReplay.lean             Spec.Fig1SlotReplay
+    lean/Spec/Fig2AttestationProcessing.lean  Spec.Fig2AttestationProcessing
+    lean/Spec/Defs/Basic.lean                 Spec.Defs.Basic
+    lean/Spec/Defs/Notation.lean              Spec.Defs.Notation      (was Pseudocode.lean)
+
+`Pseudocode.lean` became `Notation.lean` because `Defs/Pseudocode` reads as though it were a
+rendering of the paper's pseudocode, which is what the figure files are; that file is the macro
+layer and holds no protocol content.
+
+Alternative rejected: a `Spec/Figures/` subdirectory with `Basic.lean` and the notation staying
+at `Spec/`. It reaches the same arrangement from the other side, but `Spec.Figures.Fig1SlotReplay`
+stutters, and removing the stutter means dropping either `Figures` or the `Fig<n>` prefix — and
+the printed figure number in the file name was settled earlier the same day. Moving the two
+non-figures is the change that leaves the figure names alone.
+
+`Defs` rather than `Core`, `Base` or `Model`. The paper's own unit is "Definition N", so the name
+needs no explaining, and the directory will not hold one file for long: Definitions 28 to 50 are
+Section 6 onward. **Not** `Model`, which in a formalization reads as a semantic model.
+
+The honest wrinkle: the notation layer is not a definition, so `Defs` covers it only loosely.
+Accepted rather than adding a second one-file directory.
+
+No source changed — imports, four prose paths, and the tables in `MAPPING.md`, `README.md` and
+here. `INDEX.tsv` came back with the same 81 rows and only the module column different, which is
+the check that nothing but the paths moved. `tools/decl_index.lean` needed nothing: `modRoots` is
+`["Spec"]` and the root did not change.
+
 ### A figure file is named `Fig<n><Subject>`
 
 On instruction, 2026-08-13: a file rendering one of the paper's five algorithm figures carries
@@ -291,7 +326,7 @@ and a `Figures/` subdirectory holding `Fig1.lean`…`Fig5.lean`, which drops the
 name entirely.
 
 **A file that renders no figure takes no prefix.** `Basic.lean` holds the numbered definitions
-the figures read and `Pseudocode.lean` holds notation; each already says in its own docstring
+the figures read and `Defs/Notation.lean` holds notation; each already says in its own docstring
 that it is not a figure. The convention is stated in `Spec.lean`'s docstring and above
 the figure table in `MAPPING.md`.
 
@@ -329,8 +364,8 @@ definitions those two read: 3 (`def:validator-weights`), 4 (`def:height`),
 5 (`def:block-chain`), 8 (`def:fg-message`), 9 (`def:valid-attestation-inclusion`),
 13 (`def:chain-state`), 14 (`def:nonjustifiable`), 15 (`def:participation-state`), and the
 "a state or `invalid`" of 24 (`def:total-raw-replay`). Four files under
-`lean/Spec/`: `Basic.lean`, `Pseudocode.lean`, `Fig2AttestationProcessing.lean`,
-`Fig1SlotReplay.lean`, plus `lean/Spec.lean` importing them.
+`lean/Spec/`: `Fig2AttestationProcessing.lean` and `Fig1SlotReplay.lean`, with
+`Defs/Basic.lean` and `Defs/Notation.lean` under them, plus `lean/Spec.lean` importing all four.
 
 **Nothing is proved.** These are definitions; no numbered result is stated yet.
 
