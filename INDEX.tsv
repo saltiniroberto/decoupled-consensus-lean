@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 81 declarations.
+# 82 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -75,6 +75,7 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
+def	lemEmptySlotNoop	Analysis.Lemmas:108	Prop	Blk Node Root → TransitionResult Node Root | Blk Node Root → ℕ → TransitionResult Node Root
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:581	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)

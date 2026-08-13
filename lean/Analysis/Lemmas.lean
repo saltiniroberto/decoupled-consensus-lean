@@ -7,11 +7,12 @@ import Spec
 (`height_filter_healing.tex`). Statements of record, one per numbered lemma, proved against the
 specification in `Spec`.
 
-**Nothing is stated yet.** This file declares nothing. The nine lemmas of Sections 3 and 4 were
-written in one pass on 2026-08-13 and then withdrawn the same day, on instruction: they are to
-be added one at a time, each audited against the paper on its own. `CONTEXT.md` records that
-decision. What follows is the groundwork from that pass, kept because re-deriving it is the
-expensive part.
+**Being added one at a time.** The nine lemmas of Sections 3 and 4 were written in one pass on
+2026-08-13 and withdrawn the same day, on instruction: each returns on its own, audited against
+the paper by itself. `CONTEXT.md` records that decision. The groundwork below is kept from that
+pass, because re-deriving it is the expensive part.
+
+**Present so far: Lemma 3.**
 
 ## The nine lemmas, and what each waits on
 
@@ -89,3 +90,50 @@ shape is forced by how much vocabulary exists and is not a difference in progres
 `make check` catches only the first shape, so green means "no `sorry`", not "the paper's results
 are proved". `MAPPING.md` is what answers the second question.
 -/
+
+set_option autoImplicit false
+
+namespace Decoupled
+
+open scoped Decoupled
+open Framework.StsMultisetLog
+
+variable {Node Root : Type}
+
+section
+variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
+
+/-! ## Section 3 — deterministic finality state machine -/
+
+/-- **Lemma 3** (`lem:empty-slot-noop`, lines 879–891): an empty slot never changes height,
+    finality, or participation.
+
+    Read aloud: closing empty slots can name a pending target, but can never advance the chain.
+
+    **Two arguments, because neither notion is modelled.** `blockState X` is the paper's
+    `σ[X]`, the map Figure 3 (`alg:store`) builds in `derive_block_states`; `actionState X t` is
+    its `σ_a[X]` at action slot `t`, which is Definition 20 (`def:finality-action-state`). Both
+    shapes here are this file's guess and have to be checked when those land. That is why this is
+    a `def … : Prop` and not a `theorem`: over unconstrained arguments the claim would be false
+    rather than unproved.
+
+    **What the conclusion says.** The paper allows `σ_a[X]` to differ from `σ[X]` in two fields
+    only — `s`, advanced to the action slot, and `T_h`, which may gain a target name — so every
+    other field of Definition 13 (`def:chain-state`) is required equal. `σ_a[X].h = σ[X].h` is
+    among them, which is the paper's own emphasis and also how its closing clause, that every
+    height transition is consumed at a block, is expressed here.
+
+    Two words in the paper's sentence are avoided: it writes "slot cursor" for `s` and
+    "materialized" for filling `T_h`, and defines neither. -/
+def lemEmptySlotNoop
+    (blockState : Blk Node Root → TransitionResult Node Root)
+    (actionState : Blk Node Root → Time → TransitionResult Node Root) : Prop :=
+  ∀ (X : Blk Node Root) (t : Time) (σ σa : ChainState Node Root),
+    blockState X = .state σ → actionState X t = .state σa →
+      σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧
+      σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧
+      σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress
+
+end
+
+end Decoupled
