@@ -1,0 +1,7 @@
+[submodule "lean-sts"]
+	path = deps/lean-sts
+	url = https://github.com/saltiniroberto/lean-sts.git
+[submodule "latex-specs"]
+	path = latex-specs
+	url = https://github.com/saltiniroberto/decoupled-consensus-latex-specs
+	ignore = untracked

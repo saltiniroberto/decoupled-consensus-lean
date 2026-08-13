@@ -1,0 +1,22 @@
+# Every declaration in THIS project, one per line, sorted by name.
+# GENERATED — do not edit. Regenerate with `make index`.
+# 0 declarations.
+#
+# Zero because nothing is formalized yet. `tools/decl_index.lean` indexes the
+# modules it imports, and its `import Decoupled.…` lines are commented out until
+# those modules exist. Uncomment them with the first statements.
+#
+# Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
+# Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
+# for a def its whole signature.
+#
+# Dropped, because every declaration carries the same ones and they bury the rest:
+# instance binders, bare type variables, and the schedule. The `Decoupled.` and
+# `Framework.StsMultisetLog.` prefixes are stripped. So a row is a search key, not a
+# statement you can paste into Lean.
+#
+# Looking for a lemma whose *statement* you know but whose name you do not? Prefer
+# `exact?` on the goal — it matches up to unification, which grep cannot.
+#
+# An earlier formalization of the same paper has its own index of 975 declarations.
+# It is not in this repository; REFERENCES_LOCAL.md says where to read it.

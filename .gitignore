@@ -1,0 +1,8 @@
+.lake/
+*.olean
+*.olean.tmp
+*.ilean
+*.c
+CLAUDE.local.md
+CONTEXT_LOCAL.md
+REFERENCES_LOCAL.md

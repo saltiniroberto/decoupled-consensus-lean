@@ -1,0 +1,228 @@
+# Paper ↔ Lean mapping
+
+One row per part of the paper that this project will render, and one row per Lean declaration
+that renders it. Keyed on the paper's `\label`, because that is what survives renumbering; the
+printed number is given too, because it is what a human reading the PDF sees.
+
+**Nothing is formalized yet, so every Lean cell reads `—` and every status is absent.** The row
+set is the paper's, not a plan: a row appearing here says the paper has that result, not that
+this project intends to state it. Fill a row in when its statement lands.
+
+**Source**: the `latex-specs` submodule, pinned — `height_filter_healing.tex` (Sections 1–5)
+and its `\input`, `recovery_core.tex` (Sections 6–13). `git submodule status` is the authority
+on which revision this tracks.
+
+**Numbers**: derived from `height_filter_healing.aux`, a LaTeX **build artefact that the
+submodule does not carry**. `make cites` checks every number in this file and in every
+docstring against it, and skips with a notice when the paper has not been built. To arm it:
+
+```
+cd latex-specs && latexmk -pdf height_filter_healing.tex && cd -
+```
+
+**What is not carried over from an earlier attempt.** The row set below was derived from that
+attempt's own table, which records which results it proved, which it stated partially, and
+which it skipped deliberately with a reason. Only the paper-level columns were taken. None of
+its judgements is repeated here: an absent row here means "not yet examined", and an earlier
+conclusion may in any case be wrong. Its table is not in this repository; `REFERENCES_LOCAL.md`
+says where to read it.
+
+## The five algorithm figures
+
+| Paper | № | Lean file | Lean declarations |
+| --- | --- | --- | --- |
+| `alg:state-replay` | Fig. 1 | — | — |
+| `alg:attestation-processing` | Fig. 2 | — | — |
+| `alg:store` | Fig. 3 | — | — |
+| `alg:fork-choice-state` | Fig. 4 | — | — |
+| `alg:recovery-action` | Fig. 5 | — | — |
+
+## Definitions
+
+The paper's numbered definitions and assumptions, grouped as the paper groups them. The Lean
+column names the declarations that render each one.
+
+### Model and state
+
+| Paper | № | Lean |
+| --- | --- | --- |
+| `def:validator-weights` | Def. 3 | — |
+| `def:height` | Def. 4 | — |
+| `def:block-chain` | Def. 5 | — |
+| `def:fg-message` | Def. 8 | — |
+| `def:valid-attestation-inclusion` | Def. 9 | — |
+| `def:chain-state` | Def. 13 | — |
+| `def:nonjustifiable` | Def. 14 | — |
+| `def:participation-state` | Def. 15 | — |
+| `def:total-raw-replay` (slot eligibility half) | Def. 24 | — |
+| `def:valid-block` (assigned proposer half) | Def. 19 | — |
+
+### Transition
+
+| Paper | № | Lean |
+| --- | --- | --- |
+| `def:vote-contribution` | Def. 10 | — |
+| `def:block-attestation-processing` | Def. 16 | — |
+| `def:height-outcome` | Def. 18 | — |
+| `def:finality-action-state` | Def. 20 | — |
+
+### Store and fork choice
+
+| Paper | № | Lean |
+| --- | --- | --- |
+| `def:certificates` (`JC` only) | Def. 21 | — |
+| `def:stored-data` | Def. 22 | — |
+| `def:store-join` | Def. 23 | — |
+| `def:state-height` | Def. 6 | — |
+| `def:fork-state` | Def. 25 | — |
+| `def:finality-root` | Def. 26 | — |
+
+### Recovery
+
+| Paper | № | Lean |
+| --- | --- | --- |
+| `def:signing-history` | Def. 12 | — |
+| `def:recovery-timing` | Def. 28 | — |
+| `ass:recovery-goldfish` | Ass. 12 | — |
+| `ass:goldfish-committees` | Ass. 3 | — |
+| `def:recovery-proposal` | Def. 43 | — |
+| `def:rederivation` | Def. 29 | — |
+| `def:activation-filter` | Def. 30 | — |
+| `def:recovery-context` | Def. 31 | — |
+| `def:walk-standing` | Def. 32 | — |
+| `def:counting-rule` | Def. 33 | — |
+| `def:sg-head` | Def. 34 | — |
+| `def:grade-support` | Def. 35 | — |
+| `def:grades` | Def. 36 | — |
+| `def:active-grade` | Def. 37 | — |
+| `def:tsq-views` | Def. 38 | — |
+| `def:tsq-confirmation` | Def. 39 | — |
+| `def:grade-root-choice` | Def. 40 | — |
+| `def:stable-root` | Def. 41 | — |
+| `def:action-root` | Def. 42 | — |
+| `def:recovery-goldfish-vote` | Def. 45 | — |
+| `def:official-confirmation` | Def. 46 | — |
+| `def:ordinary-current-target` | Def. 47 | — |
+| `def:height-vote-rule` | Def. 48 | — |
+| `def:finality-vote-rule` | Def. 49 | — |
+| `def:fg-rule` | Def. 50 | — |
+| `ass:frontier-opportunities` (4a only) | Ass. 15 | — |
+
+### Stated but not read by a figure
+
+Definitions and assumptions the results need, which no algorithm figure reads.
+
+| Paper | № | Lean |
+| --- | --- | --- |
+| `ass:fixed-electorate` | Ass. 1 | — |
+| `ass:sg-fault-bound` | Ass. 2 | — |
+| `def:slashing` | Def. 11 | — |
+
+## Numbered results
+
+Every numbered lemma, theorem, corollary and proposition of both papers.
+
+**cited by** counts how often the paper's own proofs cite the result — a `\ref` inside a
+`proof` environment, counted mechanically across both `.tex` files. It is a property of the
+paper, so it is filled in from the start, and it is the best available guide to which results
+carry the argument.
+
+**Status**: ✅ *proved* — the statement of record covers the paper's sentence; 🟡 *partial* — a
+deliberately narrower sentence is proved, and the note says which; ⛔ *absent* — no Lean
+statement. A sortable, filterable view of this table is [mapping.html](mapping.html),
+regenerated by `make mapping`.
+
+| Paper | № | Lean | cited by | Status |
+| --- | --- | --- | --- | --- |
+| `lem:integer-thresholds` | Lem. 1 | not yet stated | 3 proofs | ⛔ absent |
+| `lem:quorum-intersection` | Lem. 2 | not yet stated | 3 | ⛔ absent |
+| `lem:target-bit-compression` | Lem. 9 | not yet stated | 2 prose | ⛔ absent |
+| `lem:empty-slot-noop` | Lem. 3 | not yet stated | 4 | ⛔ absent |
+| `lem:finalized-before-justified` | Lem. 4 | not yet stated | 3 | ⛔ absent |
+| `lem:target-uniqueness` | Lem. 5 | not yet stated | 6 | ⛔ absent |
+| `lem:height-progression` | Lem. 6 | not yet stated | 3 | ⛔ absent |
+| `lem:height-target-freshness` | Lem. 7 | not yet stated | 1 | ⛔ absent |
+| `lem:chain-target-uniqueness` | Lem. 8 | not yet stated | 6 | ⛔ absent |
+| `lem:past-finalized` | Lem. 10 | not yet stated | 17 | ⛔ absent |
+| `lem:finalized-chain` | Lem. 11 | not yet stated | 8 | ⛔ absent |
+| `thm:accountable-safety` | Thm. 5 | not yet stated | prose only | ⛔ absent |
+| `lem:store-monotonicity` | Lem. 12 | not yet stated | 10 | ⛔ absent |
+| `thm:store-merge` | Thm. 7 | not yet stated | — | ⛔ absent |
+| `cor:merged-action-inputs` | Cor. 1 | not yet stated | — | ⛔ absent |
+| `lem:local-finality-irreversible` | Lem. 13 | not yet stated | 3 | ⛔ absent |
+| `lem:finalized-root-viable` | Lem. 14 | not yet stated | 2 | ⛔ absent |
+| `lem:filtered-hmax-monotone` | Lem. 15 | not yet stated | 2 | ⛔ absent |
+| `lem:store-fork-choice-total` | Lem. 16 | not yet stated | 6 | ⛔ absent |
+| `lem:finalized-lockin` | Lem. 17 | not yet stated | 4 | ⛔ absent |
+| `lem:nonjustifiable-fg` | Lem. 18 | not yet stated | 5 | ⛔ absent |
+| `lem:aged-containment` | Lem. 19 | not yet stated | 2 | ⛔ absent |
+| `lem:aged-walk-total` | Lem. 20 | not yet stated | 2 | ⛔ absent |
+| `lem:direct-roots-chain` | Lem. 21 | not yet stated | 3 | ⛔ absent |
+| `cor:g3-chain` | Cor. 2 | not yet stated | 2 | ⛔ absent |
+| `lem:g3-g2` | Lem. 22 | not yet stated | 2 | ⛔ absent |
+| `lem:g2-g1` | Lem. 23 | not yet stated | 2 | ⛔ absent |
+| `lem:g1-g0` | Lem. 24 | not yet stated | 2 | ⛔ absent |
+| `lem:g1-acceptance` | Lem. 25 | not yet stated | 3 | ⛔ absent |
+| `lem:fresh-support-clears` | Lem. 26 | not yet stated | 3 | ⛔ absent |
+| `lem:tsq-uniqueness` | Lem. 27 | not yet stated | 4 | ⛔ absent |
+| `lem:tsq-adoption` | Lem. 28 | not yet stated | 4 | ⛔ absent |
+| `lem:fork-margin` | Lem. 29 | not yet stated | 3 | ⛔ absent |
+| `cor:tsq-walk` | Cor. 3 | not yet stated | 3 | ⛔ absent |
+| `lem:tsq-liveness` | Lem. 30 | not yet stated | 2 | ⛔ absent |
+| `cor:tsq-honest-witness` | Cor. 4 | not yet stated | 2 | ⛔ absent |
+| `lem:tsq-common-knowledge` | Lem. 31 | not yet stated | 2 | ⛔ absent |
+| `lem:tsq-monotonicity` | Lem. 32 | not yet stated | 2 | ⛔ absent |
+| `lem:recovery-rooted-persistence` | Lem. 33 | not yet stated | 3 | ⛔ absent |
+| `lem:recovery-rooted-confirmation` | Lem. 34 | not yet stated | 3 | ⛔ absent |
+| `lem:no-forward-move` | Lem. 35 | not yet stated | 5 | ⛔ absent |
+| `lem:common-recognition` | Lem. 36 | not yet stated | 3 | ⛔ absent |
+| `lem:honest-proposer-stable-root` | Lem. 37 | not yet stated | 3 | ⛔ absent |
+| `lem:forward-root` | Lem. 38 | not yet stated | 2 | ⛔ absent |
+| `lem:honest-proposer-votes` | Lem. 39 | not yet stated | 2 | ⛔ absent |
+| `lem:root-no-regression` | Lem. 40 | not yet stated | 3 | ⛔ absent |
+| `lem:root-backing` | Lem. 41 | not yet stated | 3 | ⛔ absent |
+| `lem:same-slot-target` | Lem. 42 | not yet stated | 2 | ⛔ absent |
+| `lem:official-confirmation-root-safety` | Lem. 43 | not yet stated | 4 | ⛔ absent |
+| `lem:signer-safety` | Lem. 44 | not yet stated | 3 | ⛔ absent |
+| `lem:height-vote-confirmation` | Lem. 45 | not yet stated | 3 | ⛔ absent |
+| `lem:height-increase-confirmation` | Lem. 46 | not yet stated | 3 | ⛔ absent |
+| `lem:pre-confirmation-cap` | Lem. 47 | not yet stated | 2 | ⛔ absent |
+| `lem:debt-dichotomy` | Lem. 48 | not yet stated | 2 | ⛔ absent |
+| `lem:no-height-h-justification` | Lem. 49 | not yet stated | 3 | ⛔ absent |
+| `lem:selectable-roots` | Lem. 50 | not yet stated | 3 | ⛔ absent |
+| `lem:honest-proposer-coverage` | Lem. 51 | not yet stated | 7 | ⛔ absent |
+| `lem:first-confirmation-simplex-roots` | Lem. 52 | not yet stated | 3 | ⛔ absent |
+| `lem:honest-proposal-sg-batch` | Lem. 53 | not yet stated | 3 | ⛔ absent |
+| `lem:next-batch-clears` | Lem. 54 | not yet stated | 2 | ⛔ absent |
+| `lem:rederivation-ancestry` | Lem. 55 | not yet stated | 2 | ⛔ absent |
+| `lem:pre-confirmation-finality-compatible` | Lem. 56 | not yet stated | 2 | ⛔ absent |
+| `lem:gate-closure` | Lem. 57 | not yet stated | 3 | ⛔ absent |
+| `lem:closing-action-existence` | Lem. 58 | not yet stated | — | ⛔ absent |
+| `lem:honest-proposal-confirms` | Lem. 59 | not yet stated | — | ⛔ absent |
+| `lem:no-hidden-h-advance` | Lem. 60 | not yet stated | 2 | ⛔ absent |
+| `lem:first-confirmation-heads` | Lem. 61 | not yet stated | 2 | ⛔ absent |
+| `lem:first-confirmation-clears` | Lem. 62 | not yet stated | 2 | ⛔ absent |
+| `lem:predrain-height-retention` | Lem. 63 | not yet stated | — | ⛔ absent |
+| `lem:predrain-simplex-roots` | Lem. 64 | not yet stated | — | ⛔ absent |
+| `lem:drain-stable-roots` | Lem. 65 | not yet stated | — | ⛔ absent |
+| `lem:confirmation-round-slots` | Lem. 66 | not yet stated | — | ⛔ absent |
+| `lem:drain-confirms` | Lem. 67 | not yet stated | — | ⛔ absent |
+| `lem:first-confirmation-persists` | Lem. 68 | not yet stated | — | ⛔ absent |
+| `lem:post-healing-proposer` | Lem. 69 | not yet stated | — | ⛔ absent |
+| `cor:post-drain-confirms` | Cor. 5 | not yet stated | — | ⛔ absent |
+| `lem:saved-target-transfers` | Lem. 70 | not yet stated | 2 | ⛔ absent |
+| `lem:lock-alignment` | Lem. 71 | not yet stated | — | ⛔ absent |
+| `lem:common-progress` | Lem. 72 | not yet stated | — | ⛔ absent |
+| `lem:usable-common-action` | Lem. 73 | not yet stated | — | ⛔ absent |
+| `lem:common-action-advances` | Lem. 74 | not yet stated | — | ⛔ absent |
+| `lem:height-catchup` | Lem. 75 | not yet stated | — | ⛔ absent |
+| `lem:leave-nonjustifiable-height` | Lem. 76 | not yet stated | — | ⛔ absent |
+| `lem:honest-proposer-forces-first-confirmation` | Lem. 77 | not yet stated | — | ⛔ absent |
+| `lem:recovery-height-justifies` | Lem. 78 | not yet stated | — | ⛔ absent |
+| `lem:fresh-ordinary-justify` | Lem. 79 | not yet stated | — | ⛔ absent |
+| `lem:honest-proposer-finalizes` | Lem. 80 | not yet stated | — | ⛔ absent |
+| `lem:post-healing-finality` | Lem. 81 | not yet stated | — | ⛔ absent |
+| `prop:opportunity-budget` | Prop. 1 | not yet stated | — | ⛔ absent |
+| `thm:eventual-healing` | Thm. 17 | not yet stated | — | ⛔ absent |
+| `cor:end-to-end` | Cor. 6 | not yet stated | — | ⛔ absent |
+| `cor:recurring-healing` | Cor. 7 | not yet stated | — | ⛔ absent |

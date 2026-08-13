@@ -1,0 +1,30 @@
+name = "decoupled-consensus-lean"
+version = "0.1.0"
+
+# The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
+# rather than a git require so that the revision this project builds against is recorded in
+# this repository's own history: `git submodule status` says which one, and a `git bisect`
+# here moves it.
+#
+# The flavour used is `StsMultisetLog` (`import StsMultisetLog.Spec.Protocol`); the package
+# declares four others, and nothing is shared between them, so importing one does not build
+# the rest.
+[[require]]
+name = "sts-framework"
+path = "deps/lean-sts"
+
+# Mathlib's rev must match `lean-toolchain` (leanprover/lean4:v4.32.2), and must match the
+# rev `deps/lean-sts` requires: Lake resolves one rev per dependency name across the whole
+# build graph. All three are v4.32.2 today. Bump them together.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.32.2"
+
+# This project's own sources. Commented out until there are any — a glob with no matching
+# module makes `lake build` fail rather than do nothing. Uncomment with the first file,
+# `Decoupled.lean` plus `Decoupled/`.
+#
+# [[lean_lib]]
+# name = "Decoupled"
+# globs = ["Decoupled", "Decoupled.+"]
