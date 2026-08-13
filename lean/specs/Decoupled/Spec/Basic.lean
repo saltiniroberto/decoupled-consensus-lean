@@ -41,8 +41,9 @@ datatype. A datatype forbidding it would say that a badly built block cannot be 
 which is the opposite of what the paper's store does with one.
 
 What it costs: `deriving DecidableEq` does not reach this family. Measured here, not
-inherited — see `CONTEXT.md` for what was tried. Equality is therefore classical and
-everything downstream of `⪯` is `noncomputable`.
+inherited — see `CONTEXT.md` for what was tried. So the decision procedure is written out
+by hand below, under "Decidable equality, written out". Nothing in this file or in the
+figure files is `noncomputable`.
 
 `Blk` and `Attestation` are one `mutual` family because each names the other: a block
 carries attestations, and an attestation names blocks in its head and in both of its pairs.
@@ -222,25 +223,160 @@ inductive FinalityPair (Node Root : Type) where
 
 end
 
-open Classical in
-/-- Blocks are compared classically. `deriving DecidableEq` does not reach this family; the
-    obstruction is the nesting through `List` and `Option`, which a block carrying
-    attestations and an attestation naming blocks makes unavoidable. See `CONTEXT.md`.
+/-! ### Decidable equality, written out
 
-    The price is that `⪯` and every `Finset` of blocks is noncomputable. -/
-noncomputable instance : DecidableEq (Blk Node Root) := fun _ _ => propDecidable _
+`deriving DecidableEq` does not reach this family. The error names every type in it:
 
-open Classical in
-/-- Attestations are compared classically, for the same reason as blocks. -/
-noncomputable instance : DecidableEq (Attestation Node Root) := fun _ _ => propDecidable _
+    None of the deriving handlers for class `DecidableEq` applied to
+    `Blk`, `Attestation`, and `HeightPair`
 
-open Classical in
-/-- Height pairs are compared classically, for the same reason as blocks. -/
-noncomputable instance : DecidableEq (HeightPair Node Root) := fun _ _ => propDecidable _
+and it is the nesting through `List` and `Option` that stops it, not the `mutual` — measured
+by de-nesting, which makes the same `deriving` line succeed. See `CONTEXT.md`.
 
-open Classical in
-/-- Finality pairs are compared classically, for the same reason as blocks. -/
-noncomputable instance : DecidableEq (FinalityPair Node Root) := fun _ _ => propDecidable _
+Equality here is decidable all the same: a block is a finite tree and comparing two of them
+is a structural recursion. So the procedure is written out rather than assumed. The
+alternative, `Classical.propDecidable`, has type `(a : Prop) → Decidable a` and is built from
+`Classical.choice`: it produces a `Decidable` value carrying no algorithm, which is what used
+to make `⪯` and all seven routines of Figures 1 and 2 `noncomputable`.
+
+**Six functions, not four.** `attListBeq` and `optBlkBeq` carry the nesting, and they are
+precisely what the deriving handler will not generate. Termination is inferred; no
+`termination_by` is needed.
+
+**What this costs: `[DecidableEq Root]`.** A block carries a `claimedRoot`, so deciding block
+equality means deciding root equality. Every section that compares two blocks now assumes it,
+including the figure files.
+
+**`by decide` still does not work on these.** The mutual block compiles through
+`blkBeq._mutual` over a `PSum`, which is well-founded rather than structural recursion, so
+`blkBeq .genesis .genesis` is not definitionally `true`. Proofs go through the equation
+lemmas — `simp [blkBeq]` — as the soundness theorems below do. Reduction was not available
+under the classical instance either, so nothing was lost.
+-/
+
+section DecEq
+variable [DecidableEq Node] [DecidableEq Root]
+
+mutual
+
+/-- Structural equality of blocks (Definition 5, `def:block-chain`). -/
+def blkBeq : Blk Node Root → Blk Node Root → Bool
+  | .genesis, .genesis => true
+  | .mk p s n as r, .mk p' s' n' as' r' =>
+      blkBeq p p' && s == s' && decide (n = n') && attListBeq as as' && decide (r = r')
+  | _, _ => false
+
+/-- Structural equality of attestations (Definition 8, `def:fg-message`). -/
+def attBeq : Attestation Node Root → Attestation Node Root → Bool
+  | ⟨v, rd, hd, hp, fp⟩, ⟨v', rd', hd', hp', fp'⟩ =>
+      decide (v = v') && rd == rd' && optBlkBeq hd hd' && heightPairBeq hp hp' &&
+        finalityPairBeq fp fp'
+
+/-- The `List` half of the nesting: a block's attestations, compared pairwise. -/
+def attListBeq : List (Attestation Node Root) → List (Attestation Node Root) → Bool
+  | [], [] => true
+  | a :: as, b :: bs => attBeq a b && attListBeq as bs
+  | _, _ => false
+
+/-- The `Option` half of the nesting: an attestation's stabilization head. -/
+def optBlkBeq : Option (Blk Node Root) → Option (Blk Node Root) → Bool
+  | none, none => true
+  | some a, some b => blkBeq a b
+  | _, _ => false
+
+/-- Structural equality of height pairs (Definition 8, `def:fg-message`). -/
+def heightPairBeq : HeightPair Node Root → HeightPair Node Root → Bool
+  | .target h T, .target h' T' => h == h' && blkBeq T T'
+  | .timeout h, .timeout h' => h == h'
+  | .empty, .empty => true
+  | _, _ => false
+
+/-- Structural equality of finality pairs (Definition 8, `def:fg-message`). -/
+def finalityPairBeq : FinalityPair Node Root → FinalityPair Node Root → Bool
+  | .commit h T, .commit h' T' => h == h' && blkBeq T T'
+  | .empty, .empty => true
+  | _, _ => false
+
+end
+
+mutual
+
+/-- `blkBeq` decides equality of blocks. -/
+theorem blkBeq_iff : ∀ (a b : Blk Node Root), blkBeq a b = true ↔ a = b
+  | .genesis, .genesis => by simp [blkBeq]
+  | .genesis, .mk .. => by simp [blkBeq]
+  | .mk .., .genesis => by simp [blkBeq]
+  | .mk p s n as r, .mk p' s' n' as' r' => by
+      rw [blkBeq, Blk.mk.injEq]
+      rw [Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true]
+      rw [blkBeq_iff p p', attListBeq_iff as as']
+      simp only [beq_iff_eq, decide_eq_true_eq]
+      simp only [and_assoc]
+
+/-- `attBeq` decides equality of attestations. -/
+theorem attBeq_iff : ∀ (a b : Attestation Node Root), attBeq a b = true ↔ a = b
+  | ⟨v, rd, hd, hp, fp⟩, ⟨v', rd', hd', hp', fp'⟩ => by
+      rw [attBeq, Attestation.mk.injEq]
+      rw [Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true]
+      rw [optBlkBeq_iff hd hd', heightPairBeq_iff hp hp', finalityPairBeq_iff fp fp']
+      simp only [beq_iff_eq, decide_eq_true_eq]
+      simp only [and_assoc]
+
+/-- `attListBeq` decides equality of attestation lists. -/
+theorem attListBeq_iff :
+    ∀ (a b : List (Attestation Node Root)), attListBeq a b = true ↔ a = b
+  | [], [] => by simp [attListBeq]
+  | [], _ :: _ => by simp [attListBeq]
+  | _ :: _, [] => by simp [attListBeq]
+  | a :: as, b :: bs => by
+      rw [attListBeq, Bool.and_eq_true, attBeq_iff a b, attListBeq_iff as bs]
+      simp
+
+/-- `optBlkBeq` decides equality of optional blocks. -/
+theorem optBlkBeq_iff : ∀ (a b : Option (Blk Node Root)), optBlkBeq a b = true ↔ a = b
+  | none, none => by simp [optBlkBeq]
+  | none, some _ => by simp [optBlkBeq]
+  | some _, none => by simp [optBlkBeq]
+  | some a, some b => by rw [optBlkBeq, blkBeq_iff a b]; simp
+
+/-- `heightPairBeq` decides equality of height pairs. -/
+theorem heightPairBeq_iff : ∀ (a b : HeightPair Node Root), heightPairBeq a b = true ↔ a = b
+  | .target h T, .target h' T' => by
+      rw [heightPairBeq, Bool.and_eq_true, blkBeq_iff T T']
+      simp only [beq_iff_eq, HeightPair.target.injEq]
+  | .timeout _, .timeout _ => by simp [heightPairBeq]
+  | .empty, .empty => by simp [heightPairBeq]
+  | .target .., .timeout _ => by simp [heightPairBeq]
+  | .target .., .empty => by simp [heightPairBeq]
+  | .timeout _, .target .. => by simp [heightPairBeq]
+  | .timeout _, .empty => by simp [heightPairBeq]
+  | .empty, .target .. => by simp [heightPairBeq]
+  | .empty, .timeout _ => by simp [heightPairBeq]
+
+/-- `finalityPairBeq` decides equality of finality pairs. -/
+theorem finalityPairBeq_iff :
+    ∀ (a b : FinalityPair Node Root), finalityPairBeq a b = true ↔ a = b
+  | .commit h T, .commit h' T' => by
+      rw [finalityPairBeq, Bool.and_eq_true, blkBeq_iff T T']
+      simp only [beq_iff_eq, FinalityPair.commit.injEq]
+  | .empty, .empty => by simp [finalityPairBeq]
+  | .commit .., .empty => by simp [finalityPairBeq]
+  | .empty, .commit .. => by simp [finalityPairBeq]
+
+end
+
+instance : DecidableEq (Blk Node Root) := fun a b => decidable_of_iff _ (blkBeq_iff a b)
+
+instance : DecidableEq (Attestation Node Root) :=
+  fun a b => decidable_of_iff _ (attBeq_iff a b)
+
+instance : DecidableEq (HeightPair Node Root) :=
+  fun a b => decidable_of_iff _ (heightPairBeq_iff a b)
+
+instance : DecidableEq (FinalityPair Node Root) :=
+  fun a b => decidable_of_iff _ (finalityPairBeq_iff a b)
+
+end DecEq
 
 namespace Blk
 
@@ -308,7 +444,8 @@ end Attestation
 section Tree
 
 /-- The block and all of its ancestors, nearest first. Structural recursion: the recursive
-    call is on a constructor argument. -/
+    call is on a constructor argument. Takes no `DecidableEq`: walking the chain does not
+    compare blocks, only deciding membership in the result does. -/
 def ancestors : Blk Node Root → List (Blk Node Root)
   | .genesis => [.genesis]
   | .mk p s n a r => .mk p s n a r :: ancestors p
@@ -319,7 +456,10 @@ def Preceq (a b : Blk Node Root) : Prop := a ∈ ancestors b
 
 @[inherit_doc] scoped infix:50 " ⪯ " => Preceq
 
-noncomputable instance : DecidableRel (Preceq (Node := Node) (Root := Root)) :=
+section Decide
+variable [DecidableEq Node] [DecidableEq Root]
+
+instance : DecidableRel (Preceq (Node := Node) (Root := Root)) :=
   fun a b => inferInstanceAs (Decidable (a ∈ ancestors b))
 
 /-- `B ≺ C`: strict ancestry (Definition 5, `def:block-chain`). -/
@@ -327,7 +467,7 @@ def Prec (a b : Blk Node Root) : Prop := a ⪯ b ∧ a ≠ b
 
 @[inherit_doc] scoped infix:50 " ≺ " => Prec
 
-noncomputable instance : DecidableRel (Prec (Node := Node) (Root := Root)) :=
+instance : DecidableRel (Prec (Node := Node) (Root := Root)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∧ _))
 
 /-- `B ∼ C`: compatible, one precedes the other (Definition 5, `def:block-chain`).
@@ -337,8 +477,10 @@ def Compatible (a b : Blk Node Root) : Prop := a ⪯ b ∨ b ⪯ a
 
 @[inherit_doc] scoped infix:50 " ∼ " => Compatible
 
-noncomputable instance : DecidableRel (Compatible (Node := Node) (Root := Root)) :=
+instance : DecidableRel (Compatible (Node := Node) (Root := Root)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
+
+end Decide
 
 end Tree
 
