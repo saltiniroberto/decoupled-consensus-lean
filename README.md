@@ -43,11 +43,12 @@ module they live in. `INDEX.tsv` lists all of them.
 Figures 1 and 2, and the numbered definitions those two read. Figures 3, 4 and 5 are absent,
 as is everything from Section 6 onward.
 
-**Nothing is proved.** Every proof in the analysis is `sorry`.
+**Nothing is proved, and nothing is stated.** No numbered lemma, theorem or corollary of the
+paper has a Lean statement yet.
 
 `MAPPING.md` is the authority on what exists. It carries three tables: the paper's 5 algorithm
 figures, of which 2 have Lean files; its 49 definitions and assumptions, of which 11 are
-rendered; and its 92 numbered results, of which 8 are written down and 84 are absent.
+rendered; and its 92 numbered results, every one of them still absent.
 
 The 11 are the 8 in `Basic.lean` above, plus Definitions 10, 16 and 18, which have no separate
 declaration because the figure routines *are* their rendering — `processAttestation` is
@@ -67,34 +68,28 @@ The paper's numbered results, stated against the specification above. Its own li
 | File | Module | What it holds |
 | --- | --- | --- |
 | `lean/Analysis.lean` | `Analysis` | the library root: one import per file below |
-| `lean/Analysis/Lemmas.lean` | `Analysis.Lemmas` | the nine lemmas of Sections 3 and 4, printed numbers 3 to 11 |
+| `lean/Analysis/Lemmas.lean` | `Analysis.Lemmas` | statements of record, one per numbered lemma. Empty so far: it holds the groundwork for Sections 3 and 4 and no statement |
 
 Two libraries rather than one because the two halves have no shared module prefix — the
 specification is rooted at `Spec` and the analysis at `Analysis`, and `tools/decl_index.lean`
 names both in its `modRoots`.
 
-Eight of the nine are written down and **none is proved**. `MAPPING.md` marks all eight
-🔨 *stated*, with the note column saying what each is waiting on.
+**Nothing is stated yet.** `Analysis/Lemmas.lean` declares nothing; it carries the groundwork
+for the nine lemmas of Sections 3 and 4 — which are statable in today's vocabulary, which wait on
+a definition the specification does not have, and where the chain replay should live. The
+statements are being added one at a time, each audited against the paper on its own.
 
-They carry one of two Lean shapes. This is forced by how much vocabulary the specification has,
-and is **not** a difference in progress — both mean "not proved":
+When they do land, each is one of two Lean shapes, forced by how much vocabulary exists rather
+than by any difference in progress. `MAPPING.md` marks both 🔨 *stated*:
 
-- `theorem … := sorry`, where the paper's sentence is expressible today. Lemmas 4, 6, 7, 8.
-- `def … : Prop` taking the absent notion as an argument, where it is not: certificates
-  (Definition 21), the slashing conditions (Definition 11), the finality action state
-  (Definition 20), Assumption 1's fault bound. Lemmas 3, 5, 10, 11. It has to be a `def` rather
-  than a `theorem` because over an unconstrained argument the claim would be *false* rather than
-  unproved, and a `sorry` would hide that. Each becomes a `theorem` when its argument can be
-  replaced by a real definition.
+- `theorem … := sorry`, where the paper's sentence is expressible today.
+- `def … : Prop` taking the absent notion as an argument, where it is not. It has to be a `def`
+  rather than a `theorem` because over an unconstrained argument the claim would be *false*
+  rather than unproved, and a `sorry` would hide that.
 
 **`make check` only catches the first shape.** A `def … : Prop` contains no `sorry`, so the
 strict target passes it. Green therefore means "no `sorry`", not "the paper's results are
-proved" — `MAPPING.md`'s status column is what answers the second question, and it is the thing
-to read.
-
-The ninth, Lemma 9, is not written down at all. It is a sufficiency claim about the
-representation for which the paper gives no formal shape, so pinning it down is a modelling
-decision rather than a transcription; `Analysis/Lemmas.lean` says so where it would have gone.
+proved" — `MAPPING.md`'s status column is what answers the second question.
 
 ## The rest of the layout
 
@@ -128,9 +123,10 @@ There are two build targets, and which one you want depends on whether a proof i
 | `make check` | fails | fails | checked | yes |
 
 `make dev` is the working target while a proof is being written, which is why the quickstart
-above uses it. `make check` is what says the work is done, and **it fails today on purpose**:
-four lemmas in `Analysis/Lemmas.lean` are asserted with `sorry`. `make sorries` lists every
-outstanding one with `file:line` and does not fail, so it answers "what is left".
+above uses it. `make check` is what says the work is done. Both are green today, there being no
+statement yet to prove; `make check` will start failing with the first `theorem … := sorry`.
+`make sorries` lists every outstanding one with `file:line` and does not fail, so it answers
+"what is left".
 
 `make` on its own lists every target. The others worth knowing are `make index` and
 `make mapping`, which regenerate `INDEX.tsv` and `mapping.html`, and `make cites`, which checks

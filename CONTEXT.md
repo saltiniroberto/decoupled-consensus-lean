@@ -513,7 +513,30 @@ because each is part of a definition that is otherwise needed.
 * `process_slots`' second parameter is `target`, not the figure's `slot`, which would shadow
   the `Blk.slot` projection inside that one routine.
 
-## 2026-08-13 — the analysis half, and the lemmas of Sections 3 and 4
+## 2026-08-13 — the analysis half
+
+### The nine lemmas were written in one pass, then withdrawn
+
+**Roberto's instruction, the same day: take them back out and go lemma by lemma.** The pass
+below stated eight of the nine in one commit (`e42ef9b`); that commit is not reverted — the
+`lean_lib` wiring and the tooling it repointed are kept — but the statements and `replayChain`
+are removed, and `MAPPING.md`'s eight rows are back to `⛔ absent`.
+
+Why the statements rather than the whole commit: the wiring is not what wants re-examining, and
+tearing it out only to restore it with the first lemma would make those decisions twice. What
+wants re-examining is each sentence against the paper, one at a time.
+
+`replayChain` went with them, being a definition added only because the lemmas needed it. Where
+it belongs is an open question — see below.
+
+**Not reverted in the plain sense**: `git revert e42ef9b` was rejected because `4be9087` touches
+two of the same files (`mapping.html`, `tools/mapping_html.py`), so both a revert and a
+rebase-drop conflict there and risk re-breaking the `make mapping` fix. Removal by a forward
+commit instead.
+
+**The groundwork was kept, in `Analysis/Lemmas.lean`'s docstring**, because re-deriving it is the
+expensive part: which of the nine are statable today, which wait on which numbered definition,
+the line spans, and the two-shapes rule. Everything below stands as the record of that pass.
 
 ### The analysis is its own library, at `lean/Analysis`
 
@@ -533,7 +556,7 @@ each already paid:
 with `Analysis: some modules have bad imports` until `lean/Analysis.lean` existed. That mirrors
 `lean/Spec.lean`, so each half now has a root module that imports its own files.
 
-### Nine lemmas of Sections 3 and 4, in two shapes
+### Nine lemmas of Sections 3 and 4 — the withdrawn pass, kept as the plan
 
 Sections 3 (`sec:state-machine`, lines 535–980) and 4 (`sec:safety`, lines 981–1197) hold nine
 lemmas, printed numbers 3 to 11. Theorem 5 (`thm:accountable-safety`) is in Section 4 too and is
@@ -612,7 +635,9 @@ CSS in both colour schemes, and the filter buttons. A fifth was not about status
 regex matched `theorem` only, so the four `def … : Prop` rows came back as
 `no Lean statement found for non-absent` until it accepted `def` as well.
 
-The page now reads `0 proved · 0 partial · 8 stated · 84 absent`.
+With the statements in, the page read `0 proved · 0 partial · 8 stated · 84 absent`. After
+the withdrawal it reads `0 proved · 0 partial · 0 stated · 92 absent`, and the two statuses stay
+in the legend and in `mapping_html.py` for the first lemma that lands.
 
 ### The index generator's `suppressed` drops a `Prop` binder, and it misleads here
 
@@ -625,17 +650,19 @@ that `INDEX.tsv` stays a search key rather than a signature — but do not read 
 
 ## Next
 
-1. **Prove the four `🔨 stated` lemmas**, which is what `make check` is waiting on: Lemmas 4, 6,
-   7 and 8. Read the `lean-proof-idioms` skill first — all four are over routines written in the
-   paper's imperative shape, and `replayChain` is a recursion over the block family, so the
-   `sorry` is not the only obstacle.
-2. **Model what the four `def … : Prop` lemmas wait on**, in the order that unblocks most:
+1. **Settle where the chain replay lives**, because four of the nine lemmas quantify over it and
+   nothing can be stated about them until it exists. The withdrawn pass had it as `replayChain`
+   inside `Analysis/Lemmas.lean`; it belongs in `Spec` under Definition 24
+   (`def:total-raw-replay`), whose slot eligibility conditions are also still absent.
+2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Lemma 7
+   is the one statable in full today; Lemmas 4, 6 and 8 are statable in part. Read the
+   `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
+   the paper's imperative shape, so `sorry` is not the only obstacle.
+3. **Model what the rest wait on**, in the order that unblocks most:
    Definition 21 (`def:certificates`) is needed by four results, Definition 11 (`def:slashing`)
    by two, Definition 20 (`def:finality-action-state`) by three, and Assumption 1's `b` with
    `3b < W` by one. Each one landed turns a `def … : Prop` into a `theorem`, and each is a
    modelling decision to record here.
-3. Definition 24 (`def:total-raw-replay`) in full, at which point `replayChain` moves out of
-   `Analysis/Lemmas.lean` into the specification under that number.
 4. The parts of Lemmas 4, 6, 8 and 10 that are currently narrower than the paper's sentence, and
    Lemma 9, which needs a formulation decided before it can be written at all.
 5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
