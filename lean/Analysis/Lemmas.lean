@@ -1,4 +1,8 @@
 import Spec
+-- `Spec` imports only `…Finset.Defs`, enough to *state* a weight sum. Reasoning about one needs
+-- `Finset.sum_union_inter` and `Finset.sum_le_sum_of_subset`, which live here. Added for Lemma 2.
+import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 
 /-!
 # The paper's numbered lemmas
@@ -13,7 +17,7 @@ The groundwork below is kept from that pass, because re-deriving it is the expen
 
 **Declarations are ordered by the paper's lemma number**, not by when they landed.
 
-**Present so far: Lemmas 1 and 3**, plus the two notions Lemma 3 needed — `BlockPostState` and
+**Present so far: Lemmas 1, 2 and 3**, plus the two notions Lemma 3 needed — `BlockPostState` and
 Definition 20's `actionState`.
 
 ## The lemmas, and what each waits on
@@ -25,7 +29,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | № | `\label` | Lines | Statable today? |
 | --- | --- | --- | --- |
 | 1 | `lem:integer-thresholds` | 313–322 | **yes, and proved** — landed |
-| 2 | `lem:quorum-intersection` | 342–347 | yes, it appears: `Quorum`, `weight`, `q`, `W` are all present |
+| 2 | `lem:quorum-intersection` | 342–352 | **yes, and proved** — landed, both sentences |
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
 | 4 | `lem:finalized-before-justified` | 920–931 | likely yes — see below |
 | 5 | `lem:target-uniqueness` | 967–973 | no — Defs. 21 and 11 |
@@ -182,6 +186,62 @@ theorem lemIntegerThresholds (b : Nat) (hb : 3 * b < W Node) :
     W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧
       2 * q Node - W Node > b := by
   simp only [q, m]
+  omega
+
+end
+
+-- `∩` and `∪` on a `Finset` need `DecidableEq`, which Lemma 1 does not, so Lemma 2 gets its own
+-- section rather than making Lemma 1 carry an instance it never mentions.
+section
+variable [DecidableEq Node] [Electorate Node]
+
+/-- The `Finset` fact both halves of Lemma 2 rest on: a union and an intersection together weigh
+    what the two sets weigh, and the union is inside the electorate. Stated once so neither proof
+    repeats it. Not a numbered result of the paper. -/
+private theorem weight_inter_ge {Q Q' : Finset Node}
+    (hQV : Q ⊆ Electorate.V) (hQ'V : Q' ⊆ Electorate.V) :
+    weight Q + weight Q' ≤ W Node + weight (Q ∩ Q') := by
+  have key : weight (Q ∪ Q') + weight (Q ∩ Q') = weight Q + weight Q' := by
+    simp only [weight]; exact Finset.sum_union_inter
+  have hle : weight (Q ∪ Q') ≤ W Node := by
+    simp only [weight, W]
+    exact Finset.sum_le_sum_of_subset (Finset.union_subset hQV hQ'V)
+  omega
+
+/-- **Lemma 2** (`lem:quorum-intersection`, lines 342–352): two quorums intersect in weight at
+    least `2q - W`.
+
+    Read aloud: two finality quorums share enough weight to expose a fault if they certify
+    incompatible claims.
+
+    `Q ⊆ V` and `Q' ⊆ V` are the paper's own side conditions — it says "any two quorums
+    `Q, Q' ⊆ V`". Both are needed: `Quorum` alone constrains a set's weight, not its membership,
+    and a quorum reaching outside the electorate could weigh more than `W`.
+
+    The `Nat` subtraction is truncated, which costs nothing: where `2q ≤ W` the bound is `≥ 0`,
+    and Lemma 1 is what says `2q - W` is in fact positive. -/
+theorem lemQuorumIntersection {Q Q' : Finset Node}
+    (hQV : Q ⊆ Electorate.V) (hQ'V : Q' ⊆ Electorate.V)
+    (hQ : w(Q)≥q) (hQ' : w(Q')≥q) :
+    w(Q ∩ Q') ≥ 2 * q Node - W Node := by
+  have h := weight_inter_ge hQV hQ'V
+  unfold Quorum at hQ hQ'
+  omega
+
+/-- **Lemma 2**'s second sentence: "consequently their intersection contains non-Byzantine weight
+    under Assumption 1 (`ass:fixed-electorate`)".
+
+    Separate from `lemQuorumIntersection` because it needs that assumption's Byzantine weight `b`
+    and the bound `3 * b < W`, which the first sentence does not. This is the paper's own
+    "consequently", and it is Lemma 1's `2q - W > b` composed with the bound above — though it is
+    proved here directly from `3 * b < W`, `omega` needing no help to see it. -/
+theorem lemQuorumIntersectionNonByzantine {Q Q' : Finset Node}
+    (hQV : Q ⊆ Electorate.V) (hQ'V : Q' ⊆ Electorate.V)
+    (hQ : w(Q)≥q) (hQ' : w(Q')≥q) (b : Nat) (hb : 3 * b < W Node) :
+    w(Q ∩ Q') > b := by
+  have h := weight_inter_ge hQV hQ'V
+  unfold Quorum at hQ hQ'
+  simp only [q] at hQ hQ'
   omega
 
 end

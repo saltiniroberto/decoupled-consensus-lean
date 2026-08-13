@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 85 declarations.
+# 87 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -31,7 +31,7 @@ def	Blk.mk.elim	Spec.Defs.Basic:185	motive_1 t	Blk Node Root → Sort u | Blk No
 def	Blk.parent	Spec.Defs.Basic:383	Option (Blk Node Root)	Blk Node Root
 def	Blk.proposer	Spec.Defs.Basic:394	Option Node	Blk Node Root
 def	Blk.slot	Spec.Defs.Basic:388	ℕ	Blk Node Root
-inductive	BlockPostState	Analysis.Lemmas:119	Prop	ChainState Node Root
+inductive	BlockPostState	Analysis.Lemmas:131	Prop	ChainState Node Root
 inductive	ChainState	Spec.Defs.Basic:507	Type	
 def	ChainState.Qprog	Spec.Defs.Basic:569	Finset Node	ChainState Node Root
 def	ChainState.Qtarget	Spec.Defs.Basic:563	Finset Node	ChainState Node Root
@@ -61,7 +61,7 @@ def	TransitionResult.invalid.elim	Spec.Defs.Basic:609	motive t	TransitionResult 
 def	TransitionResult.state.elim	Spec.Defs.Basic:607	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 0 | (σ : ChainState Node Root) → motive (TransitionResult.state σ)
 def	ValidInclusion	Spec.Defs.Basic:492	Bool	Attestation Node Root
 def	W	Spec.Defs.Basic:116	ℕ	
-def	actionState	Analysis.Lemmas:140	ChainState Node Root	ChainState Node Root | ℕ
+def	actionState	Analysis.Lemmas:152	ChainState Node Root	ChainState Node Root | ℕ
 def	advanceHeight	Spec.Fig2AttestationProcessing:106	ChainState Node Root	ChainState Node Root | Option (Blk Node Root) | ℕ
 def	ancestors	Spec.Defs.Basic:446	List (Blk Node Root)	Blk Node Root
 def	attBeq	Spec.Defs.Basic:269	Bool	Attestation Node Root | Attestation Node Root
@@ -77,8 +77,10 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
-theorem	lemEmptySlotNoop	Analysis.Lemmas:186	(actionState σ t).L = σ.L ∧ (actionState σ t).h = σ.h ∧ (actionState σ t).s_h = σ.s_h ∧ (actionState σ t).nj = σ.nj ∧ (actionState σ t).J = σ.J ∧ (actionState σ t).h_j = σ.h_j ∧ (actionState σ t).F = σ.F ∧ (actionState σ t).h_F = σ.h_F ∧ (actionState σ t).P = σ.P ∧ (actionState σ t).targetParticipation = σ.targetParticipation ∧ (actionState σ t).progress = σ.progress	BlockPostState σ | σ.L.slot ≤ t
-theorem	lemIntegerThresholds	Analysis.Lemmas:158	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	lemEmptySlotNoop	Analysis.Lemmas:254	(actionState σ t).L = σ.L ∧ (actionState σ t).h = σ.h ∧ (actionState σ t).s_h = σ.s_h ∧ (actionState σ t).nj = σ.nj ∧ (actionState σ t).J = σ.J ∧ (actionState σ t).h_j = σ.h_j ∧ (actionState σ t).F = σ.F ∧ (actionState σ t).h_F = σ.h_F ∧ (actionState σ t).P = σ.P ∧ (actionState σ t).targetParticipation = σ.targetParticipation ∧ (actionState σ t).progress = σ.progress	BlockPostState σ | σ.L.slot ≤ t
+theorem	lemIntegerThresholds	Analysis.Lemmas:170	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	lemQuorumIntersection	Analysis.Lemmas:211	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
+theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:231	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:581	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
