@@ -307,17 +307,83 @@ theorem settled_gen [PositiveWeight Node] :
   · intro hw; rw [hQp] at hw; exact not_quorum_empty hq hw
   · intro h; simp [ChainState.gen] at h
 
+/-! ### A height transition lands in a settled state -/
+
+theorem advanceHeight_F (σ : ChainState Node Root) (j : Option (Blk Node Root)) (st : Time) :
+    (advanceHeight σ j st).F = σ.F := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_h_F (σ : ChainState Node Root) (j : Option (Blk Node Root)) (st : Time) :
+    (advanceHeight σ j st).h_F = σ.h_F := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+/-- A justifying transition clears `P`, which is what blocks the finality branch afterwards. -/
+theorem advanceHeight_P_some (σ : ChainState Node Root) (T : Blk Node Root) (st : Time) :
+    (advanceHeight σ (some T) st).P = ∅ := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_none_J (σ : ChainState Node Root) (st : Time) :
+    (advanceHeight σ none st).J = σ.J := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_none_h_j (σ : ChainState Node Root) (st : Time) :
+    (advanceHeight σ none st).h_j = σ.h_j := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_none_P (σ : ChainState Node Root) (st : Time) :
+    (advanceHeight σ none st).P = σ.P := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+/-- **A height transition lands in a `Settled` state.** The target and both tallies are reset, which
+    blocks the target and progress branches. The finality branch is blocked two different ways
+    depending on the transition: a justifying one clears `P`, so no quorum of finality commitments
+    remains; a progress one leaves the finality fields untouched, so whatever blocked that branch
+    before still does — which is why `hfin` is a hypothesis rather than a consequence. -/
+theorem settled_advanceHeight {σ : ChainState Node Root} (hq : 0 < q Node)
+    (j : Option (Blk Node Root)) (st : Time)
+    (hfin : ¬(σ.h_j > σ.h_F ∧ σ.F ⪯ σ.J ∧ w(σ.P)≥q)) : Settled (advanceHeight σ j st) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · cases j with
+    | none =>
+        rw [advanceHeight_none_h_j, advanceHeight_h_F, advanceHeight_F, advanceHeight_none_J,
+            advanceHeight_none_P]
+        exact hfin
+    | some T =>
+        rintro ⟨-, -, hw⟩
+        rw [advanceHeight_P_some] at hw
+        exact not_quorum_empty hq hw
+  · rintro ⟨-, hT, -⟩; exact hT (advanceHeight_T_h σ j st)
+  · intro hw; rw [advanceHeight_Qprog] at hw; exact not_quorum_empty hq hw
+  · intro _; exact advanceHeight_Qtarget σ j st
+
 /-! ## Lemma 3 -/
 
 /-- Every block post-state is `Settled`.
 
-    **Outstanding.** This is the one gap left in Lemma 3. It is where `process_block` and
-    `process_height_events` have to be analysed, and the invariant does not survive
-    `process_block` — target and progress quorums are built there, which is the routine doing its
-    job — so it wants the split the `lean-proof-idioms` skill describes: a core that rides the whole
-    transition, with `process_height_events` re-establishing the rest at the end.
+    **Outstanding**, and it is the only gap left in Lemma 3. Everything it composes now exists:
 
-    `0 < q` will come from the same place it does elsewhere: any electorate member gives it. -/
+    * `closeSlots_of_settled` — `process_slots` preserves the invariant;
+    * `processAttestations_target` — `process_block` preserves `emptyTarget`, and only that;
+    * `settled_advanceHeight` — a height transition lands settled.
+
+    Two steps remain. First, `Settled (processHeightEvents σ st)` from `emptyTarget` alone, by cases
+    on that routine's three branches: a target or progress branch reduces to
+    `settled_advanceHeight`, and a no-branch case is `Settled` directly, its `noFinalize` coming
+    either from the finality sub-step having set `h_F = h_j` or from that branch's condition having
+    been false. Then those compose along `state_transition`'s three phases, and the induction over
+    `BlockPostState` closes this, with `settled_gen` at the base.
+
+    **Measured obstacle for the branch analysis**: after `simp only [processHeightEvents]` the goals
+    carry `pure (…).run` wrappers and `split_ifs` cannot see the `if`s underneath. `Id.run` has to
+    join the `simp only` set — the skill's section 16 — and the no-branch case then needs the
+    record-projection bridge (`{σ with F := …}.Qtarget = σ.Qtarget := rfl`) that `settled_setTarget`
+    already uses. -/
 theorem settled_of_blockPostState [PositiveWeight Node] {σ : ChainState Node Root}
     (h : BlockPostState σ) : Settled σ := by
   sorry
