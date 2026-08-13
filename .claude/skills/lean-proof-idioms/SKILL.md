@@ -80,6 +80,49 @@ condition and then `simp` with the definition:
 This only reaches one level down. Past that, prove the inner routine's field lemma first and
 pass it in the simp set, as `processHeightEvents_s` is passed above.
 
+### `Id.run` joins the list once the goal is not a field read
+
+**Measured in this repository, 2026-08-14**, on `settled_processHeightEvents`. The closers above
+end in `rfl`, which sees through anything definitional, so a field lemma never notices that
+`simp only [processHeightEvents]` leaves a `pure (…).run` wrapper around each leaf. A goal that
+is *not* closed by `rfl` — `Settled (processHeightEvents σ st)`, say — does notice: `split_ifs`
+reports no progress, because the `if`s are underneath the wrapper.
+
+Put `Id.run` in the list:
+
+    simp only [processHeightEvents, Id.run]
+    split_ifs <;> …
+
+All six leaves of that routine's branch tree then come out reachable.
+
+### Do not name `split_ifs` hypotheses positionally
+
+Also measured here, and it cost a session's last hour. `split_ifs at h` **discharges the leaves
+whose hypotheses contradict `h`** — against `h : … = .state σ'` on a routine that returns
+`invalid` on a failed check, the invalid leaves are already closed when the tactic returns. So a
+bullet for them errors with *"no goals to be solved"*, which reads like a wrong proof rather than
+a closed one, and a positional `split_ifs with h1 h2 h3 h2' h3'` names hypotheses that do not
+exist.
+
+Close the leaves without naming them, and the proof survives a change to the branch tree:
+
+    split_ifs <;>
+      first
+        | exact settled_advanceHeight hq _ _
+            (by rintro ⟨hlt, -, -⟩; exact absurd hlt (Nat.lt_irrefl _))
+        | exact settled_advanceHeight hq _ _ (by assumption)
+        | exact ⟨by rintro ⟨hlt, -, -⟩; exact absurd hlt (Nat.lt_irrefl _),
+                 by assumption, by assumption, hET⟩
+        | exact ⟨by assumption, by assumption, by assumption, hET⟩
+
+Two things make that work. A `(by …)` argument elaborates after the enclosing `exact` has
+unified, so the metavariable for the state is assigned by the time the tactic block runs — which
+is what lets `_ _` stand for the branch's own arguments. And `exact` unifies up to `whnf`, so the
+`pure` wrapper on each leaf needs no separate step.
+
+The same holds for `split at h` on a `match` returning `invalid` in one arm: the arm is closed,
+and `injection h` is the whole proof of the arm that is not.
+
 ## 2. `⊥` is not syntactically `none`
 
 `⊥` for an absent value is a `Bot (Option α)` instance, not a constructor. So after
@@ -338,6 +381,25 @@ not definitional. The recipe that works, from `derive_block_states`:
 4. Convert the inner `forIn` to `foldl` by list induction, and consume the outer loop by
    strong induction on a finite measure (`card (bound \ A)`), using the one-step
    unfolding: each yielding pass must strictly grow something inside a fixed bound.
+
+### A hand-written `if`-shaped bridge is *not* `rfl`
+
+**Measured in this repository, 2026-08-14.** The recipe above works because it restates the
+elaborated body word for word. Restating a `do` block as a *readable* nest of `if`s and proving
+the equation by `rfl` does not work, however plainly definitional it looks:
+
+    theorem processHeightEvents_eq (σ) (st) :
+        processHeightEvents σ st =
+          (fun σ => if ¬ σ.nj ∧ σ.T_h ≠ ⊥ ∧ w(σ.Qtarget)≥q then … else …)
+          (if σ.h_j > σ.h_F ∧ … then { σ with F := σ.J, h_F := σ.h_j } else σ) := rfl
+    -- Not a definitional equality
+
+The `if`s in the statement elaborate their own `Decidable` instances, and `Decidable` is data,
+not a proposition — two `ite`s at different instances are equal only propositionally. Section 3's
+bridge is fine because it restates the *same* term at a different projection (`forIn` the class
+method versus `Lean.Loop.forIn`), which is a defeq problem; this is a different term.
+
+Reach for `simp only [f, Id.run]` and `split_ifs` instead, per section 1.
 
 ## 12. Anatomy that needs the invariant it helps prove: the `_of` split
 
