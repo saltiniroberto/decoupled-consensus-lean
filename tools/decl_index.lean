@@ -16,9 +16,8 @@ environment only if this file imports it, so the import list below is what the i
 add a line when a new module root lands, and the same root to `modRoots`.
 
 `modRoots` is a list rather than one prefix because this project has no single module prefix
-over both halves: the specification is rooted at `Spec` and the analysis will be rooted at
-`Analysis`. Missing a root here is silent — its declarations are simply absent from the
-index.
+over its two halves: the specification is rooted at `Spec` and the analysis at `Analysis`.
+Missing a root here is silent — its declarations are simply absent from the index.
 
 Not part of any `lean_lib`, so `lake build` never sees it. Self-contained by the usual rule for
 independent attempts: a project that wants an index should copy this and let the copy disagree,
@@ -26,13 +25,11 @@ rather than sharing it.
 -/
 import Lean
 
--- One line per module root the index should cover. `Spec` pulls in every figure file and the
--- vocabulary they read; uncomment the analysis ones with the first statements, and add
--- "Analysis" to `modRoots` below at the same time.
+-- One line per module root the index should cover, and one entry per root in `modRoots`
+-- below. Each is a library root that imports its own half, so this list stays two lines as
+-- files are added under either.
 import Spec
--- import Analysis.Lemmas
--- import Analysis.Theorems
--- import Analysis.Corollaries
+import Analysis
 
 open Lean Lean.Meta
 
@@ -43,7 +40,7 @@ def outPath : System.FilePath := "INDEX.tsv"
 
 /-- Only modules under one of these roots are indexed. One entry per `lean_lib` root; see the
     file header on why this is a list. -/
-def modRoots : List String := ["Spec"]
+def modRoots : List String := ["Spec", "Analysis"]
 
 /-- Name fragments that only ever occur in declarations the elaborator generated. -/
 def noiseFragments : List String :=
@@ -135,9 +132,9 @@ def header (count : Nat) : String :=
   s!"# {count} declarations.\n" ++
   (if count == 0 then
      "#\n" ++
-     "# Zero because nothing is formalized yet. `tools/decl_index.lean` indexes the\n" ++
-     "# modules it imports, and its `import Decoupled.…` lines are commented out until\n" ++
-     "# those modules exist. Uncomment them with the first statements.\n"
+     "# Zero because this file indexes only the modules it imports, and only those whose\n" ++
+     "# name starts with one of its `modRoots`. Check both lists at the top of\n" ++
+     "# `tools/decl_index.lean`.\n"
    else "") ++
   "#\n" ++
   "# Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.\n" ++
@@ -153,7 +150,7 @@ def header (count : Nat) : String :=
   "# `exact?` on the goal — it matches up to unification, which grep cannot.\n" ++
   "#\n" ++
   "# An earlier formalization of the same paper has its own index of 975 declarations.\n" ++
-  "# It is not in this repository; REFERENCES_LOCAL.md says where to read it.\n"
+  "# It is not in this repository and no path to it is recorded here.\n"
 
 end Decoupled.DeclIndex
 

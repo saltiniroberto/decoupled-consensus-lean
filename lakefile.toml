@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["Spec"]
+defaultTargets = ["Spec", "Analysis"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -32,12 +32,19 @@ rev = "v4.32.2"
 # written in terms of is one level down in `Spec/Defs/`, so listing `Spec/*.lean` is the list
 # of figures rendered so far.
 #
-# The analysis will be a second `lean_lib` over the same `srcDir` with root `Analysis`, so
+# The analysis is a second `lean_lib` below, over the same `srcDir` with root `Analysis`, so
 # `lean/Analysis/…`. The two globs stay disjoint because the roots differ.
 #
-# `tools/decl_index.lean` filters on module roots, and its list is what has to grow when a
-# second root lands — there is no longer one shared prefix over both halves.
+# `tools/decl_index.lean` filters on module roots, and its `modRoots` list is what has to name
+# both — there is no single shared prefix over the two halves.
 [[lean_lib]]
 name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
+
+# The analysis: the paper's numbered results, stated and proved against the specification
+# above. Root `Analysis`, same `srcDir`, so `Analysis.Lemmas` is `lean/Analysis/Lemmas.lean`.
+[[lean_lib]]
+name = "Analysis"
+srcDir = "lean"
+globs = ["Analysis", "Analysis.+"]

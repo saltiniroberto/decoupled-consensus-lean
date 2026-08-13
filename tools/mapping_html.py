@@ -37,16 +37,21 @@ OUT = ROOT / "mapping.html"
 FIGURE_DEPS = ROOT / "FigureDeps.lean"
 NS = "Decoupled."
 STATEMENT_FILES = [
-    ROOT / "Decoupled" / "Analysis" / "Lemmas.lean",
-    ROOT / "Decoupled" / "Analysis" / "Theorems.lean",
-    ROOT / "Decoupled" / "Analysis" / "Corollaries.lean",
+    ROOT / "lean" / "Analysis" / "Lemmas.lean",
+    ROOT / "lean" / "Analysis" / "Theorems.lean",
+    ROOT / "lean" / "Analysis" / "Corollaries.lean",
 ]
 TEX_FILES = [
     ROOT / "latex-specs" / "height_filter_healing.tex",
     ROOT / "latex-specs" / "recovery_core.tex",
 ]
 
-STATUS_KEY = {"✅ proved": "proved", "🟡 partial": "partial", "⛔ absent": "absent"}
+STATUS_KEY = {"✅ proved": "proved", "🟡 partial": "partial", "🔨 stated": "stated",
+              "⛔ absent": "absent"}
+# "stated": written down and not proved. Whether the declaration is a `theorem` whose proof
+# is `sorry` or a `def … : Prop` over a notion this project has not modelled is a Lean-level
+# difference, explained in the statement's own docstring; it is not a difference in progress,
+# so it is not a separate status.
 LABEL_RE = r"(?:lem|cor|thm|prop):[a-z0-9-]+"
 
 
@@ -87,7 +92,9 @@ def lean_statements() -> dict[str, dict]:
     links to and quotes; `names` is all of them, which is what the figure
     dependencies are taken over."""
     out: dict[str, dict] = {}
-    decl = re.compile(r"/--((?:[^-]|-(?!/))*?)-/\s*\ntheorem (\w+)")
+    # `def` as well as `theorem`: a result whose statement cannot yet be written over the
+    # current vocabulary is a `def … : Prop` taking the absent notion as an argument.
+    decl = re.compile(r"/--((?:[^-]|-(?!/))*?)-/\s*\n(?:theorem|def) (\w+)")
     # A statement file that does not exist yet contributes no statements. Every row is then
     # absent, which `build` requires of a row with no Lean.
     for f in (f for f in STATEMENT_FILES if f.exists()):
@@ -215,7 +222,8 @@ def rows() -> list[dict[str, str]]:
 
 def build(rs: list[dict], leans: dict[str, dict], texs: dict[str, tuple[Path, int]],
           figs: list[dict], deps: dict[str, list[dict]]) -> str:
-    counts = {k: sum(1 for r in rs if r["key"] == k) for k in ("proved", "partial", "absent")}
+    counts = {k: sum(1 for r in rs if r["key"] == k)
+              for k in ("proved", "partial", "stated", "absent")}
     kind_names = {"Lem": "lemmas", "Thm": "theorems", "Cor": "corollaries", "Prop": "propositions"}
     kind_counts = {k: sum(1 for r in rs if r["kind"] == k) for k in kind_names}
     kind_buttons = "".join(
@@ -246,7 +254,8 @@ def build(rs: list[dict], leans: dict[str, dict], texs: dict[str, tuple[Path, in
         note_html = md_inline(r["note"])
         if lean:
             summary = ("what is proved, and what the paper’s sentence adds"
-                       if r["key"] == "partial" else "the statement’s docstring")
+                       if r["key"] in ("partial", "stated")
+                       else "the statement’s docstring")
             note_html += (f'<details><summary>{summary}</summary>'
                           f'<div class="doc">{docstring_html(lean["doc"])}</div></details>')
 
@@ -345,10 +354,12 @@ def build(rs: list[dict], leans: dict[str, dict], texs: dict[str, tuple[Path, in
   details.legend td {{ border-bottom: none; padding: .15rem .8rem .15rem 0; }}
   .badge.proved  {{ background: #1a7f3722; color: #1a7f37; border-color: #1a7f3755; }}
   .badge.partial {{ background: #9a670022; color: #b07800; border-color: #9a670055; }}
+  .badge.stated  {{ background: #8250df22; color: #8250df; border-color: #8250df55; }}
   .badge.absent  {{ background: #cf222e1e; color: #cf222e; border-color: #cf222e55; }}
   @media (prefers-color-scheme: dark) {{
     .badge.proved  {{ color: #4ac26b; }}
     .badge.partial {{ color: #d4a72c; }}
+    .badge.stated  {{ color: #d2a8ff; }}
     .badge.absent  {{ color: #ff7b72; }}
   }}
   td:nth-child(4) {{ min-width: 26rem; }}
@@ -358,7 +369,8 @@ def build(rs: list[dict], leans: dict[str, dict], texs: dict[str, tuple[Path, in
 <h1>Paper ↔ Lean mapping — numbered results</h1>
 <p class="note">Generated from <code>MAPPING.md</code> (the source of truth) by
 <code>mapping_html.py</code>; regenerate with <code>make decoupled-mapping</code>.
-{counts["proved"]} proved · {counts["partial"]} partial · {counts["absent"]} absent.
+{counts["proved"]} proved · {counts["partial"]} partial · {counts["stated"]} stated ·
+{counts["absent"]} absent.
 Click a column header to sort; buttons and the search box filter. The
 <em>tex</em>/<em>lean</em> links open the file in VS Code at the result's line
 <strong>when this page is viewed in an external browser</strong>; inside VS Code's
@@ -380,6 +392,7 @@ over definitions only. Traversing each proof term as well changes no row (2026-0
   <button data-f="all" class="on">All ({len(rs)})</button>
   <button data-f="proved">✅ proved ({counts["proved"]})</button>
   <button data-f="partial">🟡 partial ({counts["partial"]})</button>
+  <button data-f="stated">🔨 stated ({counts["stated"]})</button>
   <button data-f="absent">⛔ absent ({counts["absent"]})</button>
   <span class="sep"></span>
   <button data-k="all" class="on">all kinds ({len(rs)})</button>

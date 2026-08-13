@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 81 declarations.
+# 90 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -15,7 +15,7 @@
 # `exact?` on the goal — it matches up to unification, which grep cannot.
 #
 # An earlier formalization of the same paper has its own index of 975 declarations.
-# It is not in this repository; REFERENCES_LOCAL.md says where to read it.
+# It is not in this repository and no path to it is recorded here.
 inductive	Attestation	Spec.Defs.Basic:189	Type	
 def	Attestation.finalizeHeight	Spec.Defs.Basic:428	Option ℕ	Attestation Node Root
 def	Attestation.finalizeTarget	Spec.Defs.Basic:434	Option (Blk Node Root)	Attestation Node Root
@@ -75,6 +75,14 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
+theorem	lemChainTargetUniqueness	Analysis.Lemmas:171	¬Compatible T T'	replayChain B = TransitionResult.state σ | replayChain B' = TransitionResult.state σ' | σ.h = σ'.h | σ.T_h = some T | σ'.T_h = some T' | T ≠ T'
+def	lemEmptySlotNoop	Analysis.Lemmas:80	Prop	Blk Node Root → ℕ → TransitionResult Node Root
+theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:102	Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h	replayChain B = TransitionResult.state σ
+def	lemFinalizedChain	Analysis.Lemmas:229	Prop	Blk Node Root → ℕ → Prop
+theorem	lemHeightProgression	Analysis.Lemmas:139	(advanceHeight σ justify start).h = σ.h + 1	
+theorem	lemHeightTargetFreshness	Analysis.Lemmas:153	∃ T, σ.T_h = some T ∧ Prec T B ∧ ∃ σT, replayChain T = TransitionResult.state σT ∧ σT.h = σ.h	replayChain B = TransitionResult.state σ | σ.Qtarget.Nonempty
+def	lemPastFinalized	Analysis.Lemmas:208	Prop	Blk Node Root → ℕ → Prop | Node → Prop
+def	lemTargetUniqueness	Analysis.Lemmas:117	Prop	Blk Node Root → ℕ → Finset Node → Prop | Node → Prop
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:581	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
@@ -87,6 +95,7 @@ def	processHeightEvents	Spec.Fig2AttestationProcessing:125	ChainState Node Root	
 def	processSlot	Spec.Fig1SlotReplay:44	ChainState Node Root	ChainState Node Root
 def	processSlots	Spec.Fig1SlotReplay:62	ChainState Node Root	ChainState Node Root | ℕ
 def	q	Spec.Defs.Basic:119	ℕ	
+def	replayChain	Analysis.Lemmas:62	TransitionResult Node Root	Blk Node Root
 def	stateAssign	Spec.Defs.Notation:57	ParserDescr	
 def	stateTransition	Spec.Fig1SlotReplay:70	TransitionResult Node Root	ChainState Node Root | Blk Node Root
 def	termInvalid	Spec.Defs.Basic:612	ParserDescr	

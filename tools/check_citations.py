@@ -47,7 +47,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = ROOT / "latex-specs"
 AUX = SPECS / "height_filter_healing.aux"
-LEMMAS = ROOT / "Decoupled" / "Analysis" / "Lemmas.lean"
+LEMMAS = ROOT / "lean" / "Analysis" / "Lemmas.lean"
 MAPPING = ROOT / "MAPPING.md"
 
 # Not scanned for citations: `.git`, `.lake` and `latex-specs` are not ours to police, and

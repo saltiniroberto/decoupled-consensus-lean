@@ -270,11 +270,12 @@ Declaration names were untouched by all of this. `namespace Decoupled` inside th
 independent of the module name, so every declaration is still `Decoupled.…` and `INDEX.tsv` has
 the same 81 rows, with only the module column changed.
 
-**Two scripts still point at the old guess.** `tools/check_citations.py` has
-`LEMMAS = ROOT/"Decoupled"/"Analysis"/"Lemmas.lean"` and `tools/mapping_html.py` has the same
-three paths in `STATEMENT_FILES`. Under this layout no such file can exist. Both treat a
-missing file as "no statements", so both pass today and would go on passing while checking
-nothing. Fix them when the analysis lands and its directory is decided.
+**The two scripts pointed at a guessed path until the analysis landed.**
+`tools/check_citations.py` had `LEMMAS = ROOT/"Decoupled"/"Analysis"/"Lemmas.lean"` and
+`tools/mapping_html.py` the same three paths in `STATEMENT_FILES`. No such file could exist
+under any layout this project adopted, and both treat a missing file as "no statements", so
+both passed while checking nothing. Repointed at `lean/Analysis/` on 2026-08-13; `make cites`
+now reports 8 statements rather than 0, which is what says the cross-check is live.
 
 ### `Spec/` holds only the figure translations; everything else is in `Spec/Defs/`
 
@@ -512,14 +513,134 @@ because each is part of a definition that is otherwise needed.
 * `process_slots`' second parameter is `target`, not the figure's `slot`, which would shadow
   the `Blk.slot` projection inside that one routine.
 
+## 2026-08-13 — the analysis half, and the lemmas of Sections 3 and 4
+
+### The analysis is its own library, at `lean/Analysis`
+
+On instruction. A second `lean_lib` named `Analysis`, same `srcDir = "lean"`, globs
+`["Analysis", "Analysis.+"]`, so `Analysis.Lemmas` is `lean/Analysis/Lemmas.lean`.
+`defaultTargets` is now `["Spec", "Analysis"]`.
+
+Two libraries, not one, so there is no shared module prefix over the two halves. Consequences,
+each already paid:
+
+* `tools/decl_index.lean` filters on `modRoots`, now `["Spec", "Analysis"]`. Missing a root is
+  silent — its declarations are simply absent from `INDEX.tsv`.
+* `tools/check_citations.py` and `tools/mapping_html.py` were repointed from the guessed
+  `Decoupled/Analysis/…` to `lean/Analysis/…`.
+
+**A glob naming a root requires that root to exist as a file.** `globs = ["Analysis", …]` failed
+with `Analysis: some modules have bad imports` until `lean/Analysis.lean` existed. That mirrors
+`lean/Spec.lean`, so each half now has a root module that imports its own files.
+
+### Nine lemmas of Sections 3 and 4, in two shapes
+
+Sections 3 (`sec:state-machine`, lines 535–980) and 4 (`sec:safety`, lines 981–1197) hold nine
+lemmas, printed numbers 3 to 11. Theorem 5 (`thm:accountable-safety`) is in Section 4 too and is
+not a lemma, so it is not among them and its row stays absent.
+
+`sorry` became allowed the same day, so the proofs are `sorry` and `make check` fails until they
+are discharged. But **a missing proof and an unwritable statement are different**, and both occur
+here, so the file uses two shapes:
+
+* `theorem … := sorry` where the paper's sentence is expressible in the current vocabulary.
+  Lemmas 4, 6, 7, 8. This asserts the claim.
+* `def … : Prop`, taking the absent notion as an argument, where it is not. Lemmas 3, 5, 10, 11.
+  A `def` of type `Prop` asserts nothing. It must **not** be a `theorem`: over an unconstrained
+  argument the claim would be false rather than unproved, and a `sorry` would hide that. Each
+  becomes a `theorem` when its argument can be replaced by a real definition.
+
+What is absent, and which lemma waits on it: the finality action state, Definition 20
+(`def:finality-action-state`) — Lemmas 3, 4, 10; certificates and "finalized at height `h`",
+Definition 21 (`def:certificates`) — Lemmas 5, 6, 10, 11; the slashing conditions E1 and E2,
+Definition 11 (`def:slashing`) — Lemmas 5, 10; and Assumption 1's Byzantine weight `b` with
+`3b < W` — Lemma 11. `Electorate` carries `V`, `w` and `w_pos` only, which is why the last is on
+the list.
+
+**Two the paper numbers are not on it.** State-height (Def. 6) and the current-height target
+(Def. 7) are `σ.h` and `σ.T_h` of the replayed state, so Lemmas 7 and 8 needed no new
+vocabulary. Worth knowing before someone models them separately.
+
+**Four are narrower than the paper's sentence**, each saying so in its docstring: Lemma 4 covers
+block post-states but not finality action states; Lemma 6 the increment half but not "requires a
+certificate"; Lemma 8 the conflicting-branch half but not the vote-transfer half; Lemma 10 the
+same post-state restriction as Lemma 4.
+
+**Lemma 9 (`lem:target-bit-compression`) is not written down at all.** "All information needed
+for the justification and progress rules is contained in the two Boolean arrays" is a sufficiency
+claim with no formal shape in the paper; it is not a proposition about the model until someone
+chooses what "needed" quantifies over. That is a modelling decision, not a transcription, so its
+row stays absent and no declaration carries its name. One reading is recorded in the file for
+whoever takes it on.
+
+### `replayChain`, and why it is not Definition 24
+
+Four of the lemmas quantify over the paper's `σ[B]`, the state derivation along the chain ending
+at `B`. `Analysis/Lemmas.lean` defines `replayChain` as `ChainState.gen` at genesis and
+`stateTransition` at each block after, so one failed check makes the chain `invalid`.
+
+**Deliberately not offered as Definition 24 (`def:total-raw-replay`)**, which also carries slot
+eligibility conditions this project has not modelled; `MAPPING.md` still records only that
+definition's "a state or `invalid`" half. Move `replayChain` into the specification under that
+number when the rest of Definition 24 lands. Parameterizing over it instead was rejected: an
+unconstrained `replay` argument makes the lemmas false rather than unproved, and the fold of
+`stateTransition` invents nothing.
+
+### `MAPPING.md` and `mapping.html` gained one status, after briefly having two
+
+`🔨 stated`: written down and not proved, with the note column saying what is outstanding. It did
+not exist while the rule was "no `sorry`, and an unproved result stays a `def : Prop`".
+
+**A second status, `📐 shape only`, was added and then removed the same day.** It distinguished a
+`def … : Prop` over an unmodelled notion from a `theorem` whose proof is `sorry`. Roberto's
+correction, and it is right: there is no conceptual or practical difference between them. Both
+mean the paper's lemma is written down and not proved, and which Lean keyword a lemma gets is
+forced by how much vocabulary exists rather than by anything achieved about the paper. The Lean
+shapes still differ — that part is unavoidable, see `replayChain` above and the file's own
+header — but a progress table should not have a column for it.
+
+**The argument offered for keeping them apart was that `make check` fails on one and not the
+other. That is a hole in the check, not a distinction.** A `def … : Prop` holds no `sorry`, so
+the strict target passes it; green therefore means "no `sorry`", not "the paper's results are
+proved". Four of the eight lemmas are invisible to it. `MAPPING.md`'s status column is the only
+thing that answers the second question today. Closing the hole would mean a check that every
+non-absent row names a sorry-free `theorem` — not written, and worth doing before the count of
+`def … : Prop` results grows.
+
+`tools/mapping_html.py` needed four changes for them: `STATUS_KEY`, the counts tuple, the badge
+CSS in both colour schemes, and the filter buttons. A fifth was not about status: its declaration
+regex matched `theorem` only, so the four `def … : Prop` rows came back as
+`no Lean statement found for non-absent` until it accepted `def` as well.
+
+The page now reads `0 proved · 0 partial · 8 stated · 84 absent`.
+
+### The index generator's `suppressed` drops a `Prop` binder, and it misleads here
+
+`INDEX.tsv`'s row for `lemFinalizedChain` lists one hypothesis where the declaration takes two:
+`faultBound : Prop` is dropped, because `suppressed` discards any binder whose type prints as
+`Prop`. That rule is inherited from the first attempt and was already flagged here as needing a
+re-check; this is the first concrete case where it hides something a reader wants. Not fixed, so
+that `INDEX.tsv` stays a search key rather than a signature — but do not read a parameterized
+`def : Prop` row as complete.
+
 ## Next
 
-1. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+1. **Prove the four `🔨 stated` lemmas**, which is what `make check` is waiting on: Lemmas 4, 6,
+   7 and 8. Read the `lean-proof-idioms` skill first — all four are over routines written in the
+   paper's imperative shape, and `replayChain` is a recursion over the block family, so the
+   `sorry` is not the only obstacle.
+2. **Model what the four `def … : Prop` lemmas wait on**, in the order that unblocks most:
+   Definition 21 (`def:certificates`) is needed by four results, Definition 11 (`def:slashing`)
+   by two, Definition 20 (`def:finality-action-state`) by three, and Assumption 1's `b` with
+   `3b < W` by one. Each one landed turns a `def … : Prop` into a `theorem`, and each is a
+   modelling decision to record here.
+3. Definition 24 (`def:total-raw-replay`) in full, at which point `replayChain` moves out of
+   `Analysis/Lemmas.lean` into the specification under that number.
+4. The parts of Lemmas 4, 6, 8 and 10 that are currently narrower than the paper's sentence, and
+   Lemma 9, which needs a formulation decided before it can be written at all.
+5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
-   its assumption inventory — so it is the first thing that wants auditing rather than
-   assuming. Settling the signing question above is part of it.
-2. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-3. Figures 3 to 5, and the definitions Sections 4 onward add.
-4. When the analysis directory is decided: re-point `tools/check_citations.py` and
-   `tools/mapping_html.py`, which still name `Decoupled/Analysis/*.lean` at the repository
-   root.
+   its assumption inventory — so it wants auditing rather than assuming. Settling the signing
+   question above is part of it.
+6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+7. Figures 3 to 5, and the definitions Sections 5 onward add.
