@@ -1,5 +1,6 @@
 import Analysis.Proofs.Weights
 import Analysis.Proofs.SlotClosure
+import Analysis.Proofs.Ancestry
 import Analysis.Lemmas
 
 /-!
