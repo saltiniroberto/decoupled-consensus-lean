@@ -183,35 +183,43 @@ theorem lemQuorumIntersectionNonByzantine {Node : Type} [DecidableEq Node] [Elec
 
     Read aloud: closing empty slots can name a pending target, but can never advance the chain.
 
+    Stated as **one record equation** rather than as the paper's list of fields that do not move.
+    That says what `s` and `T_h` become, which the list leaves free, and it says nothing else moves
+    — a field added to `ChainState` later cannot weaken it, where it would silently weaken a
+    conjunction. `lemEmptySlotNoopFields` below is the paper's own phrasing, derived from this.
+
     The paper compares `σ_a[X]` with `σ[X]`. Definition 20 makes the first `process_slots` of the
-    second, so the claim is about `process_slots` over a block post-state — which is why it needs
-    neither Figure 3 nor Definition 20 as an argument, and is a `theorem` rather than a
-    `def … : Prop`. Both notions are declared in `Analysis/Proofs/SlotClosure.lean`.
+    second, so this is a claim about `process_slots` over a block post-state, and needs neither
+    Figure 3 nor Definition 20 as an argument. `BlockPostState` and `actionState` are declared in
+    `Analysis/Proofs/SlotClosure.lean`.
 
-    **Stronger than the paper's sentence**, since `BlockPostState` admits more states than `σ[·]`.
+    **Two hypotheses the paper does not write.** `BlockPostState σ` is the reachability its prose
+    leaves implicit — over an arbitrary state the claim is false, since the height-event check can
+    fire. And `0 < q` is real: on an empty electorate `q = ⌈2W/3⌉` is `0`, every set is a quorum,
+    and nothing is ever blocked. Against that, `BlockPostState` admits more states than `σ[·]`, so
+    in that respect the statement is stronger than the paper's.
 
-    The conclusion lists every field of Definition 13 (`def:chain-state`) except the two the paper
-    allows to differ: `s`, which the closure advances, and `T_h`, which it may fill. `h` is among
-    the eleven, which is the paper's own emphasis and also how its closing clause — every height
-    transition is consumed at a block — is expressed here.
-
-    Two of the paper's words are avoided, it defining neither: "slot cursor" for `s`, and
-    "materialized" for filling `T_h`. -/
+    `T_h` is left open rather than pinned exactly. Pinning it needs the induction to split `n = 0`
+    from `n ≥ 1`, and nothing yet needs to know *which* target was named. -/
 theorem lemEmptySlotNoop {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] :
-    ∀ (σ : ChainState Node Root) (t : Time),
-      BlockPostState σ → σ.L.slot ≤ t →
-        (actionState σ t).L = σ.L ∧
-        (actionState σ t).h = σ.h ∧
-        (actionState σ t).s_h = σ.s_h ∧
-        (actionState σ t).nj = σ.nj ∧
-        (actionState σ t).J = σ.J ∧
-        (actionState σ t).h_j = σ.h_j ∧
-        (actionState σ t).F = σ.F ∧
-        (actionState σ t).h_F = σ.h_F ∧
-        (actionState σ t).P = σ.P ∧
-        (actionState σ t).targetParticipation = σ.targetParticipation ∧
-        (actionState σ t).progress = σ.progress :=
-  Proofs.emptySlotNoop
+    [Electorate Node] [Params] {σ : ChainState Node Root} (t : Time)
+    (h : BlockPostState σ) (hq : 0 < q Node) :
+    ∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧
+      actionState σ t = { σ with s := max σ.s t, T_h := Th } :=
+  Proofs.emptySlotNoop t h hq
+
+/-- **Lemma 3** in the paper's own phrasing: the fields it lists as unchanged. Derived from the
+    record equation above, and kept so a reader checking the Lean against the `.tex` finds the
+    list. -/
+theorem lemEmptySlotNoopFields {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] {σ : ChainState Node Root} (t : Time)
+    (h : BlockPostState σ) (hq : 0 < q Node) :
+    let σa := actionState σ t
+    σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧
+    σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧
+    σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress := by
+  obtain ⟨Th, -, heq⟩ := lemEmptySlotNoop t h hq
+  rw [heq]
+  exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end Decoupled
