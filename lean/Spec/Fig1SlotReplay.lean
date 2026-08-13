@@ -41,13 +41,11 @@ variable {Node Root : Type}
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
 
-/-- `process_slot(σ)` (Figure 1, `alg:state-replay`, lines 738–746). Closes the slot at the
-    cursor: it may record the current height's target now that the latest block's root can
-    be named, runs the height check when the slot is empty on this chain, and advances the
-    cursor.
+/-- `process_slot(σ)` (Figure 1, `alg:state-replay`, lines 738–746). Closes the slot at `s`:
+    it may record the current height's target now that the latest block's root can be named,
+    runs the height check when the slot is empty on this chain, and increments `s`.
 
-    The emptiness test is `L.slot < s`. When the cursor still names the latest block's own
-    slot, that block's post-state already contains its height check, and
+    The emptiness test is `L.slot < s`. When `s` still names the latest block's own slot, that block's post-state already contains its height check, and
     Definition 17 (`def:direct-height-position`) is explicit that this call must not repeat
     it. -/
 def processSlot (σ : ChainState Node Root) : ChainState Node Root := Id.run do
@@ -68,7 +66,7 @@ def processSlots (σ : ChainState Node Root) (target : Time)
   return σ                                                    -- line 735
 
 /-- `state_transition(σ, B)` (Figure 1, `alg:state-replay`, lines 718–729). Rejects a block
-    that does not extend the state's latest block, or that sits at or before the cursor;
+    that does not extend the state's latest block, or that sits at or before `s`;
     otherwise closes the slots up to the block's own, processes the block, and runs the
     height events directly after this block's attestations, as
     Definition 17 (`def:direct-height-position`) requires. -/

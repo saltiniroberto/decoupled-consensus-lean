@@ -510,8 +510,8 @@ end Inclusion
 structure ChainState (Node Root : Type) where
   /-- `L`, the latest block. -/
   L : Blk Node Root
-  /-- `s`, the slot cursor. A block post-state leaves `s = L.slot`; each `process_slot`
-      closes the slot at the cursor and then increments `s`. -/
+  /-- `s`, the slot the chain has closed up to. A block post-state leaves `s = L.slot`; each
+      `process_slot` closes the slot at `s` and then increments it. -/
   s : Time
   /-- `h`, the current height. -/
   h : Nat

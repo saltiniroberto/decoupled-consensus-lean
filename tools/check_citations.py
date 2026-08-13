@@ -64,7 +64,15 @@ LABEL = r"(?:def|ass|lem|cor|rem|alg|thm|prop):[a-z0-9-]+"
 KINDS = "|".join(KIND.values())
 DASH = r"[–—-]"
 
-PROSE = re.compile(rf"(?<!\*\*)({KINDS}) (\d+) \(`({LABEL})`")
+# The kind word may be plural -- "Figures 1 (`alg:state-replay`) and 2 (...)" -- so `s?`. Without
+# it the whole citation went unchecked, including the first item, because "Figures" is "Figure"
+# followed by `s` rather than by a space.
+PROSE = re.compile(rf"(?<!\*\*)({KINDS})s? (\d+) \(`({LABEL})`")
+
+# The second and later items of such a list elide the kind word: "and 2 (`alg:...`)". There is no
+# kind word to agree with, so only the number is checked -- against the kind the label's own
+# prefix names, which is the same thing `check` derives it from.
+ELIDED = re.compile(rf"(?:,|and) (\d+) \(`({LABEL})`")
 INPAREN = re.compile(rf"\(({KINDS}) (\d+), `({LABEL})`")
 HEADER = re.compile(rf"\*\*({KINDS}) (\d+)\*\* \(`({LABEL})`,[^)]*?(\d+){DASH}(\d+)\)")
 ROW = re.compile(rf"\| `({LABEL})`[^|]*\| (Def|Ass|Lem|Cor|Fig|Thm|Rem|Prop)\. (\d+)")
@@ -129,6 +137,11 @@ def main() -> int:
             for rx in (PROSE, INPAREN):
                 for kind, num, label in rx.findall(line):
                     check(path, lineno, kind, num, label)
+            for num, label in ELIDED.findall(line):
+                if label in nums:
+                    check(path, lineno, KIND[label.split(':')[0]], num, label)
+                else:
+                    check(path, lineno, "?", num, label)
             for label, short, num in ROW.findall(line):
                 check(path, lineno, KIND[SHORT[short]], num, label)
 

@@ -39,7 +39,7 @@ lemma, so it is not one of these.
 | certificates, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 5, 6, 10, 11 |
 | the slashing conditions E1 and E2 | Def. 11 (`def:slashing`) | 5, 10 |
 | Assumption 1's Byzantine weight `b` and `3b < W` | Ass. 1 (`ass:fixed-electorate`) | 11 |
-| the chain replay `σ[B]` | part of Def. 24 (`def:total-raw-replay`) | 3, 4, 7, 10 |
+| the replayed state `σ[B]` | Figure 3 (`alg:store`), `derive_block_states` | 3, 4, 7, 10 |
 
 `Electorate` carries `V`, `w` and `w_pos` only, which is why the fault bound is on that list.
 
@@ -48,11 +48,24 @@ down: state-height (Def. 6, `def:state-height`) and the current-height target (D
 `def:current-height-target`) are `σ.h` and `σ.T_h` of the replayed state. Worth knowing before
 anyone models them separately.
 
-**The chain replay is the one to settle first**, since four lemmas quantify over it. The earlier
-pass defined it inside this file as the fold of `stateTransition` from `ChainState.gen`, and that
-is almost certainly the right content — but it belongs in `Spec` under Definition 24 rather than
-here, and Definition 24 also carries slot eligibility conditions that are not modelled. Decide
-where it lives before the first lemma that needs it.
+**`σ[B]` waits on Figure 3, and is not a fold of `stateTransition`.** Measured 2026-08-13 against
+`height_filter_healing.tex:1555-1577`: the map is built by `derive_block_states` in Figure 3
+(`alg:store`), and a block enters it only when
+
+    structural_precheck(x, B, B.parent) = valid          -- Definition 24's first part
+    state_transition(σ[B.parent], B) ≠ invalid
+    B's claimed post-state root = root(σ')               -- a state-root function
+
+all hold, over the objects of a store `S` whose clock admits the block's slot. The withdrawn pass
+defined `replayChain` here as the plain fold of `stateTransition` from `ChainState.gen`, and that
+was **not** a faithful `σ[B]`: it omitted the precheck and the claimed-root check, so it accepts a
+block whose `claimedRoot` disagrees with its own post-state, which Figure 3 rejects.
+
+An earlier note in this file and in `CONTEXT.md` said the replay "belongs in `Spec` under
+Definition 24". That was wrong — Definition 24 governs *when* `state_transition` is called and
+that it is total; the map itself is Figure 3's. So the four lemmas that quantify over `σ[B]` wait
+on Figure 3, on a state-root function, and on the store of Definitions 22 and 23, none of which is
+modelled. Lemma 7 is the only one of the nine that needs none of it.
 
 ## Two shapes, when statements do start landing
 

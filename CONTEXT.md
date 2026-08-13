@@ -599,18 +599,35 @@ chooses what "needed" quantifies over. That is a modelling decision, not a trans
 row stays absent and no declaration carries its name. One reading is recorded in the file for
 whoever takes it on.
 
-### `replayChain`, and why it is not Definition 24
+### `replayChain` was not a faithful `σ[B]` — corrected 2026-08-13
 
-Four of the lemmas quantify over the paper's `σ[B]`, the state derivation along the chain ending
-at `B`. `Analysis/Lemmas.lean` defines `replayChain` as `ChainState.gen` at genesis and
-`stateTransition` at each block after, so one failed check makes the chain `invalid`.
+Four of the nine lemmas quantify over the paper's `σ[B]`. The withdrawn pass defined `replayChain`
+in `Analysis/Lemmas.lean` as `ChainState.gen` at genesis and `stateTransition` at each block after,
+and recorded that it "belongs in `Spec` under Definition 24 (`def:total-raw-replay`)".
 
-**Deliberately not offered as Definition 24 (`def:total-raw-replay`)**, which also carries slot
-eligibility conditions this project has not modelled; `MAPPING.md` still records only that
-definition's "a state or `invalid`" half. Move `replayChain` into the specification under that
-number when the rest of Definition 24 lands. Parameterizing over it instead was rejected: an
-unconstrained `replay` argument makes the lemmas false rather than unproved, and the fold of
-`stateTransition` invents nothing.
+**Both halves of that were wrong**, found when checking the paper rather than the note
+(`height_filter_healing.tex:1555-1577`).
+
+`σ[·]` is built by `derive_block_states` in **Figure 3** (`alg:store`), not by Definition 24.
+Definition 24 governs when `state_transition` is called — the structural precheck, slot
+eligibility, and that the transition is total — while the map itself is the figure's.
+
+And the fold is not equivalent to it. A block enters `σ[·]` only when all of
+
+    structural_precheck(x, B, B.parent) = valid          -- Definition 24's first part
+    state_transition(σ[B.parent], B) ≠ invalid
+    B's claimed post-state root = root(σ')               -- needs a state-root function
+
+hold, over the objects of a store `S` whose clock admits the block's slot. `replayChain` checked
+only the middle one, so it accepted a block whose `claimedRoot` disagrees with its own post-state —
+which Figure 3 rejects. Had the lemmas stayed in with that definition, four of them would have been
+stated over a replay the paper does not have.
+
+**Consequence for the order of work.** Those four lemmas wait on Figure 3, on a state-root function
+(`CONTEXT.md` already recorded that none is modelled), and on the store of Definitions 22 and 23.
+They are not unblocked by any small addition, and there is nothing to put in `Spec` under
+Definition 24 today beyond the `TransitionResult` already there. **Lemma 7 is the only one of the
+nine that needs none of it**, so it is the one that can land first.
 
 ### `MAPPING.md` and `mapping.html` gained one status, after briefly having two
 
@@ -680,10 +697,9 @@ warns.
 
 ## Next
 
-1. **Settle where the chain replay lives**, because four of the nine lemmas quantify over it and
-   nothing can be stated about them until it exists. The withdrawn pass had it as `replayChain`
-   inside `Analysis/Lemmas.lean`; it belongs in `Spec` under Definition 24
-   (`def:total-raw-replay`), whose slot eligibility conditions are also still absent.
+1. **Lemma 7 (`lem:height-target-freshness`) first**, being the only one of the nine that needs
+   nothing the specification lacks. One commit, with its `MAPPING.md` row.
+   `make check` will then fail on its `sorry`, which is the intended signal.
 2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Lemma 7
    is the one statable in full today; Lemmas 4, 6 and 8 are statable in part. Read the
    `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in

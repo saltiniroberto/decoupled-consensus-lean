@@ -1,4 +1,4 @@
-.PHONY: help check dev sorry sorries nodecide orphans build cache cites mapping index paper submodules
+.PHONY: help check dev sorry sorries nodecide orphans proved build cache cites mapping index paper submodules
 
 # `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
 # which no amount of later work discharges. Every target refuses it.
@@ -23,6 +23,7 @@ help:
 	@echo 'make cache      - fetch prebuilt Mathlib artefacts (do this before a first build)'
 	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
 	@echo 'make orphans    - find .lean files under lean/ that no lean_lib glob claims'
+	@echo 'make proved     - refuse a result written down but not proved (check only)'
 	@echo 'make build      - build this project'
 	@echo 'make cites      - check every citation of the paper against its .aux'
 	@echo 'make mapping    - regenerate mapping.html from MAPPING.md'
@@ -34,7 +35,7 @@ help:
 	@echo 'run against a built library.'
 
 # The strict target: no sorry, no admit, no native_decide, citations agree, build is green.
-check: nodecide orphans sorry cites build
+check: nodecide orphans sorry cites proved build
 
 # The working target: everything `check` does except the sorry-free requirement, with the
 # outstanding count reported instead.
@@ -93,6 +94,12 @@ cache:
 # artefact the submodule does not carry -- `make paper` produces it.
 cites:
 	@python3 tools/check_citations.py
+
+# In `check` but not `dev`: a result written down and not yet proved is the normal working state,
+# and it is only `make check` that must refuse it. This is what the `sorry` step cannot see -- a
+# `def … : Prop` holds no `sorry`, so without this, green would not mean "the results are proved".
+proved:
+	@python3 tools/check_proved.py
 
 # Neither of these is part of `check` or `dev`: each rewrites a committed file.
 mapping:

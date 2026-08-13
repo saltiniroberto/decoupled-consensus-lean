@@ -85,10 +85,10 @@ def	processAttestations	Spec.Fig2AttestationProcessing:77	ChainState Node Root	C
 def	processBlock	Spec.Fig2AttestationProcessing:88	TransitionResult Node Root	ChainState Node Root | Blk Node Root
 def	processHeightEvents	Spec.Fig2AttestationProcessing:125	ChainState Node Root	ChainState Node Root | ℕ
 def	processSlot	Spec.Fig1SlotReplay:44	ChainState Node Root	ChainState Node Root
-def	processSlots	Spec.Fig1SlotReplay:62	ChainState Node Root	ChainState Node Root | ℕ
+def	processSlots	Spec.Fig1SlotReplay:60	ChainState Node Root	ChainState Node Root | ℕ
 def	q	Spec.Defs.Basic:119	ℕ	
 def	stateAssign	Spec.Defs.Notation:57	ParserDescr	
-def	stateTransition	Spec.Fig1SlotReplay:70	TransitionResult Node Root	ChainState Node Root | Blk Node Root
+def	stateTransition	Spec.Fig1SlotReplay:68	TransitionResult Node Root	ChainState Node Root | Blk Node Root
 def	termInvalid	Spec.Defs.Basic:612	ParserDescr	
 def	weight	Spec.Defs.Basic:109	ℕ	Finset Node
 def	«termW(_)»	Spec.Defs.Basic:112	ParserDescr	

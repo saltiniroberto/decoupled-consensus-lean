@@ -86,7 +86,7 @@ def processAttestations (σ : ChainState Node Root)
   return σ
 
 /-- `process_block(σ, B)` (Figure 2, `alg:attestation-processing`, lines 759–770). Fails
-    when the block does not extend the cursor's chain at the cursor's slot, or when one of
+    when the block does not extend `σ.L`'s chain, or does not sit at slot `σ.s`, or when one of
     its attestations fails Definition 9 (`def:valid-attestation-inclusion`).
 
     **`A` is `σ.L`, where the figure writes `A ← B.parent`.** The two are the same block
@@ -104,8 +104,8 @@ def processBlock (σ : ChainState Node Root) (B : Blk Node Root)
   return σ                                                    -- line 769
 
 /-- `advance_height(σ, justify, start)` (Figure 2, `alg:attestation-processing`,
-    lines 802–810). A nonempty `justify` installs the new justification and clears the
-    finality tally; either way the height increments, the new height starts empty at
+    lines 802–810). A nonempty `justify` installs the new justification and clears `P`;
+    either way the height increments, the new height starts empty at
     `start`, and Definition 14 (`def:nonjustifiable`) fixes its flag from the *new* height
     against the current finalized height. -/
 def advanceHeight (σ : ChainState Node Root)
