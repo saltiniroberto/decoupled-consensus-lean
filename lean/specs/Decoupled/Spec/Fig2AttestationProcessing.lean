@@ -45,7 +45,7 @@ open Framework.StsMultisetLog
 variable {Node Root : Type}
 
 section
-variable [DecidableEq Node] [Electorate Node] [Params]
+variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
 
 /-- `process_attestation(σ, a, A)` (Figure 2, `alg:attestation-processing`, lines 772–786).
     Definition 16 (`def:block-attestation-processing`)'s three tests, in the figure's order.
@@ -54,7 +54,7 @@ variable [DecidableEq Node] [Electorate Node] [Params]
     it is what stops a block proving its own progress.
 
     The two height tests are independent, so an exact target vote sets both bits. -/
-noncomputable def processAttestation (σ : ChainState Node Root) (a : Attestation Node Root)
+def processAttestation (σ : ChainState Node Root) (a : Attestation Node Root)
     (A : Blk Node Root) : ChainState Node Root := Id.run do
   let mut σ := σ
   let i := a.validator                                        -- line 773
@@ -77,7 +77,7 @@ noncomputable def processAttestation (σ : ChainState Node Root) (a : Attestatio
 /-- The attestation loop of `process_block` (Figure 2, `alg:attestation-processing`,
     lines 766–768), as a declaration of its own so that its equation can later be proved by
     induction on the list. -/
-noncomputable def processAttestations (σ : ChainState Node Root)
+def processAttestations (σ : ChainState Node Root)
     (as : List (Attestation Node Root)) (A : Blk Node Root) : ChainState Node Root :=
   Id.run do
   let mut σ := σ
@@ -92,7 +92,7 @@ noncomputable def processAttestations (σ : ChainState Node Root)
     **`A` is `σ.L`, where the figure writes `A ← B.parent`.** The two are the same block
     here: the preceding check has already returned `invalid` unless `B.parent = σ.L`, and
     `σ.L` is a block where `B.parent` is an `Option`. -/
-noncomputable def processBlock (σ : ChainState Node Root) (B : Blk Node Root)
+def processBlock (σ : ChainState Node Root) (B : Blk Node Root)
     : TransitionResult Node Root := Id.run do
   let mut σ := σ
   if B.parent ≠ some σ.L ∨ B.slot ≠ σ.s ∨
@@ -127,7 +127,7 @@ def advanceHeight (σ : ChainState Node Root)
     finalize the old latest justification, then prefer the exact current target, and
     otherwise advance by progress. Justification therefore wins whenever both height
     thresholds are present. -/
-noncomputable def processHeightEvents (σ : ChainState Node Root) (start : Time)
+def processHeightEvents (σ : ChainState Node Root) (start : Time)
     : ChainState Node Root := Id.run do
   let mut σ := σ
   if σ.h_j > σ.h_F ∧ σ.F ⪯ σ.J ∧ w(σ.P)≥q then                -- line 789

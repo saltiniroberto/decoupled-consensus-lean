@@ -39,7 +39,7 @@ open Framework.StsMultisetLog
 variable {Node Root : Type}
 
 section
-variable [DecidableEq Node] [Electorate Node] [Params]
+variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
 
 /-- `process_slot(σ)` (Figure 1, `alg:state-replay`, lines 738–746). Closes the slot at the
     cursor: it may record the current height's target now that the latest block's root can
@@ -50,7 +50,7 @@ variable [DecidableEq Node] [Electorate Node] [Params]
     slot, that block's post-state already contains its height check, and
     Definition 17 (`def:direct-height-position`) is explicit that this call must not repeat
     it. -/
-noncomputable def processSlot (σ : ChainState Node Root) : ChainState Node Root := Id.run do
+def processSlot (σ : ChainState Node Root) : ChainState Node Root := Id.run do
   let mut σ := σ
   if σ.T_h = ⊥ ∧ σ.L.slot ≥ σ.s_h then                        -- line 739
     σ.T_h ← some σ.L                                          -- line 740
@@ -60,7 +60,7 @@ noncomputable def processSlot (σ : ChainState Node Root) : ChainState Node Root
   return σ
 
 /-- `process_slots(σ, slot)` (Figure 1, `alg:state-replay`, lines 731–736). -/
-noncomputable def processSlots (σ : ChainState Node Root) (target : Time)
+def processSlots (σ : ChainState Node Root) (target : Time)
     : ChainState Node Root := Id.run do
   let mut σ := σ
   while σ.s < target do                                       -- line 732
@@ -72,7 +72,7 @@ noncomputable def processSlots (σ : ChainState Node Root) (target : Time)
     otherwise closes the slots up to the block's own, processes the block, and runs the
     height events directly after this block's attestations, as
     Definition 17 (`def:direct-height-position`) requires. -/
-noncomputable def stateTransition (σ : ChainState Node Root) (B : Blk Node Root)
+def stateTransition (σ : ChainState Node Root) (B : Blk Node Root)
     : TransitionResult Node Root := Id.run do
   let mut σ := σ
   if B.parent ≠ some σ.L ∨ B.slot ≤ σ.s then                  -- line 719
