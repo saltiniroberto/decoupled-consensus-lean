@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 82 declarations.
+# 84 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -31,6 +31,7 @@ def	Blk.mk.elim	Spec.Defs.Basic:185	motive_1 t	Blk Node Root → Sort u | Blk No
 def	Blk.parent	Spec.Defs.Basic:383	Option (Blk Node Root)	Blk Node Root
 def	Blk.proposer	Spec.Defs.Basic:394	Option Node	Blk Node Root
 def	Blk.slot	Spec.Defs.Basic:388	ℕ	Blk Node Root
+inductive	BlockPostState	Analysis.Lemmas:116	Prop	ChainState Node Root
 inductive	ChainState	Spec.Defs.Basic:507	Type	
 def	ChainState.Qprog	Spec.Defs.Basic:569	Finset Node	ChainState Node Root
 def	ChainState.Qtarget	Spec.Defs.Basic:563	Finset Node	ChainState Node Root
@@ -68,6 +69,7 @@ def	attListBeq	Spec.Defs.Basic:275	Bool	List (Attestation Node Root) | List (Att
 theorem	attListBeq_iff	Spec.Defs.Basic:325	attListBeq a b = true ↔ a = b	
 def	blkBeq	Spec.Defs.Basic:262	Bool	Blk Node Root | Blk Node Root
 theorem	blkBeq_iff	Spec.Defs.Basic:304	blkBeq a b = true ↔ a = b	
+def	finalityActionState	Analysis.Lemmas:137	ChainState Node Root	ChainState Node Root | ℕ
 def	finalityPairBeq	Spec.Defs.Basic:294	Bool	FinalityPair Node Root | FinalityPair Node Root
 theorem	finalityPairBeq_iff	Spec.Defs.Basic:356	finalityPairBeq a b = true ↔ a = b	
 def	heightPairBeq	Spec.Defs.Basic:287	Bool	HeightPair Node Root | HeightPair Node Root
@@ -75,7 +77,7 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:614	Coe (ChainState Node Root) (TransitionResult Node Root)	
-def	lemEmptySlotNoop	Analysis.Lemmas:108	Prop	Blk Node Root → TransitionResult Node Root | Blk Node Root → ℕ → TransitionResult Node Root
+theorem	lemEmptySlotNoop	Analysis.Lemmas:153	(finalityActionState σ t).L = σ.L ∧ (finalityActionState σ t).h = σ.h ∧ (finalityActionState σ t).s_h = σ.s_h ∧ (finalityActionState σ t).nj = σ.nj ∧ (finalityActionState σ t).J = σ.J ∧ (finalityActionState σ t).h_j = σ.h_j ∧ (finalityActionState σ t).F = σ.F ∧ (finalityActionState σ t).h_F = σ.h_F ∧ (finalityActionState σ t).P = σ.P ∧ (finalityActionState σ t).targetParticipation = σ.targetParticipation ∧ (finalityActionState σ t).progress = σ.progress	BlockPostState σ | σ.L.slot ≤ t
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:581	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
