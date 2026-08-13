@@ -868,37 +868,38 @@ works here too, but `parent_preceq`'s closing `simp` does not — it leaves
 `p = p.mk s n a r ∨ p ∈ ancestors p`, and `List.mem_cons_of_mem _ (Preceq.refl p)` is what closes
 it. Everything else was re-derived and compiled first time.
 
-### One earlier note here was wrong and is deleted
+### Both of the lemma's subjects are covered, and one earlier note here was wrong
 
-It said the finality-action-state half of the lemma would come "as a corollary of Lemma 3". That
-route works but drags in `PositiveWeight`, which this lemma does not otherwise need.
-`Chained.processSlots` gives the same half with no assumption at all. The half is still not stated
-— that is a statement to widen, not a proof to find, and `MAPPING.md` marks the row 🟡 partial for
-exactly that reason.
+The paper says "every reachable block post-state *and finality action state*".
+`lemFinalizedBeforeJustifiedActionState` is the second, three lines from `Chained.processSlots`,
+quantified over every `t` rather than the one action slot.
+
+The note this replaces said that half would come "as a corollary of Lemma 3". That route works but
+drags in `PositiveWeight`, which nothing else in this lemma needs. `Chained` survives slot closure
+whatever the tallies hold, so the assumption never enters — the same distinction as above, in the
+one place where it would have cost something.
 
 ## Next
 
-1. **Widen Lemma 4 to the paper's second subject**, the finality action state. No new assumption:
-   `Chained.processSlots` is the whole proof. It is left undone only because it changes a statement
-   that has already been reviewed.
-2. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
+1. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
    lacks: `(advanceHeight σ justify start).h = σ.h + 1`. Its `MAPPING.md` row gets 🔨 and a note
    that it is the increment half only, "requires a certificate" being the half that waits on
    Definition 21.
-3. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Lemma 7
-   is the one statable in full today; Lemmas 4, 6 and 8 are statable in part. Read the
+2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
+   is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states and Lemma 6 in
+   part; Lemmas 5, 7, 10 and 11 wait on absent definitions, and Lemma 9 on a formulation. Read the
    `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
    the paper's imperative shape, so `sorry` is not the only obstacle.
-4. **Model what the rest wait on**, in the order that unblocks most:
+3. **Model what the rest wait on**, in the order that unblocks most:
    Definition 21 (`def:certificates`) is needed by four results, Definition 11 (`def:slashing`)
    by two, Definition 20 (`def:finality-action-state`) by three, and Assumption 1's `b` with
    `3b < W` by one. Each one landed turns a `def … : Prop` into a `theorem`, and each is a
    modelling decision to record here.
-5. The parts of Lemmas 4, 6, 8 and 10 that are currently narrower than the paper's sentence, and
-   Lemma 9, which needs a formulation decided before it can be written at all.
-6. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+4. The parts of Lemmas 6, 8 and 10 that will be narrower than the paper's sentence when they
+   land, and Lemma 9, which needs a formulation decided before it can be written at all.
+5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-7. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-8. Figures 3 to 5, and the definitions Sections 5 onward add.
+6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+7. Figures 3 to 5, and the definitions Sections 5 onward add.

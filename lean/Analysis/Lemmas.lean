@@ -21,8 +21,9 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1, 2, 3 and 4**, all proved — Lemma 4 over the block post-state half of
-its sentence. Two notions came with Lemma 3: `BlockPostState` and Definition 20's `actionState`.
+**Present so far: Lemmas 1, 2, 3 and 4**, all proved, and Lemmas 2 and 4 over both of the two
+subjects their sentences name. Two notions came with Lemma 3: `BlockPostState` and Definition 20's
+`actionState`.
 
 ## The lemmas, and what each waits on
 
@@ -35,7 +36,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 1 | `lem:integer-thresholds` | 313–322 | **yes, and proved** — landed |
 | 2 | `lem:quorum-intersection` | 342–352 | **yes, and proved** — landed, both sentences |
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
-| 4 | `lem:finalized-before-justified` | 920–931 | **yes, over a block post-state** — landed and proved |
+| 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | no — Defs. 21 and 11 |
 | 6 | `lem:height-progression` | 987–994 | **in part, and nothing is missing** — see below |
 | 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
@@ -244,13 +245,32 @@ theorem lemEmptySlotNoopFields {Node Root : Type} [DecidableEq Node] [DecidableE
     enters. Lemma 3's `Settled` is different: it is a claim that the branches *stay blocked*, which
     fails outright when `q = 0`.
 
-    **Narrower than the paper's sentence in one respect.** The paper says "every reachable block
-    post-state *and finality action state*"; this covers the block post-state. The other half needs
-    no new assumption either — `Chained.processSlots` carries the invariant through slot closure —
-    so it is a statement to widen rather than a proof to find. -/
+    The paper names two subjects, "every reachable block post-state *and finality action state*".
+    This is the first; `lemFinalizedBeforeJustifiedActionState` below is the second. They are
+    separate declarations for the same reason Lemma 2's two sentences are: one reads against one
+    part of the paper's sentence without the other in the way. -/
 theorem lemFinalizedBeforeJustified {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] {σ : ChainState Node Root} (h : BlockPostState σ) :
     σ.F ⪯ σ.J ∧ σ.J ⪯ σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h :=
   Proofs.finalizedBeforeJustified h
+
+/-- **Lemma 4**'s second subject: a finality action state satisfies the same four claims.
+
+    Read aloud: closing the slots up to any later time leaves the finalized block preceding the
+    justified block, which precedes the latest block, and leaves the heights ordered the same way.
+
+    `actionState` is Definition 20 (`def:finality-action-state`)'s state, which is `process_slots`
+    of a block post-state. Quantifying over every `t` is stronger than the paper's sentence about
+    the one action slot, and implies it.
+
+    **No threshold hypothesis here either**, unlike Lemma 3, which is about the same routine.
+    `Chained` survives slot closure whatever the tallies hold, so `PositiveWeight` is not needed —
+    whereas Lemma 3 claims the height-event branches do not fire, which is false when `q = 0`. -/
+theorem lemFinalizedBeforeJustifiedActionState {Node Root : Type} [DecidableEq Node]
+    [DecidableEq Root] [Electorate Node] [Params] {σ : ChainState Node Root}
+    (h : BlockPostState σ) (t : Time) :
+    let σa := actionState σ t
+    σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h :=
+  Proofs.finalizedBeforeJustifiedActionState h t
 
 end Decoupled

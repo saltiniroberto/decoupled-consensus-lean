@@ -288,6 +288,21 @@ theorem finalizedBeforeJustified {σ : ChainState Node Root} (h : BlockPostState
   let c := chained_of_blockPostState h
   ⟨c.finJust, c.justLatest, c.hF_le_hj, c.hj_lt_h⟩
 
+/-- A finality action state is `Chained` too. `actionState` is `process_slots`, so this is
+    `Chained.processSlots` applied to the block post-state it starts from — and it needs no
+    threshold hypothesis, where routing the same claim through Lemma 3 would have needed one. -/
+theorem chained_actionState {σ : ChainState Node Root} (h : BlockPostState σ) (t : Time) :
+    Chained (actionState σ t) :=
+  (chained_of_blockPostState h).processSlots t
+
+/-- **Lemma 4**'s second subject: the finality action state satisfies the same four claims. -/
+theorem finalizedBeforeJustifiedActionState {σ : ChainState Node Root} (h : BlockPostState σ)
+    (t : Time) :
+    let σa := actionState σ t
+    σa.F ⪯ σa.J ∧ σa.J ⪯ σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h :=
+  let c := chained_actionState h t
+  ⟨c.finJust, c.justLatest, c.hF_le_hj, c.hj_lt_h⟩
+
 end
 
 end Proofs
