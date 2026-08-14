@@ -10,7 +10,8 @@ about a counted target bit. The first is `Witnessed.target`, already proved in
 about the stored target itself, and this file proves them:
 
 * it strictly precedes the chain's latest block;
-* its own post-state — *the* post-state, by `postState_unique` — is at the current height.
+* its own post-state — *the* post-state, `postState` being a function of the block — is at the
+  current height.
 
 ## The invariant is *not* preserved step by step, and that is the point
 
@@ -47,8 +48,8 @@ structure Fresh (σ : ChainState Node Root) : Prop where
   /-- The named target is on this chain. Non-strict, so that genesis is included. -/
   onChain : ∀ T, σ.T_h = some T → T ⪯ σ.L
   /-- The named target has a post-state, and it sits at the current height. Stated as an
-      existential inside the invariant, because that is what the step case produces; `anchorAll`
-      below turns it into the paper's "*the* post-state at `T`" with `postState_unique`. -/
+      existential inside the invariant, because that is what the step case produces; `anchorPost`
+      below turns it into the paper's "*the* post-state at `T`", a value of `postState`. -/
   anchor : ∀ T, σ.T_h = some T →
     ∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h
 
@@ -143,16 +144,15 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
       · rw [h, Option.some.injEq] at hT
         rw [← hT]; exact hLB
 
-/-- **Every** post-state of the named target is at the current height, which is the paper's definite
-    description. `Fresh.anchor` produces one such state; `postState_unique` says there is no other. -/
-theorem Fresh.anchorAll [PositiveWeight Node] {σ : ChainState Node Root} (h : Fresh σ)
+/-- The named target's post-state, as a value of `postState` rather than an existential over the
+    predicate. This is the paper's definite description: `postState` is a function of the block, so
+    the state named here is *the* post-state at `T`, and no uniqueness lemma is needed at the use
+    site. `postState_of_blockPostState` is what turns the invariant's existential into it. -/
+theorem Fresh.anchorPost {σ : ChainState Node Root} (h : Fresh σ)
     (T : Blk Node Root) (hT : σ.T_h = some T) :
-    (∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T) ∧
-      ∀ σT : ChainState Node Root, BlockPostState σT → σT.L = T → σT.h = σ.h := by
+    ∃ σT : ChainState Node Root, postState T = .state σT ∧ σT.h = σ.h := by
   obtain ⟨σT, hbps, hLT, hh⟩ := h.anchor T hT
-  refine ⟨⟨σT, hbps, hLT⟩, fun σT' hbps' hLT' => ?_⟩
-  rw [postState_unique T hbps' hbps hLT' hLT]
-  exact hh
+  exact ⟨σT, hLT ▸ postState_of_blockPostState hbps, hh⟩
 
 /-! ## Lemma 7 -/
 
@@ -161,21 +161,19 @@ theorem Fresh.anchorAll [PositiveWeight Node] {σ : ChainState Node Root} (h : F
     ancestor of the chain's latest block, and the target's own post-state is at this height.
 
     Three sources, one per claim: `Witnessed.target` for the first four conjuncts, `prec_of_target`
-    for strictness, `Fresh.anchor` for the post-state.
+    for strictness, `Fresh.anchorPost` for the post-state.
 
-    The post-state claim is the paper's definite description, in two halves: `T` has a post-state,
-    and every post-state of `T` is at this height. `postState_unique` is what makes the second half
-    provable, so nothing here is weaker than the paper's sentence. -/
+    The post-state claim is the paper's definite description, in one conjunct: `postState T` is the
+    state, and `postState` is a function of the block. -/
 theorem heightTargetFreshness [PositiveWeight Node] {σ : ChainState Node Root}
     (hp : BlockPostState σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      (∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T) ∧
-      ∀ σT : ChainState Node Root, BlockPostState σT → σT.L = T → σT.h = σ.h := by
+      ∃ σT : ChainState Node Root, postState T = .state σT ∧ σT.h = σ.h := by
   intro i hi
   obtain ⟨T, a, hT, hv, hpair, hinc⟩ := (witnessed_of_blockPostState hp).target i hi
-  obtain ⟨hex, hall⟩ := (fresh_of_blockPostState hp).anchorAll T hT
-  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT, hex, hall⟩
+  obtain ⟨σT, hpost, hh⟩ := (fresh_of_blockPostState hp).anchorPost T hT
+  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT, σT, hpost, hh⟩
 
 end Proofs
 

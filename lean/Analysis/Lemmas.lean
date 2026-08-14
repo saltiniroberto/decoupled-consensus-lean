@@ -50,7 +50,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
-| 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — needed `postState_unique` |
+| 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
@@ -64,9 +64,11 @@ state-root function is needed for that reading.
 
 `σ[·]` as a *map* looked necessary wherever a lemma reaches a **named earlier block's** state rather
 than the current one. It is not. Lemma 7's "the chain's post-state at `T`" is that case, and
-`postState_unique` (`Analysis/Proofs/Determinism.lean`) closes it: a block determines its post-state,
-so "some block post-state with `L = T`" and "the post-state of `T`" say the same thing. Figure 3 is
-still needed for what a *store* accepts; it is not needed to name a block's state.
+`postState` (`Analysis/Proofs/SlotClosure.lean`) closes it: it replays a block's own chain, so it is
+a function of the block, and `postState T = .state σT` names *the* post-state of `T` outright.
+`Analysis/Proofs/Determinism.lean` relates it to `BlockPostState` in both directions, which is what
+lets a proof carried out over the predicate be stated over the function. Figure 3 is still needed for
+what a *store* accepts; it is not needed to name a block's state.
 
 So the count of five waiting on `σ[B]` was pessimistic. Lemmas 3, 4 and 6 are written down over
 `BlockPostState`, and Lemma 5's certificates use it too; Lemmas 8 and 10 look expressible over it,
@@ -349,26 +351,29 @@ theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq 
     target's own post-state is at this height. Or, in the paper's own summary: a target bit always
     refers to the first block of the current height, and is processed only by a later block.
 
-    The paper's "on a chain ending at `B`" is `σ.L`, and its `h` is `σ.h`. The first four conjuncts
-    are the paper's `T = T_h` together with what makes `T` the *counted* vote's target; then `≺ B`;
-    then the post-state claim, in two halves.
+    The paper's "on a chain ending at `B`" is the hypothesis: `σ` is where replaying `B`'s own chain
+    ends. Its `h` is `σ.h`, and its `B` is `σ.L`, which `stateTransition_L` puts at `B`. The first
+    four conjuncts are the paper's `T = T_h` together with what makes `T` the *counted* vote's
+    target; then `≺ B`; then the post-state claim.
 
-    **"The chain's post-state at `T`" is a definite description**, and the two halves are what render
-    it: `T` has a block post-state, and every block post-state of `T` is at this height. The second
-    half is `postState_unique` in `Analysis/Proofs/Determinism.lean` — a block determines its
-    post-state, so "some" and "the" coincide. Figure 3's `σ[·]` is not needed for that.
+    **"The chain's post-state at `T`" is a definite description**, and `postState T` renders it:
+    `postState` is a function of the block, so the state this conjunct names is *the* post-state at
+    `T`. Figure 3's `σ[·]` is not needed for that, and neither is a uniqueness lemma at the use site.
 
     Proved in `Analysis/Proofs/Freshness.lean`, from a fourth invariant, `Fresh`: a named target is
     on the chain and has a post-state at the current height. Strictness sits outside that invariant
     because it is false at genesis, where `T_h = some genesis` and `L = genesis` — which is exactly
-    the case this lemma's own hypothesis excludes, no bit being set there. -/
+    the case this lemma's own hypothesis excludes, no bit being set there.
+
+    The hypothesis is weaker than the paper's "accepted block", because `postState` replays the
+    transition alone and Figure 3 checks three further things. That makes this statement stronger;
+    `postState`'s own docstring in `Analysis/Proofs/SlotClosure.lean` says which checks are absent. -/
 theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {σ : ChainState Node Root}
-    (hp : BlockPostState σ) :
+    {B : Blk Node Root} (hp : postState B = .state σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      (∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T) ∧
-      ∀ σT : ChainState Node Root, BlockPostState σT → σT.L = T → σT.h = σ.h :=
-  Proofs.heightTargetFreshness hp
+      ∃ σT : ChainState Node Root, postState T = .state σT ∧ σT.h = σ.h :=
+  Proofs.heightTargetFreshness (Proofs.blockPostState_of_postState B hp)
 
 end Decoupled

@@ -23,6 +23,19 @@ same block may have different shapes, and it is the block that pins the state. N
 threshold or a fault bound, which is why the `L` lemmas below are proved without `PositiveWeight` —
 Lemma 3's record equation would have supplied them, at the cost of an assumption this argument does
 not otherwise want.
+
+## The predicate and the function agree
+
+`postState` (`Analysis/Proofs/SlotClosure.lean`) replays a block's own chain and returns a
+`TransitionResult`. `BlockPostState` says the same thing as a predicate. The last section of this
+file relates them in both directions, so a statement may use whichever shape reads better:
+
+    postState B = .state σ  →  BlockPostState σ
+    BlockPostState σ        →  postState σ.L = .state σ
+
+Together they make `postState` a definite description where `BlockPostState` is an existential. That
+is a second route to `postState_unique`, and the reason a statement about "the post-state of `T`"
+need no longer be written in two halves.
 -/
 
 set_option autoImplicit false
@@ -117,6 +130,47 @@ theorem postState_unique : ∀ (B : Blk Node Root) {σ σ' : ChainState Node Roo
               have : σp = σp' := postState_unique p hp hp' hp1 hp2
               subst this
               simpa using hst.symm.trans hst'
+
+/-! ## The predicate and the function agree -/
+
+/-- What `postState` returns is a block post-state. Structural recursion on the block: genesis is
+    `BlockPostState.gen`, and a child's replay is its parent's replay followed by one transition,
+    which is `BlockPostState.step`. -/
+theorem blockPostState_of_postState : ∀ (B : Blk Node Root) {σ : ChainState Node Root},
+    postState B = .state σ → BlockPostState σ
+  | .genesis, σ, h => by
+      simp only [postState, TransitionResult.state.injEq] at h
+      exact h ▸ .gen
+  | .mk p s n as r, σ, h => by
+      rw [postState] at h
+      rcases hp : postState p with ⟨σp⟩ | _
+      · rw [hp] at h
+        exact .step (blockPostState_of_postState p hp) h
+      · rw [hp] at h
+        simp at h
+
+/-- The converse: a block post-state is what `postState` returns for its own latest block. So the
+    replay never fails on a block that has a post-state, and the two agree on the state.
+
+    Induction on the derivation, not on the block, because the step gives the parent's state
+    directly. `process_block`'s parent check is what identifies the parent of `σ.L` with the block
+    of the induction hypothesis. -/
+theorem postState_of_blockPostState {σ : ChainState Node Root} (h : BlockPostState σ) :
+    postState σ.L = .state σ := by
+  induction h with
+  | gen => rfl
+  | @step σp σ' B hp hst ih =>
+      have hLB : σ'.L = B := stateTransition_L hst
+      obtain ⟨σ₂, hb, -⟩ := stateTransition_state hst
+      have hpar : B.parent = some σp.L := by
+        rw [← processSlots_L σp B.slot]; exact processBlock_parent hb
+      cases B with
+      | genesis => simp [Blk.parent] at hpar
+      | mk p s n as r =>
+          simp only [Blk.parent, Option.some.injEq] at hpar
+          have hpp : postState p = .state σp := by rw [hpar]; exact ih
+          rw [hLB, postState, hpp]
+          exact hst
 
 end Proofs
 

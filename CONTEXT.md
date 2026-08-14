@@ -1123,6 +1123,53 @@ is what lets genesis into the invariant, and the strict version is recovered whe
 * `processAttestations_chainFields` moved from `Certificates.lean` to `Ancestry.lean`, beside its
   single-step version, so that `Freshness.lean` can read it without an import cycle.
 
+## 2026-08-15 — `postState` as a function, and Lemma 7 restated over it
+
+`postState : Blk → TransitionResult` (`Analysis/Proofs/SlotClosure.lean`) replays a block's own
+chain. It is not `σ[·]`: Figure 3 admits a block only after three further checks, none of them
+modelled, so this returns a state for blocks a store would reject. Its docstring lists them.
+
+`Analysis/Proofs/Determinism.lean` relates it to `BlockPostState` in both directions:
+
+    blockPostState_of_postState : postState B = .state σ → BlockPostState σ
+    postState_of_blockPostState : BlockPostState σ → postState σ.L = .state σ
+
+The first is structural recursion on the block, the second induction on the derivation. With them a
+proof carried out over the predicate can be stated over the function, and Lemma 7's post-state claim
+collapses from two conjuncts to one:
+
+    ∃ σT, postState T = .state σT ∧ σT.h = σ.h
+
+`postState` is a function of the block, so this *is* the paper's "the post-state at `T`" — the
+definite description no longer needs `postState_unique` at the use site, and `Fresh.anchorAll` is
+replaced by `Fresh.anchorPost`, which is two lines. `postState_unique` keeps its own proof and is
+now cited by nothing; it is a second route to the same fact and worth keeping stated.
+
+Lemma 7's hypothesis changed with it, from `BlockPostState σ` to `postState B = .state σ`. The two
+are interderivable by the bridges above, and the second is nearer the paper's "on a chain ending at
+`B`", which names the block.
+
+### `TransitionResult.get`, and why it is not in the statement
+
+`Spec/Defs/Basic.lean` gained `TransitionResult.get`, the `Option.get` shape: the state a result
+carries, given `r ≠ invalid`. Lean generates no accessor for one constructor's field of a
+two-constructor inductive, so a term naming that state otherwise needs a `match`.
+
+It is deliberately **not** used in Lemma 7. `r.get h` mentions `h`, whose type mentions `r`, so
+rewriting `r` afterwards fails with "motive is not type correct" — and this development rewrites
+states constantly. A statement wanting the state takes it as a parameter with `r = .state σ` as a
+hypothesis. `get` is for a definition that must name the state in a term.
+
+Two Lean facts found while doing it, both cheap to rediscover but easy to misdiagnose:
+
+* `∧` is non-dependent, so a conjunct cannot use the proof asserted by the conjunct beside it.
+  `postState T ≠ invalid ∧ ((postState T).get ‹_›).h = σ.h` cannot be written; the dependent form
+  `∃ h : postState T ≠ invalid, ((postState T).get h).h = σ.h` can, and is equivalent to the `∃ σT`
+  shape above.
+* `invalid` is a scoped notation, so its token cannot be an alternative name: `cases r with
+  | invalid => …` does not parse. Use positional bullets, or `rcases h : r with ⟨σ⟩ | _` when the
+  equation is needed.
+
 ## Next
 
 1. **The lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
