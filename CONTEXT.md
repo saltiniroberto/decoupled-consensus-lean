@@ -947,11 +947,11 @@ Conflict enters only as distinctness, E2 asking for `T ≠ T'`, and conflicting 
 because `⪯` is reflexive. The distinctness form is therefore strictly stronger than the paper's
 sentence; it is not stated separately until something needs it.
 
-## 2026-08-14 — Lemma 6 written down in full, proof outstanding
+## 2026-08-14 — Lemma 6 is proved, with a third invariant
 
 `lemHeightProgression`, both halves of the paper's sentence: the increment, and "requires a
-justification certificate or progress certificate". The proof is a `sorry` in
-`Analysis/Proofs/Certificates.lean`, which is the project's only one.
+justification certificate or progress certificate". Proved in
+`Analysis/Proofs/Certificates.lean`. `make check` passes with no `sorry`.
 
 ### Definition 21's progress certificate landed with it
 
@@ -983,38 +983,69 @@ paper's proof cites Assumption 1 at exactly this point, "counted using the fixed
 Nothing renders that phrase separately: `Electorate` fixes `V` and `w`, and both certificates count
 with them.
 
-### What the proof needs, neither part absent from the specification
+### `Witnessed`, the third invariant the paper does not state
 
-*The increment.* `advance_height` raises `h` by one and is its only writer — a field lemma
-`advanceHeight_h` that does not exist yet. The rest is Lemma 3, as above.
+A fired branch is a fact about **bits**; a certificate is a claim about **attestations**. Nothing
+carried the one to the other, so `Analysis/Proofs/Witnessed.lean` is new and does:
 
-*The certificate.* The branch that fired supplies the quorum clause, and getting it out means going
-into Figure 2: the target branch fires on `w(Qtarget) ≥ q`, and every bit in `Qtarget` was set by
-`process_attestation` from an attestation whose height pair is exactly `(h, T_h)`, line 778 being
-the only writer. The first attempt calls that step `advance_quorum`; nothing here does it yet, and
-it is the substantial piece. The invocation clause is `σ` itself, a block post-state with
-`σ.L = B`.
+    target   : a set target bit means an included attestation for exactly the current height and
+               the named target
+    progress : a set progress bit means an included attestation at the current height
+
+Both are stated against `σ.L` rather than an endpoint parameter, and `Witnessed.of_fields` moves the
+endpoint down the chain where a step needs it. The first attempt's equivalent is an 11-conjunct
+`Witnessed` serving many lemmas; two conjuncts are what Lemma 6 needs, and adding the rest before
+something reads them would be the guessing this project avoids.
+
+**`Settled` is needed at exactly one step, `process_slot`.** That step can name a target while bits
+are already set, which would leave old bits witnessing the wrong target. It cannot happen: naming a
+target requires `T_h = ⊥`, and `Settled`'s fourth conjunct then makes the target tally empty. This
+is the second time that conjunct — the one the paper never states — is what makes a proof go
+through.
+
+So all three invariants now in the project have a different reason to exist: `Settled` says the
+branches stay blocked, `Chained` says the blocks and heights stay ordered, `Witnessed` says the bits
+have provenance.
+
+### Figure 2's two writers, isolated
+
+`processAttestation_target_bit` and `processAttestation_progress_bit`: a bit is set only if it was
+already set, or `a` is the attestation that set it and its height pair is what the writer's own
+condition demands. Both proved by `simp only [processAttestation]; repeat' split at hb` and then
+`simp_all [Function.update_apply]` with `tauto` behind it — the indexed write expands to
+`Function.update`, which is what `Spec/Defs/Notation.lean`'s third macro produces.
+
+### What the assembly needed beyond the invariant
+
+* `advanceHeight_h`, `_L`, `_J_some`, `_h_j_some` — the field lemmas the branch analysis reads.
+* `processHeightEvents_advance` — if the height moved, which branch moved it and with what. Phrased
+  over `σ` rather than over the state the finality sub-step leaves, since those differ only in `F`
+  and `h_F`.
+* `processAttestations_chainFields`, `postBlock_fields` — the height the branch fired at is still the
+  parent state's, which is Lemma 3 underneath and is where `PositiveWeight` enters.
+
+Two tactic points worth keeping, both now in the skill: `cases hT : σ.T_h` has to come **before**
+`split_ifs` (and only `hne` needs the rewrite afterwards, `cases` having already substituted in the
+goal), and the leaves close with `exact` rather than `rw` because the goals carry a `pure` wrapper
+that `rw` will not see through.
 
 ## Next
 
-1. **Prove Lemma 6**, which is written down and `sorry`. The section above splits it: the increment
-   is `advanceHeight_h` plus Lemma 3, and the certificate needs the `Qtarget`-to-attestation step
-   through Figure 2 line 778 that the first attempt calls `advance_quorum`.
-2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
+1. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
    is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 7, 10 and
    11 wait on absent definitions, and Lemma 9 on a formulation. Read the
    `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
    the paper's imperative shape, so `sorry` is not the only obstacle.
-3. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
+2. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
    certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
    Assumption 1's `b` with `3b < W` for Lemma 11. Each
    lands in `Analysis/Vocabulary.lean` with the statement that needs it, not before, and each is a
    modelling decision to record here.
-4. The parts of Lemmas 8 and 10 that will be narrower than the paper's sentence when they land,
+3. The parts of Lemmas 8 and 10 that will be narrower than the paper's sentence when they land,
    and Lemma 9, which needs a formulation decided before it can be written at all.
-5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-7. Figures 3 to 5, and the definitions Sections 5 onward add.
+5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+6. Figures 3 to 5, and the definitions Sections 5 onward add.

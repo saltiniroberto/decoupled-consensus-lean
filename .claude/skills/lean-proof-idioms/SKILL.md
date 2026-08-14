@@ -148,6 +148,32 @@ is a variable. Case on it first:
     cases hp : a.heightPair <;> simp only [processAttestation, hT', hp] <;>
       (repeat' split) <;> rfl
 
+### Case on the scrutinee *before* `split_ifs`, and rewrite only the hypothesis
+
+**Measured in this repository, 2026-08-14**, on `processHeightEvents_advance` — the lemma saying
+which branch of the height-event check moved the height.
+
+The branch's own argument is `σ.T_h`, an `Option`, and the conclusion has to name what got
+justified. `split_ifs` first leaves goals where the field lemmas cannot fire, because
+`advance_height σ σ.T_h st` is not `advance_height σ (some T) st`. Casing first fixes it:
+
+    cases hT : σ.T_h with
+    | none => rw [hT] at hne
+              split_ifs at hne ⊢ <;> …
+    | some T => rw [hT] at hne
+                split_ifs at hne ⊢ <;> …
+
+Two details, each of which cost a round trip:
+
+* **`cases hT : e` has already substituted `e` in the goal**, so `rw [hT] at hne ⊢` fails with
+  *"did not find an occurrence"* — on the goal, after succeeding on the hypothesis. Rewrite the
+  hypothesis only.
+* **`split_ifs` must name the hypothesis too** (`at hne ⊢`). Without it the hypothesis keeps the
+  whole `if` expression while the goal is split, and the contradictory leaves cannot be closed.
+
+A `¬ (none ≠ ⊥)` leaf survives this, since `split_ifs` does not evaluate that condition. Close it
+with `exact absurd rfl hb.2.1` rather than assuming it was discharged.
+
 ## 3. Loops
 
 ### `for x in xs` — no work needed
@@ -779,6 +805,42 @@ them in one diff.
 Check the honesty component before assuming you are stuck: the `obtain` pattern in the
 existing proof may be discarding it with `-`, which makes the node look anonymous when it
 is not.
+
+## 25. An invariant for *provenance*: bits back to the messages that set them
+
+**Measured in this repository, 2026-08-14**, proving Lemma 6.
+
+A state machine that records participation as `Bool` arrays has thrown the messages away. A lemma
+whose conclusion is about messages — "the block carries a certificate", i.e. a quorum of
+attestations — therefore needs an invariant carrying each set bit back to an attestation, because
+no field lemma can produce one:
+
+    structure Witnessed (σ : ChainState Node Root) : Prop where
+      target : ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
+        a.heightPair = .target σ.h T ∧ IncludedOn a σ.L
+      progress : ∀ i ∈ σ.Qprog, ∃ a, a.validator = i ∧ a.height = some σ.h ∧ IncludedOn a σ.L
+
+Four things made it go through:
+
+* **State it against the state's own endpoint** (`σ.L`), not an endpoint parameter, and add a
+  `mono` lemma to move the endpoint down the chain. The parameterised form propagates an extra
+  argument through every step lemma for nothing.
+* **Isolate the writers first.** One lemma per array: *the bit was already set, or this attestation
+  set it and its content is what the writer's condition demanded.* Everything else is bookkeeping
+  over those two. An indexed write from the pseudocode macro expands to `Function.update`, so
+  `simp_all [Function.update_apply]` with `tauto` behind it closes the leaves.
+* **A congruence lemma pays for itself immediately** — `of_fields` over the four fields the
+  invariant reads. Every step that touches only the cursor or the finality fields is then one line.
+* **Expect it to need the other invariants.** Here exactly one step needed `Settled`: naming a
+  target while bits are set would leave them witnessing the wrong target, and it is `Settled`'s
+  unstated fourth conjunct that rules it out. That single dependency is what puts `PositiveWeight`
+  in the conclusion.
+
+Ordering note: a "the bit is set" invariant and a "the branches stay blocked" invariant are
+different claims and want separate structures. Three now coexist here — `Settled` (branches
+blocked), `Chained` (blocks and heights ordered), `Witnessed` (bits have provenance) — and each has
+its own preservation proof and its own hypotheses. Merging them would force every proof to carry
+every hypothesis.
 
 ## 24. `lake env lean` lies about this library: pass `--setup`
 
