@@ -1155,10 +1155,14 @@ it is a second route to the same fact and worth keeping.
 
 `Holds` is a class with exactly two instances, `Option` and `TransitionResult`, and it exists to
 keep the notation off everything else: on a `Finset` it would read as though the element drawn were
-the only one. Both instances are the type's own `Membership`, so `Holds.mem σ.T_h T` unfolds to
-`σ.T_h = some T` with no lemma in between, and a hypothesis obtained from the notation is usable as
-the equation. `get i from s` for a `Finset s` fails with "failed to synthesize `Holds (Finset Node)`",
-which is the intended message.
+the only one. Each instance is the equation the type already has — `o = some a`, `r = .state σ` — so
+`Holds.mem σ.T_h T` unfolds to `σ.T_h = some T` with no lemma in between, and a hypothesis obtained
+from the notation is usable as the equation. `get i from s` for a `Finset s` fails with "failed to
+synthesize `Holds (Finset Node)`", which is the intended message.
+
+`TransitionResult` deliberately has **no** `Membership` instance. One was written and removed the
+same day: `∈` is the same relation, but having it would put the notation's meaning back within reach
+of any `∈`-based binder, which is what `Holds` exists to prevent.
 
 `get` becomes a reserved token wherever the declaration is in scope. Measured: `def get` and `get 3`
 stop parsing; `o.get h`, `(postState B).get h` and `Option.get o h` are unaffected, a dotted name

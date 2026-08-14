@@ -623,25 +623,24 @@ inductive TransitionResult (Node Root : Type) where
     `return σ`. -/
 instance : Coe (ChainState Node Root) (TransitionResult Node Root) := ⟨.state⟩
 
-/-- `σ ∈ r`: the result `r` is that state, i.e. `r = .state σ`. A result holds one state or
-    none, which is what `Option` membership already says for `⊥` and `some`, so both spell the
-    same idea with the same symbol. -/
-instance : Membership (ChainState Node Root) (TransitionResult Node Root) :=
-  ⟨fun r σ => r = .state σ⟩
-
 /-- What `get … from …` may draw from: a container of **at most one** value. `Option` and
     `TransitionResult` are the two, and there are no other instances by design — on a `Finset` the
-    notation would read as though the element were unique, which it is not.
+    notation would read as though the element drawn were the only one, which it is not.
 
-    `Holds c x` is the membership of that one value, so it is `x ∈ c` in both cases and inherits
-    both `Membership` instances. -/
+    Each instance is the equation the type already has for "holds this one": `o = some a` and
+    `r = .state σ`. `Holds.mem` unfolds to it, so a hypothesis obtained from the notation is usable
+    as that equation with no lemma in between.
+
+    `TransitionResult` gets no `Membership` instance. `∈` would be the same relation, but it would
+    also put the notation's meaning back within reach of any `∈`-based binder, which is what this
+    class exists to prevent. -/
 class Holds.{u, v} (γ : Type u) (α : outParam (Type v)) where
   /-- `c` holds `x`, and holds nothing else. -/
   mem : γ → α → Prop
 
-instance holdsOption.{u} {α : Type u} : Holds (Option α) α := ⟨fun o a => a ∈ o⟩
+instance holdsOption.{u} {α : Type u} : Holds (Option α) α := ⟨fun o a => o = some a⟩
 
-instance : Holds (TransitionResult Node Root) (ChainState Node Root) := ⟨fun r σ => σ ∈ r⟩
+instance : Holds (TransitionResult Node Root) (ChainState Node Root) := ⟨fun r σ => r = .state σ⟩
 
 /-- `get x from c; p` — draw `x` from `c`, then assert `p` of it. Sugar for `∃ x, Holds.mem c x ∧ p`,
     so it applies to `Option` and to `TransitionResult` and to nothing else.
