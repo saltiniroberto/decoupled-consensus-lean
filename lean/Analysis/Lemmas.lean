@@ -356,12 +356,15 @@ theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq 
     four conjuncts are the paper's `T = T_h` together with what makes `T` the *counted* vote's
     target; then `≺ B`; then the post-state claim.
 
-    **"The chain's post-state at `T`" is a definite description**, and the last conjunct renders it
-    in one equation: the height of the post-state at `T` is `σ.h`. `postState` is a function of the
-    block, so the state it names is *the* post-state, and `TransitionResult.map` is what lets the
-    conjunct say so without quantifying over that state; being an equation against `some` it also
-    carries "the replay did not fail". Figure 3's `σ[·]` is not needed for any of it, and neither is
-    a uniqueness lemma at the use site.
+    **The two `get … from` are extractions, not definitions.** `get T from σ.T_h;` says the chain
+    names a target and binds it; `get σT from postState T;` says `T`'s replay does not fail and
+    binds where it ends. Each asserts that what it draws from holds something — the notation is
+    declared in `Spec/Defs/Basic.lean` and its docstring says so.
+
+    **"The chain's post-state at `T`" is a definite description**, and `get σT from postState T` is
+    that description: `postState` is a function of the block, so the state drawn is *the* post-state
+    at `T`. Figure 3's `σ[·]` is not needed for it, and neither is a uniqueness lemma at the use
+    site.
 
     Proved in `Analysis/Proofs/Freshness.lean`, from a fourth invariant, `Fresh`: a named target is
     on the chain and has a post-state at the current height. Strictness sits outside that invariant
@@ -374,43 +377,11 @@ theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq 
 theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {σ : ChainState Node Root}
     {B : Blk Node Root} (hp : postState B = .state σ) :
-    ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
-      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      (postState T).map ChainState.h = some σ.h :=
+    ∀ i ∈ σ.Qtarget,
+      get T from σ.T_h;
+      get σT from postState T;
+      ∃ a, a.validator = i ∧ a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧
+        T ≺ σ.L ∧ σT.h = σ.h :=
   Proofs.heightTargetFreshness (Proofs.blockPostState_of_postState B hp)
-
-/-- **The same lemma, written with `postState'`**, the post-state defined only on blocks that
-    replay. Here for comparison with the one above; one of the two should go.
-
-    Read aloud, the last conjunct: `T` replays, and the state it replays to is at height `σ.h`.
-
-    The `∃ hT` is not avoidable. `postState' T` takes a proof of `Replayable T` as an argument, and
-    `∧` has no binder, so no earlier conjunct can supply it — a dependent pair is the only way to
-    assert a hypothesis and use it in the same proposition. What is bound is a proof rather than a
-    state, which is the whole difference from `∃ σT, postState T = .state σT ∧ σT.h = σ.h`.
-
-    Two costs against one gain. `hT` appears in the statement, so a later proof that rewrites
-    `postState T` meets "motive is not type correct". And `Replayable` and `postState'` are two
-    definitions where `TransitionResult.map` is one, already general over the state's other fields.
-    The gain is that `.h` reads as a field access rather than as a projection through `Option`. -/
-theorem lemHeightTargetFreshness' {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] [PositiveWeight Node] {σ : ChainState Node Root}
-    {B : Blk Node Root} (hp : postState B = .state σ) :
-    ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
-      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      ∃ hT : Replayable T, (postState' T hT).h = σ.h := by
-  intro i hi
-  obtain ⟨T, a, hTh, hv, hpair, hinc, hprec, hmap⟩ := lemHeightTargetFreshness hp i hi
-  refine ⟨T, a, hTh, hv, hpair, hinc, hprec, ?_⟩
-  rcases hr : postState T with ⟨σT⟩ | _
-  · have hne : Replayable T := by rw [Replayable, hr]; simp
-    refine ⟨hne, ?_⟩
-    have hg : (postState T).get hne = σT :=
-      TransitionResult.state.inj ((TransitionResult.state_get _ hne).symm.trans hr)
-    rw [hr] at hmap
-    simp only [TransitionResult.map_state, Option.some.injEq] at hmap
-    rw [postState', hg, hmap]
-  · rw [hr] at hmap
-    simp at hmap
 
 end Decoupled

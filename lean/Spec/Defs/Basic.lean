@@ -623,14 +623,57 @@ inductive TransitionResult (Node Root : Type) where
     `return σ`. -/
 instance : Coe (ChainState Node Root) (TransitionResult Node Root) := ⟨.state⟩
 
+/-- `σ ∈ r`: the result `r` is that state, i.e. `r = .state σ`. A result holds one state or
+    none, which is what `Option` membership already says for `⊥` and `some`, so both spell the
+    same idea with the same symbol. -/
+instance : Membership (ChainState Node Root) (TransitionResult Node Root) :=
+  ⟨fun r σ => r = .state σ⟩
+
+/-- What `get … from …` may draw from: a container of **at most one** value. `Option` and
+    `TransitionResult` are the two, and there are no other instances by design — on a `Finset` the
+    notation would read as though the element were unique, which it is not.
+
+    `Holds c x` is the membership of that one value, so it is `x ∈ c` in both cases and inherits
+    both `Membership` instances. -/
+class Holds.{u, v} (γ : Type u) (α : outParam (Type v)) where
+  /-- `c` holds `x`, and holds nothing else. -/
+  mem : γ → α → Prop
+
+instance holdsOption.{u} {α : Type u} : Holds (Option α) α := ⟨fun o a => a ∈ o⟩
+
+instance : Holds (TransitionResult Node Root) (ChainState Node Root) := ⟨fun r σ => σ ∈ r⟩
+
+/-- `get x from c; p` — draw `x` from `c`, then assert `p` of it. Sugar for `∃ x, Holds.mem c x ∧ p`,
+    so it applies to `Option` and to `TransitionResult` and to nothing else.
+
+    **It asserts that `c` holds something.** `get T from σ.T_h; P T` claims both that a target is
+    named and that `P` holds of it. `∀ T ∈ σ.T_h, P T` is the other reading, vacuous when `T_h`
+    is `⊥`.
+
+    `Holds.mem` unfolds to the equation, so a hypothesis drawn from this notation is usable as one:
+    `have : σ.T_h = some T := hT` needs no lemma in between.
+
+    **`get` becomes a reserved token**, so a bare identifier of that name stops parsing wherever
+    this declaration is in scope. Measured: `def get` and `get 3` fail, while `o.get h`,
+    `(postState B).get h` and `Option.get o h` are unaffected, dotted names being one token. `from`
+    costs nothing, being already a keyword through `show … from …`.
+
+    **Not `TransitionResult.get`.** That one is a function: it takes a proof that the result is not
+    `invalid` and returns the state. This is a binder, and it *asserts* what that proof would
+    require. -/
+scoped syntax "get " ident " from " term "; " term : term
+
+macro_rules
+  | `(get $x:ident from $c; $p) => `(∃ $x:ident, Holds.mem $c $x ∧ $p)
+
 /-- Read a field of the state a result carries, `none` when it is `invalid`.
 
-    It exists so that a statement about that state need not quantify over it.
-    `(postState T).map ChainState.h = some σ.h` says "the post-state at `T` is at height `σ.h`" in
-    one equation, where `∃ σT, … ∧ σT.h = σ.h` and `∀ σT, … → σT.h = σ.h` both bind a variable the
-    reader then has to track. Being an equation against `some`, it also carries "the replay did not
-    fail" without a second conjunct. Any other field goes the same way: `(postState T).map
-    ChainState.L`, and so on. -/
+    The binder-free way to say the same thing as `get … from …`:
+    `(postState T).map ChainState.h = some σ.h` is "the post-state at `T` is at height `σ.h`" in one
+    equation, nothing bound, and being an equation against `some` it carries "the replay did not
+    fail" as well. Lemma 7 was written that way before the notation existed, and reads better with
+    the notation, so **nothing uses this today.** It is kept for a statement that mentions one field
+    and has no other use for the state, where a bound variable would be noise. -/
 def TransitionResult.map {α : Type} (f : ChainState Node Root → α) :
     TransitionResult Node Root → Option α
   | .state σ => some (f σ)

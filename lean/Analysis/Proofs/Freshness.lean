@@ -144,19 +144,18 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
       · rw [h, Option.some.injEq] at hT
         rw [← hT]; exact hLB
 
-/-- The named target's post-state is at this height, in one equation and with no state to quantify
-    over. Read aloud: the height of the post-state at `T` is `σ.h`. Being an equation against `some`
-    it also says the replay did not fail.
+/-- The named target's post-state is at this height. Read aloud: draw `σT` from `T`'s replay — which
+    therefore does not fail — and `σT` is at height `σ.h`.
 
     `postState` is a function of the block, so this is the paper's definite description; no
     uniqueness lemma is needed at the use site. `postState_of_blockPostState` is what turns the
     invariant's existential into it. -/
 theorem Fresh.anchorPost {σ : ChainState Node Root} (h : Fresh σ)
     (T : Blk Node Root) (hT : σ.T_h = some T) :
-    (postState T).map ChainState.h = some σ.h := by
+    get σT from postState T;
+    σT.h = σ.h := by
   obtain ⟨σT, hbps, hLT, hh⟩ := h.anchor T hT
-  have hpost : postState T = .state σT := hLT ▸ postState_of_blockPostState hbps
-  simp [hpost, hh]
+  exact ⟨σT, hLT ▸ postState_of_blockPostState hbps, hh⟩
 
 /-! ## Lemma 7 -/
 
@@ -167,18 +166,20 @@ theorem Fresh.anchorPost {σ : ChainState Node Root} (h : Fresh σ)
     Three sources, one per claim: `Witnessed.target` for the first four conjuncts, `prec_of_target`
     for strictness, `Fresh.anchorPost` for the post-state.
 
-    The post-state claim is the paper's definite description, in one equation and with no state
-    quantified over: the height of the post-state at `T` is `σ.h`. `postState` being a function of
-    the block is what makes it "the". -/
+    The two `get … from` draw the target from `T_h` and the target's post-state from its replay, so
+    each asserts that what it draws from holds something. The post-state claim is the paper's
+    definite description, `postState` being a function of the block. -/
 theorem heightTargetFreshness [PositiveWeight Node] {σ : ChainState Node Root}
     (hp : BlockPostState σ) :
-    ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
-      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      (postState T).map ChainState.h = some σ.h := by
+    ∀ i ∈ σ.Qtarget,
+      get T from σ.T_h;
+      get σT from postState T;
+      ∃ a, a.validator = i ∧ a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧
+        T ≺ σ.L ∧ σT.h = σ.h := by
   intro i hi
   obtain ⟨T, a, hT, hv, hpair, hinc⟩ := (witnessed_of_blockPostState hp).target i hi
-  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT,
-    (fresh_of_blockPostState hp).anchorPost T hT⟩
+  obtain ⟨σT, hσT, hh⟩ := (fresh_of_blockPostState hp).anchorPost T hT
+  exact ⟨T, hT, σT, hσT, a, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT, hh⟩
 
 end Proofs
 

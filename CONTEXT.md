@@ -1138,29 +1138,54 @@ The first is structural recursion on the block, the second induction on the deri
 proof carried out over the predicate can be stated over the function, and Lemma 7's post-state claim
 becomes one equation with nothing quantified over:
 
-    (postState T).map ChainState.h = some σ.h
+    ∀ i ∈ σ.Qtarget,
+      get T from σ.T_h;
+      get σT from postState T;
+      ∃ a, … ∧ σT.h = σ.h
 
-Read aloud: the height of the post-state at `T` is `σ.h`. `postState` is a function of the block, so
-the state named is *the* post-state — the definite description no longer needs `postState_unique` at
-the use site, and `Fresh.anchorAll` is replaced by `Fresh.anchorPost`. `postState_unique` keeps its
-own proof and is now cited by nothing; it is a second route to the same fact and worth keeping.
+`postState` is a function of the block, so `get σT from postState T` is *the* post-state at `T` —
+the definite description no longer needs `postState_unique` at the use site, and `Fresh.anchorAll` is
+replaced by `Fresh.anchorPost`. `postState_unique` keeps its own proof and is now cited by nothing;
+it is a second route to the same fact and worth keeping.
 
-`TransitionResult.map` (`Spec/Defs/Basic.lean`) reads a field of the state a result carries, `none`
-on `invalid`, and exists for exactly this: it lets a statement speak about that state without binding
-it. Being an equation against `some` it also carries "the replay did not fail", so the claim is one
-conjunct rather than two. Any other field goes the same way — `.map ChainState.L` — so no per-field
-accessor is needed. `TransitionResult.toOption` is `map id`, kept for the `Option` API and for
-`toOption_eq_some`.
+### The notation, and the five shapes tried before it
 
-**Two forms tried and rejected first, both on 2026-08-15, both equivalent to the above:**
+`get x from c; p` is `∃ x, Holds.mem c x ∧ p`, declared in `Spec/Defs/Basic.lean`. It asserts that
+`c` holds something — that is the half a reader can miss.
 
-    ∃ σT, postState T = .state σT ∧ σT.h = σ.h
-    postState T ≠ invalid ∧ ∀ σT, postState T = .state σT → σT.h = σ.h
+`Holds` is a class with exactly two instances, `Option` and `TransitionResult`, and it exists to
+keep the notation off everything else: on a `Finset` it would read as though the element drawn were
+the only one. Both instances are the type's own `Membership`, so `Holds.mem σ.T_h T` unfolds to
+`σ.T_h = some T` with no lemma in between, and a hypothesis obtained from the notation is usable as
+the equation. `get i from s` for a `Finset s` fails with "failed to synthesize `Holds (Finset Node)`",
+which is the intended message.
 
-The first reads as "there is some state" where the paper says "the". The second fixes that but still
-binds `σT`, which a reader then has to carry through the rest of the sentence; and its first
-conjunct cannot be dropped, since without it the `∀` is vacuously true. Roberto, on both: the state
-should not have to be quantified over at all for the statement to be readable.
+`get` becomes a reserved token wherever the declaration is in scope. Measured: `def get` and `get 3`
+stop parsing; `o.get h`, `(postState B).get h` and `Option.get o h` are unaffected, a dotted name
+being one token. `from` costs nothing, being already a keyword through `show … from …`. Nothing in
+this repository uses a bare `get` identifier.
+
+Shapes tried and rejected, all equivalent, all on 2026-08-15:
+
+    ∃ σT, postState T = .state σT ∧ σT.h = σ.h        -- "some state" where the paper says "the"
+    postState T ≠ invalid ∧ ∀ σT, … → σT.h = σ.h      -- still binds σT, and needs both conjuncts
+    (postState T).map ChainState.h = some σ.h         -- binds nothing, but Option plumbing
+    ∃ hT : Replayable T, (postState' T hT).h = σ.h    -- binds a proof; blocks later rewriting
+    ∃ σT ∈ postState T, σT.h = σ.h                    -- the ∃ … ∈ … sugar, one step from the above
+
+Roberto's objections in order: "there is some state" is not what the paper says; the state should not
+have to be quantified over at all; `∃ X, Y = some X` is unnatural to read. The notation answers the
+third while keeping the reading of the second.
+
+Two spellings were tested and dropped: `let T ← σ.T_h;` (landed briefly, then swapped — `←` is the
+figures' assignment arrow, `Spec/Fig1SlotReplay.lean` writes `σ.T_h ← some σ.L`), and `T ∈ σ.T_h; p`
+without a keyword, which cannot work: adding `ident ∈ term ; term` makes the parser expect a `;`
+after every membership, so plain `T ∈ σ.T_h` stops parsing. `let T := …` is not available either —
+`:=` is definitional binding, and `T` would be the `Option`.
+
+`Replayable`, `postState'` and a second Lemma 7 stated over them were written for comparison and
+deleted the same day. `TransitionResult.map`, `toOption` and `get` remain in `Spec/Defs/Basic.lean`
+with nothing using them; `map`'s docstring says so.
 
 Lemma 7's hypothesis changed with it, from `BlockPostState σ` to `postState B = .state σ`. The two
 are interderivable by the bridges above, and the second is nearer the paper's "on a chain ending at
