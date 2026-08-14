@@ -3,6 +3,7 @@ import Analysis.Proofs.Weights
 import Analysis.Proofs.SlotClosure
 import Analysis.Proofs.Ancestry
 import Analysis.Proofs.Certificates
+import Analysis.Proofs.Freshness
 
 /-!
 # The paper's numbered lemmas
@@ -23,9 +24,8 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 7.** Lemmas 1 to 6 are proved, each covering its paper sentence in
-full; Lemma 7 is stated with its proof outstanding, and is narrower than the paper's sentence in one
-respect its docstring names. Two notions came with Lemma 3,
+**Present so far: Lemmas 1 to 7**, all proved. Lemmas 1 to 6 cover their paper sentence in full;
+Lemma 7 is narrower in one respect its docstring names. Two notions came with Lemma 3,
 `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
 certificates.
@@ -50,7 +50,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
-| 7 | `lem:height-target-freshness` | 1002–1009 | **in part** — landed over `BlockPostState`, proof outstanding |
+| 7 | `lem:height-target-freshness` | 1002–1009 | **in part, and proved** — the post-state claim as an existential |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
@@ -358,8 +358,10 @@ theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq 
     "the" post-state needs either Figure 3's `σ[·]` or a determinism lemma — block post-states
     agreeing on `L` agree everywhere — and neither exists here yet.
 
-    The proof is outstanding, a `sorry` in `Analysis/Proofs/Witnessed.lean`, which says what the two
-    new conjuncts need. -/
+    Proved in `Analysis/Proofs/Freshness.lean`, from a fourth invariant, `Fresh`: a named target is
+    on the chain and has a post-state at the current height. Strictness sits outside that invariant
+    because it is false at genesis, where `T_h = some genesis` and `L = genesis` — which is exactly
+    the case this lemma's own hypothesis excludes, no bit being set there. -/
 theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {σ : ChainState Node Root}
     (hp : BlockPostState σ) :

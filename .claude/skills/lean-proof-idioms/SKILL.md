@@ -842,6 +842,30 @@ blocked), `Chained` (blocks and heights ordered), `Witnessed` (bits have provena
 its own preservation proof and its own hypotheses. Merging them would force every proof to carry
 every hypothesis.
 
+## 26. Which invariant does a claim belong in? Ask what breaks mid-transition
+
+**Measured in this repository, 2026-08-14**, proving Lemma 7. The plan said to add the claim as a
+conjunct of an existing per-step invariant. That was wrong, and the test that would have caught it
+is one question: **is the claim true after every statement of the transition, or only at its end?**
+
+The claim was "the named target strictly precedes the latest block". The routine that names a target
+writes `T_h ← some σ.L`, so immediately after that write the target *is* the latest block and the
+claim is false. It becomes true again only because a later phase moves `L` to the child.
+
+So the claim belongs in a *block-post-state* invariant, proved by induction with a whole transition
+as the step, not in a per-step invariant whose lemmas would then have to state something false of
+their own intermediate states.
+
+Two follow-on habits from the same lemma:
+
+* **Keep the invariant's version weak enough for the base case.** Here the strict claim fails at
+  genesis (target and latest block are both genesis). Carrying the *non-strict* claim in the
+  invariant, and recovering strictness in a separate lemma with the hypothesis that makes genesis
+  impossible, is shorter than case-splitting genesis inside every step.
+* **A hypothesis used in exactly one case is a sign the case is the whole reason for it.** Say so at
+  the theorem: here `Qtarget.Nonempty` is used for genesis and nowhere else, which is what tells the
+  next reader it is not a limitation of the argument.
+
 ## 24. `lake env lean` lies about this library: pass `--setup`
 
 Section 6 says to iterate in the scratchpad with `lake env lean <file>`. That is right for a

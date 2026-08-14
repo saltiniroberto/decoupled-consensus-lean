@@ -1029,10 +1029,10 @@ Two tactic points worth keeping, both now in the skill: `cases hT : σ.T_h` has 
 goal), and the leaves close with `exact` rather than `rw` because the goals carry a `pure` wrapper
 that `rw` will not see through.
 
-## 2026-08-14 — Lemma 7 written down, proof outstanding
+## 2026-08-14 — Lemma 7 is proved, with a fourth invariant
 
-`lemHeightTargetFreshness`, with the `sorry` in `Analysis/Proofs/Witnessed.lean` beside the
-invariant it extends.
+`lemHeightTargetFreshness`, proved in the new `Analysis/Proofs/Freshness.lean`. `make check`
+passes with no `sorry`.
 
 ### It was on the "blocked" list, and only half of it was
 
@@ -1055,39 +1055,67 @@ the vote behind the bit names the stored target at this height — and the last 
 `≺ B` and the post-state claim. That makes the new content of this lemma exactly the part that is
 outstanding.
 
-### What the two new conjuncts need, from the paper's own proof
+### `Fresh` is a fourth invariant, and it did *not* go into `Witnessed`
 
-* **Strictness** "is structural rather than a separate check": while `T_h` is empty no bit can be
-  set, and `T_h` is filled by the `process_slot` call that advances past the target block's slot, so
-  any state with `T_h ≠ ⊥` has already moved past it. That wants a `Witnessed` conjunct relating
-  `T_h`'s slot to `s` and `s_h`, which it does not carry yet.
-* **The target's own height** needs the preceding height transition to have been consumed at a block
-  — the paper cites Lemma 3 — and then either that block is `T`, whose post-state is already at this
-  height, or nothing moved the height in between.
+The plan when the statement landed said the proof would extend `Witnessed` with a `fresh` conjunct,
+following the first attempt. **That was wrong, and the reason is worth keeping.** `Witnessed` is
+preserved step by step, `process_slot` included. Strictness is not: `process_slot` writes
+`T_h ← some σ.L`, so immediately after that write the target *is* the latest block. It becomes strict
+again only because `process_block` moves `L` to the child.
 
-So the proof extends `Witnessed` rather than starting a new induction. The first attempt's version of
-that invariant carries exactly this content under the name `fresh`, which is a point in favour.
+So this invariant holds of block post-states and of nothing smaller, and its induction is over
+`BlockPostState` with a whole transition as the step — the way `Chained` is proved, not the way
+`Settled` is. Merging it into `Witnessed` would have forced `Witnessed`'s per-step lemmas to state
+something false of their intermediate states.
+
+`Fresh` therefore lives in its own file and carries the two claims that hold **unconditionally**:
+
+    onChain : ∀ T, σ.T_h = some T → T ⪯ σ.L
+    anchor  : ∀ T, σ.T_h = some T → ∃ σT, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h
+
+### Strictness is false at genesis, and that is why it sits outside the invariant
+
+At genesis `T_h = some genesis` and `L = genesis`, so `T ≺ L` fails. Every other block post-state is
+the result of a transition, where the block phase has already moved `L` past the target, so
+strictness holds there with no hypothesis at all.
+
+`prec_of_target` therefore takes `σ.Qtarget.Nonempty` and uses it in the genesis case only — no bit
+is set there, which is exactly what Lemma 7's own hypothesis rules out. Keeping `onChain` non-strict
+is what lets genesis into the invariant, and the strict version is recovered where it is true.
+
+### What the proof needed besides
+
+* **Strict ancestry**, absent until now: `parent_prec` and `Preceq.trans_prec`, both from counting —
+  `ancestors` of a child is one longer than its parent's, so no antisymmetry lemma and no `sizeOf`
+  argument is needed. `ancestors_length_le_of_preceq` and `..._lt_of_prec` are the two counting
+  lemmas, in `Analysis/Proofs/Ancestry.lean` with the rest of Definition 5.
+* **`processHeightEvents_of_target`** — the complement of `processHeightEvents_advance`: if `T_h` is
+  still filled after the check then no branch fired, because `advance_height` always clears it, so
+  the height, the latest block and the target are all unchanged. The two lemmas together cover the
+  check.
+* **`processBlock_parent`** — the parent check as a fact about the block. Three proofs now derive it,
+  so it is a lemma in `Analysis/Proofs/SlotClosure.lean` rather than four repeated lines.
+* `processAttestations_chainFields` moved from `Certificates.lean` to `Ancestry.lean`, beside its
+  single-step version, so that `Freshness.lean` can read it without an import cycle.
 
 ## Next
 
-1. **Prove Lemma 7**, which is written down and `sorry`. The section above says what its two new
-   conjuncts need, and that they go into `Witnessed` rather than a new induction.
-2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
+1. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
    is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 10 and 11
    wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
    before attempting a proof — all of them are over routines written in the paper's imperative
    shape, so `sorry` is not the only obstacle.
-3. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
+2. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
    certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
    Assumption 1's `b` with `3b < W` for Lemma 11. Each lands in `Analysis/Vocabulary.lean` with the
    statement that needs it, not before, and each is a modelling decision to record here.
-4. **Close the two places where a statement is weaker than the paper's sentence**: Lemma 7's
+3. **Close the two places where a statement is weaker than the paper's sentence**: Lemma 7's
    existential post-state, which wants Figure 3's `σ[·]` or a determinism lemma, and whatever
    Lemmas 8 and 10 turn out to need. Lemma 9 needs a formulation decided before it can be written at
    all.
-5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-7. Figures 3 to 5, and the definitions Sections 5 onward add.
+5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+6. Figures 3 to 5, and the definitions Sections 5 onward add.

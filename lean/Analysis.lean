@@ -4,6 +4,7 @@ import Analysis.Proofs.SlotClosure
 import Analysis.Proofs.Ancestry
 import Analysis.Proofs.Witnessed
 import Analysis.Proofs.Certificates
+import Analysis.Proofs.Freshness
 import Analysis.Lemmas
 
 /-!

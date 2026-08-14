@@ -230,43 +230,6 @@ theorem witnessed_of_blockPostState [PositiveWeight Node] {σ : ChainState Node 
   | gen => exact witnessed_gen
   | step hp hst ih => exact ih.stateTransition (settled_of_blockPostState hp) q_pos hst
 
-/-! ## Lemma 7
-
-`lem:height-target-freshness` adds two claims to the invariant's target clause: the named target
-strictly precedes the chain's latest block, and its own post-state sits at the current height. Both
-are properties of `T_h` rather than of a bit, so the proof will almost certainly want them as a
-further conjunct of `Witnessed` — the first attempt carries exactly that, under the name `fresh` —
-rather than as a separate induction.
--/
-
-/-- **Lemma 7** (`lem:height-target-freshness`). Read aloud: for every validator whose target bit is
-    counted, the vote behind it names the stored current-height target, that target is a strict
-    ancestor of the chain's latest block, and the target's own post-state is at this height.
-
-    **Outstanding.** A `sorry`. The first four conjuncts are `Witnessed.target`, already proved. The
-    two new ones are what needs work, and the paper's proof says how:
-
-    * **Strictness** (`T ≺ σ.L`) "is structural rather than a separate check": while `T_h` is empty
-      no bit can be set, and `T_h` is filled by the `process_slot` call that advances past the target
-      block's slot, so any state with `T_h ≠ ⊥` has already moved past it. In this rendering that
-      wants a conjunct relating `T_h`'s slot to `s` and `s_h`, which `Witnessed` does not carry yet.
-    * **The target's own height** (`σT.h = σ.h`) needs the preceding height transition to have been
-      consumed at a block — the paper cites Lemma 3 for that — and then either that block is `T`
-      itself, whose post-state is already at this height, or no height transition happened in
-      between.
-
-    **Weaker than the paper in one respect.** "The chain's post-state at `T`" is a definite
-    description, and this says only that *some* block post-state has `L = T` and height `σ.h`.
-    Pinning "the" post-state needs either Figure 3's `σ[·]` or a determinism lemma — block
-    post-states agreeing on `L` agree everywhere — and neither exists here yet. Recorded rather than
-    papered over: an existential where the paper has a description is a genuinely weaker claim. -/
-theorem heightTargetFreshness [PositiveWeight Node] {σ : ChainState Node Root}
-    (hp : BlockPostState σ) :
-    ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
-      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧
-      T ≺ σ.L ∧ ∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h := by
-  sorry
-
 end Proofs
 
 end Decoupled
