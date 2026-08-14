@@ -101,6 +101,20 @@ def postState {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
       | .state σp => stateTransition σp (.mk p s n as r)
       | invalid => invalid
 
+/-- `B`'s own chain replays without failing. -/
+def Replayable {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] (B : Blk Node Root) : Prop := postState B ≠ invalid
+
+/-- The post-state at `B`, defined exactly on the blocks that replay. `postState` with its failure
+    case removed by hypothesis rather than by a fabricated value.
+
+    A function "defined only where the replay succeeds" is a function that takes the proof: in Lean
+    the restriction of the domain *is* the proof argument, whether it is written like this or as a
+    subtype `{B // Replayable B}`. -/
+def postState' {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] (B : Blk Node Root) (h : Replayable B) : ChainState Node Root :=
+  (postState B).get h
+
 /-- Definition 20 (`def:finality-action-state`): `σ_a[X] = process_slots(σ[X], slot(a))`, the state
     a signing action reads, got by closing exactly the slots before the action.
 
