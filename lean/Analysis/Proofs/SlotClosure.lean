@@ -66,6 +66,41 @@ inductive BlockPostState {Node Root : Type} [DecidableEq Node] [DecidableEq Root
   | step {σ σ' : ChainState Node Root} {B : Blk Node Root} :
       BlockPostState σ → stateTransition σ B = .state σ' → BlockPostState σ'
 
+/-- **The post-state of `B`**: replay `B`'s own chain and return where it ends, or `invalid` if any
+    step of it fails. A function of the block alone.
+
+    This is what the paper writes `σ[B]`. The paper never defines that notation: its meaning comes
+    from Definition 19 (`def:valid-block`), where a block's replay starts "from the parent's
+    post-state", and from Figure 3 (`alg:store`), which tabulates those values. So there is no
+    numbered definition to cite, and this does not claim to render one.
+
+    Structural recursion on the block — the recursive call is on `p`, a constructor argument — so
+    there is no measure and no termination obligation, and it is computable.
+
+    **Same value as `σ[B]`, on more blocks.** Figure 3's `σ` is a partial map whose domain is the
+    accepted set `𝒜`, and a block enters it only when the structural precheck passes, the transition
+    returns a state, the block's claimed post-state root equals `root(σ')`, and its slot has started
+    by the store clock. Of those four, this replays the transition alone. So the checks sit in `σ`'s
+    *domain*, not in its value: where both give a state it is the same state, and this gives one for
+    blocks Figure 3 would have rejected — a block whose `claimedRoot` disagrees with its own
+    post-state, for instance.
+
+    A hypothesis of the form `postState B = .state σ` is therefore **weaker** than the paper's "for
+    an accepted block `B`", which makes a theorem carrying it stronger. That is safe while an
+    argument uses none of the three unmodelled checks; a proof needing the claimed root to tie a
+    block to a state, or needing proposer equivocation to be the only source of two valid blocks in
+    one slot, would want those modelled first.
+
+    An earlier `replayChain` was withdrawn for calling itself `σ[B]` while dropping those checks
+    silently. Naming the difference is the fix. -/
+def postState {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] : Blk Node Root → TransitionResult Node Root
+  | .genesis => .state ChainState.gen
+  | .mk p s n as r =>
+      match postState p with
+      | .state σp => stateTransition σp (.mk p s n as r)
+      | invalid => invalid
+
 /-- Definition 20 (`def:finality-action-state`): `σ_a[X] = process_slots(σ[X], slot(a))`, the state
     a signing action reads, got by closing exactly the slots before the action.
 
