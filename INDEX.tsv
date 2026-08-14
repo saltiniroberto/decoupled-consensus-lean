@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 191 declarations.
+# 193 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -111,6 +111,7 @@ theorem	Proofs.closeSlots_of_settled	Analysis.Proofs.SlotClosure:200	∃ Th, (Th
 theorem	Proofs.emptySlotNoop	Analysis.Proofs.SlotClosure:556	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
 theorem	Proofs.finalizedBeforeJustified	Analysis.Proofs.Ancestry:287	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
 theorem	Proofs.heightProgression	Analysis.Proofs.Certificates:96	σ.h = σp.h + 1 ∧ (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h)	BlockPostState σp | stateTransition σp B = TransitionResult.state σ | σ.h ≠ σp.h
+theorem	Proofs.heightTargetFreshness	Analysis.Proofs.Witnessed:242	∃ T a, σ.T_h = some T ∧ a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a σ.L ∧ Prec T σ.L ∧ ∃ σT, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h	BlockPostState σ | i ∈ σ.Qtarget
 theorem	Proofs.integerThresholds	Analysis.Proofs.Weights:70	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
 theorem	Proofs.not_quorum_empty	Analysis.Proofs.Weights:64	¬Quorum ∅	0 < q Node
 theorem	Proofs.postBlock_fields	Analysis.Proofs.Certificates:82	σ₂.h = σp.h ∧ σ₂.L = B ∧ σ₂.J = σp.J	BlockPostState σp | processBlock (processSlots σp B.slot) B = TransitionResult.state σ₂
@@ -176,14 +177,15 @@ theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:622	Coe (ChainState Node Root) (TransitionResult Node Root)	
-theorem	lemEmptySlotNoop	Analysis.Lemmas:197	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
-theorem	lemEmptySlotNoopFields	Analysis.Lemmas:231	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
-theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:245	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
-theorem	lemHeightProgression	Analysis.Lemmas:307	σ.h = σp.h + 1 ∧ (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h)	BlockPostState σp | stateTransition σp B = TransitionResult.state σ | σ.h ≠ σp.h
-theorem	lemIntegerThresholds	Analysis.Lemmas:145	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
-theorem	lemQuorumIntersection	Analysis.Lemmas:166	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
-theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:184	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
-theorem	lemTargetUniqueness	Analysis.Lemmas:275	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
+theorem	lemEmptySlotNoop	Analysis.Lemmas:199	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	lemEmptySlotNoopFields	Analysis.Lemmas:233	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
+theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:247	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
+theorem	lemHeightProgression	Analysis.Lemmas:309	σ.h = σp.h + 1 ∧ (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h)	BlockPostState σp | stateTransition σp B = TransitionResult.state σ | σ.h ≠ σp.h
+theorem	lemHeightTargetFreshness	Analysis.Lemmas:344	∃ T a, σ.T_h = some T ∧ a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a σ.L ∧ Prec T σ.L ∧ ∃ σT, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h	BlockPostState σ | i ∈ σ.Qtarget
+theorem	lemIntegerThresholds	Analysis.Lemmas:147	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	lemQuorumIntersection	Analysis.Lemmas:168	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
+theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:186	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
+theorem	lemTargetUniqueness	Analysis.Lemmas:277	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:589	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)

@@ -1029,23 +1029,65 @@ Two tactic points worth keeping, both now in the skill: `cases hT : σ.T_h` has 
 goal), and the leaves close with `exact` rather than `rw` because the goals carry a `pure` wrapper
 that `rw` will not see through.
 
+## 2026-08-14 — Lemma 7 written down, proof outstanding
+
+`lemHeightTargetFreshness`, with the `sorry` in `Analysis/Proofs/Witnessed.lean` beside the
+invariant it extends.
+
+### It was on the "blocked" list, and only half of it was
+
+The plan had Lemma 7 waiting on `σ[·]` as a map, because of "the chain's post-state at `T`". Two
+things turned out to be true at once. The other claims need nothing absent, and the post-state claim
+is expressible over `BlockPostState` — as an **existential**:
+
+    ∃ σT, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h
+
+**That is weaker than the paper**, which has a definite description, "*the* chain's post-state at
+`T`". `BlockPostState` does not pin uniqueness. Closing the gap needs either Figure 3's map or a
+determinism lemma — block post-states agreeing on `L` agree everywhere, which is plausible since the
+transition is a function but is not proved here. Written into the statement's docstring rather than
+left for a reader to notice.
+
+### The statement is shaped so all three of the paper's claims are visible
+
+Quantified over each counted validator, so the first four conjuncts are exactly `Witnessed.target` —
+the vote behind the bit names the stored target at this height — and the last two are the paper's
+`≺ B` and the post-state claim. That makes the new content of this lemma exactly the part that is
+outstanding.
+
+### What the two new conjuncts need, from the paper's own proof
+
+* **Strictness** "is structural rather than a separate check": while `T_h` is empty no bit can be
+  set, and `T_h` is filled by the `process_slot` call that advances past the target block's slot, so
+  any state with `T_h ≠ ⊥` has already moved past it. That wants a `Witnessed` conjunct relating
+  `T_h`'s slot to `s` and `s_h`, which it does not carry yet.
+* **The target's own height** needs the preceding height transition to have been consumed at a block
+  — the paper cites Lemma 3 — and then either that block is `T`, whose post-state is already at this
+  height, or nothing moved the height in between.
+
+So the proof extends `Witnessed` rather than starting a new induction. The first attempt's version of
+that invariant carries exactly this content under the name `fresh`, which is a point in favour.
+
 ## Next
 
-1. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
-   is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 7, 10 and
-   11 wait on absent definitions, and Lemma 9 on a formulation. Read the
-   `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
-   the paper's imperative shape, so `sorry` is not the only obstacle.
-2. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
+1. **Prove Lemma 7**, which is written down and `sorry`. The section above says what its two new
+   conjuncts need, and that they go into `Witnessed` rather than a new induction.
+2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
+   is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 10 and 11
+   wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
+   before attempting a proof — all of them are over routines written in the paper's imperative
+   shape, so `sorry` is not the only obstacle.
+3. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
    certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
-   Assumption 1's `b` with `3b < W` for Lemma 11. Each
-   lands in `Analysis/Vocabulary.lean` with the statement that needs it, not before, and each is a
-   modelling decision to record here.
-3. The parts of Lemmas 8 and 10 that will be narrower than the paper's sentence when they land,
-   and Lemma 9, which needs a formulation decided before it can be written at all.
-4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+   Assumption 1's `b` with `3b < W` for Lemma 11. Each lands in `Analysis/Vocabulary.lean` with the
+   statement that needs it, not before, and each is a modelling decision to record here.
+4. **Close the two places where a statement is weaker than the paper's sentence**: Lemma 7's
+   existential post-state, which wants Figure 3's `σ[·]` or a determinism lemma, and whatever
+   Lemmas 8 and 10 turn out to need. Lemma 9 needs a formulation decided before it can be written at
+   all.
+5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-6. Figures 3 to 5, and the definitions Sections 5 onward add.
+6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+7. Figures 3 to 5, and the definitions Sections 5 onward add.

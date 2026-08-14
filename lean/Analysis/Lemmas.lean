@@ -23,8 +23,9 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 6**, all proved and each covering its paper sentence in full. Two
-notions came with Lemma 3,
+**Present so far: Lemmas 1 to 7.** Lemmas 1 to 6 are proved, each covering its paper sentence in
+full; Lemma 7 is stated with its proof outstanding, and is narrower than the paper's sentence in one
+respect its docstring names. Two notions came with Lemma 3,
 `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
 certificates.
@@ -49,7 +50,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
-| 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
+| 7 | `lem:height-target-freshness` | 1002–1009 | **in part** — landed over `BlockPostState`, proof outstanding |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
@@ -61,10 +62,11 @@ state, and its own `L` field names that `B`, so a statement of the form "for the
 `B`" becomes "for a block post-state `σ`, with `B = σ.L`". Nothing about the store or the
 state-root function is needed for that reading.
 
-`σ[·]` as a *map* is still needed where a lemma reaches a **named earlier block's** state rather
-than the current one — Lemma 7's "the chain's post-state at `T`" is the clear case, `T` being an
-ancestor of `B`. Getting at that needs either Figure 3's map or a lemma relating `BlockPostState`
-to ancestors.
+`σ[·]` as a *map* is still what a lemma wants when it reaches a **named earlier block's** state
+rather than the current one. Lemma 7's "the chain's post-state at `T`" is that case, and it is
+landed as an *existential* — some block post-state with `L = T` — which is weaker than the paper's
+definite description. Closing that gap needs either Figure 3's map or a determinism lemma: block
+post-states agreeing on `L` agree everywhere.
 
 So the count of five waiting on `σ[B]` was pessimistic. Lemmas 3, 4 and 6 are written down over
 `BlockPostState`, and Lemma 5's certificates use it too; Lemmas 8 and 10 look expressible over it,
@@ -76,7 +78,7 @@ and each will be checked when it is reached rather than assumed here.
 | --- | --- | --- |
 | the finality certificate, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 10, 11 |
 | the slashing condition E1 | Def. 11 (`def:slashing`) | 10 |
-| `σ[·]` as a map, for a *named earlier* block's state | Figure 3 (`alg:store`), `derive_block_states` | 7 |
+| `σ[·]` as a map, for a *named earlier* block's state | Figure 3 (`alg:store`), `derive_block_states` | 7, in part |
 
 Definition 11's E2 and Definition 21's justification and progress certificates are no longer on
 that list: Lemmas 5 and 6 needed them and they are in `Analysis/Vocabulary.lean`. The rest of each definition stays
@@ -338,5 +340,32 @@ theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq 
     σ.h = σp.h + 1 ∧
       (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h) :=
   Proofs.heightProgression B hp ht hne
+
+/-- **Lemma 7** (`lem:height-target-freshness`, lines 1002–1009): a target bit names the
+    current-height target.
+
+    Read aloud: for every validator whose target bit is counted, the vote behind it names the stored
+    current-height target, that target is a strict ancestor of the chain's latest block, and the
+    target's own post-state is at this height. Or, in the paper's own summary: a target bit always
+    refers to the first block of the current height, and is processed only by a later block.
+
+    The paper's "on a chain ending at `B`" is `σ.L`, and its `h` is `σ.h`. The first four conjuncts
+    are the paper's `T = T_h` together with what makes `T` the *counted* vote's target; the last two
+    are `≺ B` and the post-state claim.
+
+    **Weaker than the paper in one respect.** "The chain's post-state at `T`" is a definite
+    description; this says only that *some* block post-state has `L = T` and height `σ.h`. Pinning
+    "the" post-state needs either Figure 3's `σ[·]` or a determinism lemma — block post-states
+    agreeing on `L` agree everywhere — and neither exists here yet.
+
+    The proof is outstanding, a `sorry` in `Analysis/Proofs/Witnessed.lean`, which says what the two
+    new conjuncts need. -/
+theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {σ : ChainState Node Root}
+    (hp : BlockPostState σ) :
+    ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
+      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧
+      T ≺ σ.L ∧ ∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h :=
+  Proofs.heightTargetFreshness hp
 
 end Decoupled
