@@ -623,4 +623,29 @@ inductive TransitionResult (Node Root : Type) where
     `return σ`. -/
 instance : Coe (ChainState Node Root) (TransitionResult Node Root) := ⟨.state⟩
 
+/-- The state a result carries, given a proof that it is not `invalid`. Same shape as
+    `Option.get`, and written for the same reason: Lean generates no accessor for the field of
+    one constructor of a two-constructor inductive, so this is the only way to name that state
+    in a term without a `match`.
+
+    **For a definition, not for a statement.** The term `r.get h` mentions `h`, whose type
+    mentions `r`, so rewriting `r` afterwards reports "motive is not type correct". A theorem
+    about a transition is better written with the state as a parameter and `r = .state σ` as a
+    hypothesis, which is what `Analysis/` does throughout. -/
+def TransitionResult.get : (r : TransitionResult Node Root) → r ≠ invalid → ChainState Node Root
+  | .state σ, _ => σ
+  | invalid, h => absurd rfl h
+
+@[simp] theorem TransitionResult.get_state {σ : ChainState Node Root}
+    (h : (.state σ : TransitionResult Node Root) ≠ invalid) :
+    (TransitionResult.state σ).get h = σ := rfl
+
+/-- The way back from `get`: a result that is not `invalid` is `.state` of what it carries.
+    The counterpart of `Option.some_get`. -/
+theorem TransitionResult.state_get (r : TransitionResult Node Root) (h : r ≠ invalid) :
+    r = .state (r.get h) := by
+  cases r
+  · rfl
+  · exact absurd rfl h
+
 end Decoupled
