@@ -77,6 +77,60 @@ theorem parent_preceq : ∀ {B P : Blk Node Root}, B.parent = some P → P ⪯ B
       subst h
       exact List.mem_cons_of_mem _ (Preceq.refl p)
 
+/-! ### Strict ancestry, by counting the chain
+
+`≺` is `⪯` plus `≠`, and the `≠` half is where acyclicity is needed: a block is not its own parent.
+Counting is what supplies it — `ancestors` of a child is one longer than `ancestors` of its parent —
+so no antisymmetry lemma and no `sizeOf` argument is required.
+-/
+
+theorem ancestors_length_le_of_preceq : ∀ {a b : Blk Node Root}, a ⪯ b →
+    (ancestors a).length ≤ (ancestors b).length
+  | _, .genesis, h => by
+      simp only [Preceq, ancestors, List.mem_singleton] at h
+      subst h; exact le_refl _
+  | _, .mk p _ _ _ _, h => by
+      simp only [Preceq, ancestors, List.mem_cons] at h
+      rcases h with rfl | h
+      · exact le_refl _
+      · have := ancestors_length_le_of_preceq h
+        simp only [ancestors, List.length_cons]
+        omega
+
+theorem ancestors_length_lt_of_prec : ∀ {b c : Blk Node Root}, b ≺ c →
+    (ancestors b).length < (ancestors c).length
+  | _, .genesis, h => by
+      obtain ⟨h1, h2⟩ := h
+      simp only [Preceq, ancestors, List.mem_singleton] at h1
+      exact absurd h1 h2
+  | _, .mk p _ _ _ _, h => by
+      obtain ⟨h1, h2⟩ := h
+      simp only [Preceq, ancestors, List.mem_cons] at h1
+      rcases h1 with rfl | h1
+      · exact absurd rfl h2
+      · have := ancestors_length_le_of_preceq h1
+        simp only [ancestors, List.length_cons]
+        omega
+
+/-- A block *strictly* follows its parent. Equality would make two chains of different length
+    equal, which is what the `congrArg` on `length` says. -/
+theorem parent_prec : ∀ {B P : Blk Node Root}, B.parent = some P → P ≺ B
+  | .genesis, _, h => by simp [Blk.parent] at h
+  | .mk p _ _ _ _, _, h => by
+      simp only [Blk.parent, Option.some.injEq] at h
+      subst h
+      refine ⟨List.mem_cons_of_mem _ (Preceq.refl p), fun he => ?_⟩
+      have := congrArg (fun b => (ancestors (Node := Node) (Root := Root) b).length) he
+      simp [ancestors] at this
+
+/-- `⪯` composes with `≺` on the left, and the strictness survives by the count. -/
+theorem Preceq.trans_prec {a b c : Blk Node Root} (hab : a ⪯ b) (hbc : b ≺ c) : a ≺ c :=
+  ⟨Preceq.trans hab hbc.1, fun he => by
+    have h1 := ancestors_length_le_of_preceq hab
+    have h2 := ancestors_length_lt_of_prec hbc
+    rw [he] at h1
+    omega⟩
+
 namespace Proofs
 
 /-! ## The invariant -/
@@ -229,6 +283,18 @@ theorem processAttestation_chainFields (σ : ChainState Node Root) (a : Attestat
     · simp only [processAttestation]
       repeat' split
       all_goals rfl
+
+/-- The attestation fold leaves every block and height field alone. -/
+theorem processAttestations_chainFields :
+    ∀ (as : List (Attestation Node Root)) {σ : ChainState Node Root} (A : Blk Node Root),
+      (processAttestations σ as A).L = σ.L ∧ (processAttestations σ as A).J = σ.J ∧
+        (processAttestations σ as A).h = σ.h
+  | [], _, _ => ⟨rfl, rfl, rfl⟩
+  | a :: as, σ, A => by
+      obtain ⟨hL, hJ, -, hh, -, -⟩ := processAttestation_chainFields σ a A
+      obtain ⟨h1, h2, h3⟩ := processAttestations_chainFields as (σ := processAttestation σ a A) A
+      rw [processAttestations_cons]
+      exact ⟨by rw [h1, hL], by rw [h2, hJ], by rw [h3, hh]⟩
 
 theorem Chained.processAttestation {σ : ChainState Node Root} (h : Chained σ)
     (a : Attestation Node Root) (A : Blk Node Root) :

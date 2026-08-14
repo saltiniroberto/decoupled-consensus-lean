@@ -67,18 +67,6 @@ Lemma 6 reads only three fields of the post-block state: the height, which has n
 latest block, which is now `B`; and the latest justification, which the block phase never writes.
 -/
 
-/-- The attestation fold leaves every block and height field alone. -/
-theorem processAttestations_chainFields :
-    ∀ (as : List (Attestation Node Root)) {σ : ChainState Node Root} (A : Blk Node Root),
-      (processAttestations σ as A).L = σ.L ∧ (processAttestations σ as A).J = σ.J ∧
-        (processAttestations σ as A).h = σ.h
-  | [], _, _ => ⟨rfl, rfl, rfl⟩
-  | a :: as, σ, A => by
-      obtain ⟨hL, hJ, -, hh, -, -⟩ := processAttestation_chainFields σ a A
-      obtain ⟨h1, h2, h3⟩ := processAttestations_chainFields as (σ := processAttestation σ a A) A
-      rw [processAttestations_cons]
-      exact ⟨by rw [h1, hL], by rw [h2, hJ], by rw [h3, hh]⟩
-
 /-- The post-block state of a transition, in those three fields. The slot phase contributes nothing
     beyond Lemma 3's record equation, which is where `PositiveWeight` comes in. -/
 theorem postBlock_fields [PositiveWeight Node] {σp σ₂ : ChainState Node Root} {B : Blk Node Root}

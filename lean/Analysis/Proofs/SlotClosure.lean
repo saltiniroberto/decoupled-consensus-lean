@@ -429,6 +429,16 @@ theorem processBlock_state {σ σ' : ChainState Node Root} {B : Blk Node Root}
   injection h with h
   exact h.symm
 
+/-- `process_block`'s first check, as a fact about the block: on the successful path the block's
+    parent is the state's latest block. Three proofs now need it, so it is a lemma rather than four
+    lines repeated. -/
+theorem processBlock_parent {σ σ' : ChainState Node Root} {B : Blk Node Root}
+    (he : processBlock σ B = .state σ') : B.parent = some σ.L := by
+  simp only [processBlock, Id.run] at he
+  split_ifs at he with hc
+  simp only [not_or, ne_eq, not_not] at hc
+  exact hc.1
+
 /-- `process_block` preserves `emptyTarget`. The `L ← B` update is invisible to it: `T_h` and the
     target tally are read off the other fields, so the fold's own lemma is the whole proof. -/
 theorem processBlock_emptyTarget {σ σ' : ChainState Node Root} {B : Blk Node Root}
@@ -520,6 +530,23 @@ theorem processHeightEvents_advance (σ : ChainState Node Root) (st : Time)
           | (rename_i hb
              exact ⟨advanceHeight_h _ _ _, advanceHeight_L _ _ _,
                Or.inr ⟨hb, advanceHeight_none_J _ _⟩⟩)
+
+/-- **If the height-event check left a target named, it did nothing else either.** Read: a state
+    whose `T_h` is still filled after the check has the same height, latest block and target as
+    before it.
+
+    The reason is one field: `advance_height` always writes `T_h ← ⊥`, so a filled `T_h` afterwards
+    says no branch fired, and the remaining leaves change only `F` and `h_F`. This is the
+    complement of `processHeightEvents_advance` and the two together cover the check. -/
+theorem processHeightEvents_of_target (σ : ChainState Node Root) (st : Time)
+    (hT : (processHeightEvents σ st).T_h ≠ ⊥) :
+    (processHeightEvents σ st).h = σ.h ∧ (processHeightEvents σ st).L = σ.L ∧
+      (processHeightEvents σ st).T_h = σ.T_h := by
+  simp only [processHeightEvents, Id.run] at hT ⊢
+  split_ifs at hT ⊢ <;>
+    first
+      | exact absurd (advanceHeight_T_h _ _ _) hT
+      | exact ⟨rfl, rfl, rfl⟩
 
 /-! ## Lemma 3 -/
 
