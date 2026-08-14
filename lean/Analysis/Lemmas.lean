@@ -23,10 +23,10 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 5.** Lemmas 1 to 4 are proved, each covering its paper sentence in
-full; Lemma 5 is stated with its proof outstanding. Two notions came with Lemma 3,
-`BlockPostState` and Definition 20's `actionState`, and Lemma 5 brought the first entries of
-`Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification certificate.
+**Present so far: Lemmas 1 to 5**, all proved and each covering its paper sentence in full. Two
+notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemma 5 brought
+the first entries of `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's
+justification certificate.
 
 **One theorem per lemma sentence.** Where a sentence names two subjects — Lemma 4's block
 post-state and finality action state — they are conjuncts of one theorem, not two declarations. A
@@ -46,7 +46,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 2 | `lem:quorum-intersection` | 342–352 | **yes, and proved** — landed, both sentences |
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
-| 5 | `lem:target-uniqueness` | 967–973 | **yes** — landed, proof outstanding; Defs. 21 and 11 rendered in part |
+| 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **in part, and nothing is missing** — see below |
 | 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
@@ -290,9 +290,11 @@ theorem lemFinalizedBeforeJustified {Node Root : Type} [DecidableEq Node] [Decid
     one was carried.
 
     `JustificationCertificate`, `IncludedOn` and `E2` are in `Analysis/Vocabulary.lean`, which
-    records what each renders and what it leaves out. The proof is outstanding, a `sorry` in
-    `Analysis/Proofs/Certificates.lean`, which says what it needs — nothing absent from the
-    specification. -/
+    records what each renders and what it leaves out.
+
+    **Only the quorum clause of each certificate is read** by the proof in
+    `Analysis/Proofs/Certificates.lean`. The height-event invocation clause is not touched, so this
+    lemma says nothing about it and cannot be cited for it. -/
 theorem lemTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] (B B' T T' : Blk Node Root) (h : Nat)
     (hJC : JustificationCertificate B h T) (hJC' : JustificationCertificate B' h T')

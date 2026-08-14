@@ -886,10 +886,10 @@ drags in `PositiveWeight`, which nothing else in this lemma needs. `Chained` sur
 whatever the tallies hold, so the assumption never enters — the same distinction as above, in the
 one place where it would have cost something.
 
-## 2026-08-14 — Lemma 5 written down, and the first vocabulary that no figure reads
+## 2026-08-14 — Lemma 5 is proved, and the first vocabulary that no figure reads
 
-`lemTargetUniqueness`, with its proof a `sorry` in `Analysis/Proofs/Certificates.lean`. Three
-modelling decisions came with it.
+`lemTargetUniqueness`, proved in `Analysis/Proofs/Certificates.lean`. Three modelling decisions
+came with it, and they are the substance — the proof itself is eight lines and needed nothing new.
 
 ### `Analysis/Vocabulary.lean` — the paper's definitions that `Spec/` does not hold
 
@@ -930,7 +930,7 @@ new vocabulary file, and `MAPPING.md`'s Definition 5 row now names it.
 Checked before naming it, per the rule that a term from the paper counts as undefined until the
 paper is seen to define it.
 
-### The statement, and what is outstanding
+### The statement, and what the proof reads
 
 The paper's "unless validators of total weight at least `2q - W` violate E2" is the **conclusion**,
 not a hypothesis: the lemma returns the set, its weight, and each member's pair of attestations. So
@@ -938,10 +938,10 @@ no fault bound is assumed and none is needed — the claim is that the evidence 
 impossible. The evidence is `IncludedOn` both chains, because a bare attestation value proves
 nothing to a consumer that sees only blocks.
 
-Nothing is missing from the specification for the proof. It is the paper's own two sentences:
-`quorumIntersection` (Lemma 2, proved) gives `Q ∩ Q'` at weight `2q - W`, and each member's two
-attestations make E2. Only the **first** clause of each certificate is read, so this lemma says
-nothing about the invocation clause and cannot be cited for it.
+The proof is the paper's own two sentences: `quorumIntersection` (Lemma 2) gives `Q ∩ Q'` at weight
+`2q - W`, and each member's two attestations make E2. Only the **first** clause of each certificate
+is read, so this lemma says nothing about the invocation clause and cannot be cited for it — which
+also means the `BlockPostState`-for-`σ[·]` substitution above does not affect this result at all.
 
 Conflict enters only as distinctness, E2 asking for `T ≠ T'`, and conflicting blocks are distinct
 because `⪯` is reflexive. The distinctness form is therefore strictly stronger than the paper's
@@ -949,27 +949,25 @@ sentence; it is not stated separately until something needs it.
 
 ## Next
 
-1. **Prove Lemma 5**, which is written down and `sorry`. Two sentences, both ingredients proved;
-   the section above says what they are.
-2. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
+1. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
    lacks: `(advanceHeight σ justify start).h = σ.h + 1`. Its `MAPPING.md` row gets 🔨 and a note
    that it is the increment half only, "requires a certificate" being the half that waits on the
    rest of Definition 21.
-3. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
+2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
    is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states and Lemma 6 in
    part; Lemmas 7, 10 and 11 wait on absent definitions, and Lemma 9 on a formulation. Read the
    `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
    the paper's imperative shape, so `sorry` is not the only obstacle.
-4. **Model what the rest wait on**, in the order that unblocks most: the progress and finality
+3. **Model what the rest wait on**, in the order that unblocks most: the progress and finality
    certificates of Definition 21 (`def:certificates`) for Lemmas 6, 10 and 11, Definition 11
    (`def:slashing`)'s E1 for Lemma 10, and Assumption 1's `b` with `3b < W` for Lemma 11. Each
    lands in `Analysis/Vocabulary.lean` with the statement that needs it, not before, and each is a
    modelling decision to record here.
-5. The parts of Lemmas 6, 8 and 10 that will be narrower than the paper's sentence when they
+4. The parts of Lemmas 6, 8 and 10 that will be narrower than the paper's sentence when they
    land, and Lemma 9, which needs a formulation decided before it can be written at all.
-6. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-7. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-8. Figures 3 to 5, and the definitions Sections 5 onward add.
+6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+7. Figures 3 to 5, and the definitions Sections 5 onward add.
