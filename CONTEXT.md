@@ -1073,6 +1073,31 @@ something false of their intermediate states.
     onChain : ∀ T, σ.T_h = some T → T ⪯ σ.L
     anchor  : ∀ T, σ.T_h = some T → ∃ σT, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h
 
+### `σ[·]` was not needed after all: a block determines its post-state
+
+The gap left when Lemma 7 first landed — an existential where the paper has a definite description —
+is closed, and **not** by rendering Figure 3. `Analysis/Proofs/Determinism.lean` proves
+
+    BlockPostState σ → BlockPostState σ' → σ.L = σ'.L → σ = σ'
+
+by structural recursion on the **block**, not on the derivation: two derivations for one block may
+have different shapes, and it is the block that pins the state. `state_transition` is a function and
+`process_block` checks `B.parent = some σ.L`, so a block's post-state is fixed by its parent's, down
+to genesis — where `ChainState.gen` is the only post-state, every step's block having a parent.
+
+So Lemma 7's last claim is now the paper's: `T` has a post-state, and every post-state of `T` is at
+this height. `Fresh.anchorAll` is the two-line bridge from the invariant's existential.
+
+**The correction this forces to an earlier entry**: the plan listed `σ[·]` as blocking any lemma that
+reaches a named earlier block's state. Too pessimistic. Figure 3 is needed for what a *store*
+accepts; it is not needed to name a block's state. `Lemmas.lean`'s own table said the same and is
+corrected too.
+
+Four `L` lemmas came with it — `processSlot_L`, `closeSlots_L`, `processSlots_L`, `stateTransition_L`
+— all without `PositiveWeight`. Lemma 3's record equation would have given them at the cost of an
+assumption this argument does not otherwise need, and `Freshness.lean`'s own `processSlots_L`, which
+did carry it, is deleted in favour of these.
+
 ### Strictness is false at genesis, and that is why it sits outside the invariant
 
 At genesis `T_h = some genesis` and `L = genesis`, so `T ≺ L` fails. Every other block post-state is
@@ -1100,7 +1125,7 @@ is what lets genesis into the invariant, and the strict version is recovered whe
 
 ## Next
 
-1. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
+1. **The lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
    is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 10 and 11
    wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
    before attempting a proof — all of them are over routines written in the paper's imperative
@@ -1109,10 +1134,9 @@ is what lets genesis into the invariant, and the strict version is recovered whe
    certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
    Assumption 1's `b` with `3b < W` for Lemma 11. Each lands in `Analysis/Vocabulary.lean` with the
    statement that needs it, not before, and each is a modelling decision to record here.
-3. **Close the two places where a statement is weaker than the paper's sentence**: Lemma 7's
-   existential post-state, which wants Figure 3's `σ[·]` or a determinism lemma, and whatever
-   Lemmas 8 and 10 turn out to need. Lemma 9 needs a formulation decided before it can be written at
-   all.
+3. **Lemma 9's formulation**, which has to be decided before it can be written at all, and whatever
+   Lemmas 8 and 10 turn out to state more narrowly than the paper's sentence. Every statement landed
+   so far now covers its sentence in full.
 4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing

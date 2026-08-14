@@ -2,6 +2,7 @@ import Analysis.Vocabulary
 import Analysis.Proofs.Weights
 import Analysis.Proofs.SlotClosure
 import Analysis.Proofs.Ancestry
+import Analysis.Proofs.Determinism
 import Analysis.Proofs.Witnessed
 import Analysis.Proofs.Certificates
 import Analysis.Proofs.Freshness

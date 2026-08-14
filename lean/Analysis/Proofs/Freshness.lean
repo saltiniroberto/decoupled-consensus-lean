@@ -1,4 +1,5 @@
 import Analysis.Proofs.Certificates
+import Analysis.Proofs.Determinism
 
 /-!
 # Where a named target sits
@@ -9,7 +10,7 @@ about a counted target bit. The first is `Witnessed.target`, already proved in
 about the stored target itself, and this file proves them:
 
 * it strictly precedes the chain's latest block;
-* its own post-state is at the current height.
+* its own post-state — *the* post-state, by `postState_unique` — is at the current height.
 
 ## The invariant is *not* preserved step by step, and that is the point
 
@@ -45,7 +46,9 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
 structure Fresh (σ : ChainState Node Root) : Prop where
   /-- The named target is on this chain. Non-strict, so that genesis is included. -/
   onChain : ∀ T, σ.T_h = some T → T ⪯ σ.L
-  /-- The named target has a post-state, and it sits at the current height. -/
+  /-- The named target has a post-state, and it sits at the current height. Stated as an
+      existential inside the invariant, because that is what the step case produces; `anchorAll`
+      below turns it into the paper's "*the* post-state at `T`" with `postState_unique`. -/
   anchor : ∀ T, σ.T_h = some T →
     ∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h
 
@@ -74,14 +77,6 @@ theorem postBlock_target [PositiveWeight Node] {σp σ₂ : ChainState Node Root
   · exact Or.inl (by rw [h2, h])
   · exact Or.inr (by rw [h2, h])
 
-/-- Slot closure does not move the latest block, which is what makes `process_block`'s parent check
-    a fact about the parent *state*. -/
-theorem processSlots_L [PositiveWeight Node] {σp : ChainState Node Root} (hp : BlockPostState σp)
-    (t : Time) : (processSlots σp t).L = σp.L := by
-  obtain ⟨Th, -, heq'⟩ := emptySlotNoop t hp
-  have heq : processSlots σp t = { σp with s := max σp.s t, T_h := Th } := heq'
-  rw [heq]
-
 /-- A transition keeps both claims. If the post-state still names a target then no height branch
     fired, so the check moved nothing; the target is then either inherited, and the induction
     hypothesis places it before the parent's latest block, or freshly named by slot closure, in which
@@ -92,7 +87,7 @@ theorem Fresh.stateTransition [PositiveWeight Node] {σp σ : ChainState Node Ro
   obtain ⟨σ₂, hb, rfl⟩ := stateTransition_state ht
   obtain ⟨hh₂, hL₂, -⟩ := postBlock_fields hp hb
   have hpar : B.parent = some σp.L := by
-    rw [← processSlots_L hp B.slot]; exact processBlock_parent hb
+    rw [← processSlots_L σp B.slot]; exact processBlock_parent hb
   have hLB : σp.L ⪯ B := parent_preceq hpar
   refine ⟨?_, ?_⟩
   · intro T hT
@@ -137,7 +132,7 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
       obtain ⟨σ₂, hb, rfl⟩ := stateTransition_state ht
       obtain ⟨-, hL₂, -⟩ := postBlock_fields hp hb
       have hpar : B.parent = some σp.L := by
-        rw [← processSlots_L hp B.slot]; exact processBlock_parent hb
+        rw [← processSlots_L σp B.slot]; exact processBlock_parent hb
       have hLB : σp.L ≺ B := parent_prec hpar
       obtain ⟨-, hL, hTh⟩ := processHeightEvents_of_target σ₂ B.slot (by rw [hT]; simp)
       rw [hTh] at hT
@@ -148,6 +143,17 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
       · rw [h, Option.some.injEq] at hT
         rw [← hT]; exact hLB
 
+/-- **Every** post-state of the named target is at the current height, which is the paper's definite
+    description. `Fresh.anchor` produces one such state; `postState_unique` says there is no other. -/
+theorem Fresh.anchorAll [PositiveWeight Node] {σ : ChainState Node Root} (h : Fresh σ)
+    (T : Blk Node Root) (hT : σ.T_h = some T) :
+    (∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T) ∧
+      ∀ σT : ChainState Node Root, BlockPostState σT → σT.L = T → σT.h = σ.h := by
+  obtain ⟨σT, hbps, hLT, hh⟩ := h.anchor T hT
+  refine ⟨⟨σT, hbps, hLT⟩, fun σT' hbps' hLT' => ?_⟩
+  rw [postState_unique T hbps' hbps hLT' hLT]
+  exact hh
+
 /-! ## Lemma 7 -/
 
 /-- **Lemma 7** (`lem:height-target-freshness`). Read aloud: for every validator whose target bit is
@@ -157,19 +163,19 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
     Three sources, one per claim: `Witnessed.target` for the first four conjuncts, `prec_of_target`
     for strictness, `Fresh.anchor` for the post-state.
 
-    **Weaker than the paper in one respect**, stated here and in the statement of record: "the
-    chain's post-state at `T`" is a definite description, and `∃ σT, BlockPostState σT ∧ σT.L = T` is
-    not. Pinning it needs Figure 3's `σ[·]` or a determinism lemma for block post-states, neither of
-    which exists here. -/
+    The post-state claim is the paper's definite description, in two halves: `T` has a post-state,
+    and every post-state of `T` is at this height. `postState_unique` is what makes the second half
+    provable, so nothing here is weaker than the paper's sentence. -/
 theorem heightTargetFreshness [PositiveWeight Node] {σ : ChainState Node Root}
     (hp : BlockPostState σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
-      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧
-      T ≺ σ.L ∧ ∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T ∧ σT.h = σ.h := by
+      a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
+      (∃ σT : ChainState Node Root, BlockPostState σT ∧ σT.L = T) ∧
+      ∀ σT : ChainState Node Root, BlockPostState σT → σT.L = T → σT.h = σ.h := by
   intro i hi
   obtain ⟨T, a, hT, hv, hpair, hinc⟩ := (witnessed_of_blockPostState hp).target i hi
-  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT,
-    (fresh_of_blockPostState hp).anchor T hT⟩
+  obtain ⟨hex, hall⟩ := (fresh_of_blockPostState hp).anchorAll T hT
+  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT, hex, hall⟩
 
 end Proofs
 
