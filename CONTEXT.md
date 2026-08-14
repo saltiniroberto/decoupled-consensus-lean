@@ -1136,21 +1136,29 @@ modelled, so this returns a state for blocks a store would reject. Its docstring
 
 The first is structural recursion on the block, the second induction on the derivation. With them a
 proof carried out over the predicate can be stated over the function, and Lemma 7's post-state claim
-is written with no existential at all:
+becomes one equation with nothing quantified over:
 
+    (postState T).toOption.map ChainState.h = some σ.h
+
+Read aloud: the height of the post-state at `T` is `σ.h`. `postState` is a function of the block, so
+the state named is *the* post-state — the definite description no longer needs `postState_unique` at
+the use site, and `Fresh.anchorAll` is replaced by `Fresh.anchorPost`. `postState_unique` keeps its
+own proof and is now cited by nothing; it is a second route to the same fact and worth keeping.
+
+`TransitionResult.toOption` (`Spec/Defs/Basic.lean`) is the isomorphism with `Option (ChainState …)`
+and exists for exactly this: it puts the `Option` API — `map`, `isSome`, `get` — at the disposal of a
+statement that would otherwise bind a state. Being an equation against `some` it also carries "the
+replay did not fail", so the claim is one conjunct rather than two.
+
+**Two forms tried and rejected first, both on 2026-08-15, both equivalent to the above:**
+
+    ∃ σT, postState T = .state σT ∧ σT.h = σ.h
     postState T ≠ invalid ∧ ∀ σT, postState T = .state σT → σT.h = σ.h
 
-Read aloud: replaying `T` does not fail, and whatever state it returns is at this height. `postState`
-is a function of the block, so the `∀` ranges over one state and the two conjuncts together *are* the
-paper's "the post-state at `T`" — the definite description no longer needs `postState_unique` at the
-use site, and `Fresh.anchorAll` is replaced by `Fresh.anchorPost`. `postState_unique` keeps its own
-proof and is now cited by nothing; it is a second route to the same fact and worth keeping stated.
-
-The `∃ σT, postState T = .state σT ∧ σT.h = σ.h` form was tried first and rejected, 2026-08-15:
-equivalent, one conjunct shorter, but it reads as "there is some state" where the paper says "the".
-The first conjunct is not redundant — without it the `∀` is vacuously true, and nothing else in the
-statement rules `invalid` out. It would become derivable from `T ≺ σ.L` and the hypothesis, an
-ancestor of a replayable block being replayable, but that lemma is not written.
+The first reads as "there is some state" where the paper says "the". The second fixes that but still
+binds `σT`, which a reader then has to carry through the rest of the sentence; and its first
+conjunct cannot be dropped, since without it the `∀` is vacuously true. Roberto, on both: the state
+should not have to be quantified over at all for the statement to be readable.
 
 Lemma 7's hypothesis changed with it, from `BlockPostState σ` to `postState B = .state σ`. The two
 are interderivable by the bridges above, and the second is nearer the paper's "on a chain ending at

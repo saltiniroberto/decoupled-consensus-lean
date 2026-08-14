@@ -144,20 +144,19 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
       · rw [h, Option.some.injEq] at hT
         rw [← hT]; exact hLB
 
-/-- The named target's post-state, said without an existential: replaying `T` does not fail, and
-    whatever state it returns is at this height. `postState` is a function of the block, so the
-    universal quantifier ranges over one state and this is the paper's definite description; no
+/-- The named target's post-state is at this height, in one equation and with no state to quantify
+    over. Read aloud: the height of the post-state at `T` is `σ.h`. Being an equation against `some`
+    it also says the replay did not fail.
+
+    `postState` is a function of the block, so this is the paper's definite description; no
     uniqueness lemma is needed at the use site. `postState_of_blockPostState` is what turns the
     invariant's existential into it. -/
 theorem Fresh.anchorPost {σ : ChainState Node Root} (h : Fresh σ)
     (T : Blk Node Root) (hT : σ.T_h = some T) :
-    postState T ≠ invalid ∧ ∀ σT : ChainState Node Root, postState T = .state σT → σT.h = σ.h := by
+    (postState T).toOption.map ChainState.h = some σ.h := by
   obtain ⟨σT, hbps, hLT, hh⟩ := h.anchor T hT
   have hpost : postState T = .state σT := hLT ▸ postState_of_blockPostState hbps
-  refine ⟨by rw [hpost]; simp, fun σT' hσ => ?_⟩
-  rw [hpost] at hσ
-  rw [← TransitionResult.state.inj hσ]
-  exact hh
+  simp [hpost, hh]
 
 /-! ## Lemma 7 -/
 
@@ -168,19 +167,18 @@ theorem Fresh.anchorPost {σ : ChainState Node Root} (h : Fresh σ)
     Three sources, one per claim: `Witnessed.target` for the first four conjuncts, `prec_of_target`
     for strictness, `Fresh.anchorPost` for the post-state.
 
-    The post-state claim is the paper's definite description, with no existential: replaying `T`
-    does not fail, and whatever state it returns is at this height. `postState` being a function of
-    the block is what makes those two say "the post-state at `T`". -/
+    The post-state claim is the paper's definite description, in one equation and with no state
+    quantified over: the height of the post-state at `T` is `σ.h`. `postState` being a function of
+    the block is what makes it "the". -/
 theorem heightTargetFreshness [PositiveWeight Node] {σ : ChainState Node Root}
     (hp : BlockPostState σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      postState T ≠ invalid ∧
-      ∀ σT : ChainState Node Root, postState T = .state σT → σT.h = σ.h := by
+      (postState T).toOption.map ChainState.h = some σ.h := by
   intro i hi
   obtain ⟨T, a, hT, hv, hpair, hinc⟩ := (witnessed_of_blockPostState hp).target i hi
-  obtain ⟨hne, hall⟩ := (fresh_of_blockPostState hp).anchorPost T hT
-  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT, hne, hall⟩
+  exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT,
+    (fresh_of_blockPostState hp).anchorPost T hT⟩
 
 end Proofs
 

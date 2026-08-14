@@ -356,11 +356,12 @@ theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq 
     four conjuncts are the paper's `T = T_h` together with what makes `T` the *counted* vote's
     target; then `≺ B`; then the post-state claim.
 
-    **"The chain's post-state at `T`" is a definite description**, and the last two conjuncts render
-    it with no existential: replaying `T` does not fail, and whatever state it returns is at this
-    height. `postState` is a function of the block, so the `∀` ranges over one state and those two
-    say "*the* post-state at `T`". Figure 3's `σ[·]` is not needed for that, and neither is a
-    uniqueness lemma at the use site.
+    **"The chain's post-state at `T`" is a definite description**, and the last conjunct renders it
+    in one equation: the height of the post-state at `T` is `σ.h`. `postState` is a function of the
+    block, so the state it names is *the* post-state, and `toOption` is what lets the conjunct say
+    so without quantifying over that state; being an equation against `some` it also carries "the
+    replay did not fail". Figure 3's `σ[·]` is not needed for any of it, and neither is a uniqueness
+    lemma at the use site.
 
     Proved in `Analysis/Proofs/Freshness.lean`, from a fourth invariant, `Fresh`: a named target is
     on the chain and has a post-state at the current height. Strictness sits outside that invariant
@@ -375,8 +376,7 @@ theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [Decidabl
     {B : Blk Node Root} (hp : postState B = .state σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      postState T ≠ invalid ∧
-      ∀ σT : ChainState Node Root, postState T = .state σT → σT.h = σ.h :=
+      (postState T).toOption.map ChainState.h = some σ.h :=
   Proofs.heightTargetFreshness (Proofs.blockPostState_of_postState B hp)
 
 end Decoupled

@@ -623,6 +623,29 @@ inductive TransitionResult (Node Root : Type) where
     `return σ`. -/
 instance : Coe (ChainState Node Root) (TransitionResult Node Root) := ⟨.state⟩
 
+/-- The state a result carries, as an `Option`. `TransitionResult` is `Option (ChainState …)` under
+    the paper's two names, and this is that isomorphism.
+
+    It exists so that a statement about the state a result carries need not quantify over that
+    state. `(postState T).toOption.map ChainState.h = some σ.h` says "the post-state at `T` is at
+    height `σ.h`" in one equation, where `∃ σT, … ∧ σT.h = σ.h` and
+    `∀ σT, … → σT.h = σ.h` both bind a variable the reader then has to track. Being an equation
+    against `some`, it also carries "the replay did not fail" without a second conjunct. -/
+def TransitionResult.toOption : TransitionResult Node Root → Option (ChainState Node Root)
+  | .state σ => some σ
+  | invalid => none
+
+@[simp] theorem TransitionResult.toOption_state (σ : ChainState Node Root) :
+    (TransitionResult.state σ).toOption = some σ := rfl
+
+@[simp] theorem TransitionResult.toOption_invalid :
+    (invalid : TransitionResult Node Root).toOption = none := rfl
+
+/-- `toOption` loses nothing: it is `some σ` exactly when the result is `.state σ`. -/
+theorem TransitionResult.toOption_eq_some {r : TransitionResult Node Root}
+    {σ : ChainState Node Root} : r.toOption = some σ ↔ r = .state σ := by
+  cases r <;> simp
+
 /-- The state a result carries, given a proof that it is not `invalid`. Same shape as
     `Option.get`, and written for the same reason: Lean generates no accessor for the field of
     one constructor of a two-constructor inductive, so this is the only way to name that state
