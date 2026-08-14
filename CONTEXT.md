@@ -1136,14 +1136,21 @@ modelled, so this returns a state for blocks a store would reject. Its docstring
 
 The first is structural recursion on the block, the second induction on the derivation. With them a
 proof carried out over the predicate can be stated over the function, and Lemma 7's post-state claim
-collapses from two conjuncts to one:
+is written with no existential at all:
 
-    ∃ σT, postState T = .state σT ∧ σT.h = σ.h
+    postState T ≠ invalid ∧ ∀ σT, postState T = .state σT → σT.h = σ.h
 
-`postState` is a function of the block, so this *is* the paper's "the post-state at `T`" — the
-definite description no longer needs `postState_unique` at the use site, and `Fresh.anchorAll` is
-replaced by `Fresh.anchorPost`, which is two lines. `postState_unique` keeps its own proof and is
-now cited by nothing; it is a second route to the same fact and worth keeping stated.
+Read aloud: replaying `T` does not fail, and whatever state it returns is at this height. `postState`
+is a function of the block, so the `∀` ranges over one state and the two conjuncts together *are* the
+paper's "the post-state at `T`" — the definite description no longer needs `postState_unique` at the
+use site, and `Fresh.anchorAll` is replaced by `Fresh.anchorPost`. `postState_unique` keeps its own
+proof and is now cited by nothing; it is a second route to the same fact and worth keeping stated.
+
+The `∃ σT, postState T = .state σT ∧ σT.h = σ.h` form was tried first and rejected, 2026-08-15:
+equivalent, one conjunct shorter, but it reads as "there is some state" where the paper says "the".
+The first conjunct is not redundant — without it the `∀` is vacuously true, and nothing else in the
+statement rules `invalid` out. It would become derivable from `T ≺ σ.L` and the hypothesis, an
+ancestor of a replayable block being replayable, but that lemma is not written.
 
 Lemma 7's hypothesis changed with it, from `BlockPostState σ` to `postState B = .state σ`. The two
 are interderivable by the bridges above, and the second is nearer the paper's "on a chain ending at
