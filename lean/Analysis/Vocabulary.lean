@@ -14,9 +14,10 @@ written here rather than inside a proof file.
 to know what the statements in `Analysis/Lemmas.lean` *mean*. Anything proved about these notions
 belongs under `Analysis/Proofs/`.
 
-**Only the parts a landed statement uses.** Definition 11's E1, and Definition 21's progress and
-finality certificates, are absent: nothing states them yet, and a declaration no statement mentions
-is an unaudited claim about what the paper means. They land with the lemma that needs them.
+**Only the parts a landed statement uses.** Definition 11's E1 and Definition 21's finality
+certificate are absent: nothing states them yet, and a declaration no statement mentions is an
+unaudited claim about what the paper means. They land with the lemma that needs them, as the
+progress certificate did with Lemma 6.
 
 ## `σ[·]` is replaced by `BlockPostState`, which makes the certificates weaker
 
@@ -60,7 +61,7 @@ end
 section
 variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
 
-/-! ## Definition 21 (`def:certificates`) — the justification certificate -/
+/-! ## Definition 21 (`def:certificates`) — the justification and progress certificates -/
 
 /-- An attestation carried by some block on the chain ending at `B`. This is the "inclusion" of
     Definition 21's "their valid inclusions on one chain".
@@ -89,6 +90,32 @@ def JustificationCertificate (B : Blk Node Root) (h : Nat) (T : Blk Node Root) :
     ∀ i ∈ Q, ∃ a : Attestation Node Root,
       a.validator = i ∧ a.heightPair = .target h T ∧ IncludedOn a B) ∧
   (∃ σ : ChainState Node Root, BlockPostState σ ∧ σ.L ⪯ B ∧ σ.J = T ∧ σ.h_j = h)
+
+/-- Definition 21 (`def:certificates`)'s **progress certificate** `PC(h)`, on the chain ending at
+    `B`. Two clauses, as the paper lists them:
+
+    * distinct signed height-`h` attestations of weight at least `q`, included on that chain. Any
+      height pair at `h` counts, exact target or timeout — `Attestation.height` reads the height out
+      of either, and the empty pair has height `⊥` and so counts for no `h`;
+    * the direct height-event invocation that advanced height without a new justification, as a
+      transition out of height `h` on that chain that leaves `J` alone.
+
+    `σ.J = σp.J` is what identifies the progress branch: the justification branch always writes `J`.
+
+    `X ⪯ B` says the transition's own block is on the chain, which is what `JustificationCertificate`
+    says as `σ.L ⪯ B` — the two are the same requirement, a successful transition leaving `σ.L = X`.
+
+    The paper's "setting the progress bits" is not a third clause here. Which bits a state holds is
+    a fact about the transition rather than a further requirement on the certificate, and it is
+    `process_attestation` that sets them; a statement that asked for the bits as well would be
+    asking for the same thing twice. -/
+def ProgressCertificate (B : Blk Node Root) (h : Nat) : Prop :=
+  (∃ Q : Finset Node, Q ⊆ Electorate.V ∧ w(Q)≥q ∧
+    ∀ i ∈ Q, ∃ a : Attestation Node Root,
+      a.validator = i ∧ a.height = some h ∧ IncludedOn a B) ∧
+  (∃ (σp σ : ChainState Node Root) (X : Blk Node Root),
+    BlockPostState σp ∧ X ⪯ B ∧ stateTransition σp X = .state σ ∧
+      σp.h = h ∧ σ.h = h + 1 ∧ σ.J = σp.J)
 
 end
 

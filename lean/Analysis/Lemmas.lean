@@ -23,10 +23,11 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 5**, all proved and each covering its paper sentence in full. Two
-notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemma 5 brought
-the first entries of `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's
-justification certificate.
+**Present so far: Lemmas 1 to 6.** Lemmas 1 to 5 are proved, each covering its paper sentence in
+full; Lemma 6 is stated in full with its proof outstanding. Two notions came with Lemma 3,
+`BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
+`Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
+certificates.
 
 **One theorem per lemma sentence.** Where a sentence names two subjects — Lemma 4's block
 post-state and finality action state — they are conjuncts of one theorem, not two declarations. A
@@ -47,7 +48,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
-| 6 | `lem:height-progression` | 987–994 | **in part, and nothing is missing** — see below |
+| 6 | `lem:height-progression` | 987–994 | **yes, in full** — landed, proof outstanding |
 | 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
@@ -65,21 +66,20 @@ than the current one — Lemma 7's "the chain's post-state at `T`" is the clear 
 ancestor of `B`. Getting at that needs either Figure 3's map or a lemma relating `BlockPostState`
 to ancestors.
 
-So the count of five waiting on `σ[B]` was pessimistic. Lemmas 3 and 4 are written down over
-`BlockPostState`; Lemmas 8 and 10 look expressible over it too, and each will be checked when it is
-reached rather than assumed here. Lemma 6's increment half remains independently statable, needing only
-`advanceHeight`.
+So the count of five waiting on `σ[B]` was pessimistic. Lemmas 3, 4 and 6 are written down over
+`BlockPostState`, and Lemma 5's certificates use it too; Lemmas 8 and 10 look expressible over it,
+and each will be checked when it is reached rather than assumed here.
 
 ## What the specification does not yet carry
 
 | Absent | Paper | Waited on by |
 | --- | --- | --- |
-| the progress and finality certificates | Def. 21 (`def:certificates`) | 6, 10, 11 |
+| the finality certificate, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 10, 11 |
 | the slashing condition E1 | Def. 11 (`def:slashing`) | 10 |
 | `σ[·]` as a map, for a *named earlier* block's state | Figure 3 (`alg:store`), `derive_block_states` | 7 |
 
-Definition 21's justification certificate and Definition 11's E2 are no longer on that list:
-Lemma 5 needed them and they are in `Analysis/Vocabulary.lean`. The rest of each definition stays
+Definition 11's E2 and Definition 21's justification and progress certificates are no longer on
+that list: Lemmas 5 and 6 needed them and they are in `Analysis/Vocabulary.lean`. The rest of each definition stays
 absent until a statement needs it, for the reason that file's docstring gives — a declaration no
 statement mentions is an unaudited claim about what the paper means.
 
@@ -303,5 +303,38 @@ theorem lemTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq R
       ∀ i ∈ S, ∃ x y : Attestation Node Root,
         x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y :=
   Proofs.targetUniqueness B B' T T' h hJC hJC' hconf
+
+/-- **Lemma 6** (`lem:height-progression`, lines 987–994): a certificate advances the height by one.
+
+    Read aloud: if a block's transition changes the height at all, then it raises it by exactly one,
+    and the block carries either a justification certificate or a progress certificate for the height
+    it left. Or, in the paper's own summary: a chain cannot skip a finality height or advance it
+    without a quorum.
+
+    **The paper's whole sentence**, both halves: the increment, and "requires a justification
+    certificate or progress certificate". The two certificates are in `Analysis/Vocabulary.lean`.
+
+    "Counted using the fixed validator weights" needs no rendering of its own. `Electorate` fixes `V`
+    and `w`, and both certificates count with them, which is Assumption 1's fixed electorate.
+
+    **The paper's "every height transition" is covered by quantifying over `state_transition`.** A
+    height transition can only happen at a height-event check, and there are two kinds of those: the
+    block's own, which is this transition's last phase, and one per closed empty slot. Lemma 3 is
+    what rules the second kind out from a block post-state — the empty-slot checks do not fire — so
+    every height transition is a block's, and this covers them all.
+
+    `PositiveWeight Node` for the same reason Lemma 3 needs it: with `q = 0` every empty slot
+    advances the height, and then a block after two empty slots raises it by more than one, making
+    the first half false. The paper's proof cites Assumption 1 at exactly this point.
+
+    The proof is outstanding, a `sorry` in `Analysis/Proofs/Certificates.lean`, which says what each
+    half needs. Nothing absent from the specification is among it. -/
+theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {σp σ : ChainState Node Root}
+    (B : Blk Node Root) (hp : BlockPostState σp) (ht : stateTransition σp B = .state σ)
+    (hne : σ.h ≠ σp.h) :
+    σ.h = σp.h + 1 ∧
+      (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h) :=
+  Proofs.heightProgression B hp ht hne
 
 end Decoupled

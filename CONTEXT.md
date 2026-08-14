@@ -947,24 +947,71 @@ Conflict enters only as distinctness, E2 asking for `T ≠ T'`, and conflicting 
 because `⪯` is reflexive. The distinctness form is therefore strictly stronger than the paper's
 sentence; it is not stated separately until something needs it.
 
+## 2026-08-14 — Lemma 6 written down in full, proof outstanding
+
+`lemHeightProgression`, both halves of the paper's sentence: the increment, and "requires a
+justification certificate or progress certificate". The proof is a `sorry` in
+`Analysis/Proofs/Certificates.lean`, which is the project's only one.
+
+### Definition 21's progress certificate landed with it
+
+`ProgressCertificate` joins `JustificationCertificate` in `Analysis/Vocabulary.lean`, which is that
+file's rule working as intended: the part of a definition a statement needs lands with the
+statement. The finality certificate is still absent, waiting on Lemmas 10 and 11.
+
+Two decisions inside it:
+
+* **`σ.J = σp.J` is what identifies the progress branch.** The paper says "advanced height without a
+  new justification", and the justification branch always writes `J`, so the branch is pinned by
+  what did *not* change rather than by naming the branch.
+* **"Setting the progress bits" is not a third clause.** Which bits a state holds is a fact about
+  the transition, and `process_attestation` is what sets them, so a clause asking for the bits as
+  well would ask for the same thing twice. Recorded because it is a place where the rendering is
+  deliberately shorter than the paper's sentence.
+
+### "Every height transition" is quantified as one `state_transition`
+
+A height transition can only happen at a height-event check, and there are two kinds: the block's
+own, which is a transition's last phase, and one per closed empty slot. **Lemma 3 rules out the
+second kind** from a block post-state, so every height transition is a block's, and quantifying over
+`state_transition σp B = .state σ` with `σ.h ≠ σp.h` covers them all.
+
+That is also why `PositiveWeight` is in the statement: with `q = 0` every empty slot advances the
+height, so a block after two empty slots raises it by more than one and the first half is false. The
+paper's proof cites Assumption 1 at exactly this point, "counted using the fixed validator weights".
+
+Nothing renders that phrase separately: `Electorate` fixes `V` and `w`, and both certificates count
+with them.
+
+### What the proof needs, neither part absent from the specification
+
+*The increment.* `advance_height` raises `h` by one and is its only writer — a field lemma
+`advanceHeight_h` that does not exist yet. The rest is Lemma 3, as above.
+
+*The certificate.* The branch that fired supplies the quorum clause, and getting it out means going
+into Figure 2: the target branch fires on `w(Qtarget) ≥ q`, and every bit in `Qtarget` was set by
+`process_attestation` from an attestation whose height pair is exactly `(h, T_h)`, line 778 being
+the only writer. The first attempt calls that step `advance_quorum`; nothing here does it yet, and
+it is the substantial piece. The invocation clause is `σ` itself, a block post-state with
+`σ.L = B`.
+
 ## Next
 
-1. **The increment half of Lemma 6 (`lem:height-progression`)** needs nothing the specification
-   lacks: `(advanceHeight σ justify start).h = σ.h + 1`. Its `MAPPING.md` row gets 🔨 and a note
-   that it is the increment half only, "requires a certificate" being the half that waits on the
-   rest of Definition 21.
+1. **Prove Lemma 6**, which is written down and `sorry`. The section above splits it: the increment
+   is `advanceHeight_h` plus Lemma 3, and the certificate needs the `Qtarget`-to-attestation step
+   through Figure 2 line 778 that the first attempt calls `advance_quorum`.
 2. **Then the lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
-   is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states and Lemma 6 in
-   part; Lemmas 7, 10 and 11 wait on absent definitions, and Lemma 9 on a formulation. Read the
+   is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 7, 10 and
+   11 wait on absent definitions, and Lemma 9 on a formulation. Read the
    `lean-proof-idioms` skill before attempting a proof — all of them are over routines written in
    the paper's imperative shape, so `sorry` is not the only obstacle.
-3. **Model what the rest wait on**, in the order that unblocks most: the progress and finality
-   certificates of Definition 21 (`def:certificates`) for Lemmas 6, 10 and 11, Definition 11
-   (`def:slashing`)'s E1 for Lemma 10, and Assumption 1's `b` with `3b < W` for Lemma 11. Each
+3. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
+   certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
+   Assumption 1's `b` with `3b < W` for Lemma 11. Each
    lands in `Analysis/Vocabulary.lean` with the statement that needs it, not before, and each is a
    modelling decision to record here.
-4. The parts of Lemmas 6, 8 and 10 that will be narrower than the paper's sentence when they
-   land, and Lemma 9, which needs a formulation decided before it can be written at all.
+4. The parts of Lemmas 8 and 10 that will be narrower than the paper's sentence when they land,
+   and Lemma 9, which needs a formulation decided before it can be written at all.
 5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
