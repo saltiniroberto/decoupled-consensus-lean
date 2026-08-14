@@ -23,8 +23,8 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 6.** Lemmas 1 to 5 are proved, each covering its paper sentence in
-full; Lemma 6 is stated in full with its proof outstanding. Two notions came with Lemma 3,
+**Present so far: Lemmas 1 to 6**, all proved and each covering its paper sentence in full. Two
+notions came with Lemma 3,
 `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
 certificates.
@@ -48,7 +48,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 3 | `lem:empty-slot-noop` | 879–891 | **yes, as a `theorem`** — landed |
 | 4 | `lem:finalized-before-justified` | 920–931 | **yes, both subjects** — landed and proved |
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
-| 6 | `lem:height-progression` | 987–994 | **yes, in full** — landed, proof outstanding |
+| 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | no — `σ[·]` at a named earlier block |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
@@ -327,8 +327,10 @@ theorem lemTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq R
     advances the height, and then a block after two empty slots raises it by more than one, making
     the first half false. The paper's proof cites Assumption 1 at exactly this point.
 
-    The proof is outstanding, a `sorry` in `Analysis/Proofs/Certificates.lean`, which says what each
-    half needs. Nothing absent from the specification is among it. -/
+    Proved in `Analysis/Proofs/Certificates.lean`. The certificate half needs a third invariant,
+    `Witnessed` in `Analysis/Proofs/Witnessed.lean`: a set participation bit has an included
+    attestation behind it. Without it a fired branch is a fact about bits, and a certificate is a
+    claim about attestations. -/
 theorem lemHeightProgression {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {σp σ : ChainState Node Root}
     (B : Blk Node Root) (hp : BlockPostState σp) (ht : stateTransition σp B = .state σ)

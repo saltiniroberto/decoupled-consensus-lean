@@ -1,6 +1,7 @@
 import Analysis.Vocabulary
 import Analysis.Proofs.Weights
 import Analysis.Proofs.Ancestry
+import Analysis.Proofs.Witnessed
 
 /-!
 # Certificates against each other
@@ -60,35 +61,90 @@ theorem targetUniqueness (B B' T T' : Blk Node Root) (h : Nat)
   obtain ⟨y, hyv, hyh, hyinc⟩ := hQ'a i hiQ'
   exact ⟨x, y, hxv, hyv, hxinc, hyinc, h, T, T', hxh, hyh, hTT'⟩
 
+/-! ### The transition's three fields, and the branch that fired
+
+Lemma 6 reads only three fields of the post-block state: the height, which has not moved yet; the
+latest block, which is now `B`; and the latest justification, which the block phase never writes.
+-/
+
+/-- The attestation fold leaves every block and height field alone. -/
+theorem processAttestations_chainFields :
+    ∀ (as : List (Attestation Node Root)) {σ : ChainState Node Root} (A : Blk Node Root),
+      (processAttestations σ as A).L = σ.L ∧ (processAttestations σ as A).J = σ.J ∧
+        (processAttestations σ as A).h = σ.h
+  | [], _, _ => ⟨rfl, rfl, rfl⟩
+  | a :: as, σ, A => by
+      obtain ⟨hL, hJ, -, hh, -, -⟩ := processAttestation_chainFields σ a A
+      obtain ⟨h1, h2, h3⟩ := processAttestations_chainFields as (σ := processAttestation σ a A) A
+      rw [processAttestations_cons]
+      exact ⟨by rw [h1, hL], by rw [h2, hJ], by rw [h3, hh]⟩
+
+/-- The post-block state of a transition, in those three fields. The slot phase contributes nothing
+    beyond Lemma 3's record equation, which is where `PositiveWeight` comes in. -/
+theorem postBlock_fields [PositiveWeight Node] {σp σ₂ : ChainState Node Root} {B : Blk Node Root}
+    (hp : BlockPostState σp) (hb : processBlock (processSlots σp B.slot) B = .state σ₂) :
+    σ₂.h = σp.h ∧ σ₂.L = B ∧ σ₂.J = σp.J := by
+  obtain ⟨Th, -, heq⟩ := emptySlotNoop B.slot hp
+  rw [actionState] at heq
+  obtain ⟨h1, h2, h3⟩ := processAttestations_chainFields B.attestations
+    (σ := { processSlots σp B.slot with L := B }) (processSlots σp B.slot).L
+  rw [processBlock_state hb]
+  exact ⟨by rw [h3, heq], by rw [h1], by rw [h2, heq]⟩
+
+/-! ## Lemma 6 -/
+
 /-- **Lemma 6** (`lem:height-progression`). Read aloud: if a block's transition changes the height at
     all, then it raises it by exactly one, and the block carries either a justification certificate
     or a progress certificate for the height it left.
 
-    **Outstanding.** A `sorry`. Both halves need work, and neither needs anything absent from the
-    specification.
+    Four pieces meet here, and each is where the paper's two-sentence proof takes something for
+    granted.
 
-    *The increment.* `advance_height` raises `h` by one, and it is the only writer of `h`
-    (`advanceHeight_h`, not yet stated). What makes the total increment exactly one rather than one
-    per closed slot is Lemma 3: from a block post-state the empty-slot height checks do not fire, so
-    the only height event in the transition is the block's own. That is where `PositiveWeight` is
-    needed — with `q = 0` every empty slot advances the height, and a block after two empty slots
-    would raise it by more than one.
+    * `processHeightEvents_advance` — the height moved, so a branch fired; it says which, and hands
+      over that branch's quorum and what it justified.
+    * `postBlock_fields` — the height the branch fired at is still `σp.h`. This is Lemma 3 underneath:
+      the empty slots closed on the way to `B` did not move the height. `PositiveWeight` is needed
+      exactly here.
+    * `witnessed_of_blockPostState` — the fired branch's bits come back as attestations included on
+      the chain. This is the whole of `Analysis/Proofs/Witnessed.lean`, and it is what the paper
+      leaves implicit in "counted using the fixed validator weights".
+    * `BlockPostState.step` — the state after the transition is itself a block post-state, which is
+      the invocation clause of both certificates.
 
-    *The certificate.* Whichever branch fired supplies the quorum clause, and it has to be dug out of
-    Figure 2: the target branch fires on `w(Qtarget) ≥ q`, and every bit in `Qtarget` was set by
-    `process_attestation` from an attestation whose height pair is exactly `(h, T_h)` — line 778 is
-    the only writer. The first attempt calls that step `advance_quorum`; nothing here does it yet.
-    The invocation clause is `σ` itself, which is a block post-state with `σ.L = B`.
-
-    The paper's own proof is two sentences, "the justification and progress rules are the only rules
-    that advance height. Both increment it by one, and both use the weights required by
-    Assumption 1" — so the work here is in what those sentences take for granted. -/
+    The two tallies are `V.filter`, so `Q ⊆ V` is `Finset.filter_subset` and nothing more is needed
+    for Definition 9's part of "valid inclusion". -/
 theorem heightProgression [PositiveWeight Node] {σp σ : ChainState Node Root}
     (B : Blk Node Root) (hp : BlockPostState σp) (ht : stateTransition σp B = .state σ)
     (hne : σ.h ≠ σp.h) :
     σ.h = σp.h + 1 ∧
       (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h) := by
-  sorry
+  obtain ⟨σ₂, hb, rfl⟩ := stateTransition_state ht
+  obtain ⟨hh₂, hL₂, hJ₂⟩ := postBlock_fields hp hb
+  have hwit : Witnessed σ₂ :=
+    ((witnessed_of_blockPostState hp).processSlots (settled_of_blockPostState hp) q_pos
+      B.slot).processBlock hb
+  have hne₂ : (processHeightEvents σ₂ B.slot).h ≠ σ₂.h := by rw [hh₂]; exact hne
+  obtain ⟨hadv, hLeq, hbranch⟩ := processHeightEvents_advance σ₂ B.slot hne₂
+  have hpost : BlockPostState (processHeightEvents σ₂ B.slot) := .step hp ht
+  have hLB : (processHeightEvents σ₂ B.slot).L = B := by rw [hLeq, hL₂]
+  refine ⟨by rw [hadv, hh₂], ?_⟩
+  rcases hbranch with ⟨hQ, hTh, hhj⟩ | ⟨hQ, hJ⟩
+  · -- the justification branch fired: its target tally is the certificate's quorum
+    refine Or.inl ⟨⟨σ₂.Qtarget, Finset.filter_subset _ _, hQ, ?_⟩,
+      processHeightEvents σ₂ B.slot, hpost, by rw [hLB]; exact Preceq.refl B, rfl,
+      by rw [hhj, hh₂]⟩
+    intro i hi
+    obtain ⟨T, a, hT, hv, hpair, hinc⟩ := hwit.target i hi
+    rw [hTh] at hT
+    obtain rfl : T = (processHeightEvents σ₂ B.slot).J := (Option.some_injective _ hT).symm
+    exact ⟨a, hv, by rw [hpair, hh₂], by rw [← hL₂]; exact hinc⟩
+  · -- the progress branch fired: its progress tally is the certificate's quorum
+    refine Or.inr ⟨⟨σ₂.Qprog, Finset.filter_subset _ _, hQ, ?_⟩,
+      σp, processHeightEvents σ₂ B.slot, B, hp, Preceq.refl B, ht, rfl,
+      by rw [hadv, hh₂], by rw [hJ, hJ₂]⟩
+    intro i hi
+    obtain ⟨a, hv, hht, hinc⟩ := hwit.progress i hi
+    exact ⟨a, hv, by rw [hht, hh₂], by rw [← hL₂]; exact hinc⟩
 
 end Proofs
 

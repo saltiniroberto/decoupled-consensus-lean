@@ -451,6 +451,76 @@ theorem stateTransition_state {σ σ' : ChainState Node Root} {B : Blk Node Root
     injection h with h
     exact ⟨σ₂, hb, h.symm⟩
 
+/-! ### What a height transition does to the height, and which branch did it
+
+Lemma 6 (`lem:height-progression`) needs more than "`Settled` is restored": it needs the height to
+have moved by exactly one, and it needs to know *which* branch moved it, because that decides which
+certificate the block carries.
+-/
+
+theorem advanceHeight_h (σ : ChainState Node Root) (j : Option (Blk Node Root)) (st : Time) :
+    (advanceHeight σ j st).h = σ.h + 1 := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_L (σ : ChainState Node Root) (j : Option (Blk Node Root)) (st : Time) :
+    (advanceHeight σ j st).L = σ.L := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_J_some (σ : ChainState Node Root) (T : Blk Node Root) (st : Time) :
+    (advanceHeight σ (some T) st).J = T := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+theorem advanceHeight_h_j_some (σ : ChainState Node Root) (T : Blk Node Root) (st : Time) :
+    (advanceHeight σ (some T) st).h_j = σ.h := by
+  simp only [advanceHeight]; repeat' split
+  all_goals rfl
+
+/-- **If the height-event check moved the height, this says which branch did it and with what.**
+    Read aloud: the height went up by one, the latest block did not change, and either the target
+    tally held a quorum and the named target is what got justified at the old height, or the
+    progress tally held a quorum and the justification did not move.
+
+    Everything is phrased over `σ` rather than over the state the finality sub-step leaves, which
+    differs from `σ` in `F` and `h_F` only — fields none of this mentions.
+
+    Two measured points. `cases hT : σ.T_h` comes **before** `split_ifs`, and only `hne` needs the
+    rewrite afterwards: `cases` has already replaced `σ.T_h` in the goal, and doing it first is what
+    turns the target branch's `advance_height σ σ.T_h st` into `advance_height σ (some T) st`, which
+    the field lemmas above can read. Second, the leaves are closed with `exact`, not `rw`: the goals
+    carry a `pure` wrapper that `rw` will not see through, and `exact` unifies up to it. -/
+theorem processHeightEvents_advance (σ : ChainState Node Root) (st : Time)
+    (hne : (processHeightEvents σ st).h ≠ σ.h) :
+    (processHeightEvents σ st).h = σ.h + 1 ∧ (processHeightEvents σ st).L = σ.L ∧
+      ((w(σ.Qtarget)≥q ∧ σ.T_h = some (processHeightEvents σ st).J ∧
+          (processHeightEvents σ st).h_j = σ.h)
+        ∨ (w(σ.Qprog)≥q ∧ (processHeightEvents σ st).J = σ.J)) := by
+  simp only [processHeightEvents, Id.run] at hne ⊢
+  cases hT : σ.T_h with
+  | none =>
+      rw [hT] at hne
+      split_ifs at hne ⊢ <;>
+        first
+          | exact absurd rfl hne
+          | (rename_i hb; exact absurd rfl hb.2.1)
+          | (rename_i hb
+             exact ⟨advanceHeight_h _ _ _, advanceHeight_L _ _ _,
+               Or.inr ⟨hb, advanceHeight_none_J _ _⟩⟩)
+  | some T =>
+      rw [hT] at hne
+      split_ifs at hne ⊢ <;>
+        first
+          | exact absurd rfl hne
+          | (rename_i hb
+             exact ⟨advanceHeight_h _ _ _, advanceHeight_L _ _ _,
+               Or.inl ⟨hb.2.2, congrArg some (advanceHeight_J_some _ _ _).symm,
+                 advanceHeight_h_j_some _ _ _⟩⟩)
+          | (rename_i hb
+             exact ⟨advanceHeight_h _ _ _, advanceHeight_L _ _ _,
+               Or.inr ⟨hb, advanceHeight_none_J _ _⟩⟩)
+
 /-! ## Lemma 3 -/
 
 /-- **A whole transition lands in a `Settled` state.** This is the split the invariant needs, and
