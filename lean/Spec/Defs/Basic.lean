@@ -623,17 +623,29 @@ inductive TransitionResult (Node Root : Type) where
     `return σ`. -/
 instance : Coe (ChainState Node Root) (TransitionResult Node Root) := ⟨.state⟩
 
-/-- The state a result carries, as an `Option`. `TransitionResult` is `Option (ChainState …)` under
-    the paper's two names, and this is that isomorphism.
+/-- Read a field of the state a result carries, `none` when it is `invalid`.
 
-    It exists so that a statement about the state a result carries need not quantify over that
-    state. `(postState T).toOption.map ChainState.h = some σ.h` says "the post-state at `T` is at
-    height `σ.h`" in one equation, where `∃ σT, … ∧ σT.h = σ.h` and
-    `∀ σT, … → σT.h = σ.h` both bind a variable the reader then has to track. Being an equation
-    against `some`, it also carries "the replay did not fail" without a second conjunct. -/
-def TransitionResult.toOption : TransitionResult Node Root → Option (ChainState Node Root)
-  | .state σ => some σ
+    It exists so that a statement about that state need not quantify over it.
+    `(postState T).map ChainState.h = some σ.h` says "the post-state at `T` is at height `σ.h`" in
+    one equation, where `∃ σT, … ∧ σT.h = σ.h` and `∀ σT, … → σT.h = σ.h` both bind a variable the
+    reader then has to track. Being an equation against `some`, it also carries "the replay did not
+    fail" without a second conjunct. Any other field goes the same way: `(postState T).map
+    ChainState.L`, and so on. -/
+def TransitionResult.map {α : Type} (f : ChainState Node Root → α) :
+    TransitionResult Node Root → Option α
+  | .state σ => some (f σ)
   | invalid => none
+
+@[simp] theorem TransitionResult.map_state {α : Type} (f : ChainState Node Root → α)
+    (σ : ChainState Node Root) : (TransitionResult.state σ).map f = some (f σ) := rfl
+
+@[simp] theorem TransitionResult.map_invalid {α : Type} (f : ChainState Node Root → α) :
+    (invalid : TransitionResult Node Root).map f = none := rfl
+
+/-- The state itself, as an `Option`: `TransitionResult` is `Option (ChainState …)` under the
+    paper's two names, and this is that isomorphism. -/
+def TransitionResult.toOption (r : TransitionResult Node Root) : Option (ChainState Node Root) :=
+  r.map id
 
 @[simp] theorem TransitionResult.toOption_state (σ : ChainState Node Root) :
     (TransitionResult.state σ).toOption = some σ := rfl
@@ -644,7 +656,7 @@ def TransitionResult.toOption : TransitionResult Node Root → Option (ChainStat
 /-- `toOption` loses nothing: it is `some σ` exactly when the result is `.state σ`. -/
 theorem TransitionResult.toOption_eq_some {r : TransitionResult Node Root}
     {σ : ChainState Node Root} : r.toOption = some σ ↔ r = .state σ := by
-  cases r <;> simp
+  cases r <;> simp [toOption, TransitionResult.map]
 
 /-- The state a result carries, given a proof that it is not `invalid`. Same shape as
     `Option.get`, and written for the same reason: Lean generates no accessor for the field of

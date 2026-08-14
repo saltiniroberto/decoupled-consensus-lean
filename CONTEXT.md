@@ -1138,17 +1138,19 @@ The first is structural recursion on the block, the second induction on the deri
 proof carried out over the predicate can be stated over the function, and Lemma 7's post-state claim
 becomes one equation with nothing quantified over:
 
-    (postState T).toOption.map ChainState.h = some σ.h
+    (postState T).map ChainState.h = some σ.h
 
 Read aloud: the height of the post-state at `T` is `σ.h`. `postState` is a function of the block, so
 the state named is *the* post-state — the definite description no longer needs `postState_unique` at
 the use site, and `Fresh.anchorAll` is replaced by `Fresh.anchorPost`. `postState_unique` keeps its
 own proof and is now cited by nothing; it is a second route to the same fact and worth keeping.
 
-`TransitionResult.toOption` (`Spec/Defs/Basic.lean`) is the isomorphism with `Option (ChainState …)`
-and exists for exactly this: it puts the `Option` API — `map`, `isSome`, `get` — at the disposal of a
-statement that would otherwise bind a state. Being an equation against `some` it also carries "the
-replay did not fail", so the claim is one conjunct rather than two.
+`TransitionResult.map` (`Spec/Defs/Basic.lean`) reads a field of the state a result carries, `none`
+on `invalid`, and exists for exactly this: it lets a statement speak about that state without binding
+it. Being an equation against `some` it also carries "the replay did not fail", so the claim is one
+conjunct rather than two. Any other field goes the same way — `.map ChainState.L` — so no per-field
+accessor is needed. `TransitionResult.toOption` is `map id`, kept for the `Option` API and for
+`toOption_eq_some`.
 
 **Two forms tried and rejected first, both on 2026-08-15, both equivalent to the above:**
 

@@ -153,7 +153,7 @@ theorem prec_of_target [PositiveWeight Node] {σ : ChainState Node Root} (h : Bl
     invariant's existential into it. -/
 theorem Fresh.anchorPost {σ : ChainState Node Root} (h : Fresh σ)
     (T : Blk Node Root) (hT : σ.T_h = some T) :
-    (postState T).toOption.map ChainState.h = some σ.h := by
+    (postState T).map ChainState.h = some σ.h := by
   obtain ⟨σT, hbps, hLT, hh⟩ := h.anchor T hT
   have hpost : postState T = .state σT := hLT ▸ postState_of_blockPostState hbps
   simp [hpost, hh]
@@ -174,7 +174,7 @@ theorem heightTargetFreshness [PositiveWeight Node] {σ : ChainState Node Root}
     (hp : BlockPostState σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      (postState T).toOption.map ChainState.h = some σ.h := by
+      (postState T).map ChainState.h = some σ.h := by
   intro i hi
   obtain ⟨T, a, hT, hv, hpair, hinc⟩ := (witnessed_of_blockPostState hp).target i hi
   exact ⟨T, a, hT, hv, hpair, hinc, prec_of_target hp ⟨i, hi⟩ T hT,

@@ -376,7 +376,7 @@ theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [Decidabl
     {B : Blk Node Root} (hp : postState B = .state σ) :
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
-      (postState T).toOption.map ChainState.h = some σ.h :=
+      (postState T).map ChainState.h = some σ.h :=
   Proofs.heightTargetFreshness (Proofs.blockPostState_of_postState B hp)
 
 end Decoupled
