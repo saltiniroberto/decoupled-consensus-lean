@@ -65,15 +65,17 @@ theorem processAttestation_target_bit (σ : ChainState Node Root) (a : Attestati
   all_goals (simp_all [Function.update_apply]; try tauto)
 
 /-- Lines 783 and 784 are the only writers of a progress bit: either the bit was already set, or
-    `a` is the attestation that set it, and its height pair sits at the current height. Which of the
-    two lines wrote it does not matter here — `Attestation.height` reads the height out of a timeout
-    pair and an exact-target pair alike. -/
+    `a` is the attestation that set it — a timeout at the current height (line 783), or an exact
+    target at the current height whose target is on the including block's parent chain (line 784,
+    where `A` is that parent). The `T ⪯ A` half is the piece Lemma 10's progress case needs: a
+    counted vote with a *nonempty* target vouches for its target being on the chain. -/
 theorem processAttestation_progress_bit (σ : ChainState Node Root) (a : Attestation Node Root)
     (A : Blk Node Root) (i : Node) (hb : (processAttestation σ a A).progress i = true) :
-    σ.progress i = true ∨ (a.validator = i ∧ a.height = some σ.h) := by
+    σ.progress i = true ∨ (a.validator = i ∧
+      (a.heightPair = .timeout σ.h ∨ ∃ T, a.heightPair = .target σ.h T ∧ T ⪯ A)) := by
   simp only [processAttestation] at hb
   repeat' split at hb
-  all_goals (simp_all [Function.update_apply, Attestation.height]; try tauto)
+  all_goals (simp_all [Function.update_apply]; try tauto)
 
 /-! ## The invariant -/
 
@@ -83,9 +85,12 @@ structure Witnessed (σ : ChainState Node Root) : Prop where
       height. -/
   target : ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
     a.heightPair = .target σ.h T ∧ IncludedOn a σ.L
-  /-- A set progress bit is backed by an included attestation at the current height. -/
-  progress : ∀ i ∈ σ.Qprog, ∃ a : Attestation Node Root,
-    a.validator = i ∧ a.height = some σ.h ∧ IncludedOn a σ.L
+  /-- A set progress bit is backed by an included attestation at the current height — a timeout,
+      or an exact target whose target is itself on this chain. The ancestry half is Figure 2's
+      line 784 condition remembered; `progress_height` below recovers the weaker
+      `a.height = some σ.h` reading. -/
+  progress : ∀ i ∈ σ.Qprog, ∃ a : Attestation Node Root, a.validator = i ∧ IncludedOn a σ.L ∧
+    (a.heightPair = .timeout σ.h ∨ ∃ T, a.heightPair = .target σ.h T ∧ T ⪯ σ.L)
 
 /-- The congruence lemma: a state agreeing on the four fields the invariant reads is witnessed, and
     the endpoint may move down the chain. Every step that touches only `s`, `F`, `h_F`, `P` or `J`
@@ -101,7 +106,10 @@ theorem Witnessed.of_fields {σ τ : ChainState Node Root} (h : Witnessed σ)
   progress i hi := by
     rw [ChainState.Qprog, hpp] at hi
     obtain ⟨a, h1, h2, h3⟩ := h.progress i (by rw [ChainState.Qprog]; exact hi)
-    exact ⟨a, h1, by rw [hh]; exact h2, h3.mono hL⟩
+    refine ⟨a, h1, h2.mono hL, ?_⟩
+    rcases h3 with h3 | ⟨T, h3, h4⟩
+    · exact Or.inl (by rw [hh]; exact h3)
+    · exact Or.inr ⟨T, by rw [hh]; exact h3, Preceq.trans h4 hL⟩
 
 /-- Vacuously witnessed: no bits, nothing to witness. This is how every step that clears the two
     arrays is discharged. -/
@@ -114,13 +122,25 @@ theorem witnessed_gen : Witnessed (ChainState.gen (Node := Node) (Root := Root))
   target i hi := by simp [ChainState.Qtarget, ChainState.gen] at hi
   progress i hi := by simp [ChainState.Qprog, ChainState.gen] at hi
 
+/-- The old reading of the progress field: the vote sits at the current height, whichever arm it
+    came from — `Attestation.height` reads a timeout and an exact target alike. -/
+theorem Witnessed.progress_height {σ : ChainState Node Root} (h : Witnessed σ) :
+    ∀ i ∈ σ.Qprog, ∃ a : Attestation Node Root,
+      a.validator = i ∧ a.height = some σ.h ∧ IncludedOn a σ.L := by
+  intro i hi
+  obtain ⟨a, h1, h2, h3⟩ := h.progress i hi
+  rcases h3 with h3 | ⟨T, h3, -⟩ <;> exact ⟨a, h1, by simp [Attestation.height, h3], h2⟩
+
 /-! ## The attestation loop, where bits are set -/
 
 /-- One attestation keeps the invariant. A bit that was already set keeps its old witness — the
     routine moves neither `T_h`, nor `h`, nor `L` — and a newly set bit is witnessed by `a` itself,
-    whose height pair the writer's own condition pins. -/
+    whose height pair the writer's own condition pins. `hA` is what turns the progress writer's
+    `T ⪯ A` into the invariant's `T ⪯ σ.L`: the parent the votes are judged against is on this
+    chain. -/
 theorem Witnessed.processAttestation {σ : ChainState Node Root} (h : Witnessed σ)
-    (a : Attestation Node Root) (A : Blk Node Root) (hinc : IncludedOn a σ.L) :
+    (a : Attestation Node Root) (A : Blk Node Root) (hinc : IncludedOn a σ.L)
+    (hA : A ⪯ σ.L) :
     Witnessed (_root_.Decoupled.processAttestation σ a A) where
   target i hi := by
     obtain ⟨hL, -, -, hh, -, -⟩ := processAttestation_chainFields σ a A
@@ -134,24 +154,30 @@ theorem Witnessed.processAttestation {σ : ChainState Node Root} (h : Witnessed 
   progress i hi := by
     obtain ⟨hL, -, -, hh, -, -⟩ := processAttestation_chainFields σ a A
     rw [ChainState.Qprog, Finset.mem_filter] at hi
-    rcases processAttestation_progress_bit σ a A i hi.2 with hold | ⟨hv, hht⟩
+    rcases processAttestation_progress_bit σ a A i hi.2 with hold | ⟨hv, harm⟩
     · obtain ⟨b, h1, h2, h3⟩ :=
         h.progress i (by rw [ChainState.Qprog, Finset.mem_filter]; exact ⟨hi.1, hold⟩)
-      exact ⟨b, h1, by rw [hh]; exact h2, by rw [hL]; exact h3⟩
-    · exact ⟨a, hv, by rw [hh]; exact hht, by rw [hL]; exact hinc⟩
+      refine ⟨b, h1, by rw [hL]; exact h2, ?_⟩
+      rcases h3 with h3 | ⟨T, h3, h4⟩
+      · exact Or.inl (by rw [hh]; exact h3)
+      · exact Or.inr ⟨T, by rw [hh]; exact h3, by rw [hL]; exact h4⟩
+    · refine ⟨a, hv, by rw [hL]; exact hinc, ?_⟩
+      rcases harm with harm | ⟨T, harm, hTA⟩
+      · exact Or.inl (by rw [hh]; exact harm)
+      · exact Or.inr ⟨T, by rw [hh]; exact harm, by rw [hL]; exact Preceq.trans hTA hA⟩
 
 /-- The fold, by list induction. `hinc` is what says the attestations being processed are on this
     chain; at the call site they are the block's own, and the block is the state's `L` by then. -/
 theorem Witnessed.processAttestations :
     ∀ (as : List (Attestation Node Root)) {σ : ChainState Node Root} (A : Blk Node Root),
-      Witnessed σ → (∀ a ∈ as, IncludedOn a σ.L) →
+      Witnessed σ → (∀ a ∈ as, IncludedOn a σ.L) → A ⪯ σ.L →
         Witnessed (_root_.Decoupled.processAttestations σ as A)
-  | [], _, _, h, _ => h
-  | a :: as, σ, A, h, hinc => by
+  | [], _, _, h, _, _ => h
+  | a :: as, σ, A, h, hinc, hA => by
       rw [processAttestations_cons]
-      refine Witnessed.processAttestations as A (h.processAttestation a A (hinc a (by simp)))
-        (fun b hb => ?_)
       obtain ⟨hL, -⟩ := processAttestation_chainFields σ a A
+      refine Witnessed.processAttestations as A
+        (h.processAttestation a A (hinc a (by simp)) hA) (fun b hb => ?_) (by rw [hL]; exact hA)
       rw [hL]
       exact hinc b (by simp [hb])
 
@@ -215,6 +241,7 @@ theorem Witnessed.processBlock {σ σ' : ChainState Node Root} {B : Blk Node Roo
   have hext : Witnessed { σ with L := B } := h.of_fields rfl rfl (parent_preceq hpar) rfl rfl
   rw [processBlock_state he]
   exact Witnessed.processAttestations _ _ hext (fun a ha => ⟨B, Preceq.refl B, ha⟩)
+    (parent_preceq hpar)
 
 theorem Witnessed.stateTransition {σ σ' : ChainState Node Root} {B : Blk Node Root}
     (h : Witnessed σ) (hs : Settled σ) (hq : 0 < q Node)

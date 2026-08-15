@@ -9,8 +9,7 @@ specification in `Spec` — the file `Analysis/Lemmas.lean` is for the numbered 
 rules apply here unchanged: statements only, proofs as one-line calls into `Analysis/Proofs/`,
 no section-level `variable`, and each docstring carries the paper's sentence verbatim.
 
-**Present so far: Theorem 5** (`thm:accountable-safety`), derived from Lemma 11, which is
-proved; both are proved outright the moment Lemma 10 is.
+**Present so far: Theorem 5** (`thm:accountable-safety`), proved.
 -/
 
 set_option autoImplicit false
@@ -41,10 +40,10 @@ open Framework.StsMultisetLog
     "For some height `h`": the height lives inside E1 and E2's own pairs and is not separately
     quantified.
 
-    Proved in `Analysis/Proofs/Finality.lean` **from Lemma 11**: order the heights, apply the
-    lemma in that order, and refuse its ancestry disjunct with the conflict. Lemma 11 is proved;
-    its different-heights case rests on Lemma 10, that file's one remaining `sorry`, so this is
-    not proved in the kernel's sense until Lemma 10 is. -/
+    Proved in `Analysis/Proofs/Finality.lean` from Lemma 11: order the heights, apply the lemma
+    in that order, and refuse its ancestry disjunct with the conflict. The whole chain — Lemma 10,
+    Lemma 11, this — is kernel-clean: `[propext, Classical.choice, Quot.sound]`, measured
+    2026-08-16. -/
 theorem thmAccountableSafety {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
     {h h' : Nat} (hBF : postState B_F ≠ invalid)

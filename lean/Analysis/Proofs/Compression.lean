@@ -50,7 +50,7 @@ theorem targetBitCompression [PositiveWeight Node] {B : Blk Node Root}
     obtain ⟨T, a, h1, h2, h3, h4⟩ := hw.target i hi
     exact ⟨T, h1, a, h2, h3, hL ▸ h4⟩
   · intro i hi
-    obtain ⟨a, h1, h2, h3⟩ := hw.progress i hi
+    obtain ⟨a, h1, h2, h3⟩ := hw.progress_height i hi
     exact ⟨a, h1, h2, hL ▸ h3⟩
 
 end Proofs

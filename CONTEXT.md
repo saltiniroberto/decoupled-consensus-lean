@@ -1542,25 +1542,57 @@ chain, and the E1 analysis at the intersection of that advance's quorum with the
 One more `cases … with | invalid` reminder: `TransitionResult.map_eq_some` hit the scoped-notation
 parse failure again; positional bullets, as `state_get` already records.
 
+## 2026-08-16 — Lemma 10 is proved; Theorem 5's chain is kernel-clean
+
+`lemPastFinalized` is proved, which closes Lemmas 10 and 11 and Theorem 5 together:
+
+    Decoupled.thmAccountableSafety depends on axioms:
+      [propext, Classical.choice, Quot.sound]      -- measured, no `sorryAx`
+
+Three pieces, all in `Analysis/Proofs/Finality.lean`:
+
+* **`exists_first_advance`** — a chain whose post-state passed `h ≥ 1` contains a block whose own
+  transition stepped from exactly `h` to `h + 1`: structural recursion down the chain past the
+  blocks still beyond `h`; Lemma 6 (`heightProgression`) pins the step at the first one that is
+  not, and genesis closes the walk at height 1.
+* **`pastFinalized_evidence`** — `C`'s commit quorum, out of the recorded pair by `Certified.fin`,
+  intersected with the quorum that fired at that first advance (`processHeightEvents_advance`
+  says which branch and hands over its weight; `Witnessed` carries its bits back to votes). A
+  signer of both holds a commit to `(h, C)` on `B_F` and a height-`h` vote on `B`; unless the
+  vote targets `C` the pair is E1, timeout case included; and a vote targeting `C` puts `C` on
+  `B`'s chain — against the case hypothesis `¬ C ⪯ B` — through the named target on the exact
+  branch and through the ancestry arm of `Witnessed.progress` on the progress branch.
+* **`pastFinalized`** — `h = 0` is genesis by stipulation; and the two subjects are one argument,
+  because `emptySlotNoop` makes the action state's height the block post-state's.
+
+**`Witnessed.progress` was strengthened for this**, from "a vote at the current height" to "a
+timeout at the current height, or an exact target at the current height whose target is on this
+chain" — Figure 2's line 784 condition remembered, which is exactly what the paper's progress
+case uses ("direct attestation processing counts a nonempty target only when `C ⪯ D_i`"). The old
+reading survives as `Witnessed.progress_height`, and the two consumers (Lemma 6's progress
+certificate, Lemma 9's compression) switched to it — one line each. The step lemmas gained an
+`A ⪯ σ.L` hypothesis, discharged at `process_block` by the parent check.
+
+Two mechanical notes: the `.get`-versus-`postState'` spelling matters to `rw` — ascribe the bridge
+hypotheses (`have hbp : BlockPostState (postState' B) := …`) or every quorum fact comes out spelled
+with `.get` and the record hypotheses do not rewrite; and `lake env lean` reported `sorryAx` on the
+records until the full build had run — stale `.olean`s, exactly as the skill warns.
+
 ## Next
 
-1. **Prove Lemma 10** — the last `sorry` under Theorem 5, and the paper's most-cited lemma (17
-   proof citations). `Certified` supplies its quorums; what remains is the walk to the first
-   advance past `h` on `B`'s chain and the E1 analysis at that advance's quorum intersected with
-   the commit quorum.
-2. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
+1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
    `Analysis/Proofs/ChainTarget.lean` — `lemChainTargetFirstBlock` and `lemChainTargetTransfer`
    are `Aligned.named` plus `postState_s_h_eq` shaped differently; `lemChainTargetConflict` is
    uniqueness's contrapositive across two chains; `lemChainTargetBothBits` is a direct Figure 2
-   computation. Read the `lean-proof-idioms` skill before any of these — the routines are in the
-   paper's imperative shape.
-3. **Lemma 9's second sentence** (`lemTargetBitCompressionEvidence`), which should now be short:
-   `Witnessed.target` on both sides gives the two votes, and distinct targets at one height are
-   E2.
-4. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated.
-5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+   computation. Read the `lean-proof-idioms` skill before any of these. Within Sections 1–5
+   nothing waits on them — their remaining paper consumers are all in `recovery_core.tex`.
+2. **Lemma 9's second sentence** (`lemTargetBitCompressionEvidence`): `Witnessed.target` on both
+   sides gives the two votes, and distinct targets at one height are E2. Short.
+3. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated and the
+   accountable-safety chain is proved.
+4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-7. Figures 3 to 5, and the definitions Sections 5 onward add.
+5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+6. Figures 3 to 5, and the definitions Sections 5 onward add.

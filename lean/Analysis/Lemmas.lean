@@ -27,10 +27,10 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 11.** One to 7 are proved and each covers its paper sentence in
-full; Lemma 8 is written down in five statements, the first proved and four outstanding; Lemma 9's
-first sentence is proved and its second sentence is stated; Lemmas 10 and 11 are stated and not
-proved. Theorem 5 is stated in `Analysis/Theorems.lean`.
+**Present so far: Lemmas 1 to 11.** One to 7, 10 and 11 are proved, each covering its paper
+sentence in full; Lemma 8 is written down in five statements, the first proved and four
+outstanding; Lemma 9's first sentence is proved and its second is stated, proof outstanding.
+Theorem 5 is proved in `Analysis/Theorems.lean`.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -59,8 +59,8 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — first clause proved, four outstanding |
 | 9 | `lem:target-bit-compression` | 1061–1073 | **yes** — first sentence proved; second stated for E2, its E1 half absent |
-| 10 | `lem:past-finalized` | 1092–1101 | **yes, stated** — finalization as the recorded pair; Def. 11's E1 landed with it |
-| 11 | `lem:finalized-chain` | 1139–1146 | **yes, stated** — over two finality certificates |
+| 10 | `lem:past-finalized` | 1092–1101 | **yes, and proved** — finalization as the recorded pair; Def. 11's E1 landed with it |
+| 11 | `lem:finalized-chain` | 1139–1146 | **yes, and proved** — over two recorded pairs |
 
 **`BlockPostState` replaces `σ[B]` in most places, which is what unblocked Lemma 3.** The paper
 writes `σ[B]` where it needs "the state of the chain ending at `B`". A block post-state *is* such a
@@ -741,10 +741,13 @@ theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [D
     retained on `B`'s, which is where the paper's proof finds them. "For `h ≥ 1`" is the
     `1 ≤ h ∧` in that disjunct: at `h = 0` the claim is flat.
 
-    The proof is outstanding, a `sorry` in `Analysis/Proofs/Finality.lean`: the quorums are
-    recovered from the recorded pairs by `Certified` (`Analysis/Proofs/Provenance.lean`), and
-    what is missing is the walk to the first advance past `h` and the E1 analysis at the
-    intersection. Lemmas 11 and Theorem 5 are already derived from this statement. -/
+    Proved in `Analysis/Proofs/Finality.lean`: `exists_first_advance` walks the chain to the
+    transition that first stepped past `h` — from exactly `h` to `h + 1`, by Lemma 6 — and the
+    commit quorum recovered from the recorded pair (`Certified`,
+    `Analysis/Proofs/Provenance.lean`) is intersected with the quorum that fired there. A signer
+    of both holds a commit to `(h, C)` and a height-`h` vote, and unless the vote targets `C` —
+    which puts `C` on the chain — the pair is E1, the timeout case included. The two subjects
+    are one argument: slot closure moves neither the height nor anything the evidence reads. -/
 theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F C B : Blk Node Root} {h : Nat}
     (hBF : postState B_F ≠ invalid)
@@ -782,9 +785,8 @@ theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root
     Proved in `Analysis/Proofs/Finality.lean`, in the paper's three cases: `h = 0` is genesis by
     stipulation (`Certified.fin0`); equal heights intersect `C`'s commit quorum with `C'`'s
     target quorum, both recovered from the recorded pairs by `Certified`
-    (`Analysis/Proofs/Provenance.lean`); different heights go through Lemma 10 — whose own proof
-    is the remaining `sorry` on this path — and order `C` below `C'` by the two post-state
-    anchors and height monotonicity. -/
+    (`Analysis/Proofs/Provenance.lean`); different heights go through Lemma 10 and order `C`
+    below `C'` by the two post-state anchors and height monotonicity. -/
 theorem lemFinalizedChain {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
     {h h' : Nat} (hBF : postState B_F ≠ invalid)

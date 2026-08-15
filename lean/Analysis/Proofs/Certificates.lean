@@ -131,7 +131,7 @@ theorem heightProgression [PositiveWeight Node] {σp σ : ChainState Node Root}
       σp, processHeightEvents σ₂ B.slot, B, hp, Preceq.refl B, ht, rfl,
       by rw [hadv, hh₂], by rw [hJ, hJ₂]⟩
     intro i hi
-    obtain ⟨a, hv, hht, hinc⟩ := hwit.progress i hi
+    obtain ⟨a, hv, hht, hinc⟩ := hwit.progress_height i hi
     exact ⟨a, hv, by rw [hht, hh₂], by rw [← hL₂]; exact hinc⟩
 
 end Proofs
