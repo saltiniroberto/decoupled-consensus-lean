@@ -1,6 +1,6 @@
 # Every declaration in THIS project, one per line, sorted by name.
 # GENERATED — do not edit. Regenerate with `make index`.
-# 213 declarations.
+# 303 declarations.
 #
 # Fields, tab-separated: kind, name, file:line, conclusion, hypotheses.
 # Hypotheses are ` | `-separated; for a theorem they are its propositional binders,
@@ -38,7 +38,8 @@ def	ChainState.Qtarget	Spec.Defs.Basic:571	Finset Node	ChainState Node Root
 def	ChainState.gen	Spec.Defs.Basic:552	ChainState Node Root	
 def	Compatible	Spec.Defs.Basic:473	Prop	Blk Node Root | Blk Node Root
 def	Conflicts	Spec.Defs.Basic:483	Prop	Blk Node Root | Blk Node Root
-def	E2	Analysis.Vocabulary:47	Prop	Attestation Node Root | Attestation Node Root
+def	E1	Analysis.Vocabulary:62	Prop	Attestation Node Root | Attestation Node Root
+def	E2	Analysis.Vocabulary:50	Prop	Attestation Node Root | Attestation Node Root
 inductive	Electorate	Spec.Defs.Basic:90	Type	
 inductive	FinalityPair	Spec.Defs.Basic:216	Type	
 def	FinalityPair.commit.elim	Spec.Defs.Basic:219	motive_4 t	FinalityPair Node Root → Sort u | FinalityPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_4 (FinalityPair.commit h T)
@@ -51,137 +52,209 @@ def	HeightPair.ctorElimType	Spec.Defs.Basic	Sort (max 1 u)	HeightPair Node Root 
 def	HeightPair.empty.elim	Spec.Defs.Basic:212	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 2 | motive_3 HeightPair.empty
 def	HeightPair.target.elim	Spec.Defs.Basic:208	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 0 | (h : ℕ) → (T : Blk Node Root) → motive_3 (HeightPair.target h T)
 def	HeightPair.timeout.elim	Spec.Defs.Basic:210	motive_3 t	HeightPair Node Root → Sort u | HeightPair Node Root | t.ctorIdx = 1 | (h : ℕ) → motive_3 (HeightPair.timeout h)
-def	IncludedOn	Analysis.Vocabulary:66	Prop	Attestation Node Root | Blk Node Root
+inductive	Holds	Spec.Defs.Basic:626	Type (max u v)	Type u
+def	IncludedOn	Analysis.Vocabulary:85	Prop	Attestation Node Root | Blk Node Root
 theorem	IncludedOn.mono	Analysis.Proofs.Witnessed:45	IncludedOn a B'	IncludedOn a B | Preceq B B'
-def	JustificationCertificate	Analysis.Vocabulary:75	Prop	Blk Node Root | ℕ | Blk Node Root
+def	JustificationCertificate	Analysis.Vocabulary:94	Prop	Blk Node Root | ℕ | Blk Node Root
 inductive	Params	Spec.Defs.Basic:157	Type	
 inductive	PositiveWeight	Analysis.Proofs.Weights:23	Prop	
 theorem	PositiveWeight.ofFaultBound	Analysis.Proofs.Weights:37	PositiveWeight Node	0 < k | k * b < W Node
 def	Prec	Spec.Defs.Basic:465	Prop	Blk Node Root | Blk Node Root
 def	Preceq	Spec.Defs.Basic:453	Prop	Blk Node Root | Blk Node Root
+theorem	Preceq.antisymm	Analysis.Proofs.Ancestry:158	a = b	Preceq a b | Preceq b a
 theorem	Preceq.refl	Analysis.Proofs.Ancestry:49	Preceq a a	
 theorem	Preceq.trans	Analysis.Proofs.Ancestry:67	Preceq a c	Preceq a b | Preceq b c
-theorem	Preceq.trans_prec	Analysis.Proofs.Ancestry:126	Prec a c	Preceq a b | Prec b c
-def	ProgressCertificate	Analysis.Vocabulary:94	Prop	Blk Node Root | ℕ
-inductive	Proofs.Chained	Analysis.Proofs.Ancestry:138	Prop	ChainState Node Root
-theorem	Proofs.Chained.advanceHeight	Analysis.Proofs.Ancestry:211	Proofs.Chained (advanceHeight σ justify start)	Proofs.Chained σ | ∀ (T : Blk Node Root), justify = some T → Preceq σ.J T ∧ Preceq T σ.L
-theorem	Proofs.Chained.closeSlots	Analysis.Proofs.Ancestry:262	Proofs.Chained (Proofs.closeSlots n σ)	Proofs.Chained σ
-theorem	Proofs.Chained.finalizeStep	Analysis.Proofs.Ancestry:160	Proofs.Chained { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.J, h_F := σ.h_j, P := σ.P }	Proofs.Chained σ
-theorem	Proofs.Chained.of_fields	Analysis.Proofs.Ancestry:167	Proofs.Chained τ	Proofs.Chained σ | τ.F = σ.F | τ.J = σ.J | τ.L = σ.L | τ.h_F = σ.h_F | τ.h_j = σ.h_j | τ.h = σ.h | τ.T_h = σ.T_h
-theorem	Proofs.Chained.processAttestation	Analysis.Proofs.Ancestry:299	Proofs.Chained (processAttestation σ a A)	Proofs.Chained σ
-theorem	Proofs.Chained.processAttestations	Analysis.Proofs.Ancestry:305	Proofs.Chained (processAttestations σ as A)	Proofs.Chained σ
-theorem	Proofs.Chained.processBlock	Analysis.Proofs.Ancestry:313	Proofs.Chained σ'	Proofs.Chained σ | processBlock σ B = TransitionResult.state σ'
-theorem	Proofs.Chained.processHeightEvents	Analysis.Proofs.Ancestry:234	Proofs.Chained (processHeightEvents σ start)	Proofs.Chained σ
-theorem	Proofs.Chained.processSlot	Analysis.Proofs.Ancestry:249	Proofs.Chained (processSlot σ)	Proofs.Chained σ
-theorem	Proofs.Chained.processSlots	Analysis.Proofs.Ancestry:269	Proofs.Chained (processSlots σ t)	Proofs.Chained σ
-theorem	Proofs.Chained.setTarget	Analysis.Proofs.Ancestry:179	Proofs.Chained { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Chained σ
-theorem	Proofs.Chained.stateTransition	Analysis.Proofs.Ancestry:332	Proofs.Chained σ'	Proofs.Chained σ | stateTransition σ B = TransitionResult.state σ'
-inductive	Proofs.Fresh	Analysis.Proofs.Freshness:45	Prop	ChainState Node Root
-theorem	Proofs.Fresh.anchorAll	Analysis.Proofs.Freshness:146	(∃ σT, BlockPostState σT ∧ σT.L = T) ∧ ∀ (σT : ChainState Node Root), BlockPostState σT → σT.L = T → σT.h = σ.h	Proofs.Fresh σ | σ.T_h = some T
-theorem	Proofs.Fresh.stateTransition	Analysis.Proofs.Freshness:80	Proofs.Fresh σ	Proofs.Fresh σp | BlockPostState σp | stateTransition σp B = TransitionResult.state σ
-inductive	Proofs.Settled	Analysis.Proofs.SlotClosure:134	Prop	ChainState Node Root
-inductive	Proofs.Witnessed	Analysis.Proofs.Witnessed:80	Prop	ChainState Node Root
-theorem	Proofs.Witnessed.closeSlots	Analysis.Proofs.Witnessed:190	Proofs.Witnessed (Proofs.closeSlots n σ)	0 < q Node | Proofs.Witnessed σ | Proofs.Settled σ
-theorem	Proofs.Witnessed.of_fields	Analysis.Proofs.Witnessed:90	Proofs.Witnessed τ	Proofs.Witnessed σ | τ.T_h = σ.T_h | τ.h = σ.h | Preceq σ.L τ.L | τ.targetParticipation = σ.targetParticipation | τ.progress = σ.progress
-theorem	Proofs.Witnessed.processAttestation	Analysis.Proofs.Witnessed:119	Proofs.Witnessed (processAttestation σ a A)	Proofs.Witnessed σ | IncludedOn a σ.L
-theorem	Proofs.Witnessed.processAttestations	Analysis.Proofs.Witnessed:143	Proofs.Witnessed (processAttestations σ as A)	Proofs.Witnessed σ | ∀ a ∈ as, IncludedOn a σ.L
-theorem	Proofs.Witnessed.processBlock	Analysis.Proofs.Witnessed:205	Proofs.Witnessed σ'	Proofs.Witnessed σ | processBlock σ B = TransitionResult.state σ'
-theorem	Proofs.Witnessed.processHeightEvents	Analysis.Proofs.Witnessed:169	Proofs.Witnessed (processHeightEvents σ st)	Proofs.Witnessed σ
-theorem	Proofs.Witnessed.processSlot	Analysis.Proofs.Witnessed:179	Proofs.Witnessed (processSlot σ)	Proofs.Witnessed σ | Proofs.Settled σ
-theorem	Proofs.Witnessed.processSlots	Analysis.Proofs.Witnessed:200	Proofs.Witnessed (processSlots σ t)	Proofs.Witnessed σ | Proofs.Settled σ | 0 < q Node
-theorem	Proofs.Witnessed.setTarget	Analysis.Proofs.Witnessed:160	Proofs.Witnessed { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Witnessed σ | σ.T_h = ⊥ → σ.Qtarget = ∅ | σ.T_h = ⊥
-theorem	Proofs.Witnessed.stateTransition	Analysis.Proofs.Witnessed:219	Proofs.Witnessed σ'	Proofs.Witnessed σ | Proofs.Settled σ | 0 < q Node | stateTransition σ B = TransitionResult.state σ'
-theorem	Proofs.advanceHeight_F	Analysis.Proofs.SlotClosure:333	(advanceHeight σ j st).F = σ.F	
-theorem	Proofs.advanceHeight_J_some	Analysis.Proofs.SlotClosure:481	(advanceHeight σ (some T) st).J = T	
-theorem	Proofs.advanceHeight_L	Analysis.Proofs.SlotClosure:476	(advanceHeight σ j st).L = σ.L	
-theorem	Proofs.advanceHeight_P_some	Analysis.Proofs.SlotClosure:343	(advanceHeight σ (some T) st).P = ∅	
-theorem	Proofs.advanceHeight_Qprog	Analysis.Proofs.SlotClosure:311	(advanceHeight σ j st).Qprog = ∅	
-theorem	Proofs.advanceHeight_Qtarget	Analysis.Proofs.SlotClosure:307	(advanceHeight σ j st).Qtarget = ∅	
-theorem	Proofs.advanceHeight_T_h	Analysis.Proofs.SlotClosure:292	(advanceHeight σ j st).T_h = ⊥	
-theorem	Proofs.advanceHeight_h	Analysis.Proofs.SlotClosure:471	(advanceHeight σ j st).h = σ.h + 1	
-theorem	Proofs.advanceHeight_h_F	Analysis.Proofs.SlotClosure:338	(advanceHeight σ j st).h_F = σ.h_F	
-theorem	Proofs.advanceHeight_h_j_some	Analysis.Proofs.SlotClosure:486	(advanceHeight σ (some T) st).h_j = σ.h	
-theorem	Proofs.advanceHeight_none_J	Analysis.Proofs.SlotClosure:349	(advanceHeight σ none st).J = σ.J	
-theorem	Proofs.advanceHeight_none_P	Analysis.Proofs.SlotClosure:359	(advanceHeight σ none st).P = σ.P	
-theorem	Proofs.advanceHeight_none_h_j	Analysis.Proofs.SlotClosure:354	(advanceHeight σ none st).h_j = σ.h_j	
-theorem	Proofs.advanceHeight_progress	Analysis.Proofs.SlotClosure:302	(advanceHeight σ j st).progress = fun x => false	
-theorem	Proofs.advanceHeight_s	Analysis.Proofs.SlotClosure:87	(advanceHeight σ j st).s = σ.s	
-theorem	Proofs.advanceHeight_target	Analysis.Proofs.SlotClosure:297	(advanceHeight σ j st).targetParticipation = fun x => false	
-theorem	Proofs.blockPostState_genesis	Analysis.Proofs.Determinism:68	σ = ChainState.gen	BlockPostState σ | σ.L = Blk.genesis
-theorem	Proofs.chained_actionState	Analysis.Proofs.Ancestry:346	Proofs.Chained (actionState σ t)	BlockPostState σ
-theorem	Proofs.chained_gen	Analysis.Proofs.Ancestry:191	Proofs.Chained ChainState.gen	
-theorem	Proofs.chained_of_blockPostState	Analysis.Proofs.Ancestry:339	Proofs.Chained σ	BlockPostState σ
-def	Proofs.closeSlots	Analysis.Proofs.SlotClosure:118	ChainState Node Root	ℕ | ChainState Node Root
-theorem	Proofs.closeSlots_L	Analysis.Proofs.Determinism:50	(Proofs.closeSlots n σ).L = σ.L	
-theorem	Proofs.closeSlots_of_settled	Analysis.Proofs.SlotClosure:200	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ Proofs.closeSlots n σ = { L := σ.L, s := σ.s + n, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (Proofs.closeSlots n σ)	Proofs.Settled σ | 0 < q Node
-theorem	Proofs.emptySlotNoop	Analysis.Proofs.SlotClosure:583	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
-theorem	Proofs.finalizedBeforeJustified	Analysis.Proofs.Ancestry:353	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
-theorem	Proofs.fresh_gen	Analysis.Proofs.Freshness:55	Proofs.Fresh ChainState.gen	
-theorem	Proofs.fresh_of_blockPostState	Analysis.Proofs.Freshness:110	Proofs.Fresh σ	BlockPostState σ
+theorem	Preceq.trans_prec	Analysis.Proofs.Ancestry:150	Prec a c	Preceq a b | Prec b c
+def	ProgressCertificate	Analysis.Vocabulary:113	Prop	Blk Node Root | ℕ
+inductive	Proofs.Aligned	Analysis.Proofs.ChainTarget:278	Prop	ChainState Node Root
+inductive	Proofs.Certified	Analysis.Proofs.Provenance:166	Prop	ChainState Node Root
+theorem	Proofs.Certified.of_fields	Analysis.Proofs.Provenance:193	Proofs.Certified τ	Proofs.Certified σ | τ.P = σ.P | τ.J = σ.J | τ.h_j = σ.h_j | τ.F = σ.F | τ.h_F = σ.h_F | Preceq σ.L τ.L
+theorem	Proofs.Certified.stateTransition	Analysis.Proofs.Provenance:224	Proofs.Certified σ'	Proofs.Certified σp | BlockPostState σp | stateTransition σp B = TransitionResult.state σ'
+inductive	Proofs.Chained	Analysis.Proofs.Ancestry:171	Prop	ChainState Node Root
+theorem	Proofs.Chained.advanceHeight	Analysis.Proofs.Ancestry:244	Proofs.Chained (advanceHeight σ justify start)	Proofs.Chained σ | ∀ (T : Blk Node Root), justify = some T → Preceq σ.J T ∧ Preceq T σ.L
+theorem	Proofs.Chained.closeSlots	Analysis.Proofs.Ancestry:295	Proofs.Chained (Proofs.closeSlots n σ)	Proofs.Chained σ
+theorem	Proofs.Chained.finalizeStep	Analysis.Proofs.Ancestry:193	Proofs.Chained { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.J, h_F := σ.h_j, P := σ.P }	Proofs.Chained σ
+theorem	Proofs.Chained.of_fields	Analysis.Proofs.Ancestry:200	Proofs.Chained τ	Proofs.Chained σ | τ.F = σ.F | τ.J = σ.J | τ.L = σ.L | τ.h_F = σ.h_F | τ.h_j = σ.h_j | τ.h = σ.h | τ.T_h = σ.T_h
+theorem	Proofs.Chained.processAttestation	Analysis.Proofs.Ancestry:332	Proofs.Chained (processAttestation σ a A)	Proofs.Chained σ
+theorem	Proofs.Chained.processAttestations	Analysis.Proofs.Ancestry:338	Proofs.Chained (processAttestations σ as A)	Proofs.Chained σ
+theorem	Proofs.Chained.processBlock	Analysis.Proofs.Ancestry:346	Proofs.Chained σ'	Proofs.Chained σ | processBlock σ B = TransitionResult.state σ'
+theorem	Proofs.Chained.processHeightEvents	Analysis.Proofs.Ancestry:267	Proofs.Chained (processHeightEvents σ start)	Proofs.Chained σ
+theorem	Proofs.Chained.processSlot	Analysis.Proofs.Ancestry:282	Proofs.Chained (processSlot σ)	Proofs.Chained σ
+theorem	Proofs.Chained.processSlots	Analysis.Proofs.Ancestry:302	Proofs.Chained (processSlots σ t)	Proofs.Chained σ
+theorem	Proofs.Chained.setTarget	Analysis.Proofs.Ancestry:212	Proofs.Chained { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Chained σ
+theorem	Proofs.Chained.stateTransition	Analysis.Proofs.Ancestry:365	Proofs.Chained σ'	Proofs.Chained σ | stateTransition σ B = TransitionResult.state σ'
+inductive	Proofs.Fresh	Analysis.Proofs.Freshness:46	Prop	ChainState Node Root
+theorem	Proofs.Fresh.anchorPost	Analysis.Proofs.Freshness:147	∃ σT, Holds.mem (postState T) σT ∧ σT.h = σ.h	Proofs.Fresh σ | σ.T_h = some T
+theorem	Proofs.Fresh.stateTransition	Analysis.Proofs.Freshness:81	Proofs.Fresh σ	Proofs.Fresh σp | BlockPostState σp | stateTransition σp B = TransitionResult.state σ
+inductive	Proofs.Settled	Analysis.Proofs.SlotClosure:193	Prop	ChainState Node Root
+inductive	Proofs.Witnessed	Analysis.Proofs.Witnessed:82	Prop	ChainState Node Root
+theorem	Proofs.Witnessed.closeSlots	Analysis.Proofs.Witnessed:216	Proofs.Witnessed (Proofs.closeSlots n σ)	0 < q Node | Proofs.Witnessed σ | Proofs.Settled σ
+theorem	Proofs.Witnessed.of_fields	Analysis.Proofs.Witnessed:95	Proofs.Witnessed τ	Proofs.Witnessed σ | τ.T_h = σ.T_h | τ.h = σ.h | Preceq σ.L τ.L | τ.targetParticipation = σ.targetParticipation | τ.progress = σ.progress
+theorem	Proofs.Witnessed.processAttestation	Analysis.Proofs.Witnessed:136	Proofs.Witnessed (processAttestation σ a A)	Proofs.Witnessed σ | IncludedOn a σ.L | Preceq A σ.L
+theorem	Proofs.Witnessed.processAttestations	Analysis.Proofs.Witnessed:169	Proofs.Witnessed (processAttestations σ as A)	Proofs.Witnessed σ | ∀ a ∈ as, IncludedOn a σ.L | Preceq A σ.L
+theorem	Proofs.Witnessed.processBlock	Analysis.Proofs.Witnessed:231	Proofs.Witnessed σ'	Proofs.Witnessed σ | processBlock σ B = TransitionResult.state σ'
+theorem	Proofs.Witnessed.processHeightEvents	Analysis.Proofs.Witnessed:195	Proofs.Witnessed (processHeightEvents σ st)	Proofs.Witnessed σ
+theorem	Proofs.Witnessed.processSlot	Analysis.Proofs.Witnessed:205	Proofs.Witnessed (processSlot σ)	Proofs.Witnessed σ | Proofs.Settled σ
+theorem	Proofs.Witnessed.processSlots	Analysis.Proofs.Witnessed:226	Proofs.Witnessed (processSlots σ t)	Proofs.Witnessed σ | Proofs.Settled σ | 0 < q Node
+theorem	Proofs.Witnessed.progress_height	Analysis.Proofs.Witnessed:125	∃ a, a.validator = i ∧ a.height = some σ.h ∧ IncludedOn a σ.L	Proofs.Witnessed σ | i ∈ σ.Qprog
+theorem	Proofs.Witnessed.setTarget	Analysis.Proofs.Witnessed:186	Proofs.Witnessed { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Witnessed σ | σ.T_h = ⊥ → σ.Qtarget = ∅ | σ.T_h = ⊥
+theorem	Proofs.Witnessed.stateTransition	Analysis.Proofs.Witnessed:246	Proofs.Witnessed σ'	Proofs.Witnessed σ | Proofs.Settled σ | 0 < q Node | stateTransition σ B = TransitionResult.state σ'
+theorem	Proofs.accountableSafety	Analysis.Proofs.Finality:249	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ (IncludedOn x B_F ∧ IncludedOn y B_F' ∨ IncludedOn x B_F' ∧ IncludedOn y B_F) ∧ (E1 x y ∨ E2 x y)	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B_F' ≠ TransitionResult.invalid | (postState' B_F' hBF').F = C' | (postState' B_F' hBF').h_F = h' | Conflicts C C'
+theorem	Proofs.advanceHeight_F	Analysis.Proofs.SlotClosure:392	(advanceHeight σ j st).F = σ.F	
+theorem	Proofs.advanceHeight_J_some	Analysis.Proofs.SlotClosure:540	(advanceHeight σ (some T) st).J = T	
+theorem	Proofs.advanceHeight_L	Analysis.Proofs.SlotClosure:535	(advanceHeight σ j st).L = σ.L	
+theorem	Proofs.advanceHeight_P_some	Analysis.Proofs.SlotClosure:402	(advanceHeight σ (some T) st).P = ∅	
+theorem	Proofs.advanceHeight_Qprog	Analysis.Proofs.SlotClosure:370	(advanceHeight σ j st).Qprog = ∅	
+theorem	Proofs.advanceHeight_Qtarget	Analysis.Proofs.SlotClosure:366	(advanceHeight σ j st).Qtarget = ∅	
+theorem	Proofs.advanceHeight_T_h	Analysis.Proofs.SlotClosure:351	(advanceHeight σ j st).T_h = ⊥	
+theorem	Proofs.advanceHeight_h	Analysis.Proofs.SlotClosure:530	(advanceHeight σ j st).h = σ.h + 1	
+theorem	Proofs.advanceHeight_h_F	Analysis.Proofs.SlotClosure:397	(advanceHeight σ j st).h_F = σ.h_F	
+theorem	Proofs.advanceHeight_h_j_some	Analysis.Proofs.SlotClosure:545	(advanceHeight σ (some T) st).h_j = σ.h	
+theorem	Proofs.advanceHeight_none_J	Analysis.Proofs.SlotClosure:408	(advanceHeight σ none st).J = σ.J	
+theorem	Proofs.advanceHeight_none_P	Analysis.Proofs.SlotClosure:418	(advanceHeight σ none st).P = σ.P	
+theorem	Proofs.advanceHeight_none_h_j	Analysis.Proofs.SlotClosure:413	(advanceHeight σ none st).h_j = σ.h_j	
+theorem	Proofs.advanceHeight_progress	Analysis.Proofs.SlotClosure:361	(advanceHeight σ j st).progress = fun x => false	
+theorem	Proofs.advanceHeight_s	Analysis.Proofs.SlotClosure:146	(advanceHeight σ j st).s = σ.s	
+theorem	Proofs.advanceHeight_s_h	Analysis.Proofs.ChainTarget:55	(advanceHeight σ j st).s_h = st	
+theorem	Proofs.advanceHeight_target	Analysis.Proofs.SlotClosure:356	(advanceHeight σ j st).targetParticipation = fun x => false	
+theorem	Proofs.aligned_gen	Analysis.Proofs.ChainTarget:288	Proofs.Aligned ChainState.gen	
+theorem	Proofs.aligned_of_blockPostState	Analysis.Proofs.ChainTarget:368	Proofs.Aligned σ	BlockPostState σ
+theorem	Proofs.aligned_stateTransition	Analysis.Proofs.ChainTarget:332	Proofs.Aligned σ'	Proofs.Settled σp | 0 < q Node | Proofs.Aligned σp | stateTransition σp B = TransitionResult.state σ'
+theorem	Proofs.blockPostState_genesis	Analysis.Proofs.Determinism:81	σ = ChainState.gen	BlockPostState σ | σ.L = Blk.genesis
+theorem	Proofs.blockPostState_of_postState	Analysis.Proofs.Determinism:136	BlockPostState σ	postState B = TransitionResult.state σ
+theorem	Proofs.certified_gen	Analysis.Proofs.Provenance:217	Proofs.Certified ChainState.gen	
+theorem	Proofs.certified_of_blockPostState	Analysis.Proofs.Provenance:420	Proofs.Certified σ	BlockPostState σ
+theorem	Proofs.chainTargetConflict	Analysis.Proofs.ChainTarget:603	Conflicts T T'	postState B = TransitionResult.state σ | postState B' = TransitionResult.state σ' | σ.h = σ'.h | σ.T_h = some T | σ'.T_h = some T' | T ≠ T'
+theorem	Proofs.chainTargetFirstBlock	Analysis.Proofs.ChainTarget:497	Preceq T B ∧ ∀ (B' : Blk Node Root) (σ' : ChainState Node Root), postState B' = TransitionResult.state σ' → Preceq B' B → σ'.h = σ.h → Preceq T B'	postState B = TransitionResult.state σ | σ.T_h = some T
+theorem	Proofs.chainTargetTransfer	Analysis.Proofs.ChainTarget:533	σ'.T_h = some T	postState B = TransitionResult.state σ | postState B' = TransitionResult.state σ' | σ.T_h = some T | σ'.h = σ.h | Prec T B'
+theorem	Proofs.chainTargetUniqueness	Analysis.Proofs.ChainTarget:438	T = T'	Preceq B B' | postState B = TransitionResult.state σ | postState B' = TransitionResult.state σ' | σ.h = σ'.h | σ.T_h = some T | σ'.T_h = some T'
+theorem	Proofs.chained_actionState	Analysis.Proofs.Ancestry:379	Proofs.Chained (actionState σ t)	BlockPostState σ
+theorem	Proofs.chained_gen	Analysis.Proofs.Ancestry:224	Proofs.Chained ChainState.gen	
+theorem	Proofs.chained_of_blockPostState	Analysis.Proofs.Ancestry:372	Proofs.Chained σ	BlockPostState σ
+def	Proofs.closeSlots	Analysis.Proofs.SlotClosure:177	ChainState Node Root	ℕ | ChainState Node Root
+theorem	Proofs.closeSlots_L	Analysis.Proofs.Determinism:63	(Proofs.closeSlots n σ).L = σ.L	
+theorem	Proofs.closeSlots_aligned	Analysis.Proofs.ChainTarget:315	Proofs.Aligned (Proofs.closeSlots n σ) ∧ (0 < n → (Proofs.closeSlots n σ).T_h ≠ ⊥)	Proofs.Settled σ | 0 < q Node | Proofs.Aligned σ
+theorem	Proofs.closeSlots_h_le	Analysis.Proofs.ChainTarget:233	σ.h ≤ (Proofs.closeSlots n σ).h	
+theorem	Proofs.closeSlots_of_settled	Analysis.Proofs.SlotClosure:259	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ Proofs.closeSlots n σ = { L := σ.L, s := σ.s + n, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (Proofs.closeSlots n σ)	Proofs.Settled σ | 0 < q Node
+theorem	Proofs.closeSlots_s	Analysis.Proofs.ChainTarget:84	(Proofs.closeSlots n σ).s = σ.s + n	
+theorem	Proofs.emptySlotNoop	Analysis.Proofs.SlotClosure:642	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	Proofs.exists_first_advance	Analysis.Proofs.Finality:39	∃ D σp σD, Preceq D B ∧ BlockPostState σp ∧ stateTransition σp D = TransitionResult.state σD ∧ σp.h = h ∧ σD.h = h + 1	postState B = TransitionResult.state σB | 1 ≤ h | h < σB.h
+theorem	Proofs.finalizedBeforeJustified	Analysis.Proofs.Ancestry:386	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
+theorem	Proofs.finalizedChain	Analysis.Proofs.Finality:180	Preceq C C' ∨ ∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y)	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B_F' ≠ TransitionResult.invalid | (postState' B_F' hBF').F = C' | (postState' B_F' hBF').h_F = h' | h ≤ h'
+theorem	Proofs.fresh_gen	Analysis.Proofs.Freshness:56	Proofs.Fresh ChainState.gen	
+theorem	Proofs.fresh_of_blockPostState	Analysis.Proofs.Freshness:111	Proofs.Fresh σ	BlockPostState σ
 theorem	Proofs.heightProgression	Analysis.Proofs.Certificates:84	σ.h = σp.h + 1 ∧ (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h)	BlockPostState σp | stateTransition σp B = TransitionResult.state σ | σ.h ≠ σp.h
-theorem	Proofs.heightTargetFreshness	Analysis.Proofs.Freshness:159	∃ T a, σ.T_h = some T ∧ a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a σ.L ∧ Prec T σ.L ∧ (∃ σT, BlockPostState σT ∧ σT.L = T) ∧ ∀ (σT : ChainState Node Root), BlockPostState σT → σT.L = T → σT.h = σ.h	BlockPostState σ | i ∈ σ.Qtarget
+theorem	Proofs.heightTargetFreshness	Analysis.Proofs.Freshness:162	∃ T, Holds.mem σ.T_h T ∧ ∃ σT, Holds.mem (postState T) σT ∧ ∃ a, a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a σ.L ∧ Prec T σ.L ∧ σT.h = σ.h	BlockPostState σ | i ∈ σ.Qtarget
 theorem	Proofs.integerThresholds	Analysis.Proofs.Weights:70	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
 theorem	Proofs.not_quorum_empty	Analysis.Proofs.Weights:64	¬Quorum ∅	0 < q Node
+theorem	Proofs.pastFinalized	Analysis.Proofs.Finality:141	(h < (postState' B hB).h → Preceq C B ∨ 1 ≤ h ∧ ∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y) ∧ (h < (actionState (postState' B hB) t).h → Preceq C B ∨ 1 ≤ h ∧ ∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y)	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B ≠ TransitionResult.invalid
+theorem	Proofs.pastFinalized_evidence	Analysis.Proofs.Finality:66	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B = TransitionResult.state σB | 1 ≤ h | h < σB.h | ¬Preceq C B
 theorem	Proofs.postBlock_fields	Analysis.Proofs.Certificates:70	σ₂.h = σp.h ∧ σ₂.L = B ∧ σ₂.J = σp.J	BlockPostState σp | processBlock (processSlots σp B.slot) B = TransitionResult.state σ₂
-theorem	Proofs.postBlock_target	Analysis.Proofs.Freshness:64	σ₂.T_h = σp.T_h ∨ σ₂.T_h = some σp.L	BlockPostState σp | processBlock (processSlots σp B.slot) B = TransitionResult.state σ₂
-theorem	Proofs.postState_unique	Analysis.Proofs.Determinism:81	σ = σ'	BlockPostState σ | BlockPostState σ' | σ.L = B | σ'.L = B
-theorem	Proofs.prec_of_target	Analysis.Proofs.Freshness:118	Prec T σ.L	BlockPostState σ | σ.Qtarget.Nonempty | σ.T_h = some T
-theorem	Proofs.processAttestation_T_h	Analysis.Proofs.SlotClosure:226	(processAttestation σ a A).T_h = σ.T_h	
-theorem	Proofs.processAttestation_chainFields	Analysis.Proofs.Ancestry:274	(processAttestation σ a A).L = σ.L ∧ (processAttestation σ a A).J = σ.J ∧ (processAttestation σ a A).F = σ.F ∧ (processAttestation σ a A).h = σ.h ∧ (processAttestation σ a A).h_j = σ.h_j ∧ (processAttestation σ a A).h_F = σ.h_F	
-theorem	Proofs.processAttestation_progress_bit	Analysis.Proofs.Witnessed:67	σ.progress i = true ∨ a.validator = i ∧ a.height = some σ.h	(processAttestation σ a A).progress i = true
-theorem	Proofs.processAttestation_target	Analysis.Proofs.SlotClosure:232	(processAttestation σ a A).targetParticipation = σ.targetParticipation	σ.T_h = ⊥
+theorem	Proofs.postBlock_target	Analysis.Proofs.Freshness:65	σ₂.T_h = σp.T_h ∨ σ₂.T_h = some σp.L	BlockPostState σp | processBlock (processSlots σp B.slot) B = TransitionResult.state σ₂
+theorem	Proofs.postState_L	Analysis.Proofs.Determinism:152	σ.L = B	postState B = TransitionResult.state σ
+theorem	Proofs.postState_ancestor	Analysis.Proofs.ChainTarget:152	∃ σC, postState C = TransitionResult.state σC	Preceq C B | postState B = TransitionResult.state σ
+theorem	Proofs.postState_h_le	Analysis.Proofs.ChainTarget:257	σ.h ≤ σ'.h	Preceq B B' | postState B = TransitionResult.state σ | postState B' = TransitionResult.state σ'
+theorem	Proofs.postState_of_blockPostState	Analysis.Proofs.Determinism:168	postState σ.L = TransitionResult.state σ	BlockPostState σ
+theorem	Proofs.postState_s	Analysis.Proofs.ChainTarget:134	σ.s = B.slot	postState B = TransitionResult.state σ
+theorem	Proofs.postState_s_h_eq	Analysis.Proofs.ChainTarget:408	σ.s_h = σ'.s_h	Preceq B B' | postState B = TransitionResult.state σ | postState B' = TransitionResult.state σ' | σ.h = σ'.h
+theorem	Proofs.postState_unique	Analysis.Proofs.Determinism:94	σ = σ'	BlockPostState σ | BlockPostState σ' | σ.L = B | σ'.L = B
+theorem	Proofs.prec_of_target	Analysis.Proofs.Freshness:119	Prec T σ.L	BlockPostState σ | σ.Qtarget.Nonempty | σ.T_h = some T
+theorem	Proofs.prec_slot_lt	Analysis.Proofs.ChainTarget:189	C.slot < B.slot	Prec C B | postState B = TransitionResult.state σ
+theorem	Proofs.preceq_slot_le	Analysis.Proofs.ChainTarget:169	C.slot ≤ B.slot	Preceq C B | postState B = TransitionResult.state σ
+theorem	Proofs.processAttestation_P_mem	Analysis.Proofs.Provenance:105	i ∈ σ.P ∨ a.validator = i ∧ a.finalityPair = FinalityPair.commit σ.h_j σ.J	i ∈ (processAttestation σ a A).P
+theorem	Proofs.processAttestation_T_h	Analysis.Proofs.SlotClosure:285	(processAttestation σ a A).T_h = σ.T_h	
+theorem	Proofs.processAttestation_both_bits	Analysis.Proofs.ChainTarget:581	(processAttestation σ a A).targetParticipation a.validator = true ∧ (processAttestation σ a A).progress a.validator = true	σ.T_h = some T | a.heightPair = HeightPair.target σ.h T | Preceq T A
+theorem	Proofs.processAttestation_chainFields	Analysis.Proofs.Ancestry:307	(processAttestation σ a A).L = σ.L ∧ (processAttestation σ a A).J = σ.J ∧ (processAttestation σ a A).F = σ.F ∧ (processAttestation σ a A).h = σ.h ∧ (processAttestation σ a A).h_j = σ.h_j ∧ (processAttestation σ a A).h_F = σ.h_F	
+theorem	Proofs.processAttestation_finFields	Analysis.Proofs.Provenance:114	(processAttestation σ a A).h_j = σ.h_j ∧ (processAttestation σ a A).J = σ.J ∧ (processAttestation σ a A).F = σ.F ∧ (processAttestation σ a A).h_F = σ.h_F	
+theorem	Proofs.processAttestation_progress_bit	Analysis.Proofs.Witnessed:67	σ.progress i = true ∨ a.validator = i ∧ (a.heightPair = HeightPair.timeout σ.h ∨ ∃ T, a.heightPair = HeightPair.target σ.h T ∧ Preceq T A)	(processAttestation σ a A).progress i = true
+theorem	Proofs.processAttestation_s	Analysis.Proofs.ChainTarget:72	(processAttestation σ a A).s = σ.s	
+theorem	Proofs.processAttestation_s_h	Analysis.Proofs.ChainTarget:60	(processAttestation σ a A).s_h = σ.s_h	
+theorem	Proofs.processAttestation_target	Analysis.Proofs.SlotClosure:291	(processAttestation σ a A).targetParticipation = σ.targetParticipation	σ.T_h = ⊥
 theorem	Proofs.processAttestation_target_bit	Analysis.Proofs.Witnessed:55	σ.targetParticipation i = true ∨ a.validator = i ∧ ∃ T, σ.T_h = some T ∧ a.heightPair = HeightPair.target σ.h T	(processAttestation σ a A).targetParticipation i = true
-theorem	Proofs.processAttestations_T_h	Analysis.Proofs.SlotClosure:264	(processAttestations σ as A).T_h = σ.T_h	
-theorem	Proofs.processAttestations_chainFields	Analysis.Proofs.Ancestry:287	(processAttestations σ as A).L = σ.L ∧ (processAttestations σ as A).J = σ.J ∧ (processAttestations σ as A).h = σ.h	
-theorem	Proofs.processAttestations_cons	Analysis.Proofs.SlotClosure:244	processAttestations σ (a :: as) A = processAttestations (processAttestation σ a A) as A	
-theorem	Proofs.processAttestations_emptyTarget	Analysis.Proofs.SlotClosure:273	(processAttestations σ as A).Qtarget = ∅	σ.T_h = ⊥ → σ.Qtarget = ∅ | (processAttestations σ as A).T_h = ⊥
-theorem	Proofs.processAttestations_target	Analysis.Proofs.SlotClosure:249	(processAttestations σ as A).targetParticipation = σ.targetParticipation ∧ (processAttestations σ as A).T_h = σ.T_h	σ.T_h = ⊥
-theorem	Proofs.processBlock_emptyTarget	Analysis.Proofs.SlotClosure:442	σ'.Qtarget = ∅	processBlock σ B = TransitionResult.state σ' | σ.T_h = ⊥ → σ.Qtarget = ∅ | σ'.T_h = ⊥
-theorem	Proofs.processBlock_parent	Analysis.Proofs.SlotClosure:432	B.parent = some σ.L	processBlock σ B = TransitionResult.state σ'
-theorem	Proofs.processBlock_state	Analysis.Proofs.SlotClosure:422	σ' = processAttestations { L := B, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } B.attestations σ.L	processBlock σ B = TransitionResult.state σ'
-theorem	Proofs.processHeightEvents_L	Analysis.Proofs.Determinism:41	(processHeightEvents σ st).L = σ.L	
-theorem	Proofs.processHeightEvents_advance	Analysis.Proofs.SlotClosure:491	(processHeightEvents σ st).h = σ.h + 1 ∧ (processHeightEvents σ st).L = σ.L ∧ (Quorum σ.Qtarget ∧ σ.T_h = some (processHeightEvents σ st).J ∧ (processHeightEvents σ st).h_j = σ.h ∨ Quorum σ.Qprog ∧ (processHeightEvents σ st).J = σ.J)	(processHeightEvents σ st).h ≠ σ.h
-theorem	Proofs.processHeightEvents_of_settled	Analysis.Proofs.SlotClosure:152	processHeightEvents σ st = σ	Proofs.Settled σ
-theorem	Proofs.processHeightEvents_of_target	Analysis.Proofs.SlotClosure:534	(processHeightEvents σ st).h = σ.h ∧ (processHeightEvents σ st).L = σ.L ∧ (processHeightEvents σ st).T_h = σ.T_h	(processHeightEvents σ st).T_h ≠ ⊥
-theorem	Proofs.processHeightEvents_s	Analysis.Proofs.SlotClosure:92	(processHeightEvents σ st).s = σ.s	
-theorem	Proofs.processSlot_L	Analysis.Proofs.Determinism:46	(processSlot σ).L = σ.L	
-theorem	Proofs.processSlot_of_settled	Analysis.Proofs.SlotClosure:180	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ processSlot σ = { L := σ.L, s := σ.s + 1, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (processSlot σ)	Proofs.Settled σ | 0 < q Node
-theorem	Proofs.processSlot_s	Analysis.Proofs.SlotClosure:97	(processSlot σ).s = σ.s + 1	
-theorem	Proofs.processSlots_L	Analysis.Proofs.Determinism:54	(processSlots σ t).L = σ.L	
-theorem	Proofs.processSlots_eq_closeSlots	Analysis.Proofs.SlotClosure:124	processSlots σ t = Proofs.closeSlots (t - σ.s) σ	
-theorem	Proofs.processSlots_eq_loop	Analysis.Proofs.SlotClosure:102	processSlots σ t = { }.forIn σ fun x s => if s.s < t then pure (ForInStep.yield (processSlot s)) else pure (ForInStep.done s)	
-theorem	Proofs.processSlots_step	Analysis.Proofs.SlotClosure:111	processSlots σ t = if σ.s < t then processSlots (processSlot σ) t else σ	
+theorem	Proofs.processAttestations_P_mem	Analysis.Proofs.Provenance:122	i ∈ σ.P ∨ ∃ a ∈ as, a.validator = i ∧ a.finalityPair = FinalityPair.commit σ.h_j σ.J	i ∈ (processAttestations σ as A).P
+theorem	Proofs.processAttestations_T_h	Analysis.Proofs.SlotClosure:323	(processAttestations σ as A).T_h = σ.T_h	
+theorem	Proofs.processAttestations_chainFields	Analysis.Proofs.Ancestry:320	(processAttestations σ as A).L = σ.L ∧ (processAttestations σ as A).J = σ.J ∧ (processAttestations σ as A).h = σ.h	
+theorem	Proofs.processAttestations_cons	Analysis.Proofs.SlotClosure:303	processAttestations σ (a :: as) A = processAttestations (processAttestation σ a A) as A	
+theorem	Proofs.processAttestations_emptyTarget	Analysis.Proofs.SlotClosure:332	(processAttestations σ as A).Qtarget = ∅	σ.T_h = ⊥ → σ.Qtarget = ∅ | (processAttestations σ as A).T_h = ⊥
+theorem	Proofs.processAttestations_finFields	Analysis.Proofs.Provenance:140	(processAttestations σ as A).h_j = σ.h_j ∧ (processAttestations σ as A).J = σ.J ∧ (processAttestations σ as A).F = σ.F ∧ (processAttestations σ as A).h_F = σ.h_F	
+theorem	Proofs.processAttestations_s	Analysis.Proofs.ChainTarget:77	(processAttestations σ as A).s = σ.s	
+theorem	Proofs.processAttestations_s_h	Analysis.Proofs.ChainTarget:65	(processAttestations σ as A).s_h = σ.s_h	
+theorem	Proofs.processAttestations_target	Analysis.Proofs.SlotClosure:308	(processAttestations σ as A).targetParticipation = σ.targetParticipation ∧ (processAttestations σ as A).T_h = σ.T_h	σ.T_h = ⊥
+theorem	Proofs.processBlock_emptyTarget	Analysis.Proofs.SlotClosure:501	σ'.Qtarget = ∅	processBlock σ B = TransitionResult.state σ' | σ.T_h = ⊥ → σ.Qtarget = ∅ | σ'.T_h = ⊥
+theorem	Proofs.processBlock_h	Analysis.Proofs.ChainTarget:243	σ'.h = σ.h	processBlock σ B = TransitionResult.state σ'
+theorem	Proofs.processBlock_parent	Analysis.Proofs.SlotClosure:491	B.parent = some σ.L	processBlock σ B = TransitionResult.state σ'
+theorem	Proofs.processBlock_state	Analysis.Proofs.SlotClosure:481	σ' = processAttestations { L := B, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } B.attestations σ.L	processBlock σ B = TransitionResult.state σ'
+theorem	Proofs.processBlock_validators	Analysis.Proofs.Provenance:151	a.validator ∈ Electorate.V	processBlock σ B = TransitionResult.state σ' | a ∈ B.attestations
+theorem	Proofs.processHeightEvents_F_pair	Analysis.Proofs.Provenance:85	(processHeightEvents σ st).F = σ.F ∧ (processHeightEvents σ st).h_F = σ.h_F ∨ (processHeightEvents σ st).F = σ.J ∧ (processHeightEvents σ st).h_F = σ.h_j ∧ σ.h_F < σ.h_j ∧ Quorum σ.P	
+theorem	Proofs.processHeightEvents_J_P	Analysis.Proofs.Provenance:57	(processHeightEvents σ st).J = σ.J ∧ (processHeightEvents σ st).h_j = σ.h_j ∧ (processHeightEvents σ st).P = σ.P ∨ (processHeightEvents σ st).P = ∅ ∧ ∃ T, σ.T_h = some T ∧ (processHeightEvents σ st).J = T ∧ (processHeightEvents σ st).h_j = σ.h ∧ Quorum σ.Qtarget	
+theorem	Proofs.processHeightEvents_L	Analysis.Proofs.Determinism:54	(processHeightEvents σ st).L = σ.L	
+theorem	Proofs.processHeightEvents_advance	Analysis.Proofs.SlotClosure:550	(processHeightEvents σ st).h = σ.h + 1 ∧ (processHeightEvents σ st).L = σ.L ∧ (Quorum σ.Qtarget ∧ σ.T_h = some (processHeightEvents σ st).J ∧ (processHeightEvents σ st).h_j = σ.h ∨ Quorum σ.Qprog ∧ (processHeightEvents σ st).J = σ.J)	(processHeightEvents σ st).h ≠ σ.h
+theorem	Proofs.processHeightEvents_h_le	Analysis.Proofs.ChainTarget:219	σ.h ≤ (processHeightEvents σ st).h	
+theorem	Proofs.processHeightEvents_of_bot	Analysis.Proofs.ChainTarget:110	(processHeightEvents σ st).h = σ.h + 1 ∧ (processHeightEvents σ st).s_h = st ∧ (processHeightEvents σ st).L = σ.L	σ.T_h ≠ ⊥ | (processHeightEvents σ st).T_h = ⊥
+theorem	Proofs.processHeightEvents_of_settled	Analysis.Proofs.SlotClosure:211	processHeightEvents σ st = σ	Proofs.Settled σ
+theorem	Proofs.processHeightEvents_of_target	Analysis.Proofs.SlotClosure:593	(processHeightEvents σ st).h = σ.h ∧ (processHeightEvents σ st).L = σ.L ∧ (processHeightEvents σ st).T_h = σ.T_h	(processHeightEvents σ st).T_h ≠ ⊥
+theorem	Proofs.processHeightEvents_s	Analysis.Proofs.SlotClosure:151	(processHeightEvents σ st).s = σ.s	
+theorem	Proofs.processHeightEvents_s_h_of_target	Analysis.Proofs.ChainTarget:99	(processHeightEvents σ st).s_h = σ.s_h	(processHeightEvents σ st).T_h ≠ ⊥
+theorem	Proofs.processSlot_L	Analysis.Proofs.Determinism:59	(processSlot σ).L = σ.L	
+theorem	Proofs.processSlot_aligned	Analysis.Proofs.ChainTarget:294	Proofs.Aligned (processSlot σ) ∧ (processSlot σ).T_h ≠ ⊥	Proofs.Settled σ | 0 < q Node | Proofs.Aligned σ
+theorem	Proofs.processSlot_h_le	Analysis.Proofs.ChainTarget:225	σ.h ≤ (processSlot σ).h	
+theorem	Proofs.processSlot_of_settled	Analysis.Proofs.SlotClosure:239	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ processSlot σ = { L := σ.L, s := σ.s + 1, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P } ∧ Proofs.Settled (processSlot σ)	Proofs.Settled σ | 0 < q Node
+theorem	Proofs.processSlot_s	Analysis.Proofs.SlotClosure:156	(processSlot σ).s = σ.s + 1	
+theorem	Proofs.processSlots_L	Analysis.Proofs.Determinism:67	(processSlots σ t).L = σ.L	
+theorem	Proofs.processSlots_eq_closeSlots	Analysis.Proofs.SlotClosure:183	processSlots σ t = Proofs.closeSlots (t - σ.s) σ	
+theorem	Proofs.processSlots_eq_loop	Analysis.Proofs.SlotClosure:161	processSlots σ t = { }.forIn σ fun x s => if s.s < t then pure (ForInStep.yield (processSlot s)) else pure (ForInStep.done s)	
+theorem	Proofs.processSlots_h_le	Analysis.Proofs.ChainTarget:239	σ.h ≤ (processSlots σ t).h	
+theorem	Proofs.processSlots_s	Analysis.Proofs.ChainTarget:88	(processSlots σ t).s = max σ.s t	
+theorem	Proofs.processSlots_step	Analysis.Proofs.SlotClosure:170	processSlots σ t = if σ.s < t then processSlots (processSlot σ) t else σ	
 theorem	Proofs.q_pos	Analysis.Proofs.Weights:58	0 < q Node	
 theorem	Proofs.quorumIntersection	Analysis.Proofs.Weights:78	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
 theorem	Proofs.quorumIntersectionNonByzantine	Analysis.Proofs.Weights:87	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
-theorem	Proofs.settled_advanceHeight	Analysis.Proofs.SlotClosure:364	Proofs.Settled (advanceHeight σ j st)	0 < q Node | ¬(σ.h_j > σ.h_F ∧ Preceq σ.F σ.J ∧ Quorum σ.P)
-theorem	Proofs.settled_bump	Analysis.Proofs.SlotClosure:173	Proofs.Settled { L := σ.L, s := n, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ
-theorem	Proofs.settled_gen	Analysis.Proofs.SlotClosure:315	Proofs.Settled ChainState.gen	
-theorem	Proofs.settled_of_blockPostState	Analysis.Proofs.SlotClosure:571	Proofs.Settled σ	BlockPostState σ
-theorem	Proofs.settled_processHeightEvents	Analysis.Proofs.SlotClosure:386	Proofs.Settled (processHeightEvents σ st)	0 < q Node | σ.T_h = ⊥ → σ.Qtarget = ∅
-theorem	Proofs.settled_setTarget	Analysis.Proofs.SlotClosure:160	Proofs.Settled { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ | 0 < q Node | σ.T_h = ⊥
-theorem	Proofs.settled_stateTransition	Analysis.Proofs.SlotClosure:553	Proofs.Settled σ'	Proofs.Settled σ | 0 < q Node | stateTransition σ B = TransitionResult.state σ'
-theorem	Proofs.stateTransition_L	Analysis.Proofs.Determinism:58	σ.L = B	stateTransition σp B = TransitionResult.state σ
-theorem	Proofs.stateTransition_state	Analysis.Proofs.SlotClosure:450	∃ σ₂, processBlock (processSlots σ B.slot) B = TransitionResult.state σ₂ ∧ σ' = processHeightEvents σ₂ B.slot	stateTransition σ B = TransitionResult.state σ'
+theorem	Proofs.settled_advanceHeight	Analysis.Proofs.SlotClosure:423	Proofs.Settled (advanceHeight σ j st)	0 < q Node | ¬(σ.h_j > σ.h_F ∧ Preceq σ.F σ.J ∧ Quorum σ.P)
+theorem	Proofs.settled_bump	Analysis.Proofs.SlotClosure:232	Proofs.Settled { L := σ.L, s := n, h := σ.h, s_h := σ.s_h, T_h := σ.T_h, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ
+theorem	Proofs.settled_gen	Analysis.Proofs.SlotClosure:374	Proofs.Settled ChainState.gen	
+theorem	Proofs.settled_of_blockPostState	Analysis.Proofs.SlotClosure:630	Proofs.Settled σ	BlockPostState σ
+theorem	Proofs.settled_processHeightEvents	Analysis.Proofs.SlotClosure:445	Proofs.Settled (processHeightEvents σ st)	0 < q Node | σ.T_h = ⊥ → σ.Qtarget = ∅
+theorem	Proofs.settled_setTarget	Analysis.Proofs.SlotClosure:219	Proofs.Settled { L := σ.L, s := σ.s, h := σ.h, s_h := σ.s_h, T_h := some σ.L, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	Proofs.Settled σ | 0 < q Node | σ.T_h = ⊥
+theorem	Proofs.settled_stateTransition	Analysis.Proofs.SlotClosure:612	Proofs.Settled σ'	Proofs.Settled σ | 0 < q Node | stateTransition σ B = TransitionResult.state σ'
+theorem	Proofs.stateTransition_L	Analysis.Proofs.Determinism:71	σ.L = B	stateTransition σp B = TransitionResult.state σ
+theorem	Proofs.stateTransition_h_le	Analysis.Proofs.ChainTarget:250	σp.h ≤ σ'.h	stateTransition σp B = TransitionResult.state σ'
+theorem	Proofs.stateTransition_s_h_eq	Analysis.Proofs.ChainTarget:378	σ'.s_h = σp.s_h	Proofs.Settled σp | 0 < q Node | Proofs.Aligned σp | stateTransition σp B = TransitionResult.state σ' | σ'.h = σp.h
+theorem	Proofs.stateTransition_slot_lt	Analysis.Proofs.ChainTarget:124	σ.s < B.slot	stateTransition σ B = TransitionResult.state σ'
+theorem	Proofs.stateTransition_state	Analysis.Proofs.SlotClosure:509	∃ σ₂, processBlock (processSlots σ B.slot) B = TransitionResult.state σ₂ ∧ σ' = processHeightEvents σ₂ B.slot	stateTransition σ B = TransitionResult.state σ'
+theorem	Proofs.targetBitCompression	Analysis.Proofs.Compression:42	(∀ i ∈ σ.Qtarget, ∃ T, σ.T_h = some T ∧ ∃ a, a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a B) ∧ ∀ i ∈ σ.Qprog, ∃ a, a.validator = i ∧ a.height = some σ.h ∧ IncludedOn a B	postState B = TransitionResult.state σ
+theorem	Proofs.targetBitCompressionEvidence	Analysis.Proofs.Compression:61	∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	postState B = TransitionResult.state σ | postState B' = TransitionResult.state σ' | i ∈ σ.Qtarget | i ∈ σ'.Qtarget | σ.h = σ'.h | σ.T_h = some T | σ'.T_h = some T' | T ≠ T'
 theorem	Proofs.targetUniqueness	Analysis.Proofs.Certificates:31	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
+theorem	Proofs.target_postState	Analysis.Proofs.ChainTarget:479	Preceq T B ∧ ∃ σT, postState T = TransitionResult.state σT ∧ σT.h = σ.h ∧ σT.s_h = σ.s_h ∧ T.slot = σ.s_h	postState B = TransitionResult.state σ | σ.T_h = some T
 theorem	Proofs.weightInterGe	Analysis.Proofs.Weights:46	weight Q + weight Q' ≤ W Node + weight (Q ∩ Q')	Q ⊆ Electorate.V | Q' ⊆ Electorate.V
-theorem	Proofs.witnessed_gen	Analysis.Proofs.Witnessed:113	Proofs.Witnessed ChainState.gen	
-theorem	Proofs.witnessed_of_blockPostState	Analysis.Proofs.Witnessed:225	Proofs.Witnessed σ	BlockPostState σ
-theorem	Proofs.witnessed_of_empty	Analysis.Proofs.Witnessed:106	Proofs.Witnessed σ	σ.Qtarget = ∅ | σ.Qprog = ∅
+theorem	Proofs.witnessed_gen	Analysis.Proofs.Witnessed:121	Proofs.Witnessed ChainState.gen	
+theorem	Proofs.witnessed_of_blockPostState	Analysis.Proofs.Witnessed:252	Proofs.Witnessed σ	BlockPostState σ
+theorem	Proofs.witnessed_of_empty	Analysis.Proofs.Witnessed:114	Proofs.Witnessed σ	σ.Qtarget = ∅ | σ.Qprog = ∅
 def	Quorum	Spec.Defs.Basic:132	Prop	Finset Node
+def	Replayable	Analysis.Proofs.SlotClosure:104	Prop	Blk Node Root
 def	StrictMajority	Spec.Defs.Basic:142	Prop	Finset Node
 inductive	TransitionResult	Spec.Defs.Basic:601	Type	
 def	TransitionResult.ctorElim	Spec.Defs.Basic:601	motive t	TransitionResult Node Root → Sort u | ℕ | TransitionResult Node Root | ctorIdx = t.ctorIdx | TransitionResult.ctorElimType ctorIdx
 def	TransitionResult.ctorElimType	Spec.Defs.Basic	Sort (max 1 u)	TransitionResult Node Root → Sort u | ℕ
+def	TransitionResult.get	Spec.Defs.Basic:712	ChainState Node Root	TransitionResult Node Root | r ≠ TransitionResult.invalid
+theorem	TransitionResult.get_state	Spec.Defs.Basic:725	(TransitionResult.state σ).get h = σ	TransitionResult.state σ ≠ TransitionResult.invalid
 def	TransitionResult.invalid.elim	Spec.Defs.Basic:617	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 1 | motive TransitionResult.invalid
+def	TransitionResult.map	Spec.Defs.Basic:668	Option α	ChainState Node Root → α | TransitionResult Node Root
+theorem	TransitionResult.map_eq_some	Spec.Defs.Basic:687	∃ σ, r = TransitionResult.state σ ∧ f σ = v	TransitionResult.map f r = some v
+theorem	TransitionResult.map_invalid	Spec.Defs.Basic:684	TransitionResult.map f TransitionResult.invalid = none	
+theorem	TransitionResult.map_state	Spec.Defs.Basic:681	TransitionResult.map f (TransitionResult.state σ) = some (f σ)	
 def	TransitionResult.state.elim	Spec.Defs.Basic:615	motive t	TransitionResult Node Root → Sort u | TransitionResult Node Root | t.ctorIdx = 0 | (σ : ChainState Node Root) → motive (TransitionResult.state σ)
+theorem	TransitionResult.state_get	Spec.Defs.Basic:729	r = TransitionResult.state (r.get h)	r ≠ TransitionResult.invalid
+def	TransitionResult.toOption	Spec.Defs.Basic:696	Option (ChainState Node Root)	TransitionResult Node Root
+theorem	TransitionResult.toOption_eq_some	Spec.Defs.Basic:707	r.toOption = some σ ↔ r = TransitionResult.state σ	
+theorem	TransitionResult.toOption_invalid	Spec.Defs.Basic:704	TransitionResult.invalid.toOption = none	
+theorem	TransitionResult.toOption_state	Spec.Defs.Basic:701	(TransitionResult.state σ).toOption = some σ	
 def	ValidInclusion	Spec.Defs.Basic:500	Bool	Attestation Node Root
 def	W	Spec.Defs.Basic:116	ℕ	
-def	actionState	Analysis.Proofs.SlotClosure:69	ChainState Node Root	ChainState Node Root | ℕ
+def	actionState	Analysis.Proofs.SlotClosure:128	ChainState Node Root	ChainState Node Root | ℕ
 def	advanceHeight	Spec.Fig2AttestationProcessing:106	ChainState Node Root	ChainState Node Root | Option (Blk Node Root) | ℕ
 def	ancestors	Spec.Defs.Basic:446	List (Blk Node Root)	Blk Node Root
-theorem	ancestors_length_le_of_preceq	Analysis.Proofs.Ancestry:87	(ancestors a).length ≤ (ancestors b).length	Preceq a b
-theorem	ancestors_length_lt_of_prec	Analysis.Proofs.Ancestry:100	(ancestors b).length < (ancestors c).length	Prec b c
+theorem	ancestors_length_le_of_preceq	Analysis.Proofs.Ancestry:92	(ancestors a).length ≤ (ancestors b).length	Preceq a b
+theorem	ancestors_length_lt_of_prec	Analysis.Proofs.Ancestry:105	(ancestors b).length < (ancestors c).length	Prec b c
 theorem	ancestors_subset	Analysis.Proofs.Ancestry:54	x ∈ ancestors c	Preceq b c | x ∈ ancestors b
 def	attBeq	Spec.Defs.Basic:269	Bool	Attestation Node Root | Attestation Node Root
 theorem	attBeq_iff	Spec.Defs.Basic:316	attBeq a b = true ↔ a = b	
@@ -191,27 +264,42 @@ def	blkBeq	Spec.Defs.Basic:262	Bool	Blk Node Root | Blk Node Root
 theorem	blkBeq_iff	Spec.Defs.Basic:304	blkBeq a b = true ↔ a = b	
 def	finalityPairBeq	Spec.Defs.Basic:294	Bool	FinalityPair Node Root | FinalityPair Node Root
 theorem	finalityPairBeq_iff	Spec.Defs.Basic:356	finalityPairBeq a b = true ↔ a = b	
+theorem	genesis_preceq	Analysis.Proofs.Ancestry:71	Preceq Blk.genesis B	
 def	heightPairBeq	Spec.Defs.Basic:287	Bool	HeightPair Node Root | HeightPair Node Root
 theorem	heightPairBeq_iff	Spec.Defs.Basic:342	heightPairBeq a b = true ↔ a = b	
+def	holdsOption	Spec.Defs.Basic:641	Holds (Option α) α	Type u
 def	idxAssign	Spec.Defs.Notation:87	ParserDescr	
 def	instBotOption_spec	Spec.Defs.Basic:84	Bot (Option α)	
 def	instCoeChainStateTransitionResult	Spec.Defs.Basic:622	Coe (ChainState Node Root) (TransitionResult Node Root)	
-theorem	lemEmptySlotNoop	Analysis.Lemmas:199	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
-theorem	lemEmptySlotNoopFields	Analysis.Lemmas:233	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
-theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:247	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
-theorem	lemHeightProgression	Analysis.Lemmas:309	σ.h = σp.h + 1 ∧ (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h)	BlockPostState σp | stateTransition σp B = TransitionResult.state σ | σ.h ≠ σp.h
-theorem	lemHeightTargetFreshness	Analysis.Lemmas:344	∃ T a, σ.T_h = some T ∧ a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a σ.L ∧ Prec T σ.L ∧ (∃ σT, BlockPostState σT ∧ σT.L = T) ∧ ∀ (σT : ChainState Node Root), BlockPostState σT → σT.L = T → σT.h = σ.h	BlockPostState σ | i ∈ σ.Qtarget
-theorem	lemIntegerThresholds	Analysis.Lemmas:147	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
-theorem	lemQuorumIntersection	Analysis.Lemmas:168	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
-theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:186	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
-theorem	lemTargetUniqueness	Analysis.Lemmas:277	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
+def	instHoldsTransitionResultChainState	Spec.Defs.Basic:643	Holds (TransitionResult Node Root) (ChainState Node Root)	
+theorem	lemChainTargetBothBits	Analysis.Lemmas:591	(processAttestation (postState' B' hB') a A).targetParticipation a.validator = true ∧ (processAttestation (postState' B' hB') a A).progress a.validator = true	postState B' ≠ TransitionResult.invalid | (postState' B' hB').T_h = some T | a.heightPair = HeightPair.target (postState' B' hB').h T | Preceq T A
+theorem	lemChainTargetConflict	Analysis.Lemmas:634	Conflicts T T'	postState B ≠ TransitionResult.invalid | postState B' ≠ TransitionResult.invalid | (postState' B hB).h = (postState' B' hB').h | (postState' B hB).T_h = some T | (postState' B' hB').T_h = some T' | T ≠ T'
+theorem	lemChainTargetFirstBlock	Analysis.Lemmas:495	Preceq T B ∧ ∀ (B' : Blk Node Root) (hB' : postState B' ≠ TransitionResult.invalid), Preceq B' B → (postState' B' hB').h = (postState' B hB).h → Preceq T B'	postState B ≠ TransitionResult.invalid | (postState' B hB).T_h = some T
+theorem	lemChainTargetTransfer	Analysis.Lemmas:537	(postState' B' hB').T_h = some T	postState B ≠ TransitionResult.invalid | postState B' ≠ TransitionResult.invalid | (postState' B hB).targetParticipation a.validator = true | a.heightPair = HeightPair.target (postState' B hB).h T | (postState' B hB).T_h = some T | (postState' B' hB').h = (postState' B hB).h | Prec T B'
+theorem	lemChainTargetUniqueness	Analysis.Lemmas:463	T = T'	Preceq B B' | postState B ≠ TransitionResult.invalid | postState B' ≠ TransitionResult.invalid | (postState' B hB).h = (postState' B' hB').h | (postState' B hB).T_h = some T | (postState' B' hB').T_h = some T'
+theorem	lemEmptySlotNoop	Analysis.Lemmas:207	∃ Th, (Th = σ.T_h ∨ Th = some σ.L) ∧ actionState σ t = { L := σ.L, s := max σ.s t, h := σ.h, s_h := σ.s_h, T_h := Th, nj := σ.nj, targetParticipation := σ.targetParticipation, progress := σ.progress, J := σ.J, h_j := σ.h_j, F := σ.F, h_F := σ.h_F, P := σ.P }	BlockPostState σ
+theorem	lemEmptySlotNoopFields	Analysis.Lemmas:241	have σa := actionState σ t; σa.L = σ.L ∧ σa.h = σ.h ∧ σa.s_h = σ.s_h ∧ σa.nj = σ.nj ∧ σa.J = σ.J ∧ σa.h_j = σ.h_j ∧ σa.F = σ.F ∧ σa.h_F = σ.h_F ∧ σa.P = σ.P ∧ σa.targetParticipation = σ.targetParticipation ∧ σa.progress = σ.progress	BlockPostState σ
+theorem	lemFinalizedBeforeJustified	Analysis.Lemmas:255	have σa := actionState σ t; (Preceq σ.F σ.J ∧ Preceq σ.J σ.L ∧ σ.h_F ≤ σ.h_j ∧ σ.h_j < σ.h) ∧ Preceq σa.F σa.J ∧ Preceq σa.J σa.L ∧ σa.h_F ≤ σa.h_j ∧ σa.h_j < σa.h	BlockPostState σ
+theorem	lemFinalizedChain	Analysis.Lemmas:800	Preceq C C' ∨ ∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y)	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B_F' ≠ TransitionResult.invalid | (postState' B_F' hBF').F = C' | (postState' B_F' hBF').h_F = h' | h ≤ h'
+theorem	lemHeightProgression	Analysis.Lemmas:317	σ.h = σp.h + 1 ∧ (JustificationCertificate B σp.h σ.J ∨ ProgressCertificate B σp.h)	BlockPostState σp | stateTransition σp B = TransitionResult.state σ | σ.h ≠ σp.h
+theorem	lemHeightTargetFreshness	Analysis.Lemmas:352	∃ T, Holds.mem σ.T_h T ∧ ∃ σT, Holds.mem (postState T) σT ∧ ∃ a, a.validator = i ∧ a.heightPair = HeightPair.target σ.h T ∧ IncludedOn a σ.L ∧ Prec T σ.L ∧ σT.h = σ.h	postState B = TransitionResult.state σ | i ∈ σ.Qtarget
+theorem	lemIntegerThresholds	Analysis.Lemmas:155	W Node - b ≥ q Node ∧ q Node ≥ m Node ∧ m Node > b ∧ q Node > b ∧ 2 * q Node - W Node > b	3 * b < W Node
+theorem	lemPastFinalized	Analysis.Lemmas:748	(h < (postState' B hB).h → Preceq C B ∨ 1 ≤ h ∧ ∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y) ∧ (h < (actionState (postState' B hB) t).h → Preceq C B ∨ 1 ≤ h ∧ ∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y)	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B ≠ TransitionResult.invalid
+theorem	lemQuorumIntersection	Analysis.Lemmas:176	weight (Q ∩ Q') ≥ 2 * q Node - W Node	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q'
+theorem	lemQuorumIntersectionNonByzantine	Analysis.Lemmas:194	weight (Q ∩ Q') > b	Q ⊆ Electorate.V | Q' ⊆ Electorate.V | Quorum Q | Quorum Q' | 3 * b < W Node
+theorem	lemTargetBitCompression	Analysis.Lemmas:668	(∀ i ∈ (postState' B hB).Qtarget, ∃ T, Holds.mem (postState' B hB).T_h T ∧ ∃ a, a.validator = i ∧ a.heightPair = HeightPair.target (postState' B hB).h T ∧ IncludedOn a B) ∧ ∀ i ∈ (postState' B hB).Qprog, ∃ a, a.validator = i ∧ a.height = some (postState' B hB).h ∧ IncludedOn a B	postState B ≠ TransitionResult.invalid
+theorem	lemTargetBitCompressionEvidence	Analysis.Lemmas:709	∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	postState B ≠ TransitionResult.invalid | postState B' ≠ TransitionResult.invalid | i ∈ (postState' B hB).Qtarget | i ∈ (postState' B' hB').Qtarget | (postState' B hB).h = (postState' B' hB').h | (postState' B hB).T_h = some T | (postState' B' hB').T_h = some T' | T ≠ T'
+theorem	lemTargetUniqueness	Analysis.Lemmas:285	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y	JustificationCertificate B h T | JustificationCertificate B' h T' | Conflicts T T'
 def	m	Spec.Defs.Basic:124	ℕ	
 def	nonjustifiable	Spec.Defs.Basic:589	Bool	ℕ | ℕ
 def	optBlkBeq	Spec.Defs.Basic:281	Bool	Option (Blk Node Root) | Option (Blk Node Root)
 theorem	optBlkBeq_iff	Spec.Defs.Basic:335	optBlkBeq a b = true ↔ a = b	
 def	pairAssign	Spec.Defs.Notation:76	ParserDescr	
-theorem	parent_prec	Analysis.Proofs.Ancestry:115	Prec P B	B.parent = some P
-theorem	parent_preceq	Analysis.Proofs.Ancestry:71	Preceq P B	B.parent = some P
+theorem	parent_prec	Analysis.Proofs.Ancestry:120	Prec P B	B.parent = some P
+theorem	parent_preceq	Analysis.Proofs.Ancestry:76	Preceq P B	B.parent = some P
+def	postState	Analysis.Proofs.SlotClosure:69	TransitionResult Node Root	Blk Node Root
+def	postState'	Analysis.Proofs.SlotClosure:109	ChainState Node Root	Blk Node Root | autoParam (Replayable B) postState'._auto_1
+theorem	preceq_or_preceq	Analysis.Proofs.Ancestry:131	Preceq a b ∨ Preceq b a	Preceq a c | Preceq b c
 def	processAttestation	Spec.Fig2AttestationProcessing:50	ChainState Node Root	ChainState Node Root | Attestation Node Root | Blk Node Root
 def	processAttestations	Spec.Fig2AttestationProcessing:77	ChainState Node Root	ChainState Node Root | List (Attestation Node Root) | Blk Node Root
 def	processBlock	Spec.Fig2AttestationProcessing:88	TransitionResult Node Root	ChainState Node Root | Blk Node Root
@@ -222,7 +310,9 @@ def	q	Spec.Defs.Basic:119	ℕ
 def	stateAssign	Spec.Defs.Notation:57	ParserDescr	
 def	stateTransition	Spec.Fig1SlotReplay:68	TransitionResult Node Root	ChainState Node Root | Blk Node Root
 def	termInvalid	Spec.Defs.Basic:620	ParserDescr	
+theorem	thmAccountableSafety	Analysis.Theorems:22	∃ S, weight S ≥ 2 * q Node - W Node ∧ ∀ i ∈ S, ∃ x y, x.validator = i ∧ y.validator = i ∧ (IncludedOn x B_F ∧ IncludedOn y B_F' ∨ IncludedOn x B_F' ∧ IncludedOn y B_F) ∧ (E1 x y ∨ E2 x y)	postState B_F ≠ TransitionResult.invalid | (postState' B_F hBF).F = C | (postState' B_F hBF).h_F = h | postState B_F' ≠ TransitionResult.invalid | (postState' B_F' hBF').F = C' | (postState' B_F' hBF').h_F = h' | Conflicts C C'
 def	weight	Spec.Defs.Basic:109	ℕ	Finset Node
+def	«termGet_From_;_»	Spec.Defs.Basic:645	ParserDescr	
 def	«termW(_)»	Spec.Defs.Basic:112	ParserDescr	
 def	«termW(_)≥m»	Spec.Defs.Basic:146	ParserDescr	
 def	«termW(_)≥q»	Spec.Defs.Basic:140	ParserDescr	

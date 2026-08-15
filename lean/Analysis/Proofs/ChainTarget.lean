@@ -3,8 +3,8 @@ import Analysis.Proofs.Freshness
 /-!
 # Proofs: where a chain's target sits (Lemma 8)
 
-The machinery behind `lem:chain-target-uniqueness`. `Analysis/Lemmas.lean` holds the five
-statements of record and calls into here.
+The machinery behind `lem:chain-target-uniqueness`, and all five of its statements.
+`Analysis/Lemmas.lean` holds the statements of record and calls into here.
 
 ## The route: slots, not "first"
 
@@ -464,6 +464,165 @@ theorem chainTargetUniqueness [PositiveWeight Node] {B B' T T' : Blk Node Root}
   · obtain ⟨σT, hσT⟩ := postState_ancestor B' hTB' hB'
     have := prec_slot_lt ⟨hcmp, fun he => hne he.symm⟩ hσT
     omega
+
+/-! ## The named target's own post-state
+
+Everything below reads a named target through the state its own chain replays to. That state is
+where `Fresh` and `Aligned` meet: `Fresh` says the target is on the chain and that its post-state
+is at the current height, and `Aligned` says its slot is the height's start slot.
+
+**It is also what carries a fact from one chain to another.** `postState_s_h_eq` compares two
+states on *one* chain, so it says nothing about two blocks that only share a target. The target's
+own post-state sits on both chains, so applying that lemma twice through it — once on each side —
+relates the two chains' start slots. `chainTargetTransfer` is where that is needed. -/
+
+/-- What the statements below all read off a named target: it is on the chain, its own replay
+    does not fail, that replay ends at the current height and at the same start slot, and the
+    target sits at that slot. -/
+theorem target_postState [PositiveWeight Node] {B T : Blk Node Root} {σ : ChainState Node Root}
+    (hB : postState B = .state σ) (hT : σ.T_h = some T) :
+    T ⪯ B ∧ ∃ σT : ChainState Node Root, postState T = .state σT ∧ σT.h = σ.h ∧
+      σT.s_h = σ.s_h ∧ T.slot = σ.s_h := by
+  have hbp := blockPostState_of_postState B hB
+  have hTB : T ⪯ B := by
+    have h := (fresh_of_blockPostState hbp).onChain T hT
+    rwa [postState_L B hB] at h
+  obtain ⟨σT, hbpT, hLT, hh⟩ := (fresh_of_blockPostState hbp).anchor T hT
+  have hpT : postState T = .state σT := hLT ▸ postState_of_blockPostState hbpT
+  exact ⟨hTB, σT, hpT, hh, postState_s_h_eq B hTB hpT hB hh,
+    (aligned_of_blockPostState hbp).named T hT⟩
+
+/-! ## Lemma 8, first sentence, second clause -/
+
+/-- **The named target is the chain's first block at its height.** Read aloud: the target is on
+    the chain, and every block of the chain whose own post-state is at this height is a descendant
+    of it.
+
+    Minimality is where the two conjuncts of `Aligned` are both used. Take a block `B'` of the
+    chain whose post-state `σ'` is at this height. Either `σ'` names a target, and then
+    `chainTargetUniqueness` makes it `T`, which `Fresh.onChain` puts before `B'`; or it names
+    none, and then `Aligned.empty` puts `B'` itself at the start slot — the same slot as `T`, by
+    `postState_s_h_eq`. Two blocks of one chain at one slot are equal, by `prec_slot_lt`. -/
+theorem chainTargetFirstBlock [PositiveWeight Node] {B T : Blk Node Root}
+    {σ : ChainState Node Root} (hB : postState B = .state σ) (hT : σ.T_h = some T) :
+    T ⪯ B ∧ ∀ (B' : Blk Node Root) (σ' : ChainState Node Root), postState B' = .state σ' →
+      B' ⪯ B → σ'.h = σ.h → T ⪯ B' := by
+  obtain ⟨hTB, σT, hpT, hhT, hshT, hslotT⟩ := target_postState hB hT
+  refine ⟨hTB, fun B' σ' hB' hle hh => ?_⟩
+  have hbp' := blockPostState_of_postState B' hB'
+  have hL' : σ'.L = B' := postState_L B' hB'
+  cases hT' : σ'.T_h with
+  | some T' =>
+      have heq : T' = T := chainTargetUniqueness hle hB' hB hh hT' hT
+      subst heq
+      have h := (fresh_of_blockPostState hbp').onChain T' hT'
+      rwa [hL'] at h
+  | none =>
+      have hemp : σ'.L.slot = σ'.s_h := (aligned_of_blockPostState hbp').empty hT'
+      rw [hL'] at hemp
+      have hsh : σ'.s_h = σ.s_h := postState_s_h_eq B hle hB' hB hh
+      rcases preceq_or_preceq B hTB hle with hc | hc
+      · exact hc
+      · by_cases he : B' = T
+        · exact he ▸ Preceq.refl _
+        · have hlt := prec_slot_lt ⟨hc, he⟩ hpT
+          omega
+
+/-! ## Lemma 8, second sentence, first half -/
+
+/-- **The stored target transfers to every extension beyond it.** Read aloud: if a chain's
+    post-state names `T`, then so does the post-state of any block strictly beyond `T` whose own
+    height is the same.
+
+    The two chains are related only through `T`, so the argument runs through `T`'s own
+    post-state: its start slot is `σ.s_h` on the one side and `σ'.s_h` on the other, so those two
+    agree, and `T` sits at that slot. Then `σ'` cannot name nothing — `Aligned.empty` would put
+    `B'` at the same slot as `T`, which `T ≺ B'` forbids — and whatever it does name is a block
+    of `B'`'s chain at `T`'s slot, so it is `T`. -/
+theorem chainTargetTransfer [PositiveWeight Node] {B B' T : Blk Node Root}
+    {σ σ' : ChainState Node Root}
+    (hB : postState B = .state σ) (hB' : postState B' = .state σ')
+    (hT : σ.T_h = some T) (hheight : σ'.h = σ.h) (hpast : T ≺ B') :
+    σ'.T_h = some T := by
+  obtain ⟨hTB, σT, hpT, hhT, hshT, hslotT⟩ := target_postState hB hT
+  have hsh' : σT.s_h = σ'.s_h := postState_s_h_eq B' hpast.1 hpT hB' (by omega)
+  have hbp' := blockPostState_of_postState B' hB'
+  have hL' : σ'.L = B' := postState_L B' hB'
+  cases hTh : σ'.T_h with
+  | none =>
+      have hemp : σ'.L.slot = σ'.s_h := (aligned_of_blockPostState hbp').empty hTh
+      rw [hL'] at hemp
+      have hlt := prec_slot_lt hpast hB'
+      omega
+  | some T0 =>
+      have h0 : T0.slot = σ'.s_h := (aligned_of_blockPostState hbp').named T0 hTh
+      have hT0B' : T0 ⪯ B' := by
+        have h := (fresh_of_blockPostState hbp').onChain T0 hTh
+        rwa [hL'] at h
+      have heq : T0 = T := by
+        rcases preceq_or_preceq B' hT0B' hpast.1 with hc | hc
+        · by_contra hne
+          have hlt := prec_slot_lt ⟨hc, hne⟩ hpT
+          omega
+        · by_contra hne
+          obtain ⟨σT0, hσT0⟩ := postState_ancestor B' hT0B' hB'
+          have hlt := prec_slot_lt ⟨hc, fun he => hne he.symm⟩ hσT0
+          omega
+      rw [heq]
+
+/-! ## Lemma 8, second sentence, second half
+
+Figure 2's two height tests, run the other way round. `Witnessed.lean` has
+`processAttestation_target_bit` and `processAttestation_progress_bit`, which read a set bit back
+to the attestation that set it; this reads an attestation forward to the bits it sets. It
+mentions no chain at all — the two tests read `σ.h`, `σ.T_h` and the ancestor argument, and
+nothing else. -/
+
+/-- **An exact target vote sets both of its signer's bits.** Read aloud: an attestation whose
+    height pair is the state's own height and stored target, whose target precedes the ancestor
+    argument, leaves both that validator's participation bits set.
+
+    The two tests are independent — Figure 2, line 778 for the target bit and lines 781–782 for
+    the progress bit — and the second is the one that needs `T ⪯ A`, Definition 10
+    (`def:vote-contribution`)'s bound. -/
+theorem processAttestation_both_bits {σ : ChainState Node Root} {T : Blk Node Root}
+    (a : Attestation Node Root) (A : Blk Node Root)
+    (hT : σ.T_h = some T) (hvote : a.heightPair = .target σ.h T) (hanc : T ⪯ A) :
+    (processAttestation σ a A).targetParticipation a.validator = true ∧
+      (processAttestation σ a A).progress a.validator = true := by
+  constructor
+  · simp only [processAttestation]
+    repeat' split
+    all_goals (simp_all; try tauto)
+  · simp only [processAttestation]
+    repeat' split
+    all_goals (simp_all; try tauto)
+
+/-! ## Lemma 8, third sentence -/
+
+/-- **Distinct current-height targets at one height conflict.** Read aloud: if two chains'
+    post-states are at the same height and name different targets, neither target is an ancestor
+    of the other.
+
+    Suppose one were, say `T ⪯ T'`. Then `T` is on `B'`'s chain, and `T`'s own post-state is at
+    that chain's height, so `chainTargetFirstBlock`'s minimality on `B'` puts `T'` before `T`.
+    Antisymmetry then makes them equal. The other order is the same argument with the two chains
+    exchanged. -/
+theorem chainTargetConflict [PositiveWeight Node] {B B' T T' : Blk Node Root}
+    {σ σ' : ChainState Node Root}
+    (hB : postState B = .state σ) (hB' : postState B' = .state σ')
+    (hheight : σ.h = σ'.h) (hT : σ.T_h = some T) (hT' : σ'.T_h = some T')
+    (hne : T ≠ T') : Conflicts T T' := by
+  obtain ⟨hTB, σT, hpT, hhT, -, -⟩ := target_postState hB hT
+  obtain ⟨hT'B', σT', hpT', hhT', -, -⟩ := target_postState hB' hT'
+  intro hcompat
+  rcases hcompat with hc | hc
+  · have hTB' : T ⪯ B' := Preceq.trans hc hT'B'
+    have hmin := (chainTargetFirstBlock hB' hT').2 T σT hpT hTB' (by omega)
+    exact hne (Preceq.antisymm hc hmin)
+  · have hT'B : T' ⪯ B := Preceq.trans hc hTB
+    have hmin := (chainTargetFirstBlock hB hT).2 T' σT' hpT' hT'B (by omega)
+    exact hne (Preceq.antisymm hmin hc)
 
 end Proofs
 

@@ -1578,21 +1578,81 @@ hypotheses (`have hbp : BlockPostState (postState' B) := …`) or every quorum f
 with `.get` and the record hypotheses do not rewrite; and `lake env lean` reported `sorryAx` on the
 records until the full build had run — stale `.olean`s, exactly as the skill warns.
 
+## 2026-08-16 — Lemma 8's other four statements, and Lemma 9's second sentence
+
+Every result written down in `Analysis/Lemmas.lean` is now proved; `make check` is green and the
+five new records carry `[propext, Classical.choice, Quot.sound]` and no `sorryAx`. The plan
+recorded under "Next" the day before was right in outline, and the one thing it did not
+anticipate is the shared fact below.
+
+### `target_postState` — one fact, four consumers, and the bridge between two chains
+
+The previous entry's route stopped at "`s_h` agrees along **one** chain at one height"
+(`postState_s_h_eq`). Three of the four statements compare blocks that are **not** on one chain,
+so that lemma alone does not reach them. What does is the named target's own post-state:
+
+    σ.T_h = some T →  T ⪯ B  ∧  ∃ σT, postState T = .state σT ∧ σT.h = σ.h ∧
+                                       σT.s_h = σ.s_h ∧ T.slot = σ.s_h
+
+`Fresh.onChain` and `Fresh.anchor` give the first three, `postState_s_h_eq` the fourth (the
+target is on the chain, so that comparison *is* along one chain), `Aligned.named` the fifth. It
+is `target_postState` in `Analysis/Proofs/ChainTarget.lean`.
+
+The point is the fourth conjunct. `T`'s post-state sits on **both** chains whenever two chains
+share a target, so applying `postState_s_h_eq` once per side through it relates `s_h` on two
+chains that have no other relation. That is the whole content of `chainTargetTransfer`, and
+nothing weaker would do: `B` and `B'` there are related only by `T ≺ B'`.
+
+### The four, and what each turned out to need
+
+* **`chainTargetFirstBlock`** — minimality is where *both* conjuncts of `Aligned` are read. A
+  block of the chain at this height either names a target, and then the first clause
+  (`chainTargetUniqueness`) makes it `T`; or names none, and then `Aligned.empty` puts that
+  block itself at the start slot, which is `T`'s slot, so the two are equal by `prec_slot_lt`.
+  The docstring's older claim that this clause is the first one seen from the other side stays
+  wrong: the first clause is used *inside* this proof.
+* **`chainTargetTransfer`** — `hbit` and `hvote` do no work, as the statement's docstring already
+  said; only `hT`, `hheight` and `hpast` are read. They are kept because they are the paper's
+  antecedent, and the file now carries `set_option linter.unusedVariables false in` above that
+  declaration so the linter does not read them as bindings to delete.
+* **`chainTargetConflict`** — the paper's own reason, mechanically: if one target preceded the
+  other it would be a block of the other's chain at that chain's height, so
+  `chainTargetFirstBlock`'s minimality orders them the other way too. That needed
+  **antisymmetry of `⪯`**, which `Ancestry.lean` did not have; it is `Preceq.antisymm`, three
+  lines from the existing length count.
+* **`processAttestation_both_bits`** — no chain and no invariant. The two height tests read
+  `σ.h`, `σ.T_h` and the ancestor argument and nothing else, so this is a Figure 2 computation
+  and the statement of record calls it directly. `simp only [processAttestation]`, `repeat'
+  split`, `simp_all` closes it — the same shape as `processAttestation_target_bit` in
+  `Witnessed.lean`, which is this fact run the other way round.
+
+### Lemma 9's second sentence was as short as expected
+
+`targetBitCompressionEvidence` (`Analysis/Proofs/Compression.lean`) is `targetBitCompression`
+applied once per chain. Each counted bit hands back an included vote naming that chain's own
+height and stored target; the heights agree by hypothesis and the targets differ, which is E2
+read off the two pairs. No invariant beyond `Witnessed`, no chain comparison, no fault bound.
+The row stays 🟡 in `MAPPING.md` for the reason it always did — the sentence's E1 half is not
+stated at all — and not because anything written down is outstanding.
+
+### Two decisions closed
+
+* **`lemChainTargetFirstBlock` keeps its `hB'` hypothesis.** The 2026-08-15 entry left dropping
+  it "for when that statement is proved". It is droppable — `postState_ancestor` derives it —
+  but the statement needs a name for `B'`'s post-state to say what its height is, and
+  `postState'` takes that proof. Dropping it would mean writing the height through `postState B'`
+  and an `Option`, which reads worse and is no stronger.
+* **`processAttestation_both_bits` lives in `ChainTarget.lean`, not `Witnessed.lean`**, although
+  it is the converse of the two writer lemmas there. Lemma 8 is its only consumer and that file's
+  docstring promises Lemma 8's machinery in one place.
+
 ## Next
 
-1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
-   `Analysis/Proofs/ChainTarget.lean` — `lemChainTargetFirstBlock` and `lemChainTargetTransfer`
-   are `Aligned.named` plus `postState_s_h_eq` shaped differently; `lemChainTargetConflict` is
-   uniqueness's contrapositive across two chains; `lemChainTargetBothBits` is a direct Figure 2
-   computation. Read the `lean-proof-idioms` skill before any of these. Within Sections 1–5
-   nothing waits on them — their remaining paper consumers are all in `recovery_core.tex`.
-2. **Lemma 9's second sentence** (`lemTargetBitCompressionEvidence`): `Witnessed.target` on both
-   sides gives the two votes, and distinct targets at one height are E2. Short.
-3. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated and the
-   accountable-safety chain is proved.
-4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+1. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated and proved.
+2. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-6. Figures 3 to 5, and the definitions Sections 5 onward add.
+3. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+4. Figures 3 to 5, and the definitions Sections 5 onward add.
+5. Lemma 9's second sentence for E1, once E1's place in it has something to be stated over.

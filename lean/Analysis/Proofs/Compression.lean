@@ -17,6 +17,11 @@ half is a theorem:
 So the proof here is a re-export of `Witnessed` over `postState`, with the endpoint moved from
 `σ.L` to the block by `postState_L`.
 
+The lemma's **second** sentence, "retaining the signed messages is sufficient to prove E1 and E2
+violations", is `targetBitCompressionEvidence` below, for E2. It is that re-export applied twice,
+once per chain: the bits point and the messages prove. Its E1 half is not stated, E1's place in
+that sentence not being rendered.
+
 **The paper's proof cites Lemma 8; this one does not need it.** The paper reaches "every vote
 counted toward justification names `T_h`" through Lemma 8's transfer argument. In this rendering
 the target test (Figure 2, line 778) compares the vote's target with `T_h` directly, so the
@@ -52,6 +57,29 @@ theorem targetBitCompression [PositiveWeight Node] {B : Blk Node Root}
   · intro i hi
     obtain ⟨a, h1, h2, h3⟩ := hw.progress_height i hi
     exact ⟨a, h1, h2, hL ▸ h3⟩
+
+/-- The second sentence's E2 half: one validator's target bit counted on two chains at one height
+    naming different targets produces the pair that proves the violation.
+
+    Nothing beyond `targetBitCompression` is needed. Each bit hands back an included attestation
+    whose height pair is that chain's own height and stored target; the two heights agree by
+    hypothesis and the two targets differ, which is E2 read off the two pairs. The participation
+    state contributes only the two bits — the messages are what prove the violation, which is the
+    sentence's own point. -/
+theorem targetBitCompressionEvidence [PositiveWeight Node] {B B' T T' : Blk Node Root}
+    {σ σ' : ChainState Node Root} {i : Node}
+    (hB : postState B = .state σ) (hB' : postState B' = .state σ')
+    (hi : i ∈ σ.Qtarget) (hi' : i ∈ σ'.Qtarget)
+    (hheight : σ.h = σ'.h) (hT : σ.T_h = some T) (hT' : σ'.T_h = some T') (hne : T ≠ T') :
+    ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+      IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y := by
+  obtain ⟨T0, hT0, x, hx1, hx2, hx3⟩ := (targetBitCompression hB).1 i hi
+  obtain ⟨T1, hT1, y, hy1, hy2, hy3⟩ := (targetBitCompression hB').1 i hi'
+  rw [hT, Option.some.injEq] at hT0
+  rw [hT', Option.some.injEq] at hT1
+  subst hT0; subst hT1
+  refine ⟨x, y, hx1, hy1, hx3, hy3, σ.h, T, T', hx2, ?_, hne⟩
+  rw [hheight]; exact hy2
 
 end Proofs
 

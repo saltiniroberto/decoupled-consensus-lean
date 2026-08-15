@@ -27,10 +27,11 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 11.** One to 7, 10 and 11 are proved, each covering its paper
-sentence in full; Lemma 8 is written down in five statements, the first proved and four
-outstanding; Lemma 9's first sentence is proved and its second is stated, proof outstanding.
-Theorem 5 is proved in `Analysis/Theorems.lean`.
+**Present so far: Lemmas 1 to 11, and nothing written down is unproved.** One to 7, 10 and 11
+each cover their paper sentence in full. Lemma 8 is five statements, all proved. Lemma 9 is two,
+both proved, and it is still the one partial row: the second sentence's E1 half is not stated at
+all, E1's place in that sentence being unrendered. Theorem 5 is proved in
+`Analysis/Theorems.lean`.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -57,8 +58,8 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
-| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — first clause proved, four outstanding |
-| 9 | `lem:target-bit-compression` | 1061–1073 | **yes** — first sentence proved; second stated for E2, its E1 half absent |
+| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements, all proved** |
+| 9 | `lem:target-bit-compression` | 1061–1073 | **yes, both sentences proved** — the second for E2, its E1 half absent |
 | 10 | `lem:past-finalized` | 1092–1101 | **yes, and proved** — finalization as the recorded pair; Def. 11's E1 landed with it |
 | 11 | `lem:finalized-chain` | 1139–1146 | **yes, and proved** — over two recorded pairs |
 
@@ -443,12 +444,17 @@ paper's that auditing one against the other meant reconstructing the mapping, an
 equivalence claim turned out to be false. Extending the convention to Lemmas 1–7 is parked
 (Roberto, 2026-08-15).
 
-**The first is proved; the other four are `sorry`**, and `MAPPING.md`'s row says 🔨 stated.
-The proofs live in `Analysis/Proofs/ChainTarget.lean`, whose route is `s_h`: Definition 7
-(`def:current-height-target`) makes it the slot of the block whose transition entered the
-height, slots are strict along a chain, and `Aligned` — the fifth invariant — says a named
-target sits at it. The record statements are one-line calls, the way Lemma 7 calls into
+**All five are proved**, in `Analysis/Proofs/ChainTarget.lean`, whose route is `s_h`:
+Definition 7 (`def:current-height-target`) makes it the slot of the block whose transition
+entered the height, slots are strict along a chain, and `Aligned` — the fifth invariant — says a
+named target sits at it. The record statements are one-line calls, the way Lemma 7 calls into
 `Freshness.lean`.
+
+Four of the five run on one shared fact, `target_postState`: a named target has a post-state,
+that post-state is at the chain's own height and start slot, and the target sits at that slot.
+It is also what relates two chains that share nothing but a target — the target's own post-state
+is on both, so a `s_h` equality proved along one chain reaches the other through it. The fifth,
+`lemChainTargetBothBits`, needs none of that: it is a fact about `process_attestation` alone.
 
 **"Branch" is not rendered, because the paper does not define it.** Thirty-eight uses, no
 definition; the nearest is line 408, glossing conflict as lying on "different branches". These
@@ -501,21 +507,33 @@ theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [Decidabl
     is itself *at* the height is Lemma 7's post-state conjunct and is not restated here.
 
     `postState B' ≠ invalid` is carried as a hypothesis although it follows from `B' ⪯ B` and
-    `hB` — `postState_ancestor` in `Analysis/Proofs/ChainTarget.lean` is that lemma. Dropping
-    it is a statement change, left for when this is proved.
+    `hB` — `postState_ancestor` in `Analysis/Proofs/ChainTarget.lean` is that lemma. It is kept
+    because the statement needs a name for `B'`'s post-state to say what its height is, and
+    `postState'` takes the proof; dropping the hypothesis would mean writing that height through
+    `postState B'` and an `Option`, which reads worse for no gain in strength.
 
     An earlier note here dismissed this clause as the first clause seen from the other side.
     That was wrong: minimality is new content — it is the invariant the other four statements'
     proofs need — and the first clause is not provable without it.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/ChainTarget.lean`, from the same two invariants as the first
+    clause. Minimality is where both conjuncts of `Aligned` are read: a block of the chain at
+    this height whose own state names a target names `T` by the first clause, and one that names
+    none sits at the start slot itself, which is `T`'s slot. -/
 theorem lemChainTargetFirstBlock {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B T : Blk Node Root}
     (hB : postState B ≠ invalid) (hT : (postState' B).T_h = some T) :
     T ⪯ B ∧ ∀ (B' : Blk Node Root) (hB' : postState B' ≠ invalid), B' ⪯ B →
-      (postState' B').h = (postState' B).h → T ⪯ B' := by
-  sorry
+      (postState' B').h = (postState' B).h → T ⪯ B' :=
+  ⟨(Proofs.chainTargetFirstBlock (TransitionResult.state_get _ hB) hT).1,
+    fun B' hB' hle hh =>
+      (Proofs.chainTargetFirstBlock (TransitionResult.state_get _ hB) hT).2 B' _
+        (TransitionResult.state_get _ hB') hle hh⟩
 
+-- `hbit` and `hvote` are the paper's antecedent and are read by no tactic, which the unused-
+-- variable linter reports as a binding to remove. Removing them would change the statement; the
+-- docstring below says why they are here.
+set_option linter.unusedVariables false in
 /-- **Lemma 8, second sentence, first half** (`lem:chain-target-uniqueness`, lines 1031–1034):
     the target transfers to every extension that contains it.
 
@@ -552,7 +570,11 @@ theorem lemChainTargetFirstBlock {Node Root : Type} [DecidableEq Node] [Decidabl
     7 makes the mark of the block that entered the height, both this statement and that corner
     follow. `CONTEXT.md`, 2026-08-15, records the finding.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/ChainTarget.lean`. `B` and `B'` are related only through `T`, so
+    the argument runs through `T`'s own post-state, which sits on both chains: it puts `T.slot` at
+    both states' start slot. Then `B'`'s state cannot name nothing — `Aligned`'s second conjunct
+    would put `B'` at `T`'s slot, against `T ≺ B'` — and what it does name is a block of `B'`'s
+    chain at that slot, so it is `T`. -/
 theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B B' T : Blk Node Root}
     {a : Attestation Node Root}
@@ -562,8 +584,9 @@ theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableE
     (hT : (postState' B).T_h = some T)
     (hheight : (postState' B').h = (postState' B).h)
     (hpast : T ≺ B') :
-    (postState' B').T_h = some T := by
-  sorry
+    (postState' B').T_h = some T :=
+  Proofs.chainTargetTransfer (TransitionResult.state_get _ hB)
+    (TransitionResult.state_get _ hB') hT hheight hpast
 
 /-- **Lemma 8, second sentence, second half** (`lem:chain-target-uniqueness`, lines 1031–1034):
     the receiving branch "gives the vote both bits".
@@ -594,7 +617,10 @@ theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableE
     Stated on the bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
     `a.validator ∈ V` hypothesis is needed to say what fired.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/ChainTarget.lean`, by `processAttestation_both_bits`, which is
+    this claim with the chain dropped: the two tests read `h`, `T_h` and the ancestor argument
+    and nothing else, so the fact is about `process_attestation` alone and neither `postState`
+    nor any invariant enters it. -/
 theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] {B' T A : Blk Node Root} {a : Attestation Node Root}
     (hB' : postState B' ≠ invalid)
@@ -602,8 +628,8 @@ theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableE
     (hvote : a.heightPair = .target (postState' B').h T)
     (hanc : T ⪯ A) :
     (processAttestation (postState' B') a A).targetParticipation a.validator = true ∧
-      (processAttestation (postState' B') a A).progress a.validator = true := by
-  sorry
+      (processAttestation (postState' B') a A).progress a.validator = true :=
+  Proofs.processAttestation_both_bits a A hT' hvote hanc
 
 /-- **Lemma 8, third sentence** (`lem:chain-target-uniqueness`, lines 1034–1037): distinct
     current-height targets at one height conflict.
@@ -626,14 +652,18 @@ theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableE
     rather than claiming anything, and `hheight` is where that bound already sits in each of
     the five statements.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/ChainTarget.lean`, and this is where the paper's own reason is
+    carried out: were one target an ancestor of the other, it would be a block of the other's
+    chain at that chain's height, so `lemChainTargetFirstBlock`'s minimality would put the two in
+    the opposite order as well, and `⪯` is antisymmetric. -/
 theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B B' T T' : Blk Node Root}
     (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
     (hheight : (postState' B).h = (postState' B').h)
     (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') (hne : T ≠ T') :
-    Conflicts T T' := by
-  sorry
+    Conflicts T T' :=
+  Proofs.chainTargetConflict (TransitionResult.state_get _ hB)
+    (TransitionResult.state_get _ hB') hheight hT hT' hne
 
 /-- **Lemma 9** (`lem:target-bit-compression`, lines 1061–1073): two bits per validator preserve
     both tallies.
@@ -700,7 +730,10 @@ theorem lemTargetBitCompression {Node Root : Type} [DecidableEq Node] [Decidable
     **The E1 half is not stated.** E1 is not rendered, and waits on Lemma 10 with the rest of
     Definition 11.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/Compression.lean`, from `lemTargetBitCompression` twice and
+    nothing else: each bit hands back an included vote naming that chain's own height and stored
+    target, and E2 is those two pairs read side by side. No invariant beyond `Witnessed` and no
+    chain comparison enters, which is why this needs neither Lemma 8 nor the fault bound. -/
 theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B B' T T' : Blk Node Root} {i : Node}
     (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
@@ -708,8 +741,9 @@ theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [D
     (hheight : (postState' B).h = (postState' B').h)
     (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') (hne : T ≠ T') :
     ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-      IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y := by
-  sorry
+      IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y :=
+  Proofs.targetBitCompressionEvidence (TransitionResult.state_get _ hB)
+    (TransitionResult.state_get _ hB') hi hi' hheight hT hT' hne
 
 /-- **Lemma 10** (`lem:past-finalized`, lines 1092–1101): a chain past a finalized height
     contains its finalized block.
