@@ -58,7 +58,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — first clause proved, four outstanding |
 | 9 | `lem:target-bit-compression` | 1061–1073 | **yes** — first sentence proved; second stated for E2, its E1 half absent |
-| 10 | `lem:past-finalized` | 1092–1101 | **yes, stated** — Def. 21's `FC` and Def. 11's E1 landed with it |
+| 10 | `lem:past-finalized` | 1092–1101 | **yes, stated** — finalization as the recorded pair; Def. 11's E1 landed with it |
 | 11 | `lem:finalized-chain` | 1139–1146 | **yes, stated** — over two finality certificates |
 
 **`BlockPostState` replaces `σ[B]` in most places, which is what unblocked Lemma 3.** The paper
@@ -722,9 +722,16 @@ theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [D
     that block is on the chain — or a quorum-intersection's worth of validators each signed a
     finality commitment on one chain and a conflicting height message on the other.
 
-    Noun by noun. "`C` be finalized at height `h`" is `FinalityCertificate B_F h C` — Definition
-    21's `FC`, rendered with this statement, with `B_F` naming the chain the finalization sits
-    on. "Either a block post-state … or a finality action state derived from that chain" is the
+    Noun by noun. "`C` be finalized at height `h`" is **the recorded pair**: the chain ending at
+    `B_F` replays to a state with `(F, h_F) = (C, h)`. Definition 21's finality certificate is
+    deliberately not the hypothesis (Roberto, 2026-08-16): the machine writes that pair only when
+    the certificate's quorums were counted, so the recorded pair is the weaker hypothesis and this
+    statement the stronger — recovering the commit quorum from it is a provenance obligation the
+    proof will carry, a `P`-analogue of `Witnessed`. A pair recorded lower on a longer chain is
+    this statement at that block. At `h = 0` the hypothesis admits genesis, which the paper
+    finalizes by stipulation (line 365) rather than by certificate.
+
+    "Either a block post-state … or a finality action state derived from that chain" is the
     two conjuncts, the way Lemma 4 covers its two subjects; `t` is the action slot, with
     Definition 20's side condition `B.slot ≤ t` not required, as in Lemma 4. "The only exception
     requires E1-slashable validators of total weight at least `2q − W`" is the second disjunct,
@@ -736,7 +743,9 @@ theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [D
     Proof outstanding. -/
 theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F C B : Blk Node Root} {h : Nat}
-    (hfin : FinalityCertificate B_F h C) (hB : postState B ≠ invalid) (t : Time) :
+    (hBF : postState B_F ≠ invalid)
+    (hC : (postState' B_F).F = C) (hhF : (postState' B_F).h_F = h)
+    (hB : postState B ≠ invalid) (t : Time) :
     (h < (postState' B).h → C ⪯ B ∨
       (1 ≤ h ∧ ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
         ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
@@ -756,8 +765,10 @@ theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root
     the other — or a quorum-intersection's worth of validators each signed a slashable pair
     across the two chains.
 
-    Noun by noun. "Finalized pairs" is one `FinalityCertificate` per pair, each on its own chain,
-    `B_F` and `B_F'`. "Unless the fault bound in Assumption 1 is violated" is the second
+    Noun by noun. "Finalized pairs" is one recorded pair per chain: `B_F` replays to a state
+    with `(F, h_F) = (C, h)` and `B_F'` to one with `(C', h')` — the state fact rather than
+    Definition 21's certificate, for the reason `lemPastFinalized` gives.
+    "Unless the fault bound in Assumption 1 is violated" is the second
     disjunct: the bound cannot be *stated* — `Electorate` carries no Byzantine set — but its
     violation is exhibited, a set of weight `2q − W` of validators each with a slashable pair,
     Definition 11's "either condition holds" rendered as `E1 x y ∨ E2 x y`. The paper's own
@@ -767,7 +778,10 @@ theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root
     Proof outstanding. -/
 theorem lemFinalizedChain {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
-    {h h' : Nat} (hfin : FinalityCertificate B_F h C) (hfin' : FinalityCertificate B_F' h' C')
+    {h h' : Nat} (hBF : postState B_F ≠ invalid)
+    (hC : (postState' B_F).F = C) (hhF : (postState' B_F).h_F = h)
+    (hBF' : postState B_F' ≠ invalid)
+    (hC' : (postState' B_F').F = C') (hhF' : (postState' B_F').h_F = h')
     (hle : h ≤ h') :
     C ⪯ C' ∨
       ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧

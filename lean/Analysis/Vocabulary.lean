@@ -15,9 +15,12 @@ to know what the statements in `Analysis/Lemmas.lean` *mean*. Anything proved ab
 belongs under `Analysis/Proofs/`.
 
 **Only the parts a landed statement uses.** Definition 11's E2 landed with Lemma 5, the
-justification and progress certificates with Lemmas 5 and 6, and E1 and the finality certificate
-with Lemmas 10 and 11 and Theorem 5. A declaration no statement mentions is an unaudited claim
-about what the paper means, which is why each waited.
+justification and progress certificates with Lemmas 5 and 6, and E1 with Lemma 10. A declaration
+no statement mentions is an unaudited claim about what the paper means, which is why each waited.
+Definition 21's **finality certificate is absent again**: it was rendered when Lemmas 10 and 11
+were first stated (commit `f284635`), and removed the next day when their finalization hypothesis
+became the recorded pair `(F, h_F)` on a post-state, which no longer mentions it. Restore it from
+that commit when a statement needs the certificate as an object.
 
 ## `σ[·]` is replaced by `BlockPostState`, which makes the certificates weaker
 
@@ -132,30 +135,6 @@ def ProgressCertificate (B : Blk Node Root) (h : Nat) : Prop :=
   (∃ (σp σ : ChainState Node Root) (X : Blk Node Root),
     BlockPostState σp ∧ X ⪯ B ∧ stateTransition σp X = .state σ ∧
       σp.h = h ∧ σ.h = h + 1 ∧ σ.J = σp.J)
-
-/-- Definition 21 (`def:certificates`)'s **finality certificate** `FC(h, T)`, on the chain ending
-    at `B`. Three clauses, as the paper lists them:
-
-    * `JC(h, T)`, on the same chain;
-    * distinct finality commitments to `(h, T)` of weight at least `q`, included on that chain —
-      "distinct" is `Q` being a `Finset` of validators, one attestation each, as in the other two
-      certificates;
-    * the direct invocation that finalized it, as a block post-state on that chain recording
-      `(F, h_F) = (T, h)`.
-
-    The paper's "accepted while it was the latest unfinalized justification" is not a fourth
-    clause: acceptance is Figure 2's own condition on setting a finality bit (lines 774–775), a
-    fact about the transition rather than a further requirement on the certificate — the same
-    reading `ProgressCertificate` gives "setting the progress bits".
-
-    `BlockPostState` stands in for the paper's `σ[·]` here, as in the other two certificates —
-    see the module docstring for what that changes and in which direction. -/
-def FinalityCertificate (B : Blk Node Root) (h : Nat) (T : Blk Node Root) : Prop :=
-  JustificationCertificate B h T ∧
-  (∃ Q : Finset Node, Q ⊆ Electorate.V ∧ w(Q)≥q ∧
-    ∀ i ∈ Q, ∃ a : Attestation Node Root,
-      a.validator = i ∧ a.finalityPair = .commit h T ∧ IncludedOn a B) ∧
-  (∃ σ : ChainState Node Root, BlockPostState σ ∧ σ.L ⪯ B ∧ σ.F = T ∧ σ.h_F = h)
 
 end
 

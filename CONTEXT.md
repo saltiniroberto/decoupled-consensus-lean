@@ -1457,6 +1457,28 @@ Decisions in the three statements, each recorded in its docstring:
 1173 fails the build. The checker is stricter than expected — worth remembering that spans are
 verified, not decorative.
 
+## 2026-08-16 — finalization hypotheses are recorded pairs, and `FC` is removed
+
+Roberto: Lemmas 10 and 11 and Theorem 5 should be stated over post-states alone — the highlighted
+clause of `FC`, `(F, h_F) = (C, h)` recorded on the chain, not the certificate. Restated: each
+finalization hypothesis is now
+
+    (hBF : postState B_F ≠ invalid)
+    (hC : (postState' B_F).F = C) (hhF : (postState' B_F).h_F = h)
+
+The recorded pair is the weaker hypothesis, so the theorems are stronger. What it costs sits in
+the future proofs: the machine writes `(F, h_F)` only when the commit quorum was counted, and
+recovering that quorum from the recorded pair is a provenance obligation — a `P`-analogue of
+`Witnessed`, which today covers the target and progress bits and not `P`. At `h = 0` the
+hypothesis admits genesis, which the paper finalizes by stipulation (line 365), so the paper's
+`h = 0` cases now sit inside the statements rather than outside them.
+
+**`FinalityCertificate` is removed**, one day after it landed: no statement mentions it, and
+`Vocabulary.lean`'s own rule is that such a declaration is an unaudited claim. It lives at commit
+`f284635`; restore it from there when a statement needs the certificate as an object — the bridge
+lemma "a recorded pair at `1 ≤ h` yields the certificate" is the natural such statement. E1 stays:
+Lemma 10's evidence disjunct uses it.
+
 ## Next
 
 1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in

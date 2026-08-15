@@ -29,8 +29,10 @@ open Framework.StsMultisetLog
     weight at least `2q − W`, each of which signed a slashable pair of messages retained on the
     two chains.
 
-    Noun by noun. "Both finalize" is one `FinalityCertificate` per block, each on its own chain,
-    `B_F` and `B_F'`; "conflicting" is Definition 5's `Conflicts`. "Cannot … unless" is rendered
+    Noun by noun. "Both finalize" is one recorded pair per chain: `B_F` replays to a state with
+    `(F, h_F) = (C, h)` and `B_F'` to one with `(C', h')` — the state fact rather than Definition
+    21's certificate, for the reason `lemPastFinalized` gives; "conflicting" is Definition 5's
+    `Conflicts`. "Cannot … unless" is rendered
     as the paper's "unless" made the conclusion, as in Lemma 5: both certificates in hand, the
     slashable set exists. "Provably E1- or E2-slashable" is the pair `x, y` with
     `E1 x y ∨ E2 x y`, each message retained — included — on one of the two chains, in either
@@ -41,7 +43,10 @@ open Framework.StsMultisetLog
     Proof outstanding. -/
 theorem thmAccountableSafety {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
-    {h h' : Nat} (hfin : FinalityCertificate B_F h C) (hfin' : FinalityCertificate B_F' h' C')
+    {h h' : Nat} (hBF : postState B_F ≠ invalid)
+    (hC : (postState' B_F).F = C) (hhF : (postState' B_F).h_F = h)
+    (hBF' : postState B_F' ≠ invalid)
+    (hC' : (postState' B_F').F = C') (hhF' : (postState' B_F').h_F = h')
     (hconf : Conflicts C C') :
     ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
       ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
