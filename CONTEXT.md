@@ -1394,6 +1394,33 @@ Also: the working tree's `SlotClosure.lean` came back with `Replayable`/`postSta
 statements need. Restored from HEAD. That is the failure mode `CLAUDE.local.md`'s commit rule
 exists for.
 
+## 2026-08-15 — Lemma 9 is stated and its first sentence proved
+
+`lem:target-bit-compression` had been marked "no formal shape". Read closely, its first sentence
+does have one, and the formulation decision is this: the sentence claims two things, and only one
+is a statement *in* the model.
+
+* That the justification and progress rules **read** nothing beyond the two arrays is visible in
+  `processHeightEvents`'s own text — its conditions are `w(Q_target) ≥ q` and `w(Q_prog) ≥ q`. A
+  congruence theorem saying so would be trivial; it is a fact about the definition. Not stated.
+* That the compression **loses nothing** is a theorem: behind each set bit sits an included vote
+  whose content is exactly what the rule would otherwise need. That is `Witnessed`, the third
+  invariant, re-exported over `postState` with the endpoint moved to the block by `postState_L`.
+  `lemTargetBitCompression`, proved in the new `Analysis/Proofs/Compression.lean`, six lines.
+
+The second sentence — retained messages suffice for E1 and E2 — is not stated: E1 is not rendered
+(it waits on Lemma 10), and for E2 the claim is carried by its type, a predicate on two
+attestations that reads no participation state. `MAPPING.md`'s row is 🟡 partial for this reason.
+
+**The finding Roberto asked the lemma for: Lemma 9 does not need Lemma 8 here.** The paper's proof
+reaches "every vote counted toward justification names `T_h`" through Lemma 8; in this rendering,
+Figure 2's line 778 compares the vote's target with `T_h` directly, so `Witnessed.target` already
+carries the naming and no chain comparison enters. Within Sections 1–5, Lemma 9 was Lemma 8's only
+proof-level consumer — so **every remaining in-paper use of Lemma 8 is in the recovery half**:
+`recovery_core.tex` cites it five times (lines 2355, 2667, 3340, 3839, 3868). Lemma 8's four
+outstanding proofs are therefore not blocking anything in Sections 1–5; they matter when the
+recovery sections land.
+
 ## Next
 
 1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
@@ -1409,9 +1436,8 @@ exists for.
    certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
    Assumption 1's `b` with `3b < W` for Lemma 11. Each lands in `Analysis/Vocabulary.lean` with the
    statement that needs it, not before, and each is a modelling decision to record here.
-3. **Lemma 9's formulation**, which has to be decided before it can be written at all, and whatever
-   Lemmas 8 and 10 turn out to state more narrowly than the paper's sentence. Every statement landed
-   so far now covers its sentence in full.
+3. Whatever Lemma 10 turns out to state more narrowly than the paper's sentence. Lemma 9's
+   formulation is settled and its first sentence proved; its second waits on E1, with Lemma 10.
 4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing

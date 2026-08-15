@@ -5,6 +5,7 @@ import Analysis.Proofs.Ancestry
 import Analysis.Proofs.Certificates
 import Analysis.Proofs.Freshness
 import Analysis.Proofs.ChainTarget
+import Analysis.Proofs.Compression
 
 /-!
 # The paper's numbered lemmas
@@ -25,8 +26,9 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 8.** One to 7 are proved and each covers its paper sentence in full;
-Lemma 8 is written down in five statements, the first proved and four outstanding.
+**Present so far: Lemmas 1 to 9.** One to 7 are proved and each covers its paper sentence in full;
+Lemma 8 is written down in five statements, the first proved and four outstanding; Lemma 9's first
+sentence is proved and its second waits on E1.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -54,7 +56,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — first clause proved, four outstanding |
-| 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
+| 9 | `lem:target-bit-compression` | 1061–1073 | **yes, first sentence, and proved** — the second waits on E1 |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
 | 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 |
 
@@ -631,5 +633,47 @@ theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableE
     (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') (hne : T ≠ T') :
     Conflicts T T' := by
   sorry
+
+/-- **Lemma 9** (`lem:target-bit-compression`, lines 1061–1073): two bits per validator preserve
+    both tallies.
+
+    > For a given chain state, all information needed for the justification and progress rules
+    > is contained in the two Boolean arrays `target_participation` and `progress`. Retaining
+    > the signed messages is sufficient to prove E1 and E2 violations.
+
+    Read aloud: on the chain ending at `B`, every counted target bit is backed by an included
+    vote naming the stored target at the current height, and every counted progress bit by an
+    included vote at the current height.
+
+    **What the first sentence can mean in this rendering.** Definition 15's state already stores
+    only the two arrays, so the half saying the rules *read* nothing else — the paper's proof:
+    "these are the only two signer sets used by `process_height_events`" — is visible in that
+    routine's own text, whose conditions are `w(Q_target) ≥ q` and `w(Q_prog) ≥ q`. It is a fact
+    about the definition, not a statement in the model. The half that is a theorem is that the
+    compression **loses nothing**: behind each set bit sits an included vote whose content is
+    exactly what the rule would otherwise need — for justification a vote naming `(h, T_h)`, the
+    root the bit does not store being recoverable as `T_h` itself; for progress a vote at the
+    current height, the target it named deliberately forgotten. "With each validator counted
+    once" is `Q_target` and `Q_prog` being `Finset`s.
+
+    **The second sentence is not stated.** E1 is not rendered — it waits on Lemma 10 — and for
+    E2 the claim is carried by its type: `E2` is a predicate on two attestations, so it reads
+    messages alone and no participation state. `MAPPING.md`'s row is 🟡 partial for this reason.
+
+    **The paper's proof cites Lemma 8; this proof does not need it.** The paper reaches "every
+    vote counted toward justification names `T_h`" through Lemma 8's transfer between branches.
+    In this rendering, Figure 2's line 778 compares the vote's target with `T_h` directly, so
+    the naming is `Witnessed.target` — the third invariant — with no chain comparison anywhere.
+
+    Proved in `Analysis/Proofs/Compression.lean`, a re-export of `Witnessed` over `postState`. -/
+theorem lemTargetBitCompression {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {B : Blk Node Root}
+    (hB : postState B ≠ invalid) :
+    (∀ i ∈ (postState' B).Qtarget,
+      get T from (postState' B).T_h;
+      ∃ a, a.validator = i ∧ a.heightPair = .target (postState' B).h T ∧ IncludedOn a B) ∧
+    ∀ i ∈ (postState' B).Qprog, ∃ a : Attestation Node Root,
+      a.validator = i ∧ a.height = some (postState' B).h ∧ IncludedOn a B :=
+  Proofs.targetBitCompression (TransitionResult.state_get _ hB)
 
 end Decoupled
