@@ -24,9 +24,10 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 7**, all proved and each covering its paper sentence in full. Two
-notions came with Lemma 3,
-`BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
+**Present so far: Lemmas 1 to 8.** One to 7 are proved and each covers its paper sentence in full;
+Lemma 8's four statements are written down and none is proved.
+
+Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
 certificates.
 
@@ -51,7 +52,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
-| 8 | `lem:chain-target-uniqueness` | 1029–1041 | likely yes, over two block post-states |
+| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in four statements** — written down, none proved |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
 | 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 |
@@ -417,5 +418,108 @@ theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [Decidabl
 --       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
 --       ∃ _ : Replayable T, (postState' T).h = σ.h := by
 --   `sorry`
+
+/-! ## Lemma 8, in four statements
+
+`lem:chain-target-uniqueness` (lines 1029–1041) is four sentences, and three of them are claims.
+Each gets its own theorem, which is this file's rule; the fourth is a scope disclaimer and is
+recorded in `lemChainTargetUniqueness`'s docstring rather than stated.
+
+**None of the four is proved yet.** Each is a `sorry`, and `MAPPING.md`'s row says 🔨 stated. What
+they wait on is a fifth invariant: that a named target is the *first* block of its height on its
+chain. `Fresh` (`Analysis/Proofs/Freshness.lean`) says only that it has a post-state at the current
+height, which does not distinguish it from a later block of the same height.
+
+**"Branch" is not rendered, because the paper does not define it.** Thirty-eight uses, no
+definition; the nearest is line 408, glossing conflict as lying on "different branches". These
+statements say `⪯`, `≺` and `Conflicts` instead. -/
+
+/-- **Lemma 8, first sentence** (`lem:chain-target-uniqueness`, lines 1030–1031): a chain has one
+    current-height target per height.
+
+    Read aloud: if two block post-states on one chain are at the same height and both name a target,
+    they name the same block.
+
+    "On a given chain" is `σ.L ⪯ σ'.L`, and "each reached height" is `σ.h = σ'.h`. The claim is
+    conditional on both naming a target: `T_h` is `⊥` from the transition block until the following
+    slot records it, so a post-state at the height need not name one, and `get T from σ.T_h` would
+    assert what the sentence does not.
+
+    **The paper's fourth sentence is not stated**: "targets of different heights on one chain are
+    compatible and are not constrained by this claim" bounds the scope of the other three rather
+    than claiming anything, and the `σ.h = σ'.h` hypothesis is where that bound already sits.
+
+    "Once nonempty, it is the chain's unique first block at that height" is the same claim seen from
+    the other side, and it is what the proof will need as an invariant. It is not a second statement
+    because it says nothing the first sentence does not.
+
+    Proof outstanding. -/
+theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {σ σ' : ChainState Node Root}
+    {B B' T T' : Blk Node Root} (hp : postState B = .state σ) (hp' : postState B' = .state σ')
+    (hchain : σ.L ⪯ σ'.L) (hheight : σ.h = σ'.h)
+    (hT : σ.T_h = some T) (hT' : σ'.T_h = some T') : T = T' := by
+  sorry
+
+/-- **Lemma 8, second sentence, first half** (`lem:chain-target-uniqueness`, lines 1031–1034): the
+    target transfers to every extension that contains it.
+
+    Read aloud: a block post-state at this height whose latest block is strictly beyond `T` names
+    `T` as its target, given that some post-state at that height names `T`.
+
+    The paper's antecedent is "a target vote for `T` sets the target bit on one height-`h` branch".
+    That is `σ.T_h = some T` here, which is what Lemma 7 delivers from a counted bit — so the
+    hypothesis is the vote's consequence rather than the vote, and nothing is lost.
+
+    "Has processed beyond `T` and contains `T`" is the single condition `T ≺ σ'.L`: `≺` is
+    containment, and strictness is "beyond".
+
+    Proof outstanding. -/
+theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {σ σ' : ChainState Node Root}
+    {B B' T : Blk Node Root} (hp : postState B = .state σ) (hp' : postState B' = .state σ')
+    (hheight : σ'.h = σ.h) (hT : σ.T_h = some T) (hpast : T ≺ σ'.L) : σ'.T_h = some T := by
+  sorry
+
+/-- **Lemma 8, second sentence, second half** (`lem:chain-target-uniqueness`, line 1034): such a
+    chain "gives the vote both bits".
+
+    Read aloud: an exact target vote naming this state's own height and target sets the voter's
+    target bit and its progress bit.
+
+    A claim about Figure 2's routine rather than about a state, which is why it is its own theorem:
+    the rest of this file speaks about states. The two height tests in `process_attestation` are
+    independent — lines 778 and 781–782 — so an exact target vote passes both, the second because
+    `T ⪯ A` holds when `A` is the including block's parent and `T` is on that chain.
+
+    Stated on the bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
+    `a.validator ∈ V` hypothesis is needed to say what fired.
+
+    Proof outstanding. -/
+theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] {σ : ChainState Node Root} {a : Attestation Node Root}
+    {T A : Blk Node Root} (hT : σ.T_h = some T) (hpair : a.heightPair = .target σ.h T)
+    (hanc : T ⪯ A) :
+    (processAttestation σ a A).targetParticipation a.validator = true ∧
+      (processAttestation σ a A).progress a.validator = true := by
+  sorry
+
+/-- **Lemma 8, third sentence** (`lem:chain-target-uniqueness`, lines 1034–1035): distinct
+    current-height targets at one height conflict.
+
+    Read aloud: if two block post-states at the same height name different targets, neither target
+    is an ancestor of the other.
+
+    No chain hypothesis, which is the point: this is what the first sentence rules out on one chain,
+    said about two chains that need not be related. The paper's reason is that two distinct first
+    blocks at one height cannot be comparable.
+
+    Proof outstanding. -/
+theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {σ σ' : ChainState Node Root}
+    {B B' T T' : Blk Node Root} (hp : postState B = .state σ) (hp' : postState B' = .state σ')
+    (hheight : σ.h = σ'.h) (hT : σ.T_h = some T) (hT' : σ'.T_h = some T') (hne : T ≠ T') :
+    Conflicts T T' := by
+  sorry
 
 end Decoupled

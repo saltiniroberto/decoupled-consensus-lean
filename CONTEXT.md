@@ -1235,10 +1235,41 @@ Two Lean facts found while doing it, both cheap to rediscover but easy to misdia
   | invalid => …` does not parse. Use positional bullets, or `rcases h : r with ⟨σ⟩ | _` when the
   equation is needed.
 
+## 2026-08-15 — Lemma 8 is stated, in four theorems, none proved
+
+`lem:chain-target-uniqueness` (lines 1029–1041) is four sentences, three of them claims. Each claim
+is its own theorem in `Analysis/Lemmas.lean`, per that file's rule:
+
+    lemChainTargetUniqueness   one chain, one height, both naming a target → same target
+    lemChainTargetTransfer     a post-state at that height with T ≺ L names T
+    lemChainTargetBothBits     an exact target vote sets the target bit and the progress bit
+    lemChainTargetConflict     two post-states at one height naming different targets → conflict
+
+The fourth sentence — "targets of different heights on one chain are compatible and are not
+constrained by this claim" — bounds the scope of the others rather than claiming anything, and the
+`σ.h = σ'.h` hypothesis is where that bound already sits. It is recorded in a docstring, not stated.
+
+**All four are `sorry`, and `MAPPING.md`'s row says 🔨 stated.** `make check` refuses the tree until
+they are proved; `make dev` reports four outstanding.
+
+**What they wait on: a fifth invariant.** The named target must be the *first* block of its height on
+its chain. `Fresh` says only that it has a post-state at the current height, which does not separate
+it from a later block of the same height, and every one of the three claims turns on "first".
+
+**"Branch" is not rendered.** The paper uses the word 38 times and never defines it; the nearest is
+line 408, glossing conflict as lying on "different branches". The statements say `⪯`, `≺` and
+`Conflicts`.
+
+`lemChainTargetBothBits` is the odd one: it is a claim about `processAttestation` rather than about a
+state, which is why it is separate rather than folded into `lemChainTargetTransfer`. It is stated on
+the participation bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
+`a.validator ∈ V` hypothesis is needed to say what fired.
+
 ## Next
 
-1. **The lemmas, one at a time**, each its own commit with its own `MAPPING.md` row. Of what
-   is left of Sections 3 and 4, Lemma 8 looks statable over two block post-states; Lemmas 10 and 11
+1. **Prove Lemma 8's four statements**, which needs the fifth invariant above: a named target is the
+   first block of its height on its chain. Then the lemmas one at a time, each its own commit with
+   its own `MAPPING.md` row. Of what is left of Sections 3 and 4, Lemmas 10 and 11
    wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
    before attempting a proof — all of them are over routines written in the paper's imperative
    shape, so `sorry` is not the only obstacle.
