@@ -155,6 +155,15 @@ theorem Preceq.trans_prec {a b c : Blk Node Root} (hab : a ⪯ b) (hbc : b ≺ c
     rw [he] at h1
     omega⟩
 
+/-- **`⪯` is antisymmetric**: two blocks each preceding the other are the same block. Same count
+    as the two lemmas above — were they distinct, one would be a strict ancestor of the other and
+    so have the strictly shorter chain, while the other inequality bounds it the other way. -/
+theorem Preceq.antisymm {a b : Blk Node Root} (hab : a ⪯ b) (hba : b ⪯ a) : a = b := by
+  by_contra hne
+  have h1 := ancestors_length_lt_of_prec (⟨hab, hne⟩ : a ≺ b)
+  have h2 := ancestors_length_le_of_preceq hba
+  omega
+
 namespace Proofs
 
 /-! ## The invariant -/
