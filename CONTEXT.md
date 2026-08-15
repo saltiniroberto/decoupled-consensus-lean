@@ -1187,9 +1187,28 @@ without a keyword, which cannot work: adding `ident ∈ term ; term` makes the p
 after every membership, so plain `T ∈ σ.T_h` stops parsing. `let T := …` is not available either —
 `:=` is definitional binding, and `T` would be the `Option`.
 
-`Replayable`, `postState'` and a second Lemma 7 stated over them were written for comparison and
-deleted the same day. `TransitionResult.map`, `toOption` and `get` remain in `Spec/Defs/Basic.lean`
-with nothing using them; `map`'s docstring says so.
+### The domain-restriction alternative, parked rather than decided
+
+`Replayable B` is `postState B ≠ invalid`, and `postState' B (h : Replayable B) : ChainState` is the
+post-state defined exactly where the replay succeeds — a result type with no failure case, nothing
+fabricated. The proof is an autoparam (`:= by assumption`), so `postState' T` can be written bare
+wherever `Replayable T` is a hypothesis, including under a binder that introduces it.
+
+Both are live in `Analysis/Proofs/SlotClosure.lean` and used by nothing. The statement written over
+them is **commented out** at the end of `Analysis/Lemmas.lean`, with its proof never written:
+
+    ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ … ∧ T ≺ σ.L ∧
+      ∃ _ : Replayable T, (postState' T).h = σ.h
+
+The `∃ _` cannot be removed: `postState' T` needs the proof as an argument, and `∧` has no binder to
+supply one. What it binds is a proof rather than a state, and having it inside the statement is what
+would meet "motive is not type correct" in a later proof that rewrites `postState T`.
+
+Roberto, 2026-08-15: parked, not decided — how a statement should name an earlier block's post-state
+is a question to come back to, and the two shapes are kept side by side until then.
+
+`TransitionResult.map`, `toOption` and `get` also remain in `Spec/Defs/Basic.lean` with nothing using
+them; `map`'s docstring says so.
 
 Lemma 7's hypothesis changed with it, from `BlockPostState σ` to `postState B = .state σ`. The two
 are interderivable by the bridges above, and the second is nearer the paper's "on a chain ending at

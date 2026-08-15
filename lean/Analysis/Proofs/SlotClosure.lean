@@ -101,6 +101,30 @@ def postState {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
       | .state σp => stateTransition σp (.mk p s n as r)
       | invalid => invalid
 
+/-- `B`'s own chain replays without failing. A name for `postState B ≠ invalid`, so that a
+    statement or a hypothesis can say what the condition means rather than how it is written. -/
+def Replayable {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] (B : Blk Node Root) : Prop := postState B ≠ invalid
+
+/-- The post-state at `B`, defined exactly on the blocks that replay. Its result type is
+    `ChainState`, with no failure case: `invalid` has not been removed from the world but from the
+    *domain*, since the function cannot be applied where the replay fails. Nothing is fabricated,
+    which is what a total `postState` with a default value would have to do.
+
+    A function "defined only where the replay succeeds" is a function that takes the proof. Writing
+    it over a subtype, `{B // Replayable B} → ChainState …`, is the same thing with the pair packed:
+    in Lean the restriction of the domain *is* the proof argument.
+
+    The proof is an **autoparam**, filled by `assumption` from the local context, so `postState' T`
+    can be written bare wherever `Replayable T` is already a hypothesis — including under a binder
+    that introduces it, as in `∃ _ : Replayable T, (postState' T).h = σ.h`. It can still be passed
+    explicitly. What this hides is the writing of the proof, not the proof: the elaborated term
+    contains it, so rewriting `postState B` afterwards still meets "motive is not type correct". -/
+def postState' {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] (B : Blk Node Root)
+    (h : Replayable B := by assumption) : ChainState Node Root :=
+  (postState B).get h
+
 /-- Definition 20 (`def:finality-action-state`): `σ_a[X] = process_slots(σ[X], slot(a))`, the state
     a signing action reads, got by closing exactly the slots before the action.
 

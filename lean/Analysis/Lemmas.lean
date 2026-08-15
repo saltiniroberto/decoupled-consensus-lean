@@ -384,4 +384,38 @@ theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [Decidabl
         T ≺ σ.L ∧ σT.h = σ.h :=
   Proofs.heightTargetFreshness (Proofs.blockPostState_of_postState B hp)
 
+-- Commented out 2026-08-15, pending a decision on how a statement should name the post-state
+-- of an earlier block. The statement above is the one of record; this is the same claim over
+-- `Replayable` and `postState'`, which are live in `Analysis/Proofs/SlotClosure.lean` and used
+-- by nothing. Its proof was never written. `CONTEXT.md` records the alternatives.
+
+-- /-- **Lemma 7 written with `Replayable`**, to be compared with the statement above. The two say
+--     the same thing; if this one is ever revived, one of them goes.
+--
+--     No `get … from` here, deliberately: this is what the statement looks like written with
+--     `Replayable` and ordinary quantifiers throughout.
+--
+--     `Replayable T` names "`T`'s own chain replays", and `postState' T hT` is the post-state itself,
+--     a `ChainState` with no failure case — so `.h` is a field access.
+--
+--     The binder cannot be avoided: `postState' T` needs a proof of `Replayable T`, and `∧` has no
+--     binder, so no conjunct beside it can supply one. What is bound is a proof rather than a state,
+--     and `postState'`'s autoparam is why it need not be written twice — the `∃` puts the proof in
+--     the body's context and `assumption` finds it, so the binder needs no name at all.
+--
+--     What it buys: the replay condition has a name a reader can say aloud, and that name is the shape
+--     a later lemma would take as a hypothesis; and the height is read off a state rather than through
+--     an `Option`.
+--
+--     What it costs: the target comes back as `∃ T` with `σ.T_h = some T` beside it; `hT` sits inside
+--     the statement, so a proof that rewrites `postState T` afterwards meets "motive is not type
+--     correct"; and it needs two definitions, `Replayable` and `postState'`. -/
+-- theorem lemHeightTargetFreshness' {Node Root : Type} [DecidableEq Node]
+--     [DecidableEq Root] [Electorate Node] [Params] [PositiveWeight Node]
+--     {σ : ChainState Node Root} {B : Blk Node Root} (hp : postState B = .state σ) :
+--     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
+--       a.heightPair = .target σ.h T ∧ IncludedOn a σ.L ∧ T ≺ σ.L ∧
+--       ∃ _ : Replayable T, (postState' T).h = σ.h := by
+--   `sorry`
+
 end Decoupled
