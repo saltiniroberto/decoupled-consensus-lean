@@ -1267,6 +1267,43 @@ state, which is why it is separate rather than folded into `lemChainTargetTransf
 the participation bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
 `a.validator ∈ V` hypothesis is needed to say what fired.
 
+### Restated for audit, later the same day — and one fidelity bug found
+
+Roberto: as written, the statements were hard to audit against the paper. Their vocabulary —
+`postState'`, `⪯`, fields — was no longer the sentences' — vote, bit, branch — and every translation
+argument lived in a docstring as unchecked prose. Restated, with two conventions:
+
+* **Each Lemma 8 docstring now carries the paper's sentence verbatim**, then maps its nouns one by
+  one, and states a deviation as a deviation rather than as an equivalence. Extending this to
+  Lemmas 1–7 is parked (Roberto, 2026-08-15).
+* **Five declarations, not four.** The first sentence's second clause — "once nonempty, it is the
+  chain's unique first block at that height" — had been dismissed as the first clause seen from the
+  other side. Wrong: it is the minimality claim, the fifth invariant above, now
+  `lemChainTargetFirstBlock`. Its `∀ C` carries `postState C ≠ invalid` as a named hypothesis
+  because "an ancestor of a replayable block replays" is not written; the autoparam fails on an
+  *anonymous* arrow binder (`assumption` did not find it during statement elaboration), so the
+  binder is named `hC`.
+
+**The fidelity bug.** The old transfer docstring said its hypothesis `T_h = some T` was the vote's
+consequence, "nothing is lost". False in one reachable corner: the bit is set mid-block, and when
+the same vote completes the quorum, `process_height_events` fires at the end of that block —
+`stateTransition` runs it directly after the attestations — and `advance_height` clears `T_h`
+**and** both participation arrays, so no post-state of that branch carries any trace of the event.
+The restated `lemChainTargetTransfer` carries the paper's antecedent (`hbit`, `hvote`, `hT`; only
+`hT` does deductive work, and the docstring says so) and records the corner as a stated deviation.
+
+**The proofs layer will carry the stronger form**: antecedent `(postState' B').s_h = T.slot ∧
+T ≺ B'`. Definition 7 makes `s_h` the slot of the block whose transition entered the height, and
+slots are strict along a chain — `state_transition` rejects `B.slot ≤ σ.s`, Figure 1 line 719 — so
+that antecedent pins `T` as the height's first block, is implied by the paper's antecedent even in
+the consumed-quorum corner, and yields both the record statement and the corner. (Line 719 also
+closes an earlier worry: a same-slot child, which would have made the recorded target the last
+same-slot block rather than the transition block, is rejected there.)
+
+`lemChainTargetBothBits` moved to the receiving chain `B'`, its hypotheses now exactly what
+`lemChainTargetTransfer` concludes, so the two compose into the paper's sentence; its earlier
+generic-state shape returns in the proofs layer, the claim depending only on `T_h` and `h`.
+
 ### The shape all four settled into, later the same day
 
 No state is quantified over anywhere in Lemma 8. Each statement takes the blocks, a hypothesis that
@@ -1313,8 +1350,8 @@ case either way.
 
 ## Next
 
-1. **Prove Lemma 8's four statements**, which needs the fifth invariant above: a named target is the
-   first block of its height on its chain. Then the lemmas one at a time, each its own commit with
+1. **Prove Lemma 8's five statements**, `lemChainTargetFirstBlock` first — it is the minimality
+   invariant the other four need, and the proofs go over `(postState' B').s_h = T.slot`. Then the lemmas one at a time, each its own commit with
    its own `MAPPING.md` row. Of what is left of Sections 3 and 4, Lemmas 10 and 11
    wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
    before attempting a proof — all of them are over routines written in the paper's imperative

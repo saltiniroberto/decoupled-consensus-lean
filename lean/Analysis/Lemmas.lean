@@ -25,7 +25,7 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 readable where it stands rather than assembled from context above it.
 
 **Present so far: Lemmas 1 to 8.** One to 7 are proved and each covers its paper sentence in full;
-Lemma 8's four statements are written down and none is proved.
+Lemma 8's five statements are written down and none is proved.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -52,7 +52,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
-| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in four statements** — written down, none proved |
+| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — written down, none proved |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
 | 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 |
@@ -419,46 +419,55 @@ theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [Decidabl
 --       ∃ _ : Replayable T, (postState' T).h = σ.h := by
 --   `sorry`
 
-/-! ## Lemma 8, in four statements
+/-! ## Lemma 8, in five statements
 
-`lem:chain-target-uniqueness` (lines 1029–1041) is four sentences, and three of them are claims.
-Each gets its own theorem, which is this file's rule; the fourth is a scope disclaimer and is
-recorded in `lemChainTargetUniqueness`'s docstring rather than stated.
+`lem:chain-target-uniqueness` (lines 1029–1041) is three sentences and a gloss. The first two
+sentences are each two claims, and the third is a claim and a scope note, so the
+sentence-per-theorem rule gives five declarations and one docstring note:
 
-**None of the four is proved yet.** Each is a `sorry`, and `MAPPING.md`'s row says 🔨 stated. What
-they wait on is a fifth invariant: that a named target is the *first* block of its height on its
-chain. `Fresh` (`Analysis/Proofs/Freshness.lean`) says only that it has a post-state at the current
-height, which does not distinguish it from a later block of the same height.
+* first sentence — `lemChainTargetUniqueness`, at most one target per chain and height, and
+  `lemChainTargetFirstBlock`, the named target is the chain's first block at that height;
+* second sentence — `lemChainTargetTransfer`, the stored target transfers to extensions, and
+  `lemChainTargetBothBits`, the transferred vote counts for both predicates;
+* third sentence — `lemChainTargetConflict`, distinct targets at one height conflict; the
+  sentence's second clause bounds the scope of the others and is recorded in that docstring.
+
+**Each docstring carries the paper's sentence verbatim**, then says what renders each of its
+nouns, and states a deviation as a deviation rather than as an equivalence. This is the first
+section written that way — the earlier statements' vocabulary had drifted far enough from the
+paper's that auditing one against the other meant reconstructing the mapping, and one docstring's
+equivalence claim turned out to be false. Extending the convention to Lemmas 1–7 is parked
+(Roberto, 2026-08-15).
+
+**None of the five is proved.** Each is a `sorry`, and `MAPPING.md`'s row says 🔨 stated. The
+proofs will live in `Analysis/Proofs/`, over the antecedent `(postState' B').s_h = T.slot` —
+Definition 7 (`def:current-height-target`) makes `s_h` the slot of the block whose transition
+entered the height, and slots are strict along a chain — with these record statements one-line
+calls into them, the way Lemma 7 calls into `Freshness.lean`.
 
 **"Branch" is not rendered, because the paper does not define it.** Thirty-eight uses, no
 definition; the nearest is line 408, glossing conflict as lying on "different branches". These
 statements say `⪯`, `≺` and `Conflicts` instead. -/
 
-/-- **Lemma 8, first sentence** (`lem:chain-target-uniqueness`, lines 1030–1031): a chain has one
-    current-height target per height.
+/-- **Lemma 8, first sentence, first clause** (`lem:chain-target-uniqueness`, lines 1030–1031):
+    a chain has at most one current-height target per height.
 
-    Read aloud: if two block post-states on one chain are at the same height and both name a target,
-    they name the same block.
+    > Each reached height has at most one current-height target on a given chain; once
+    > nonempty, it is the chain's unique first block at that height.
 
-    **No state is quantified over.** `postState B ≠ invalid` says the replay does not fail, and
-    `postState' B` is then the post-state itself, so the statement speaks of the two blocks and
-    their fields and never binds a `σ`. `postState'`'s proof argument is an autoparam filled by
-    `assumption`, and it takes `hB` even though its declared type is `Replayable B` — that
-    definition unfolds to this hypothesis, so neither the name nor the argument has to be written.
+    This declaration is the "at most one" clause. The "unique first block" clause is
+    `lemChainTargetFirstBlock`, next — a second declaration for the same sentence, the way
+    `lemEmptySlotNoopFields` is for Lemma 3.
 
-    "On a given chain" is `B ⪯ B'`, the two blocks the hypotheses already name. "Each reached
-    height" is the equality of the two post-states' `h`. The claim is conditional on both naming a
-    target: `T_h` is `⊥` from the transition block until the following slot records it, so a
-    post-state at the height need not name one, and `get T from (postState' B).T_h` would assert
-    what the sentence does not.
+    Read aloud: if the post-states of two blocks on one chain are at the same height and both
+    name a target, they name the same block.
 
-    **The paper's fourth sentence is not stated**: "targets of different heights on one chain are
-    compatible and are not constrained by this claim" bounds the scope of the other three rather
-    than claiming anything, and the height equality is where that bound already sits.
-
-    "Once nonempty, it is the chain's unique first block at that height" is the same claim seen from
-    the other side, and it is what the proof will need as an invariant. It is not a second statement
-    because it says nothing the first sentence does not.
+    Noun by noun: "a given chain" is `B ⪯ B'` — a post-state's chain is its own block's, so the
+    two states sit on one chain read at two moments. "Each reached height" is the equality of
+    the two `h` fields. "At most one current-height target" is conditional on both states
+    naming one: `T_h` is `⊥` from the transition block until the following slot records it,
+    Definition 7's one-slot delay, so a post-state at the height need not name a target and
+    `get T from …` would assert what the sentence does not.
 
     Proof outstanding. -/
 theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
@@ -468,65 +477,145 @@ theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [Decidabl
     (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') : T = T' := by
   sorry
 
-/-- **Lemma 8, second sentence, first half** (`lem:chain-target-uniqueness`, lines 1031–1034): the
-    target transfers to every extension that contains it.
+/-- **Lemma 8, first sentence, second clause** (`lem:chain-target-uniqueness`, lines
+    1030–1031): the named target is the chain's first block at its height.
 
-    Read aloud: a block post-state at this height whose latest block is strictly beyond `T` names
-    `T` as its target, given that some post-state at that height names `T`.
+    > Each reached height has at most one current-height target on a given chain; once
+    > nonempty, it is the chain's unique first block at that height.
 
-    The paper's antecedent is "a target vote for `T` sets the target bit on one height-`h` branch".
-    That is `(postState' B).T_h = some T` here, which is what Lemma 7 delivers from a counted bit —
-    so the hypothesis is the vote's consequence rather than the vote, and nothing is lost.
+    Read aloud: the named target is on the chain, and every block of the chain whose post-state
+    is at this height is a descendant of it.
 
-    "Has processed beyond `T` and contains `T`" is the single condition `T ≺ B'`: `≺` is
-    containment, and strictness is "beyond". `B'` rather than the state's `L`, for the reason
-    `lemChainTargetUniqueness` gives.
+    "Once nonempty" is `hT`. "First" is the conclusion's second half, minimality: `T` precedes
+    every block of the height. "Unique" costs nothing further — two firsts precede each other,
+    and `⪯` is antisymmetric by the length count in `Analysis/Proofs/Ancestry.lean`. That `T`
+    is itself *at* the height is Lemma 7's post-state conjunct and is not restated here.
+
+    `postState C ≠ invalid` is carried as a hypothesis although it follows from `C ⪯ B` and
+    `hB` — an ancestor of a block that replays itself replays — because that lemma is not
+    written. Dropping it later strengthens the statement without moving any caller.
+
+    An earlier note here dismissed this clause as the first clause seen from the other side.
+    That was wrong: minimality is new content — it is the invariant the other four statements'
+    proofs need — and the first clause is not provable without it.
+
+    Proof outstanding. -/
+theorem lemChainTargetFirstBlock {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {B T : Blk Node Root}
+    (hB : postState B ≠ invalid) (hT : (postState' B).T_h = some T) :
+    T ⪯ B ∧ ∀ (C : Blk Node Root) (hC : postState C ≠ invalid), C ⪯ B →
+      (postState' C).h = (postState' B).h → T ⪯ C := by
+  sorry
+
+/-- **Lemma 8, second sentence, first half** (`lem:chain-target-uniqueness`, lines 1031–1034):
+    the target transfers to every extension that contains it.
+
+    > If a target vote for `T` sets the target bit on one height-`h` branch, then every
+    > height-`h` branch that has processed beyond `T` and contains `T` has the same
+    > current-height target and gives the vote both bits.
+
+    This declaration is the "has the same current-height target" half; "gives the vote both
+    bits" is `lemChainTargetBothBits`, next.
+
+    Read aloud: a vote names the target stored on `B`'s chain and its bit stands set there;
+    then the post-state of any `B'` strictly beyond `T` at the same height stores the same
+    target.
+
+    The antecedent, noun by noun. "A target vote for `T`" is `hvote`; "sets the target bit" is
+    `hbit`, the bit standing in `B`'s post-state; "on one height-`h` branch" is `B`, and `hT`
+    ties the vote's `T` to that branch's stored target — Figure 2's line 778 sets the bit only
+    when the vote's pair equals `(h, T_h)`, so these three are the state the paper's event
+    leaves behind. Only `hT` does work in the proof. `hbit` and `hvote` are kept because they
+    are the paper's antecedent: an earlier shape kept only `hT` and claimed the two readings
+    were equivalent, and they are not — see below.
+
+    "Every height-`h` branch" is `hheight`. "Has processed beyond `T` and contains `T`" is
+    `T ≺ B'` alone: `state_transition` rejects `B.slot ≤ σ.s` (line 719), so slots strictly
+    increase along a chain, and any strict descendant's replay has closed `T`'s slot — which is
+    where Definition 7's recording happens.
+
+    **One reading of the antecedent is not covered.** The bit is set mid-block, and when the
+    same vote completes the quorum, `process_height_events` fires at the end of that block:
+    `advance_height` clears `T_h` and both participation arrays, so no post-state of `B`'s
+    branch satisfies `hbit` and `hT`, while the paper's event did happen. The sentence read at
+    that event is strictly stronger than this statement. It is still true, and the proofs layer
+    is where it will live: from the antecedent `(postState' B').s_h = T.slot`, which Definition
+    7 makes the mark of the block that entered the height, both this statement and that corner
+    follow. `CONTEXT.md`, 2026-08-15, records the finding.
 
     Proof outstanding. -/
 theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B B' T : Blk Node Root}
+    {a : Attestation Node Root}
     (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hbit : (postState' B).targetParticipation a.validator = true)
+    (hvote : a.heightPair = .target (postState' B).h T)
+    (hT : (postState' B).T_h = some T)
     (hheight : (postState' B').h = (postState' B).h)
-    (hT : (postState' B).T_h = some T) (hpast : T ≺ B') :
+    (hpast : T ≺ B') :
     (postState' B').T_h = some T := by
   sorry
 
-/-- **Lemma 8, second sentence, second half** (`lem:chain-target-uniqueness`, line 1034): such a
-    chain "gives the vote both bits".
+/-- **Lemma 8, second sentence, second half** (`lem:chain-target-uniqueness`, lines 1031–1034):
+    the receiving branch "gives the vote both bits".
 
-    Read aloud: an exact target vote naming this state's own height and target sets the voter's
-    target bit and its progress bit.
+    > If a target vote for `T` sets the target bit on one height-`h` branch, then every
+    > height-`h` branch that has processed beyond `T` and contains `T` has the same
+    > current-height target and gives the vote both bits.
 
-    A claim about Figure 2's routine rather than about a state, which is why it is its own theorem:
-    the rest of this file speaks about states. The two height tests in `process_attestation` are
-    independent — lines 778 and 781–782 — so an exact target vote passes both, the second because
-    `T ⪯ A` holds when `A` is the including block's parent and `T` is on that chain.
+    Read aloud: on a chain whose post-state names `T`, an exact target vote for that state's
+    height and `T` sets its signer's target bit and progress bit.
+
+    "Gives the vote both bits" is the conclusion: both of Figure 2's height tests count the
+    vote. The two tests are independent — lines 778 and 781–782 — and the second needs `T ⪯ A`,
+    where `A` is the including block's parent (line 765); Definition 10 (`def:vote-contribution`)
+    is where that bound comes from. On this chain any including block extends `B'`, so its
+    parent satisfies `T ⪯ B' ⪯ A`; `A` stays a variable because the including block is not part
+    of this statement.
+
+    `hT'` and the height in `hvote` arrive here as hypotheses because they are what
+    `lemChainTargetTransfer` concludes: the two declarations compose into the paper's sentence.
+
+    **Deviation**: on a real inclusion the vote is processed at a later state of the chain —
+    after slot closure and the including block's earlier attestations — and this statement
+    fixes the state at `B'`'s post-state. The claim depends only on the state's `T_h` and `h`,
+    which is the form the proof in `Analysis/Proofs/` will take, over any state agreeing on
+    those two fields.
 
     Stated on the bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
     `a.validator ∈ V` hypothesis is needed to say what fired.
 
-    **Narrower than it need be.** Nothing in the argument uses that the state is a post-state: the
-    same holds of any state whose `T_h` and `h` the vote names. It is written over `postState' B`
-    to match the other three, and because the paper's sentence is about a branch.
-
     Proof outstanding. -/
 theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] {B T A : Blk Node Root} {a : Attestation Node Root}
-    (hB : postState B ≠ invalid) (hT : (postState' B).T_h = some T)
-    (hpair : a.heightPair = .target (postState' B).h T) (hanc : T ⪯ A) :
-    (processAttestation (postState' B) a A).targetParticipation a.validator = true ∧
-      (processAttestation (postState' B) a A).progress a.validator = true := by
+    [Electorate Node] [Params] {B' T A : Blk Node Root} {a : Attestation Node Root}
+    (hB' : postState B' ≠ invalid)
+    (hT' : (postState' B').T_h = some T)
+    (hvote : a.heightPair = .target (postState' B').h T)
+    (hanc : T ⪯ A) :
+    (processAttestation (postState' B') a A).targetParticipation a.validator = true ∧
+      (processAttestation (postState' B') a A).progress a.validator = true := by
   sorry
 
-/-- **Lemma 8, third sentence** (`lem:chain-target-uniqueness`, lines 1034–1035): distinct
+/-- **Lemma 8, third sentence** (`lem:chain-target-uniqueness`, lines 1034–1037): distinct
     current-height targets at one height conflict.
 
-    Read aloud: if two block post-states at the same height name different targets, neither target
-    is an ancestor of the other.
+    > Distinct current-height targets at one height lie on conflicting branches; targets of
+    > different heights on one chain are compatible and are not constrained by this claim.
 
-    No `B ⪯ B'`, which is the point: this is what the first sentence rules out on one chain, said
-    about two blocks that need not be related. The paper's reason is that two distinct first blocks
-    at one height cannot be comparable.
+    Read aloud: if the post-states of two blocks are at the same height and name different
+    targets, neither target is an ancestor of the other.
+
+    No `B ⪯ B'`, which is the point: this is what the first sentence rules out on one chain,
+    said about two blocks that need not be related. "Lie on conflicting branches" is
+    `Conflicts T T'` — the paper's own gloss of conflict, at line 408, is lying on different
+    branches, and `Conflicts` is Definition 5's rendering of it. The paper's reason is that two
+    distinct first blocks at one height cannot be comparable, which is
+    `lemChainTargetFirstBlock` applied on each side.
+
+    **The sentence's second clause is not stated**: "targets of different heights on one chain
+    are compatible and are not constrained by this claim" bounds the scope of the whole lemma
+    rather than claiming anything, and `hheight` is where that bound already sits in each of
+    the five statements.
 
     Proof outstanding. -/
 theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
