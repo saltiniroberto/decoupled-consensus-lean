@@ -149,6 +149,22 @@ theorem blockPostState_of_postState : ∀ (B : Blk Node Root) {σ : ChainState N
       · rw [hp] at h
         simp at h
 
+/-- `postState B`'s own latest block is `B`. So a hypothesis `postState B = .state σ` already names
+    the chain's last block, and a statement about two such states can relate them by `B ⪯ B'`
+    without mentioning `σ.L` at all. -/
+theorem postState_L : ∀ (B : Blk Node Root) {σ : ChainState Node Root},
+    postState B = .state σ → σ.L = B
+  | .genesis, σ, h => by
+      simp only [postState, TransitionResult.state.injEq] at h
+      rw [← h]; rfl
+  | .mk p s n as r, σ, h => by
+      rw [postState] at h
+      rcases hp : postState p with ⟨σp⟩ | _
+      · rw [hp] at h
+        exact stateTransition_L h
+      · rw [hp] at h
+        simp at h
+
 /-- The converse: a block post-state is what `postState` returns for its own latest block. So the
     replay never fails on a block that has a post-state, and the two agree on the state.
 

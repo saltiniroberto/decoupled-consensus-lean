@@ -1194,8 +1194,10 @@ post-state defined exactly where the replay succeeds — a result type with no f
 fabricated. The proof is an autoparam (`:= by assumption`), so `postState' T` can be written bare
 wherever `Replayable T` is a hypothesis, including under a binder that introduces it.
 
-Both are live in `Analysis/Proofs/SlotClosure.lean` and used by nothing. The statement written over
-them is **commented out** at the end of `Analysis/Lemmas.lean`, with its proof never written:
+Both are live in `Analysis/Proofs/SlotClosure.lean`. They were unused when this was written; later
+the same day all four of Lemma 8's statements were written over them, so `postState'` is now the
+shape a statement uses to name an earlier block's post-state. The Lemma 7 statement written over
+them is still **commented out** at the end of `Analysis/Lemmas.lean`, with its proof never written:
 
     ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ … ∧ T ≺ σ.L ∧
       ∃ _ : Replayable T, (postState' T).h = σ.h
@@ -1264,6 +1266,50 @@ line 408, glossing conflict as lying on "different branches". The statements say
 state, which is why it is separate rather than folded into `lemChainTargetTransfer`. It is stated on
 the participation bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
 `a.validator ∈ V` hypothesis is needed to say what fired.
+
+### The shape all four settled into, later the same day
+
+No state is quantified over anywhere in Lemma 8. Each statement takes the blocks, a hypothesis that
+each replays, and reads fields off `postState'`:
+
+    (hchain : B ⪯ B') (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hheight : (postState' B).h = (postState' B').h)
+    (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') : T = T'
+
+Roberto, 2026-08-15, in three steps: do not write `σ.L` — use the blocks the hypotheses already
+name; do not bind `σ` and `σ'` at all; and do not write `Replayable` in a statement.
+
+`postState' B` is written bare although its proof argument is declared `Replayable B`: the argument
+is an autoparam filled by `assumption`, and `Replayable` unfolds to `postState B ≠ invalid`, so the
+hypothesis matches. That is what lets the name stay out of the statements while `postState'` keeps
+it in its signature. `Replayable` and `postState'` are therefore no longer unused — the note above
+saying so is superseded.
+
+`T ≺ σ'.L` became `T ≺ B'` in `lemChainTargetTransfer`. `postState_L` in
+`Analysis/Proofs/Determinism.lean` is what says nothing is lost: `postState B = .state σ → σ.L = B`.
+
+**One statement was narrowed to fit the style.** `lemChainTargetBothBits` held of *any* state whose
+`T_h` and `h` the vote names — nothing in it needs a post-state — and is now written over
+`postState' B`. Reversible, and the docstring says so.
+
+### What the proofs need, measured and then backed out
+
+Two pieces were drafted and removed on instruction, the ask having been for statements only. Their
+shapes, so they are not rediscovered:
+
+* **comparability of two ancestors of one block** — `a ⪯ c → b ⪯ c → a ⪯ b ∨ b ⪯ a`, by structural
+  recursion on `c`: at a child either one of the two *is* that child, or both are ancestors of the
+  parent. It compiled. Nothing in `Ancestry.lean` had it.
+* **height monotone along a chain** — `X ⪯ Y → postState X = .state σX → postState Y = .state σY →
+  σX.h ≤ σY.h`, from `advanceHeight_h` upward through `processHeightEvents`, `processSlot`,
+  `closeSlots`, `processSlots`, `processBlock` and `stateTransition`, none of which lowers `h`. It
+  needs no `PositiveWeight`, unlike Lemma 6. The `processHeightEvents` step did not go through with
+  `first | (rw [advanceHeight_h]; omega) | exact Nat.le_refl _`; the goals sit under `pure`, and the
+  `_L` lemma above it uses `exact advanceHeight_L _ _ _` for that reason.
+
+With those two and the fifth invariant, the first sentence is short: `T ⪯ B ⪯ B'` and `T' ⪯ B'` make
+`T` and `T'` comparable, both are at the same height, and "first at its height" kills the strict
+case either way.
 
 ## Next
 

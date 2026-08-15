@@ -440,14 +440,21 @@ statements say `⪯`, `≺` and `Conflicts` instead. -/
     Read aloud: if two block post-states on one chain are at the same height and both name a target,
     they name the same block.
 
-    "On a given chain" is `σ.L ⪯ σ'.L`, and "each reached height" is `σ.h = σ'.h`. The claim is
-    conditional on both naming a target: `T_h` is `⊥` from the transition block until the following
-    slot records it, so a post-state at the height need not name one, and `get T from σ.T_h` would
-    assert what the sentence does not.
+    **No state is quantified over.** `postState B ≠ invalid` says the replay does not fail, and
+    `postState' B` is then the post-state itself, so the statement speaks of the two blocks and
+    their fields and never binds a `σ`. `postState'`'s proof argument is an autoparam filled by
+    `assumption`, and it takes `hB` even though its declared type is `Replayable B` — that
+    definition unfolds to this hypothesis, so neither the name nor the argument has to be written.
+
+    "On a given chain" is `B ⪯ B'`, the two blocks the hypotheses already name. "Each reached
+    height" is the equality of the two post-states' `h`. The claim is conditional on both naming a
+    target: `T_h` is `⊥` from the transition block until the following slot records it, so a
+    post-state at the height need not name one, and `get T from (postState' B).T_h` would assert
+    what the sentence does not.
 
     **The paper's fourth sentence is not stated**: "targets of different heights on one chain are
     compatible and are not constrained by this claim" bounds the scope of the other three rather
-    than claiming anything, and the `σ.h = σ'.h` hypothesis is where that bound already sits.
+    than claiming anything, and the height equality is where that bound already sits.
 
     "Once nonempty, it is the chain's unique first block at that height" is the same claim seen from
     the other side, and it is what the proof will need as an invariant. It is not a second statement
@@ -455,10 +462,10 @@ statements say `⪯`, `≺` and `Conflicts` instead. -/
 
     Proof outstanding. -/
 theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] [PositiveWeight Node] {σ σ' : ChainState Node Root}
-    {B B' T T' : Blk Node Root} (hp : postState B = .state σ) (hp' : postState B' = .state σ')
-    (hchain : σ.L ⪯ σ'.L) (hheight : σ.h = σ'.h)
-    (hT : σ.T_h = some T) (hT' : σ'.T_h = some T') : T = T' := by
+    [Electorate Node] [Params] [PositiveWeight Node] {B B' T T' : Blk Node Root}
+    (hchain : B ⪯ B') (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hheight : (postState' B).h = (postState' B').h)
+    (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') : T = T' := by
   sorry
 
 /-- **Lemma 8, second sentence, first half** (`lem:chain-target-uniqueness`, lines 1031–1034): the
@@ -468,17 +475,20 @@ theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [Decidabl
     `T` as its target, given that some post-state at that height names `T`.
 
     The paper's antecedent is "a target vote for `T` sets the target bit on one height-`h` branch".
-    That is `σ.T_h = some T` here, which is what Lemma 7 delivers from a counted bit — so the
-    hypothesis is the vote's consequence rather than the vote, and nothing is lost.
+    That is `(postState' B).T_h = some T` here, which is what Lemma 7 delivers from a counted bit —
+    so the hypothesis is the vote's consequence rather than the vote, and nothing is lost.
 
-    "Has processed beyond `T` and contains `T`" is the single condition `T ≺ σ'.L`: `≺` is
-    containment, and strictness is "beyond".
+    "Has processed beyond `T` and contains `T`" is the single condition `T ≺ B'`: `≺` is
+    containment, and strictness is "beyond". `B'` rather than the state's `L`, for the reason
+    `lemChainTargetUniqueness` gives.
 
     Proof outstanding. -/
 theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] [PositiveWeight Node] {σ σ' : ChainState Node Root}
-    {B B' T : Blk Node Root} (hp : postState B = .state σ) (hp' : postState B' = .state σ')
-    (hheight : σ'.h = σ.h) (hT : σ.T_h = some T) (hpast : T ≺ σ'.L) : σ'.T_h = some T := by
+    [Electorate Node] [Params] [PositiveWeight Node] {B B' T : Blk Node Root}
+    (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hheight : (postState' B').h = (postState' B).h)
+    (hT : (postState' B).T_h = some T) (hpast : T ≺ B') :
+    (postState' B').T_h = some T := by
   sorry
 
 /-- **Lemma 8, second sentence, second half** (`lem:chain-target-uniqueness`, line 1034): such a
@@ -495,13 +505,17 @@ theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableE
     Stated on the bits rather than on `Q_target` and `Q_prog`, which are `V.filter`, so that no
     `a.validator ∈ V` hypothesis is needed to say what fired.
 
+    **Narrower than it need be.** Nothing in the argument uses that the state is a post-state: the
+    same holds of any state whose `T_h` and `h` the vote names. It is written over `postState' B`
+    to match the other three, and because the paper's sentence is about a branch.
+
     Proof outstanding. -/
 theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] {σ : ChainState Node Root} {a : Attestation Node Root}
-    {T A : Blk Node Root} (hT : σ.T_h = some T) (hpair : a.heightPair = .target σ.h T)
-    (hanc : T ⪯ A) :
-    (processAttestation σ a A).targetParticipation a.validator = true ∧
-      (processAttestation σ a A).progress a.validator = true := by
+    [Electorate Node] [Params] {B T A : Blk Node Root} {a : Attestation Node Root}
+    (hB : postState B ≠ invalid) (hT : (postState' B).T_h = some T)
+    (hpair : a.heightPair = .target (postState' B).h T) (hanc : T ⪯ A) :
+    (processAttestation (postState' B) a A).targetParticipation a.validator = true ∧
+      (processAttestation (postState' B) a A).progress a.validator = true := by
   sorry
 
 /-- **Lemma 8, third sentence** (`lem:chain-target-uniqueness`, lines 1034–1035): distinct
@@ -510,15 +524,16 @@ theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableE
     Read aloud: if two block post-states at the same height name different targets, neither target
     is an ancestor of the other.
 
-    No chain hypothesis, which is the point: this is what the first sentence rules out on one chain,
-    said about two chains that need not be related. The paper's reason is that two distinct first
-    blocks at one height cannot be comparable.
+    No `B ⪯ B'`, which is the point: this is what the first sentence rules out on one chain, said
+    about two blocks that need not be related. The paper's reason is that two distinct first blocks
+    at one height cannot be comparable.
 
     Proof outstanding. -/
 theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
-    [Electorate Node] [Params] [PositiveWeight Node] {σ σ' : ChainState Node Root}
-    {B B' T T' : Blk Node Root} (hp : postState B = .state σ) (hp' : postState B' = .state σ')
-    (hheight : σ.h = σ'.h) (hT : σ.T_h = some T) (hT' : σ'.T_h = some T') (hne : T ≠ T') :
+    [Electorate Node] [Params] [PositiveWeight Node] {B B' T T' : Blk Node Root}
+    (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hheight : (postState' B).h = (postState' B').h)
+    (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') (hne : T ≠ T') :
     Conflicts T T' := by
   sorry
 
