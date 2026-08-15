@@ -8,6 +8,7 @@ import Analysis.Proofs.Certificates
 import Analysis.Proofs.Freshness
 import Analysis.Proofs.ChainTarget
 import Analysis.Proofs.Compression
+import Analysis.Proofs.Provenance
 import Analysis.Proofs.Finality
 import Analysis.Lemmas
 import Analysis.Theorems

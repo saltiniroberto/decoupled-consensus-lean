@@ -68,6 +68,11 @@ theorem ancestors_subset : ∀ {b c : Blk Node Root}, b ⪯ c →
 theorem Preceq.trans {a b c : Blk Node Root} (hab : a ⪯ b) (hbc : b ⪯ c) : a ⪯ c :=
   ancestors_subset hbc a hab
 
+/-- Genesis precedes every block: `ancestors` always ends at it. -/
+theorem genesis_preceq : ∀ (B : Blk Node Root), (Blk.genesis : Blk Node Root) ⪯ B
+  | .genesis => Preceq.refl _
+  | .mk p _ _ _ _ => List.mem_cons_of_mem _ (genesis_preceq p)
+
 /-- A block's parent precedes it. This is what turns `process_block`'s `parent = σ.L` check into
     an ancestry fact, and it is the only place the check is used. -/
 theorem parent_preceq : ∀ {B P : Blk Node Root}, B.parent = some P → P ⪯ B

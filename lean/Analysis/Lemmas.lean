@@ -741,7 +741,10 @@ theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [D
     retained on `B`'s, which is where the paper's proof finds them. "For `h ≥ 1`" is the
     `1 ≤ h ∧` in that disjunct: at `h = 0` the claim is flat.
 
-    Proof outstanding. -/
+    The proof is outstanding, a `sorry` in `Analysis/Proofs/Finality.lean`: the quorums are
+    recovered from the recorded pairs by `Certified` (`Analysis/Proofs/Provenance.lean`), and
+    what is missing is the walk to the first advance past `h` and the E1 analysis at the
+    intersection. Lemmas 11 and Theorem 5 are already derived from this statement. -/
 theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F C B : Blk Node Root} {h : Nat}
     (hBF : postState B_F ≠ invalid)
@@ -754,8 +757,8 @@ theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root
     (h < (actionState (postState' B) t).h → C ⪯ B ∨
       (1 ≤ h ∧ ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
         ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-          IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y)) := by
-  sorry
+          IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y)) :=
+  Proofs.pastFinalized hBF hC hhF hB t
 
 /-- **Lemma 11** (`lem:finalized-chain`, lines 1139–1146): finalized blocks form a chain.
 
@@ -776,9 +779,12 @@ theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root
     proof produces E1 alone in both of its cases, so the disjunction may narrow to E1 when this
     is proved; recorded rather than assumed.
 
-    The proof is outstanding, a `sorry` in `Analysis/Proofs/Finality.lean`, whose docstring says
-    what is missing — Lemma 10, and the recovery of the two quorums from the recorded pairs.
-    Theorem 5 is already derived from this statement. -/
+    Proved in `Analysis/Proofs/Finality.lean`, in the paper's three cases: `h = 0` is genesis by
+    stipulation (`Certified.fin0`); equal heights intersect `C`'s commit quorum with `C'`'s
+    target quorum, both recovered from the recorded pairs by `Certified`
+    (`Analysis/Proofs/Provenance.lean`); different heights go through Lemma 10 — whose own proof
+    is the remaining `sorry` on this path — and order `C` below `C'` by the two post-state
+    anchors and height monotonicity. -/
 theorem lemFinalizedChain {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
     {h h' : Nat} (hBF : postState B_F ≠ invalid)

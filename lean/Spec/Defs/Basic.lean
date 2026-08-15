@@ -684,6 +684,15 @@ def TransitionResult.map {α : Type} (f : ChainState Node Root → α) :
 @[simp] theorem TransitionResult.map_invalid {α : Type} (f : ChainState Node Root → α) :
     (invalid : TransitionResult Node Root).map f = none := rfl
 
+/-- `map` loses nothing: a mapped value pins the state it was read from. -/
+theorem TransitionResult.map_eq_some {α : Type} {f : ChainState Node Root → α}
+    {r : TransitionResult Node Root} {v : α} (h : r.map f = some v) :
+    ∃ σ, r = .state σ ∧ f σ = v := by
+  cases r
+  · exact ⟨_, rfl, Option.some.inj (by rwa [TransitionResult.map_state] at h)⟩
+  · rw [TransitionResult.map_invalid] at h
+    exact absurd h (by simp)
+
 /-- The state itself, as an `Option`: `TransitionResult` is `Option (ChainState …)` under the
     paper's two names, and this is that isomorphism. -/
 def TransitionResult.toOption (r : TransitionResult Node Root) : Option (ChainState Node Root) :=
