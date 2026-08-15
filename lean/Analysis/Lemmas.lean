@@ -491,7 +491,7 @@ theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [Decidabl
     and `⪯` is antisymmetric by the length count in `Analysis/Proofs/Ancestry.lean`. That `T`
     is itself *at* the height is Lemma 7's post-state conjunct and is not restated here.
 
-    `postState C ≠ invalid` is carried as a hypothesis although it follows from `C ⪯ B` and
+    `postState B' ≠ invalid` is carried as a hypothesis although it follows from `B' ⪯ B` and
     `hB` — an ancestor of a block that replays itself replays — because that lemma is not
     written. Dropping it later strengthens the statement without moving any caller.
 
@@ -503,8 +503,8 @@ theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [Decidabl
 theorem lemChainTargetFirstBlock {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B T : Blk Node Root}
     (hB : postState B ≠ invalid) (hT : (postState' B).T_h = some T) :
-    T ⪯ B ∧ ∀ (C : Blk Node Root) (hC : postState C ≠ invalid), C ⪯ B →
-      (postState' C).h = (postState' B).h → T ⪯ C := by
+    T ⪯ B ∧ ∀ (B' : Blk Node Root) (hB' : postState B' ≠ invalid), B' ⪯ B →
+      (postState' B').h = (postState' B).h → T ⪯ B' := by
   sorry
 
 /-- **Lemma 8, second sentence, first half** (`lem:chain-target-uniqueness`, lines 1031–1034):
