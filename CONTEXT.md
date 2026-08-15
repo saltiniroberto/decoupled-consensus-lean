@@ -1504,25 +1504,63 @@ proof needs, recorded in `Finality.lean`'s docstring: Lemma 10; and — because 
 hypotheses are recorded pairs now — provenance invariants recovering the finality and
 justification quorums from `P` and `(J, h_j)`, the `Witnessed` shape extended to two more fields.
 
+## 2026-08-16 — Lemma 11 is proved, from a sixth invariant
+
+`lemFinalizedChain` is proved, in the paper's three cases. The machinery is new in two files.
+
+**`Certified`, the sixth invariant** (`Analysis/Proofs/Provenance.lean`): the recorded pairs have
+quorums behind them. Five fields — the finality tally is inside `V`; every `P` bit has an included
+commit to the current `(h_j, J)`; a justified pair at `h_j ≥ 1` has an included target quorum and
+an anchor, `(postState σ.J).map ChainState.h = some σ.h_j`; a finalized pair at `h_F ≥ 1` has an
+included commit quorum *and* an included target quorum and the same anchor for `F`; and `h_F = 0`
+means `F` is genesis. `fin` carries both quorums because the finality write copies `(J, h_j)`: at
+that moment `P` is the commit quorum and `just` is the target quorum, and the copy freezes both.
+The anchors come from `Fresh` via `postBlock_target`'s two cases, exactly as in
+`Fresh.stateTransition`. Preservation needed two new height-event lemmas keyed on the pairs —
+`processHeightEvents_J_P`, which reports `J` and `P` in one disjunction because `J` never changes
+while `P` survives, and `processHeightEvents_F_pair` — plus the `P`-writer lemma in `Witnessed`'s
+style. `certified_of_blockPostState` closes it; no `sorry` anywhere in the file.
+
+**The proof of Lemma 11** (`Analysis/Proofs/Finality.lean`):
+
+* `h = 0`: `Certified.fin0` makes `C` genesis, and `genesis_preceq` (new, `Ancestry.lean`) puts
+  genesis under everything.
+* `h = h' ≥ 1`: intersect `C`'s commit quorum with `C'`'s target quorum — both out of
+  `Certified.fin` — by `quorumIntersection`; every intersection signer holds a commit to `(h, C)`
+  on `B_F` and a target vote for `(h, C')` on `B_F'`, which is E1 unless `C = C'`.
+* `h < h'`: `Chained` puts `B_F'`'s state past `h'`, so Lemma 10 applies — its evidence disjunct
+  maps straight into the conclusion, and its `C ⪯ B_F'` disjunct is ordered below `C'` by the two
+  `Certified.fin` anchors, `preceq_or_preceq`, and `postState_h_le`, with
+  `TransitionResult.map_eq_some` (new, `Spec/Defs/Basic.lean`) unpacking the anchors.
+
+**Lemma 10 is now the one `sorry` under Theorem 5.** Its statement moved to
+`Analysis/Proofs/Finality.lean` as `pastFinalized`, verbatim, with `lemPastFinalized` a one-line
+call; six `sorry` outstanding in all (Lemma 8's four, Lemma 9's second sentence, Lemma 10). What
+Lemma 10's proof needs beyond `Certified`: the walk to the *first* advance past `h` on `B`'s
+chain, and the E1 analysis at the intersection of that advance's quorum with the commit quorum.
+
+One more `cases … with | invalid` reminder: `TransitionResult.map_eq_some` hit the scoped-notation
+parse failure again; positional bullets, as `state_get` already records.
+
 ## Next
 
-1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
+1. **Prove Lemma 10** — the last `sorry` under Theorem 5, and the paper's most-cited lemma (17
+   proof citations). `Certified` supplies its quorums; what remains is the walk to the first
+   advance past `h` on `B`'s chain and the E1 analysis at that advance's quorum intersected with
+   the commit quorum.
+2. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
    `Analysis/Proofs/ChainTarget.lean` — `lemChainTargetFirstBlock` and `lemChainTargetTransfer`
    are `Aligned.named` plus `postState_s_h_eq` shaped differently; `lemChainTargetConflict` is
    uniqueness's contrapositive across two chains; `lemChainTargetBothBits` is a direct Figure 2
-   computation. Then the lemmas one at a time, each its own commit with
-   its own `MAPPING.md` row. Of what is left of Sections 3 and 4, Lemmas 10 and 11
-   wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
-   before attempting a proof — all of them are over routines written in the paper's imperative
-   shape, so `sorry` is not the only obstacle.
-2. **Prove what is stated**: Lemma 8's remaining four, Lemma 9's second sentence, Lemmas 10 and
-   11, Theorem 5 — eight `sorry` in all. Lemma 10 matters most: the paper's proofs cite it 17
-   times, and Lemma 11 and Theorem 5 stand on it. Assumption 1's `b` with `3b < W` turned out not to be needed for
-   Lemma 11's statement — the accountable disjunct renders "fault bound violated" without it.
-3. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated.
-4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
+   computation. Read the `lean-proof-idioms` skill before any of these — the routines are in the
+   paper's imperative shape.
+3. **Lemma 9's second sentence** (`lemTargetBitCompressionEvidence`), which should now be short:
+   `Witnessed.target` on both sides gives the two votes, and distinct targets at one height are
+   E2.
+4. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated.
+5. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
    question above is part of it.
-5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-6. Figures 3 to 5, and the definitions Sections 5 onward add.
+6. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+7. Figures 3 to 5, and the definitions Sections 5 onward add.
