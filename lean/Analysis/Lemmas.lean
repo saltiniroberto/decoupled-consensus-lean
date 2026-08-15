@@ -4,6 +4,7 @@ import Analysis.Proofs.SlotClosure
 import Analysis.Proofs.Ancestry
 import Analysis.Proofs.Certificates
 import Analysis.Proofs.Freshness
+import Analysis.Proofs.ChainTarget
 
 /-!
 # The paper's numbered lemmas
@@ -25,7 +26,7 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 readable where it stands rather than assembled from context above it.
 
 **Present so far: Lemmas 1 to 8.** One to 7 are proved and each covers its paper sentence in full;
-Lemma 8's five statements are written down and none is proved.
+Lemma 8 is written down in five statements, the first proved and four outstanding.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -52,7 +53,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 5 | `lem:target-uniqueness` | 967–973 | **yes, and proved** — landed; Defs. 21 and 11 rendered in part |
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
-| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — written down, none proved |
+| 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — first clause proved, four outstanding |
 | 9 | `lem:target-bit-compression` | 1061–1073 | no — the paper gives it no formal shape |
 | 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
 | 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 |
@@ -439,11 +440,12 @@ paper's that auditing one against the other meant reconstructing the mapping, an
 equivalence claim turned out to be false. Extending the convention to Lemmas 1–7 is parked
 (Roberto, 2026-08-15).
 
-**None of the five is proved.** Each is a `sorry`, and `MAPPING.md`'s row says 🔨 stated. The
-proofs will live in `Analysis/Proofs/`, over the antecedent `(postState' B').s_h = T.slot` —
-Definition 7 (`def:current-height-target`) makes `s_h` the slot of the block whose transition
-entered the height, and slots are strict along a chain — with these record statements one-line
-calls into them, the way Lemma 7 calls into `Freshness.lean`.
+**The first is proved; the other four are `sorry`**, and `MAPPING.md`'s row says 🔨 stated.
+The proofs live in `Analysis/Proofs/ChainTarget.lean`, whose route is `s_h`: Definition 7
+(`def:current-height-target`) makes it the slot of the block whose transition entered the
+height, slots are strict along a chain, and `Aligned` — the fifth invariant — says a named
+target sits at it. The record statements are one-line calls, the way Lemma 7 calls into
+`Freshness.lean`.
 
 **"Branch" is not rendered, because the paper does not define it.** Thirty-eight uses, no
 definition; the nearest is line 408, glossing conflict as lying on "different branches". These
@@ -469,13 +471,17 @@ statements say `⪯`, `≺` and `Conflicts` instead. -/
     Definition 7's one-slot delay, so a post-state at the height need not name a target and
     `get T from …` would assert what the sentence does not.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/ChainTarget.lean`, from a fifth invariant, `Aligned`: a named
+    target sits at the height's start slot, `T.slot = s_h`, which is the paper's "first block of
+    the height" said about one field. Uniqueness is then three equalities and the strictness of
+    slots along a chain. -/
 theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B B' T T' : Blk Node Root}
     (hchain : B ⪯ B') (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
     (hheight : (postState' B).h = (postState' B').h)
-    (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') : T = T' := by
-  sorry
+    (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') : T = T' :=
+  Proofs.chainTargetUniqueness hchain (TransitionResult.state_get _ hB)
+    (TransitionResult.state_get _ hB') hheight hT hT'
 
 /-- **Lemma 8, first sentence, second clause** (`lem:chain-target-uniqueness`, lines
     1030–1031): the named target is the chain's first block at its height.
@@ -492,8 +498,8 @@ theorem lemChainTargetUniqueness {Node Root : Type} [DecidableEq Node] [Decidabl
     is itself *at* the height is Lemma 7's post-state conjunct and is not restated here.
 
     `postState B' ≠ invalid` is carried as a hypothesis although it follows from `B' ⪯ B` and
-    `hB` — an ancestor of a block that replays itself replays — because that lemma is not
-    written. Dropping it later strengthens the statement without moving any caller.
+    `hB` — `postState_ancestor` in `Analysis/Proofs/ChainTarget.lean` is that lemma. Dropping
+    it is a statement change, left for when this is proved.
 
     An earlier note here dismissed this clause as the first clause seen from the other side.
     That was wrong: minimality is new content — it is the invariant the other four statements'

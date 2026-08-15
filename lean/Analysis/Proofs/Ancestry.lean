@@ -123,6 +123,25 @@ theorem parent_prec : ∀ {B P : Blk Node Root}, B.parent = some P → P ≺ B
       have := congrArg (fun b => (ancestors (Node := Node) (Root := Root) b).length) he
       simp [ancestors] at this
 
+/-- **Two ancestors of one block are comparable.** A block's ancestors are a chain, not a tree, so
+    anything two of them can be is one before the other.
+
+    Structural recursion on the common descendant: at a child, either one of the two *is* that
+    child — and then the other precedes it — or both are ancestors of the parent. -/
+theorem preceq_or_preceq : ∀ (c : Blk Node Root) {a b : Blk Node Root}, a ⪯ c → b ⪯ c →
+    a ⪯ b ∨ b ⪯ a
+  | .genesis, a, b, ha, hb => by
+      simp only [Preceq, ancestors, List.mem_singleton] at ha hb
+      subst ha; subst hb
+      exact Or.inl (Preceq.refl _)
+  | .mk p s n as r, a, b, ha, hb => by
+      simp only [Preceq, ancestors, List.mem_cons] at ha hb
+      rcases ha with rfl | ha
+      · exact Or.inr (by simpa only [Preceq, ancestors, List.mem_cons] using hb)
+      rcases hb with rfl | hb
+      · exact Or.inl (by simpa only [Preceq, ancestors, List.mem_cons] using Or.inr ha)
+      exact preceq_or_preceq p ha hb
+
 /-- `⪯` composes with `≺` on the left, and the strictness survives by the count. -/
 theorem Preceq.trans_prec {a b c : Blk Node Root} (hab : a ⪯ b) (hbc : b ≺ c) : a ≺ c :=
   ⟨Preceq.trans hab hbc.1, fun he => by

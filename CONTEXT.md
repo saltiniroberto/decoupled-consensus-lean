@@ -1348,10 +1348,59 @@ With those two and the fifth invariant, the first sentence is short: `T ⪯ B �
 `T` and `T'` comparable, both are at the same height, and "first at its height" kills the strict
 case either way.
 
+## 2026-08-15 — Lemma 8's first clause is proved, and the fifth invariant is `Aligned`
+
+`lemChainTargetUniqueness` is proved. The machinery is `Analysis/Proofs/ChainTarget.lean`, and the
+route is the `s_h` one recorded above, not the paper's "first block":
+
+* **`Aligned`, the fifth invariant** — a named target sits at the height's start slot
+  (`σ.T_h = some T → T.slot = σ.s_h`), and until one is named the *latest block* does
+  (`σ.T_h = ⊥ → σ.L.slot = σ.s_h`). The second conjunct is what turns Figure 1's write condition
+  `L.slot ≥ s_h` into an equality at the moment of recording, and what shows the write always
+  fires at the first closed slot after a transition — Definition 7's one-slot delay as an
+  invariant. Preservation follows the `Settled` phase split; the height-event check either
+  fires nothing (every field `Aligned` reads unchanged) or advances, and then the `empty`
+  conjunct is the new height's own anchor: `s_h ← B.slot` with `L = B`.
+* **Slots are strict along a chain** — `stateTransition_slot_lt` extracts Figure 1's
+  `B.slot ≤ σ.s → invalid`, `postState_s` says a post-state's cursor sits at its block's slot,
+  and `prec_slot_lt` chains them: a strict ancestor sits at a strictly smaller slot. So one
+  chain has at most one block per slot, which is what lets `s_h` pin a block.
+* **`s_h` agrees along one chain at one height** (`postState_s_h_eq`), from height monotonicity
+  (`postState_h_le`, no threshold hypothesis — `advance_height` is the one writer of `h` and it
+  increments) plus `stateTransition_s_h_eq`: a transition that leaves `h` alone leaves `s_h`
+  alone.
+* **`postState_ancestor`** — an ancestor of a block that replays itself replays. This is the
+  lemma `lemChainTargetFirstBlock`'s docstring called unwritten; its hypothesis `hB'` is now
+  droppable, left for when that statement is proved.
+* `preceq_or_preceq` (two ancestors of one block are comparable) landed in `Ancestry.lean`.
+
+Uniqueness is then three equalities and one comparison: `T.slot = σ.s_h = σ'.s_h = T'.slot`,
+`T` and `T'` are both ancestors of `B'`, comparable, and distinct comparable blocks cannot share
+a slot.
+
+Two Lean notes, both anticipated by the skill and confirmed:
+
+* `exact processHeightEvents_h_le _ _` fails on the leaf where the state is `{ σ with T_h := … }`:
+  the unifier fixes the metavariable from the goal's *left* side (`σ.h`) before seeing the right,
+  and then the right does not match. Passing the record explicitly —
+  `exact processHeightEvents_h_le { σ with T_h := some σ.L } σ.s` — avoids the trap, since a
+  fully applied term is checked by defeq rather than solved.
+* `rw [closeSlots]` auto-closes a `≤` goal (`Nat.le_refl` is `@[refl]`), so a following closer
+  errors with "No goals to be solved"; the same `rw` does *not* close `σ.s = σ.s + 0`, which
+  needs an explicit `rfl`.
+
+Also: the working tree's `SlotClosure.lean` came back with `Replayable`/`postState'` commented out
+— a stale editor buffer from the parked-decision era, saved over the live version that Lemma 8's
+statements need. Restored from HEAD. That is the failure mode `CLAUDE.local.md`'s commit rule
+exists for.
+
 ## Next
 
-1. **Prove Lemma 8's five statements**, `lemChainTargetFirstBlock` first — it is the minimality
-   invariant the other four need, and the proofs go over `(postState' B').s_h = T.slot`. Then the lemmas one at a time, each its own commit with
+1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
+   `Analysis/Proofs/ChainTarget.lean` — `lemChainTargetFirstBlock` and `lemChainTargetTransfer`
+   are `Aligned.named` plus `postState_s_h_eq` shaped differently; `lemChainTargetConflict` is
+   uniqueness's contrapositive across two chains; `lemChainTargetBothBits` is a direct Figure 2
+   computation. Then the lemmas one at a time, each its own commit with
    its own `MAPPING.md` row. Of what is left of Sections 3 and 4, Lemmas 10 and 11
    wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
    before attempting a proof — all of them are over routines written in the paper's imperative
