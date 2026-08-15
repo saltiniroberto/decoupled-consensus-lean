@@ -1421,6 +1421,42 @@ proof-level consumer — so **every remaining in-paper use of Lemma 8 is in the 
 outstanding proofs are therefore not blocking anything in Sections 1–5; they matter when the
 recovery sections land.
 
+## 2026-08-15 — Lemmas 10 and 11 and Theorem 5 are stated, with E1 and the finality certificate
+
+Statements only, on instruction — all four `sorry` (Lemma 9's second sentence,
+`lemTargetBitCompressionEvidence`, is among them, stated earlier the same day). Two definitions
+landed with them in `Analysis/Vocabulary.lean`, per that file's rule that a part of a paper
+definition waits for the statement that needs it:
+
+* **E1** (Definition 11): `x`'s finality pair is `(h, T)` and `y`'s height pair is `(h, T')` with
+  `T' ≠ T` — the `.target h T'` arm — or `.timeout h`, the explicit-timeout case Lemma 10's proof
+  singles out. Asymmetric where E2 is not, and `x = y` is allowed, both as the paper says.
+* **`FinalityCertificate`** (Definition 21's `FC`): `JC(h, T)` plus a commit quorum included on
+  the chain plus a block post-state recording `(F, h_F) = (T, h)`. "Accepted while it was the
+  latest unfinalized justification" is not a fourth clause — acceptance is Figure 2's own
+  condition on setting a finality bit, the same reading `ProgressCertificate` gives "setting the
+  progress bits".
+
+Decisions in the three statements, each recorded in its docstring:
+
+* "Finalized at height `h`" is a `FinalityCertificate` on a named chain `B_F`. Nothing else in
+  the paper defines the phrase.
+* Lemma 10 covers its two subjects as two conjuncts (Lemma 4's pattern), renders "for `h ≥ 1`"
+  as `1 ≤ h ∧` inside the accountable disjunct — so at `h = 0` the claim is flat — and puts the
+  E1 evidence where the paper's proof finds it: the commitment on `B_F`'s chain, the height
+  message on `B`'s.
+* Lemma 11's "unless the fault bound in Assumption 1 is violated" is the accountable disjunct
+  (the bound itself is unstateable, `Electorate` carrying no Byzantine set): a `2q − W` set with
+  `E1 ∨ E2` pairs, Definition 11's "either condition". The paper's own proof produces E1 alone in
+  both cases, so the disjunction may narrow when proved.
+* Theorem 5 lives in the new `Analysis/Theorems.lean` — it is not a lemma, and `Lemmas.lean`'s
+  header always said so. Its inclusions come "in either order" across the two chains, since which
+  chain carries the finality commitment depends on which height is lower.
+
+`make check`'s citation checker measures line spans: Theorem 5's env is 1166–1172, and claiming
+1173 fails the build. The checker is stricter than expected — worth remembering that spans are
+verified, not decorative.
+
 ## Next
 
 1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in
@@ -1432,12 +1468,11 @@ recovery sections land.
    wait on absent definitions, and Lemma 9 on a formulation. Read the `lean-proof-idioms` skill
    before attempting a proof — all of them are over routines written in the paper's imperative
    shape, so `sorry` is not the only obstacle.
-2. **Model what the rest wait on**, in the order that unblocks most: Definition 21's finality
-   certificate for Lemmas 10 and 11, Definition 11 (`def:slashing`)'s E1 for Lemma 10, and
-   Assumption 1's `b` with `3b < W` for Lemma 11. Each lands in `Analysis/Vocabulary.lean` with the
-   statement that needs it, not before, and each is a modelling decision to record here.
-3. Whatever Lemma 10 turns out to state more narrowly than the paper's sentence. Lemma 9's
-   formulation is settled and its first sentence proved; its second waits on E1, with Lemma 10.
+2. **Prove what is stated**: Lemma 8's remaining four, Lemma 9's second sentence, Lemmas 10 and
+   11, Theorem 5 — eight `sorry` in all. Lemma 10 matters most: the paper's proofs cite it 17
+   times, and Lemma 11 and Theorem 5 stand on it. Assumption 1's `b` with `3b < W` turned out not to be needed for
+   Lemma 11's statement — the accountable disjunct renders "fault bound violated" without it.
+3. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated.
 4. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing

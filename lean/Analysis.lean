@@ -6,7 +6,10 @@ import Analysis.Proofs.Determinism
 import Analysis.Proofs.Witnessed
 import Analysis.Proofs.Certificates
 import Analysis.Proofs.Freshness
+import Analysis.Proofs.ChainTarget
+import Analysis.Proofs.Compression
 import Analysis.Lemmas
+import Analysis.Theorems
 
 /-!
 # The analysis
@@ -14,9 +17,9 @@ import Analysis.Lemmas
 One import per file under `Analysis/`. The paper's numbered results, stated and proved against
 the specification in `Spec`.
 
-Present: `Lemmas.lean`, the statements of record; `Vocabulary.lean`, the paper's definitions that
-no figure reads and a statement needs; and `Proofs/`, which holds the arguments.
-`Theorems.lean` and `Corollaries.lean` are absent.
+Present: `Lemmas.lean` and `Theorems.lean`, the statements of record; `Vocabulary.lean`, the
+paper's definitions that no figure reads and a statement needs; and `Proofs/`, which holds the
+arguments. `Corollaries.lean` is absent.
 
 **A statement in `Lemmas.lean` is proved by a one-line call into `Proofs/`**, so that a statement
 can be read against the paper without a proof between it and the reader. `Lemmas.lean` also holds

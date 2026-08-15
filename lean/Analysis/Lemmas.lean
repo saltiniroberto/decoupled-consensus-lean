@@ -26,9 +26,10 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 9.** One to 7 are proved and each covers its paper sentence in full;
-Lemma 8 is written down in five statements, the first proved and four outstanding; Lemma 9's first
-sentence is proved and its second waits on E1.
+**Present so far: Lemmas 1 to 11.** One to 7 are proved and each covers its paper sentence in
+full; Lemma 8 is written down in five statements, the first proved and four outstanding; Lemma 9's
+first sentence is proved and its second sentence is stated; Lemmas 10 and 11 are stated and not
+proved. Theorem 5 is stated in `Analysis/Theorems.lean`.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -56,9 +57,9 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements** — first clause proved, four outstanding |
-| 9 | `lem:target-bit-compression` | 1061–1073 | **yes, first sentence, and proved** — the second waits on E1 |
-| 10 | `lem:past-finalized` | 1092–1101 | no — Defs. 21 and 11 |
-| 11 | `lem:finalized-chain` | 1139–1146 | no — Def. 21 |
+| 9 | `lem:target-bit-compression` | 1061–1073 | **yes** — first sentence proved; second stated for E2, its E1 half absent |
+| 10 | `lem:past-finalized` | 1092–1101 | **yes, stated** — Def. 21's `FC` and Def. 11's E1 landed with it |
+| 11 | `lem:finalized-chain` | 1139–1146 | **yes, stated** — over two finality certificates |
 
 **`BlockPostState` replaces `σ[B]` in most places, which is what unblocked Lemma 3.** The paper
 writes `σ[B]` where it needs "the state of the chain ending at `B`". A block post-state *is* such a
@@ -82,14 +83,13 @@ and each will be checked when it is reached rather than assumed here.
 
 | Absent | Paper | Waited on by |
 | --- | --- | --- |
-| the finality certificate, and "finalized at height `h`" | Def. 21 (`def:certificates`) | 10, 11 |
-| the slashing condition E1 | Def. 11 (`def:slashing`) | 10 |
 | `σ[·]` as a map, for what a *store* accepts | Figure 3 (`alg:store`), `derive_block_states` | nothing yet |
 
-Definition 11's E2 and Definition 21's justification and progress certificates are no longer on
-that list: Lemmas 5 and 6 needed them and they are in `Analysis/Vocabulary.lean`. The rest of each definition stays
-absent until a statement needs it, for the reason that file's docstring gives — a declaration no
-statement mentions is an unaudited claim about what the paper means.
+Definitions 11 and 21 are no longer on that list: E2 and the justification and progress
+certificates landed with Lemmas 5 and 6, and E1 and the finality certificate with Lemmas 10, 11
+and Theorem 5 — all in `Analysis/Vocabulary.lean`. A part of a definition stays absent until a
+statement needs it, for the reason that file's docstring gives — a declaration no statement
+mentions is an unaudited claim about what the paper means.
 
 **Assumption 1's Byzantine weight `b` is not on that list, and Lemma 1 is why.** `Electorate`
 carries `V`, `w` and `w_pos` only, so `b` has no rendering — but a *quantity* arrives with its
@@ -656,9 +656,8 @@ theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableE
     current height, the target it named deliberately forgotten. "With each validator counted
     once" is `Q_target` and `Q_prog` being `Finset`s.
 
-    **The second sentence is not stated.** E1 is not rendered — it waits on Lemma 10 — and for
-    E2 the claim is carried by its type: `E2` is a predicate on two attestations, so it reads
-    messages alone and no participation state. `MAPPING.md`'s row is 🟡 partial for this reason.
+    **The second sentence is `lemTargetBitCompressionEvidence`, next** — its E2 half; the E1
+    half is not rendered and waits on Lemma 10, which is why `MAPPING.md`'s row is 🟡 partial.
 
     **The paper's proof cites Lemma 8; this proof does not need it.** The paper reaches "every
     vote counted toward justification names `T_h`" through Lemma 8's transfer between branches.
@@ -675,5 +674,105 @@ theorem lemTargetBitCompression {Node Root : Type} [DecidableEq Node] [Decidable
     ∀ i ∈ (postState' B).Qprog, ∃ a : Attestation Node Root,
       a.validator = i ∧ a.height = some (postState' B).h ∧ IncludedOn a B :=
   Proofs.targetBitCompression (TransitionResult.state_get _ hB)
+
+/-- **Lemma 9, second sentence** (`lem:target-bit-compression`, lines 1061–1073): the retained
+    messages prove the violation the bits point at.
+
+    > Retaining the signed messages is sufficient to prove E1 and E2 violations.
+
+    Read aloud: if one validator's target bit is counted on two chains at the same height naming
+    different targets, then two messages — one included on each chain — prove E2.
+
+    "Retaining the signed messages" is `IncludedOn`: a message's retention in this model is its
+    inclusion on a chain, the state having forgotten the vote and the chain not. "Sufficient to
+    prove E2 violations" is the conclusion's shape: the violating pair is produced from inclusions
+    alone, the participation state contributing only the two bits in the hypotheses. That is the
+    compression claim from the slashing side — the bits point, the messages prove.
+
+    **Read literally, the sentence is a fact about a type**: E2 is a predicate on two
+    attestations, so checking it never needed the participation state. This statement is the
+    reading with content: the situation the compressed state can still witness — one validator
+    counted toward two different targets at one height — is provable as a violation from what the
+    chains retain. Compare `lemTargetUniqueness`, which reaches the same evidence shape from two
+    certificates; here two bits suffice.
+
+    **The E1 half is not stated.** E1 is not rendered, and waits on Lemma 10 with the rest of
+    Definition 11.
+
+    Proof outstanding. -/
+theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {B B' T T' : Blk Node Root} {i : Node}
+    (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hi : i ∈ (postState' B).Qtarget) (hi' : i ∈ (postState' B').Qtarget)
+    (hheight : (postState' B).h = (postState' B').h)
+    (hT : (postState' B).T_h = some T) (hT' : (postState' B').T_h = some T') (hne : T ≠ T') :
+    ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+      IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y := by
+  sorry
+
+/-- **Lemma 10** (`lem:past-finalized`, lines 1092–1101): a chain past a finalized height
+    contains its finalized block.
+
+    > Let `C` be finalized at height `h`, and let `σ` be either a block post-state on a chain
+    > ending at `B` or a finality action state derived from that chain. If `σ.h > h`, then
+    > `C ⪯ B`. For `h ≥ 1`, the only exception requires E1-slashable validators of total weight
+    > at least `2q − W`.
+
+    Read aloud: if a chain's state has advanced past a height at which some block is finalized,
+    that block is on the chain — or a quorum-intersection's worth of validators each signed a
+    finality commitment on one chain and a conflicting height message on the other.
+
+    Noun by noun. "`C` be finalized at height `h`" is `FinalityCertificate B_F h C` — Definition
+    21's `FC`, rendered with this statement, with `B_F` naming the chain the finalization sits
+    on. "Either a block post-state … or a finality action state derived from that chain" is the
+    two conjuncts, the way Lemma 4 covers its two subjects; `t` is the action slot, with
+    Definition 20's side condition `B.slot ≤ t` not required, as in Lemma 4. "The only exception
+    requires E1-slashable validators of total weight at least `2q − W`" is the second disjunct,
+    with the slashable set produced rather than required, as in Lemma 5, and the evidence as
+    included pairs: `x` the finality commitment retained on `B_F`'s chain, `y` the height message
+    retained on `B`'s, which is where the paper's proof finds them. "For `h ≥ 1`" is the
+    `1 ≤ h ∧` in that disjunct: at `h = 0` the claim is flat.
+
+    Proof outstanding. -/
+theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {B_F C B : Blk Node Root} {h : Nat}
+    (hfin : FinalityCertificate B_F h C) (hB : postState B ≠ invalid) (t : Time) :
+    (h < (postState' B).h → C ⪯ B ∨
+      (1 ≤ h ∧ ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
+        ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+          IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y)) ∧
+    (h < (actionState (postState' B) t).h → C ⪯ B ∨
+      (1 ≤ h ∧ ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
+        ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+          IncludedOn x B_F ∧ IncludedOn y B ∧ E1 x y)) := by
+  sorry
+
+/-- **Lemma 11** (`lem:finalized-chain`, lines 1139–1146): finalized blocks form a chain.
+
+    > For any finalized pairs `(C, h)` and `(C', h')`, if `h ≤ h'` then `C ⪯ C'`, unless the
+    > fault bound in Assumption 1 is violated.
+
+    Read aloud: of two finalized blocks, the one finalized at the lower height is an ancestor of
+    the other — or a quorum-intersection's worth of validators each signed a slashable pair
+    across the two chains.
+
+    Noun by noun. "Finalized pairs" is one `FinalityCertificate` per pair, each on its own chain,
+    `B_F` and `B_F'`. "Unless the fault bound in Assumption 1 is violated" is the second
+    disjunct: the bound cannot be *stated* — `Electorate` carries no Byzantine set — but its
+    violation is exhibited, a set of weight `2q − W` of validators each with a slashable pair,
+    Definition 11's "either condition holds" rendered as `E1 x y ∨ E2 x y`. The paper's own
+    proof produces E1 alone in both of its cases, so the disjunction may narrow to E1 when this
+    is proved; recorded rather than assumed.
+
+    Proof outstanding. -/
+theorem lemFinalizedChain {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
+    {h h' : Nat} (hfin : FinalityCertificate B_F h C) (hfin' : FinalityCertificate B_F' h' C')
+    (hle : h ≤ h') :
+    C ⪯ C' ∨
+      ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
+        ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+          IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y) := by
+  sorry
 
 end Decoupled

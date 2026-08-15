@@ -14,10 +14,10 @@ written here rather than inside a proof file.
 to know what the statements in `Analysis/Lemmas.lean` *mean*. Anything proved about these notions
 belongs under `Analysis/Proofs/`.
 
-**Only the parts a landed statement uses.** Definition 11's E1 and Definition 21's finality
-certificate are absent: nothing states them yet, and a declaration no statement mentions is an
-unaudited claim about what the paper means. They land with the lemma that needs them, as the
-progress certificate did with Lemma 6.
+**Only the parts a landed statement uses.** Definition 11's E2 landed with Lemma 5, the
+justification and progress certificates with Lemmas 5 and 6, and E1 and the finality certificate
+with Lemmas 10 and 11 and Theorem 5. A declaration no statement mentions is an unaudited claim
+about what the paper means, which is why each waited.
 
 ## `σ[·]` is replaced by `BlockPostState`, which makes the certificates weaker
 
@@ -55,6 +55,22 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     `lemTargetUniqueness` does by pinning both validators to the same `i`. -/
 def E2 (x y : Attestation Node Root) : Prop :=
   ∃ h T T', x.heightPair = .target h T ∧ y.heightPair = .target h T' ∧ T ≠ T'
+
+/-- Definition 11 (`def:slashing`), **E1**: one finality pair is `(h, T)` with `T ≠ ⊥`, while the
+    other height pair is `(h, T')` with `T' ≠ T`, including `T' = ⊥`.
+
+    `x` carries the finality pair and `y` the height pair, so the definition is asymmetric where
+    E2 is not; a caller wanting either order says so. "`T ≠ ⊥`" is carried by the constructor:
+    `FinalityPair.commit` is the pair with a block. "`(h, T')` … including `T' = ⊥`" is two
+    constructors: `.target h T'` with `T' ≠ T`, or `.timeout h` — the explicit-timeout case the
+    paper's Lemma 10 proof singles out. "An empty height pair has height `⊥`, so it conflicts
+    with neither pair" is `.empty` matching neither arm.
+
+    "The two conflicting fields may occur in the same signed attestation": nothing here stops
+    `x = y`. As with E2, Definition 11's "by one validator" is the caller's to state. -/
+def E1 (x y : Attestation Node Root) : Prop :=
+  ∃ h T, x.finalityPair = .commit h T ∧
+    ((∃ T', y.heightPair = .target h T' ∧ T' ≠ T) ∨ y.heightPair = .timeout h)
 
 end
 
@@ -116,6 +132,30 @@ def ProgressCertificate (B : Blk Node Root) (h : Nat) : Prop :=
   (∃ (σp σ : ChainState Node Root) (X : Blk Node Root),
     BlockPostState σp ∧ X ⪯ B ∧ stateTransition σp X = .state σ ∧
       σp.h = h ∧ σ.h = h + 1 ∧ σ.J = σp.J)
+
+/-- Definition 21 (`def:certificates`)'s **finality certificate** `FC(h, T)`, on the chain ending
+    at `B`. Three clauses, as the paper lists them:
+
+    * `JC(h, T)`, on the same chain;
+    * distinct finality commitments to `(h, T)` of weight at least `q`, included on that chain —
+      "distinct" is `Q` being a `Finset` of validators, one attestation each, as in the other two
+      certificates;
+    * the direct invocation that finalized it, as a block post-state on that chain recording
+      `(F, h_F) = (T, h)`.
+
+    The paper's "accepted while it was the latest unfinalized justification" is not a fourth
+    clause: acceptance is Figure 2's own condition on setting a finality bit (lines 774–775), a
+    fact about the transition rather than a further requirement on the certificate — the same
+    reading `ProgressCertificate` gives "setting the progress bits".
+
+    `BlockPostState` stands in for the paper's `σ[·]` here, as in the other two certificates —
+    see the module docstring for what that changes and in which direction. -/
+def FinalityCertificate (B : Blk Node Root) (h : Nat) (T : Blk Node Root) : Prop :=
+  JustificationCertificate B h T ∧
+  (∃ Q : Finset Node, Q ⊆ Electorate.V ∧ w(Q)≥q ∧
+    ∀ i ∈ Q, ∃ a : Attestation Node Root,
+      a.validator = i ∧ a.finalityPair = .commit h T ∧ IncludedOn a B) ∧
+  (∃ σ : ChainState Node Root, BlockPostState σ ∧ σ.L ⪯ B ∧ σ.F = T ∧ σ.h_F = h)
 
 end
 
