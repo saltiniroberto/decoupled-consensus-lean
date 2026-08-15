@@ -1479,6 +1479,31 @@ hypothesis admits genesis, which the paper finalizes by stipulation (line 365), 
 lemma "a recorded pair at `1 ≤ h` yields the certificate" is the natural such statement. E1 stays:
 Lemma 10's evidence disjunct uses it.
 
+## 2026-08-16 — Theorem 5 is derived from Lemma 11
+
+`Analysis/Proofs/Finality.lean` is new and holds two things:
+
+* `finalizedChain` — Lemma 11's content, verbatim, still `sorry`; `lemFinalizedChain` is now a
+  one-line call into it, which is the house shape (the placeholder moved layers, the statement
+  did not move at all).
+* `accountableSafety` — Theorem 5's proof from it, real: order the two heights with
+  `Nat.le_total`, apply `finalizedChain` in that order, and refuse its ancestry disjunct with the
+  conflict — `Conflicts` is `¬ (C ⪯ C' ∨ C' ⪯ C)` and each branch's ancestry lands in one arm.
+  The evidence's inclusions come out in the order the lemma was applied, which is the theorem's
+  either-order disjunction.
+
+Roberto's instruction: prove top-down, and using still-`sorry` lemmas is fine. So the theorem is
+proved *as a derivation* and is proved outright the moment Lemma 11 is; `MAPPING.md` keeps the
+row 🔨 with a note, since the kernel does not consider it proved until then. Seven `sorry`
+outstanding, down from eight.
+
+The paper proves Theorem 5 directly, with the same two cases Lemma 11 carries (equal heights:
+finality quorum ∩ justification quorum; different heights: through Lemma 10's intersection). So
+deriving from Lemma 11 loses nothing and puts the intersection work in one place. What Lemma 11's
+proof needs, recorded in `Finality.lean`'s docstring: Lemma 10; and — because the finalization
+hypotheses are recorded pairs now — provenance invariants recovering the finality and
+justification quorums from `P` and `(J, h_j)`, the `Witnessed` shape extended to two more fields.
+
 ## Next
 
 1. **Prove Lemma 8's remaining four statements** over `Aligned` and the slot machinery in

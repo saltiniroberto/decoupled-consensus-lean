@@ -1,4 +1,4 @@
-import Analysis.Vocabulary
+import Analysis.Proofs.Finality
 
 /-!
 # The paper's numbered theorems
@@ -9,7 +9,8 @@ specification in `Spec` — the file `Analysis/Lemmas.lean` is for the numbered 
 rules apply here unchanged: statements only, proofs as one-line calls into `Analysis/Proofs/`,
 no section-level `variable`, and each docstring carries the paper's sentence verbatim.
 
-**Present so far: Theorem 5** (`thm:accountable-safety`), stated and not proved.
+**Present so far: Theorem 5** (`thm:accountable-safety`), derived from Lemma 11; it is proved
+outright the moment Lemma 11 is.
 -/
 
 set_option autoImplicit false
@@ -40,7 +41,9 @@ open Framework.StsMultisetLog
     "For some height `h`": the height lives inside E1 and E2's own pairs and is not separately
     quantified.
 
-    Proof outstanding. -/
+    Proved in `Analysis/Proofs/Finality.lean` **from Lemma 11**, whose own proof is that file's
+    outstanding `sorry`: order the heights, apply the lemma in that order, and refuse its
+    ancestry disjunct with the conflict. Not proved in the kernel's sense until Lemma 11 is. -/
 theorem thmAccountableSafety {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
     {h h' : Nat} (hBF : postState B_F ≠ invalid)
@@ -51,7 +54,7 @@ theorem thmAccountableSafety {Node Root : Type} [DecidableEq Node] [DecidableEq 
     ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
       ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
         ((IncludedOn x B_F ∧ IncludedOn y B_F') ∨ (IncludedOn x B_F' ∧ IncludedOn y B_F)) ∧
-        (E1 x y ∨ E2 x y) := by
-  sorry
+        (E1 x y ∨ E2 x y) :=
+  Proofs.accountableSafety hBF hC hhF hBF' hC' hhF' hconf
 
 end Decoupled

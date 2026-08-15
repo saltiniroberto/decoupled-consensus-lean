@@ -6,6 +6,7 @@ import Analysis.Proofs.Certificates
 import Analysis.Proofs.Freshness
 import Analysis.Proofs.ChainTarget
 import Analysis.Proofs.Compression
+import Analysis.Proofs.Finality
 
 /-!
 # The paper's numbered lemmas
@@ -775,7 +776,9 @@ theorem lemPastFinalized {Node Root : Type} [DecidableEq Node] [DecidableEq Root
     proof produces E1 alone in both of its cases, so the disjunction may narrow to E1 when this
     is proved; recorded rather than assumed.
 
-    Proof outstanding. -/
+    The proof is outstanding, a `sorry` in `Analysis/Proofs/Finality.lean`, whose docstring says
+    what is missing — Lemma 10, and the recovery of the two quorums from the recorded pairs.
+    Theorem 5 is already derived from this statement. -/
 theorem lemFinalizedChain {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root}
     {h h' : Nat} (hBF : postState B_F ≠ invalid)
@@ -786,7 +789,7 @@ theorem lemFinalizedChain {Node Root : Type} [DecidableEq Node] [DecidableEq Roo
     C ⪯ C' ∨
       ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
         ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-          IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y) := by
-  sorry
+          IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y) :=
+  Proofs.finalizedChain hBF hC hhF hBF' hC' hhF' hle
 
 end Decoupled
