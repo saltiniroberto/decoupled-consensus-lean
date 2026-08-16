@@ -19,13 +19,13 @@ lands, becomes a one-line call into `Analysis/Proofs/`.
 
 ## Shared rendering decisions
 
-**Time is the received-block sequence — except in Theorem 3, which is on an execution.**
-`on_block` is the store's only mutator, so "at all future times" is "after any further
-`onBlocks`", and "the store maintains … at all times" is a hypothesis `S.Reachable`; both
-notions are in `Analysis/Vocabulary.lean`. Theorem 3 instead reads time as the steps of a
-framework execution of the node protocol (`Spec/Protocol.lean`), on instruction — the
-statement quantifies over `Exec protocol sched` and a validator, and its docstring names
-the store-level core its proof will establish.
+**Time is the received-block sequence — except in Theorems 3 and 4, which are on
+executions.** `on_block` is the store's only mutator, so "at all future times" is "after
+any further `onBlocks`", and "the store maintains … at all times" is a hypothesis
+`S.Reachable`; both notions are in `Analysis/Vocabulary.lean`. Theorems 3 and 4 instead
+read time as the steps of a framework execution of the node protocol
+(`Spec/Protocol.lean`), on instruction — each quantifies over `Exec protocol sched` and a
+validator, and each docstring names the store-level core its proof will establish.
 
 **"Unless `≥ n/3` validators are slashable" is the accountable disjunct.** The same
 rendering as `thmAccountableSafety`: the claim holds, or a set of weight at least `2q − W`
@@ -84,20 +84,27 @@ theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [Decidable
     (p : Node) {i j : Nat} (hij : i ≤ j) :
     (x[i][p].st).F ⪯ (x[j][p].st).F := sorry
 
-/-- **Theorem 4** (`hft:thm:fleqr`, lines 591–593): `F ⪯ J`.
+/-- **Theorem 4** (`hft:thm:fleqr`, lines 591–593): `F ⪯ J`, stated on an execution — on
+    instruction, 2026-08-16, like Theorem 3.
 
     > The store maintains `Σ.F ⪯ Σ.J` at all times.
 
-    Read aloud: the store-finalized block is always an ancestor of the store root.
+    Read aloud: at every step of any execution of the node protocol, under any schedule,
+    every validator's store-finalized block is an ancestor of its store root.
 
-    "Maintains … at all times" is the hypothesis `S.Reachable`: the claim holds at every
-    store the node can hold, the genesis store included (`F = J = genesis` there). Unlike
-    Theorem 3 this is an invariant, not a monotonicity: an arbitrary store need not satisfy
-    it, so the reachability hypothesis is not droppable. -/
+    Noun by noun. "The store" is `x[i][p].st`, validator `p`'s store after `i` steps.
+    "Maintains … at all times" is the quantification over `i` — and unlike the store-level
+    form, no hypothesis is left: this is an invariant, and what carried it there as
+    `S.Reachable` is carried here by the execution itself, whose `init` field starts every
+    validator at the genesis store, where `F = J = genesis`. Timeless, and over corrupted
+    validators too, for the reason in Theorem 3's docstring. The store-level core the
+    proof will establish is the previous statement of record:
+    `S.Reachable → S.F ⪯ S.J`. -/
 theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
-    {S : Store Node Root} (hS : S.Reachable) :
-    S.F ⪯ S.J := sorry
+    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
+    (p : Node) (i : Nat) :
+    (x[i][p].st).F ⪯ (x[i][p].st).J := sorry
 
 /-- **Theorem 7** (`hft:thm:fcconsistency`, lines 638–640): fork-choice consistency.
 
