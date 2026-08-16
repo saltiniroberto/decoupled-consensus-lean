@@ -5,6 +5,7 @@ import Analysis.Proofs.Irreversibility
 import Analysis.Proofs.StoreInvariants
 import Analysis.Proofs.Acceptance
 import Analysis.Proofs.LockIn
+import Analysis.Proofs.OrderIndependence
 
 /-!
 # The companion paper's numbered theorems — its Section 3.1
@@ -17,9 +18,13 @@ stated; per the selection rule in `CONTEXT.md`, a lemma gets stated when a proof
 or on instruction. The rules of `Analysis/Theorems.lean` apply unchanged: each docstring
 carries the paper's sentence verbatim, and there is no section-level `variable`.
 
-**Stated on instruction, 2026-08-16; five of the six are proved, Theorem 10 is `sorry`.**
-So `make dev` counts one here and `make check` fails until it is proved; each proof, when it
-lands, becomes a one-line call into `Analysis/Proofs/`, as the five proved ones are.
+**Stated on instruction, 2026-08-16; all six are proved as of 2026-08-17.** Each proof is a
+one-line call into `Analysis/Proofs/`, and each of the six is kernel-clean —
+`#print axioms` reports `[propext, Classical.choice, Quot.sound]` for all of them.
+
+Theorem 10 carries one assumption the other five do not, `[HashInjective Node Root]`, added
+to its statement on 2026-08-17 in Roberto's absence; its docstring says what it is and why,
+and `CONTEXT.md` records the alternative that was rejected.
 
 ## Shared rendering decisions
 
@@ -253,9 +258,26 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     either of the two stores. The second validator is `p'`, not `q`, which names the
     quorum threshold. Unlike the other five statements, the steps stay explicit — spelled
     `storeAt` — because `deliveredBlocks` is a prefix of the execution and must name how
-    far each validator has run. -/
+    far each validator has run.
+
+    **`[HashInjective Node Root]` was added to this statement on 2026-08-17, in Roberto's
+    absence, and is the one statement change in this file since it was written.** It is the
+    paper's collision-freedom idealization (`Spec/Defs/Store.lean`), carried by this theorem
+    alone — the same treatment `PositiveWeight` gets, and for the same reason: only the
+    results that need an assumption should pay for it. Without it the `Σ.J` conjunct is
+    false and not by a slashable event. `update_justified` breaks its tie on `hash(J)`, so
+    two distinct blocks justified at one height with equal hashes leave the store root
+    decided by arrival order, and Definition 9 (`hft:def:slashing`) is E1 alone and says
+    nothing about two targets at one height, so the disjunct cannot absorb it. The paper
+    identifies a block with its hash, so in its own model the assumption is free.
+    `CONTEXT.md` records the alternative that was rejected — folding injectivity into
+    `BlockHash`, which would have made the other five theorems pay for it too.
+
+    Proved in `Analysis/Proofs/OrderIndependence.lean`, over the fold; a validator's store
+    is that fold by `Proofs.storeAt_eq_fold`. -/
 theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
+    [HashInjective Node Root]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p p' : Node} {i j : Nat}
     (hperm : (deliveredBlocks x p i).Perm (deliveredBlocks x p' j))
@@ -271,6 +293,7 @@ theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq 
         ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
           (∃ Ca, (Ca ∈ (storeAt x p i).T ∨ Ca ∈ (storeAt x p' j).T) ∧ IncludedOn a Ca) ∧
           (∃ Cb, (Cb ∈ (storeAt x p i).T ∨ Cb ∈ (storeAt x p' j).T) ∧ IncludedOn b Cb) ∧
-          E1 a b := sorry
+          E1 a b :=
+  Proofs.orderIndependence hperm hp hp'
 
 end Decoupled

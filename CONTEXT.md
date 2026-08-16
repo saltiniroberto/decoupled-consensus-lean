@@ -2016,18 +2016,168 @@ can only have failed on the key comparison. Frictions measured, all skill-known:
 and `dsimp only` at the offending hypotheses fix it; `omega` does not split disjunctive
 hypotheses — `rcases` them first.
 
+## 2026-08-17 — Theorems 8, 9 and 10 proved; Section 3.1 is complete
+
+All six theorem environments of the companion paper's Section 3.1 are now proved and
+kernel-clean: `#print axioms` reports `[propext, Classical.choice, Quot.sound]` for each of
+`thmLocalIrreversibility`, `thmFPreceqJ`, `thmForkChoiceConsistency`, `thmFinalityAcceptance`,
+`thmLockIn` and `thmOrderIndependence`. `make check` is green.
+
+Six new files under `Analysis/Proofs/`, one per step of the plan that
+`PLAN_HFT_THEOREMS.md` set out (that file is deleted in the same commit as Theorem 10, per
+its own definition of done):
+
+* `StoreRecords.lean` — records persist and the tree grows through `on_block` and across
+  `ReachesFrom`; the `record_…` family turning a store record into a `BlockPostState`,
+  `Chained`, `Certified`, its endpoint and its `postState'`.
+* `Upgrade.lean` — `RetainedOn`/`SlashableSet`, then `certChain` (Lem 8, `hft:lem:certchain`)
+  and `upgrade` (Lem 9, `hft:lem:upgrade`).
+* `Viability.lean` — `exists_leaf`, `mem_T_of_preceq`, and `viable_of_height_lt`
+  (Lem 10, `hft:lem:viable-finalized`).
+* `Acceptance.lean` — Theorem 8 (`hft:thm:finlive`).
+* `LockIn.lean` — Theorem 9 (`hft:thm:lockin`).
+* `Fold.lean` and `OrderIndependence.lean` — Theorem 10 (`hft:thm:orderindep`).
+
+### `reachesFrom_mono`: the walker's relational companion
+
+`exec_node_invariant` carries a store *predicate* forward from `Store.gen`. The new
+`reachesFrom_mono` (`StoreRecords.lean`) carries a reflexive, transitive store *relation*
+between two stores one validator holds in order, given that `receive` establishes it at every
+store satisfying `StoreInv`. The trick that makes it work is putting `StoreInv (c[p].st)` into
+the `Step.elim` **motive** as a hypothesis: each case is handed an arbitrary configuration, so
+the invariant cannot be derived inside a case, but it can be discharged once at the
+application. `reachesFrom_record` and `reachesFrom_T` are its two instances.
+
+### `finalizedChainE1`: healing's Lemma 11 with E1 alone
+
+The companion paper's Definition 9 (`hft:def:slashing`) is E1 and has no E2, so its theorems'
+disjuncts name E1 only, while `lemFinalizedChain` concludes `E1 ∨ E2`. Its own proof produces
+E1 in both cases, so `Analysis/Proofs/Finality.lean` now proves `finalizedChainE1` and derives
+`finalizedChain` from it in three lines. The statement of record is unchanged.
+
+### `storeInv_accept` split in two, because Theorem 8 reads the invariant mid-branch
+
+Theorem 8's proof asks whether `update_finalized`'s three conditions hold, and answering the
+viability one is an argument about the store *between* `update_justified` and
+`update_finalized`. So `StoreProvenance.lean` now proves `storeInv_writes_justified` (three
+writes plus `update_justified`) and `storeInv_updateFinalized` separately, and composes them.
+The composed `storeInv_accept` keeps its statement, minus a `Chained` argument it never used.
+The split also halves the case count: two cases plus a two-case lemma, where there were four.
+
+### Theorem 8 does not need the paper's ancestor, and does not need Theorem 4
+
+The paper's proof of `hft:thm:finlive` reaches the `F' ⪯ Σ.J` condition by naming an ancestor
+`B'` of the accepted block whose post-state *justified* `F'`, arguing `B'` was processed first
+because the order is parent-first, and invoking its Lemma 9. None of that is needed: `Chained`
+gives `h_F ≤ h_j` on the accepted block's own state, so `certChain` applies directly with the
+accepted block as the finalizing chain. Consequences: no parent-first hypothesis in Theorem 8,
+one fewer object to produce, and `accept_F` carries no `F ⪯ J`.
+
+### Theorem 9's third claim is proved by refutation
+
+Rather than proving `∀ C, GetConfirmed Σ C → F ⪯ C` directly, the proof asks classically
+whether some confirmation fails to descend from `F` and deals only with that `C`. Each of the
+paper's easy cases then becomes a contradiction with `¬ F ⪯ C`, which is shorter than carrying
+the disjunction through. One step the paper leaves implicit and this supplies: the hard branch
+needs `Σ.F ⪯ F` before `keyDom` can bound `h_f`, and it follows from `F ⪯ Σ.J` plus Theorem 4
+making `F` and `Σ.F` two ancestors of `Σ.J`, hence comparable.
+
+### Theorem 10: the acceptance lemma is the whole content, and the paper skips it
+
+`onBlocks_accept` (`Fold.lean`) is the load the theorem rests on: in a parent-first fold whose
+store-finalized block never passes a given `Fmax`, every block of the list **comparable with**
+`Fmax` — in either direction — that replays is accepted. Both directions are needed. A block
+*below* `Fmax` must be accepted too, or a parent chain is broken and its descendants are
+rejected; it is accepted because at the moment it is offered, either the store's `F` is at or
+below it (the assert passes) or the store has already passed it, and then it is already in the
+tree, since `fProv` plus the tree's downward closure put every ancestor of `Σ.F` in the tree
+(`F_mem_T`). The paper asserts the corresponding step ("the `on_block` finality-ancestor
+assertion accepts such a maximum-height block") without proving it.
+
+Two other departures from the paper's proof, both simplifications:
+
+* **No maximum over the input set.** The paper takes `F_max` to be the maximum of
+  `{σ[B].F : B ∈ 𝓑}` and needs that set to be a chain with a maximum. Here the two stores'
+  own `F`s are compared with `finalizedChainE1`, the larger one is shown to be reached by the
+  other order too (its carrying record is accepted there, by the acceptance lemma), and
+  antisymmetry of `⪯` closes it. No `Finset.max` over a filtered set is constructed.
+* **`J` needs no lex-max machinery.** The paper builds the deterministic high-descriptor
+  multiset and argues the final root is its lex-max. Here `jProv` names a record carrying the
+  store's justified pair; Theorem 4 puts that record above `F`, so the acceptance lemma puts it
+  in the other fold, and `keyDom` at each store bounds each key by the other. The two keys are
+  therefore equal, in four lines.
+
+### `HashInjective`: a statement change to Theorem 10, made in Roberto's absence
+
+**This is the one place the plan's "do not change a statement without checking" was not
+followed, and it should be reviewed.** Theorem 10's signature gained
+`[HashInjective Node Root]`, a new class in `Spec/Defs/Store.lean` holding the paper's
+collision-freedom idealization.
+
+Why it is needed. `update_justified` breaks its tie on `hash(J)`. Two *distinct* blocks
+justified at one height with *equal* hashes therefore leave the store root decided by arrival
+order, so `Σ.J = Σ'.J` is false without collision-freedom. The disjunct cannot absorb the
+failure: two distinct targets at one height are an E2 event, and the companion paper's
+Definition 9 is E1 alone and has no E2, so no slashable set in this statement's sense is
+exhibited. Distinct blocks with *different* hashes are fine — the tiebreak is then
+deterministic — so collision-freedom is exactly what is missing and nothing more.
+
+Why it costs nothing against the paper: the companion paper identifies a block with its hash,
+so in its model the assumption holds by construction. This project models blocks as
+content-identified with an abstract `hash`, which is why the identification has to be assumed.
+CONTEXT.md's 2026-08-16 entry already anticipated this — "the collision-freedom idealization
+joins the class when a proof needs it".
+
+**The alternative that was rejected**: adding the injectivity field to `BlockHash` itself. That
+changes no statement text, so it would have satisfied the plan's rule to the letter, but it
+makes Theorems 3, 4, 7, 8 and 9 assume collision-freedom they do not use. The project's own
+precedent argues against it — `PositiveWeight` is a separate class carried only by the results
+that need it, and in this very file Theorems 3, 4 and 7 do not carry it. So a separate class on
+one statement was taken as the smaller change, and this entry is the record of the choice.
+
+### Lean frictions measured, beyond the skill's list
+
+* **`subst` on `C = Bs[n]` destroys later references to `C`.** Inside the acceptance
+  induction, `rw [← hCB]` on the goal is what to do instead: it puts the goal back in terms of
+  the bound variable and leaves every hypothesis about it usable.
+* **`cases h : e` has already rewritten the goal**, so the branch's witness is `rfl`, not `h`.
+  Two `Application type mismatch: ... but is expected to have type some σL = some σL` errors
+  came from passing `h`.
+* **A record-update literal in a `theorem` statement needs its continuation fields aligned to
+  the first field's column**, or the parser stops at the first field (`unexpected identifier;
+  expected '}'`). The skill records this for multi-line updates; it bit `writes_self`, whose
+  literal was indented to the `by` block's column instead.
+* **`simp only [deliveredAt, if_pos rfl, hm]` leaves `if True then … else …`.** Plain `simp`
+  finishes it; `if_pos` rewrote the condition rather than the `ite`.
+* **`push_neg` is deprecated** on this toolchain; the replacement is `push Not at h`.
+* Two Mathlib imports were added: `Mathlib.Data.Finset.Max` for `Finset.exists_max_image`
+  (`exists_leaf`). Nothing already in the graph carried it.
+
+### MAPPING.md is stale for the `hft:` rows
+
+Its Section 3.1 rows still say "not yet stated" — they were already stale for Theorems 3, 4
+and 7 before this work. `make cites` does not check them (it enforces only that every `lem…`
+declaration in `Analysis/Lemmas.lean` has a row), and per the pause, status flips wait for
+instruction. The rows to flip when that comes: `hft:thm:finperm`, `hft:thm:fleqr`,
+`hft:thm:fcconsistency`, `hft:thm:finlive`, `hft:thm:lockin`, `hft:thm:orderindep`, and the
+three lemmas now proved as machinery rather than as statements of record —
+`hft:lem:certchain`, `hft:lem:upgrade`, `hft:lem:viable-finalized`.
+
 ## Next
 
-1. Prove `Analysis/HftTheorems.lean`'s three remaining statements. `StoreInv` is in hand;
-   next is the upgrade argument (`hft:lem:upgrade`) as a store-level lemma — `keyDom` plus
-   healing Lemma 10/11 through the bridge, quorum intersection at equal heights giving the
-   E1 pair on recorded chains — then viability bookkeeping (leaf existence above the
-   `hmax` witness via `prec_slot_lt`-bounded ascent), then Theorem 8's accepting-step
-   walk, then Theorem 9, then Theorem 10's fold-equals-execution core.
-2. Finish the `StsMultisetLog/Spec/` audit: `Execution.lean` and `Schedule.lean`, the
+1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
+   one decision taken without agreement, and the alternative is recorded.
+2. Flip MAPPING.md's `hft:` rows and regenerate `mapping.html`, on instruction; refresh
+   `README.md` before the next push. Both are paused per `CLAUDE.local.md`.
+3. Section 3.1's remaining unstated results, if wanted as statements of record: Lemma 6
+   (`hft:lem:Rs-key-monotone`), Lemma 7 (`hft:lem:F-viable`), Corollary 1
+   (`hft:cor:getConfirmed-total`), Lemma 11 (`hft:lem:no-high-just`), and Remarks
+   `hft:rem:fs-invariant` and `hft:rem:viable-monotone`. Most are already inside
+   `StoreInv` or provable in a few lines from what is now in `Analysis/Proofs/`.
+4. Finish the `StsMultisetLog/Spec/` audit: `Execution.lean` and `Schedule.lean`, the
    assumption inventory — the layer where the first attempt's trouble concentrated.
    `Protocol.lean` and `Message.lean` are done, recorded above; the signing question is
    settled by the framework (structural signing).
-3. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-4. Healing Figures 4 and 5 and Sections 5 onward, under the store decision above: Figure 3
+5. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
+6. Healing Figures 4 and 5 and Sections 5 onward, under the store decision above: Figure 3
    only returns if merge/recovery does.

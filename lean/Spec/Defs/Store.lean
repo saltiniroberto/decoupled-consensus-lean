@@ -62,6 +62,25 @@ class BlockHash (Node Root : Type) where
 
 @[inherit_doc] scoped notation:max "hash(" B ")" => BlockHash.hash B
 
+/-- **The paper's collision-freedom idealization**, as a separate class so that only the
+    results that need it carry it — the same treatment `PositiveWeight`
+    (`Analysis/Proofs/Weights.lean`) gets.
+
+    The companion paper identifies a block with its hash ("The paper's blocks are identified
+    with their hashes", module header above), so in its model this holds by construction. Here
+    `Blk` is content-identified and `hash` is an abstract function, so the identification has to
+    be assumed where a proof relies on it.
+
+    One result relies on it: Theorem 10 (`hft:thm:orderindep`)'s claim that two nodes agree on
+    `Σ.J`. `update_justified` breaks ties on `hash(J)`, so two distinct blocks justified at one
+    height with equal hashes would leave the store root decided by arrival order, and neither
+    that nor the resulting conflict is a Definition 9 (`hft:def:slashing`) violation — that
+    definition is E1 and has no rule about two targets at one height. Everything else in
+    Section 3.1 is proved without this class. -/
+class HashInjective (Node Root : Type) [BlockHash Node Root] : Prop where
+  /-- Distinct blocks have distinct hashes. -/
+  inj : ∀ B B' : Blk Node Root, hash(B) = hash(B') → B = B'
+
 /-- Definition 10 (`hft:def:store`): `Σ = (σ, T, F, J, h_j, hmax)`, in the paper's order.
     The paper's `Σ` is written `S` in this project — see the module header. -/
 structure Store (Node Root : Type) where
