@@ -4,6 +4,7 @@ import Analysis.Vocabulary
 import Analysis.Proofs.Irreversibility
 import Analysis.Proofs.StoreInvariants
 import Analysis.Proofs.Acceptance
+import Analysis.Proofs.LockIn
 
 /-!
 # The companion paper's numbered theorems — its Section 3.1
@@ -16,10 +17,9 @@ stated; per the selection rule in `CONTEXT.md`, a lemma gets stated when a proof
 or on instruction. The rules of `Analysis/Theorems.lean` apply unchanged: each docstring
 carries the paper's sentence verbatim, and there is no section-level `variable`.
 
-**Stated on instruction, 2026-08-16; Theorems 3, 4, 7 and 8 are proved, the other two are
-`sorry`.** So `make dev` counts two here and `make check` fails until they are proved;
-each proof, when it lands, becomes a one-line call into `Analysis/Proofs/`, as the four
-proved ones are.
+**Stated on instruction, 2026-08-16; five of the six are proved, Theorem 10 is `sorry`.**
+So `make dev` counts one here and `make check` fails until it is proved; each proof, when it
+lands, becomes a one-line call into `Analysis/Proofs/`, as the five proved ones are.
 
 ## Shared rendering decisions
 
@@ -224,7 +224,8 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
         ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
           (IncludedOn a B_F ∨ ∃ Ca ∈ S'.T, IncludedOn a Ca) ∧
-          (IncludedOn b B_F ∨ ∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b := sorry
+          (IncludedOn b B_F ∨ ∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b :=
+  Proofs.lockIn h hBF hF hhf hB
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
 

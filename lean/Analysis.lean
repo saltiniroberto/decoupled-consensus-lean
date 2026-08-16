@@ -17,6 +17,7 @@ import Analysis.Proofs.StoreRecords
 import Analysis.Proofs.Upgrade
 import Analysis.Proofs.Viability
 import Analysis.Proofs.Acceptance
+import Analysis.Proofs.LockIn
 import Analysis.Lemmas
 import Analysis.Theorems
 import Analysis.HftTheorems
