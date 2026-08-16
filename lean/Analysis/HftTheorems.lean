@@ -1,6 +1,7 @@
 import StsMultisetLog.Spec.Execution
 import Spec.Protocol
 import Analysis.Vocabulary
+import Analysis.Proofs.Irreversibility
 
 /-!
 # The companion paper's numbered theorems — its Section 3.1
@@ -13,9 +14,9 @@ stated; per the selection rule in `CONTEXT.md`, a lemma gets stated when a proof
 or on instruction. The rules of `Analysis/Theorems.lean` apply unchanged: each docstring
 carries the paper's sentence verbatim, and there is no section-level `variable`.
 
-**Statements only, on instruction (Roberto, 2026-08-16): every proof is a `sorry`.** So
-`make dev` counts six here and `make check` fails until they are proved; each proof, when it
-lands, becomes a one-line call into `Analysis/Proofs/`.
+**Stated on instruction, 2026-08-16; Theorem 3 is proved, the other five are `sorry`.**
+So `make dev` counts five here and `make check` fails until they are proved; each proof,
+when it lands, becomes a one-line call into `Analysis/Proofs/`, as Theorem 3's is.
 
 ## Shared rendering decisions
 
@@ -74,15 +75,20 @@ open Framework.StsMultisetLog
     classification, like accountable safety, and `p` ranges over corrupted validators too —
     corruption in this framework decides what may be *signed* (`Action.adversarial`
     touches only the log), while every change to a validator's own store goes through the
-    protocol's reaction, hence through `on_block`. The store-level core the proof will
-    establish is `S.F ⪯ (onBlocks S Bs).F` for an arbitrary store `S` — this theorem over
-    one fold, needing no reachability because `update_finalized`'s condition `F' ≻ Σ.F` is
-    per-step. -/
+    protocol's reaction, hence through `on_block`. The store-level core is
+    `Proofs.onBlocks_F`: `S.F ⪯ (onBlocks S Bs).F` for an arbitrary store `S` — this
+    theorem over one fold, needing no reachability because `update_finalized`'s condition
+    `F' ≻ Σ.F` is per-step.
+
+    Proved in `Analysis/Proofs/Irreversibility.lean`: `F` moves only inside
+    `update_finalized`, whose own condition supplies the `⪯`; the execution walk is
+    `Step.elim` per step and `Nat.le_induction` across them. -/
 theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
     {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
     (p : Node) {i j : Nat} (hij : i ≤ j) :
-    (x[i][p].st).F ⪯ (x[j][p].st).F := sorry
+    (x[i][p].st).F ⪯ (x[j][p].st).F :=
+  Proofs.localIrreversibility x p hij
 
 /-- **Theorem 4** (`hft:thm:fleqr`, lines 591–593): `F ⪯ J`, stated on an execution — on
     instruction, 2026-08-16, like Theorem 3.
@@ -114,15 +120,18 @@ theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     Read aloud: once the store finalizes a block, every confirmation it ever offers from
     then on sits below that block.
 
-    Noun by noun. "Once a node sets `Σ.F = F`": `S` reachable, `F` is `S.F`. "At all future
-    times": the store `onBlocks S Bs`. "Returns … for every `Ω`": every `C` with
-    `GetConfirmed (onBlocks S Bs) C` — the relation holds of exactly the blocks some `Ω`
-    could pick, so quantifying over its solutions is quantifying over `Ω`. -/
+    Noun by noun. "Once a node sets `Σ.F = F`": `F` is `(x[i][p].st).F`, validator `p`'s
+    store-finalized block at step `i`. "At all future times": every step `j ≥ i`.
+    "Returns … for every `Ω`": every `C` with `GetConfirmed (x[j][p].st) C` — the relation
+    holds of exactly the blocks some `Ω` could pick, so quantifying over its solutions is
+    quantifying over `Ω`. The store-level core the proof will establish is the previous
+    statement of record: `S.Reachable → GetConfirmed (onBlocks S Bs) C → S.F ⪯ C`. -/
 theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
-    {S : Store Node Root} (hS : S.Reachable) {Bs : List (Blk Node Root)}
-    {C : Blk Node Root} (hC : GetConfirmed (onBlocks S Bs) C) :
-    S.F ⪯ C := sorry
+    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
+    (p : Node) {i j : Nat} (hij : i ≤ j)
+    {C : Blk Node Root} (hC : GetConfirmed (x[j][p].st) C) :
+    (x[i][p].st).F ⪯ C := sorry
 
 /-- **Theorem 8** (`hft:thm:finlive`, lines 683–685): local acceptance of finality updates.
 

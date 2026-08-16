@@ -1870,10 +1870,38 @@ assumption is an à-la-carte predicate on executions (`TimeMonotone`, `TimeStepw
 `Safe`/`Live`/`Secure` are stated abstractly over an output function and prefix order.
 Still unread: `Spec/Schedule.lean`.
 
+## 2026-08-16 — Theorem 3 proved, kernel-clean
+
+`Analysis/Proofs/Irreversibility.lean`, three layers. Store: `F` moves only inside
+`update_finalized`, whose own condition `F' ≻ Σ.F` supplies the `⪯`; `onBlock_F` is
+`simp only [onBlock, Id.run]; repeat' split` with two closers (`Preceq.refl` on every
+rejection leaf, `updates_F rfl` on the accept leaf); the fold `onBlocks_F` is the
+store-level core over an arbitrary store. Execution: `Step.elim` with the motive
+`(c[p].st).F ⪯ (c'[p].st).F` — `advance`/`adversarial` never touch a node, `custom` is
+`Empty.elim`, and the three reacting cases re-ascribe `protocol.step` to
+`res = reaction … e` (defeq re-ascription) and split on reactor = observer. The walk is
+`Nat.le_induction`. `#print axioms`: `[propext, Classical.choice, Quot.sound]`, measured
+after a full `make dev`.
+
+Three notes for the next store proof:
+
+* The framework states `clock`/`view` read-backs but not `st`; the four `st` read-backs
+  (`applyNodeStepResult_st_self`/`_other`, `setClock_st`, `receive_st`) now live at the top
+  of `Irreversibility.lean` and are what every store-invariant-on-executions proof will
+  open with.
+* `updates_F` takes `S₀.F = S.F` discharged by `rfl` at the use site: inside `on_block`'s
+  accept branch the store is a record update whose `.F` is definitionally the original's,
+  and passing the equality keeps the unifier from picking the wrong store (the skill's
+  metavariable trap).
+* `reaction` reduces definitionally on each concrete event, so the `tick`/`wake` cases
+  close by `Preceq.refl` after the read-backs, and `recv` needs only `receiveMsg_F` —
+  one `cases` on the `StoreMsg`.
+
 ## Next
 
-1. Prove `Analysis/HftTheorems.lean`'s six statements: the map-domain coherence invariant
-   first, then the induction-on-operations ones (Thm 3, Thm 4), then the conditional three.
+1. Prove `Analysis/HftTheorems.lean`'s five remaining statements: the map-domain coherence
+   invariant first, then Thm 4 (its store core `Reachable → F ⪯ J` plus the execution walk
+   that `Irreversibility.lean` now demonstrates), then the conditional three.
    `thmOrderIndependence` quantifies over permutations of a block sequence and is a
    different proof shape (`List.Perm`). Section 3.1's lemmas get stated as the proofs
    demand them.
