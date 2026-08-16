@@ -177,9 +177,17 @@ theorem pastFinalized [PositiveWeight Node] {B_F C B : Blk Node Root} {h : Nat}
       · exact Or.inl hCB
       · exact Or.inr ⟨h1, pastFinalized_evidence hBF hC hhF hσB h1 hlt hCB⟩
 
-/-- Lemma 11's content; `lemFinalizedChain` in `Analysis/Lemmas.lean` is the statement of
-    record and is this, verbatim. The module docstring gives the three cases. -/
-theorem finalizedChain [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root} {h h' : Nat}
+/-- **Lemma 11's content, with E1 alone.** The paper's statement says "the fault bound is
+    violated", which Definition 11 renders as either condition; its own proof produces E1 in
+    both of its cases, and so does this one — the equal-height case intersects a commit quorum
+    with a target quorum, and the different-height case goes through Lemma 10, whose evidence
+    is E1. `finalizedChain` below weakens this to the paper's disjunction, and
+    `lemFinalizedChain` in `Analysis/Lemmas.lean` is that weaker form, verbatim.
+
+    The strong form is what the companion paper's Section 3.1 needs: its Definition 9
+    (`hft:def:slashing`) is the single rule E1 and has no E2, so its theorems' disjuncts name
+    E1 and nothing else. The module docstring gives the three cases. -/
+theorem finalizedChainE1 [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root} {h h' : Nat}
     (hBF : postState B_F ≠ invalid)
     (hC : (postState' B_F).F = C) (hhF : (postState' B_F).h_F = h)
     (hBF' : postState B_F' ≠ invalid)
@@ -188,7 +196,7 @@ theorem finalizedChain [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root} {h 
     C ⪯ C' ∨
       ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
         ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-          IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y) := by
+          IncludedOn x B_F ∧ IncludedOn y B_F' ∧ E1 x y := by
   have hσeq := TransitionResult.state_get _ hBF
   have hσeq' := TransitionResult.state_get _ hBF'
   have hbp : BlockPostState (postState' B_F) := blockPostState_of_postState B_F hσeq
@@ -214,7 +222,7 @@ theorem finalizedChain [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root} {h 
         refine ⟨Qc ∩ Qt, quorumIntersection hQcV hQtV hQcw hQtw, fun i hi => ?_⟩
         obtain ⟨x, hxv, hxp, hxi⟩ := hQca i (Finset.mem_inter.1 hi).1
         obtain ⟨y, hyv, hyp, hyi⟩ := hQta i (Finset.mem_inter.1 hi).2
-        refine ⟨x, y, hxv, hyv, by rwa [hL] at hxi, by rwa [hL'] at hyi, Or.inl ?_⟩
+        refine ⟨x, y, hxv, hyv, by rwa [hL] at hxi, by rwa [hL'] at hyi, ?_⟩
         rw [hhF, hC] at hxp
         rw [hhF', hC', ← heq] at hyp
         exact ⟨h, C, hxp, Or.inl ⟨C', hyp, fun he => hCC he.symm⟩⟩
@@ -244,7 +252,26 @@ theorem finalizedChain [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root} {h 
       · right
         refine ⟨S, hw, fun i hi => ?_⟩
         obtain ⟨x, y, hxv, hyv, hxi, hyi, he⟩ := hev i hi
-        exact ⟨x, y, hxv, hyv, hxi, hyi, Or.inl he⟩
+        exact ⟨x, y, hxv, hyv, hxi, hyi, he⟩
+
+/-- Lemma 11's content in the paper's own shape — `E1 ∨ E2`, Definition 11's "either condition
+    holds" — weakened from `finalizedChainE1`. `lemFinalizedChain` in `Analysis/Lemmas.lean` is
+    the statement of record and is this, verbatim. -/
+theorem finalizedChain [PositiveWeight Node] {B_F B_F' C C' : Blk Node Root} {h h' : Nat}
+    (hBF : postState B_F ≠ invalid)
+    (hC : (postState' B_F).F = C) (hhF : (postState' B_F).h_F = h)
+    (hBF' : postState B_F' ≠ invalid)
+    (hC' : (postState' B_F').F = C') (hhF' : (postState' B_F').h_F = h')
+    (hle : h ≤ h') :
+    C ⪯ C' ∨
+      ∃ S : Finset Node, w(S) ≥ 2 * q Node - W Node ∧
+        ∀ i ∈ S, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+          IncludedOn x B_F ∧ IncludedOn y B_F' ∧ (E1 x y ∨ E2 x y) := by
+  rcases finalizedChainE1 hBF hC hhF hBF' hC' hhF' hle with hpre | ⟨S, hw, hev⟩
+  · exact Or.inl hpre
+  · refine Or.inr ⟨S, hw, fun i hi => ?_⟩
+    obtain ⟨x, y, hxv, hyv, hxi, hyi, he⟩ := hev i hi
+    exact ⟨x, y, hxv, hyv, hxi, hyi, Or.inl he⟩
 
 /-- Theorem 5's content: order the heights, apply `finalizedChain` in that order, and refuse its
     first disjunct with the conflict — `Conflicts` is `¬ (C ⪯ C' ∨ C' ⪯ C)`, and each branch's
