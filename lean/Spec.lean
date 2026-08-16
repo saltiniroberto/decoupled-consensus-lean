@@ -1,37 +1,38 @@
 import Spec.Defs.Basic
 import Spec.Defs.Notation
+import Spec.Defs.Store
 import Spec.Fig2AttestationProcessing
 import Spec.Fig1SlotReplay
-import Spec.Timeouts.Defs
-import Spec.Timeouts.Fig2Store
-import Spec.Timeouts.Receive
-import Spec.Timeouts.Protocol
+import Spec.HftFig2Store
+import Spec.Receive
+import Spec.Protocol
 
 /-!
 # The specification
 
-One import per file under `Spec/`. The papers' figures, and the numbered definitions they
-read.
+One import per file under `Spec/`. **One protocol**, assembled from two papers: the chain
+layer from `height_filter_healing.tex`, the store layer from the companion paper
+`full/height_filter_and_timeouts.tex` — the decision is recorded in `Spec/Defs/Store.lean`
+and `CONTEXT.md`.
 
-**`Spec/` holds the figure translations and nothing else.** A file that renders one of the
-healing paper's five algorithm figures is named `Fig<n><Subject>`, where `<n>` is the
-figure's printed number at the pinned revision of the paper.
+**A figure file's name says which paper it renders.** A figure of the healing paper is
+`Fig<n><Subject>`; a figure of the companion paper is `HftFig<n><Subject>` — the same
+`hft` that prefixes its citation labels — with `<n>` the printed figure number in its own
+paper at the pinned revision. So `Fig2AttestationProcessing` is healing's Figure 2 and
+`HftFig2Store` is the companion's.
 
 Everything the figures are written in terms of sits one level down, in `Spec/Defs/`:
-`Basic.lean` holds the paper's numbered definitions, and `Notation.lean` holds the
-assignment macros and no protocol content. Each says so in its own docstring.
+`Basic.lean` holds the healing paper's numbered definitions, `Store.lean` the companion
+paper's, and `Notation.lean` the assignment macros and no protocol content. Each says so
+in its own docstring.
 
-**`Spec/Timeouts/` is the store layer**, and its contract is the companion paper
-`full/height_filter_and_timeouts.tex` — cited with `hft:`-prefixed labels — rather than the
-healing paper; `Spec/Timeouts/Defs.lean` records the decision. The same naming convention
-applies inside it with that paper's figure numbers: `Fig2Store` renders its Figure 2
-(`hft:alg:store`), `Defs` the numbered definitions that figure reads, and two files that
-render no figure — `Receive`, the message-receipt wiring, and `Protocol`, the node as a
+Two files render no figure: `Receive.lean`, the message-receipt wiring — a block message
+is passed to `on_block` — and `Protocol.lean`, the node as a
 `Framework.StsMultisetLog.Protocol` instance.
 
-Present from the healing paper: Figure 1 (`alg:state-replay`) and Figure 2
-(`alg:attestation-processing`), and the vocabulary in `Spec/Defs/Basic.lean` those two
-need. Its Figure 3 (`alg:store`), Figure 4 (`alg:fork-choice-state`) and Figure 5
-(`alg:recovery-action`) are absent — the store layer deliberately so, in favour of
-`Spec/Timeouts/` — as is everything Section 6 onward defines.
+Present: healing's Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`),
+the companion's Figure 2 (`hft:alg:store`), and the vocabulary those three need. Healing's
+Figure 3 (`alg:store`) is deliberately not rendered — the store above replaces it — and
+its Figures 4 (`alg:fork-choice-state`) and 5 (`alg:recovery-action`) are absent, as is
+everything its Section 6 onward defines.
 -/
