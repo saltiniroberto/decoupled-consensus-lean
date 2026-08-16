@@ -127,23 +127,41 @@ theorem update_keeps {S : Store Node Root}
     rw [h3]
   · exact h₀
 
-/-- The accept branch of `on_block` preserves the invariant. `S₁` is the store after the
-    three writes and before the two updates; the two `spec` lemmas turn the updates into
-    record equations, and the four resulting cases differ only in the three
-    provenance fields. -/
-theorem storeInv_accept {S : Store Node Root} (hinv : StoreInv S)
+/-- The one entry the accept branch writes, read back through `update_justified`. Named
+    because `storeInv_accept` needs it as `update_finalized`'s provenance witness, and the
+    record literal makes it awkward to inline. -/
+theorem writes_self {S : Store Node Root} {B' : Blk Node Root} {σ' : ChainState Node Root} :
+    (updateJustified
+      { S with σ := Function.update S.σ B' (some σ'), T := S.T ∪ {B'},
+               hmax := max S.hmax σ'.h } σ'.J σ'.h_j).σ B' = some σ' := by
+  have h1 : Function.update S.σ B' (some σ') B' = some σ' := by
+    rw [Function.update_apply]; exact if_pos rfl
+  rw [updateJustified_σ]
+  exact h1
+
+/-- **Everything the accept branch does before the finality update preserves the invariant**:
+    the three writes, then `update_justified`. Two cases, differing only in the three
+    provenance fields, and the interesting one is `keyDom` when the justification did not
+    fire — the new record's own pair then lost the key comparison, which is what that field
+    claims.
+
+    Split from `update_finalized` (below) because Theorem 8 (`hft:thm:finlive`) reads the
+    invariant at exactly this point: its proof asks whether the finality update's three
+    conditions hold, and answering each is an argument about a store whose records the
+    healing machinery has to apply to. -/
+theorem storeInv_writes_justified {S : Store Node Root} (hinv : StoreInv S)
     {B' P : Blk Node Root} {σ' : ChainState Node Root}
     (hP : B'.parent = some P) (hPT : P ∈ S.T)
-    (hpost : postState B' = .state σ') (hch : Chained σ') :
-    StoreInv (updateFinalized (updateJustified
+    (hpost : postState B' = .state σ') :
+    StoreInv (updateJustified
       { S with σ := Function.update S.σ B' (some σ'), T := S.T ∪ {B'},
-               hmax := max S.hmax σ'.h } σ'.J σ'.h_j) σ'.F) := by
+               hmax := max S.hmax σ'.h } σ'.J σ'.h_j) := by
   set u : Blk Node Root → Option (ChainState Node Root) :=
     Function.update S.σ B' (some σ') with hu
   have hself : u B' = some σ' := by
     rw [hu, Function.update_apply]
     exact if_pos rfl
-  -- Facts at the intermediate store, shared by all four cases.
+  -- Facts at the intermediate store, shared by both cases.
   have hrec₁ : ∀ B σB, u B = some σB → postState B = .state σB := by
     intro B σB hB
     rw [hu, Function.update_apply] at hB
@@ -184,41 +202,20 @@ theorem storeInv_accept {S : Store Node Root} (hinv : StoreInv S)
     · obtain ⟨B₀, σ₀, h₀, hh₀⟩ := hinv.hmaxEx
       exact ⟨B₀, σ₀, update_keeps hinv.recorded hpost h₀, by rw [hm, hh₀]⟩
     · exact ⟨B', σ', hself, by rw [hm]⟩
-  -- The two updates, as record equations.
+  have hfp : ∀ (σ₀ : ChainState Node Root) (B₀ : Blk Node Root),
+      S.σ B₀ = some σ₀ → u B₀ = some σ₀ :=
+    fun σ₀ B₀ h₀ => update_keeps hinv.recorded hpost h₀
+  -- `update_justified`, as a record equation.
   rcases updateJustified_spec
       { S with σ := u, T := S.T ∪ {B'}, hmax := max S.hmax σ'.h } σ'.J σ'.h_j with
     ⟨hcJ, hlex, hJeq⟩ | ⟨hcJ, hJeq⟩ <;>
     rw [hJeq] <;>
-    [rcases updateFinalized_spec
-        { S with σ := u, T := S.T ∪ {B'}, hmax := max S.hmax σ'.h, J := σ'.J,
-                 h_j := σ'.h_j } σ'.F with ⟨hcF, hFJ, hFv, hFeq⟩ | ⟨hcF, hFeq⟩;
-     rcases updateFinalized_spec
-        { S with σ := u, T := S.T ∪ {B'}, hmax := max S.hmax σ'.h } σ'.F with
-        ⟨hcF, hFJ, hFv, hFeq⟩ | ⟨hcF, hFeq⟩] <;>
-    rw [hFeq] <;>
     refine ⟨hrec₁, hdom₁, hpar₁, ?_, ?_, ?_, hle₁, hex₁⟩
-  -- Case 1: both updates fired.
-  · exact ⟨B', σ', hself, rfl, rfl⟩
-  · exact Or.inr ⟨B', σ', hself, rfl⟩
-  · intro B σB hB hcond
-    dsimp only at hcond ⊢
-    (try dsimp only at hcJ)
-    have hB' : Function.update S.σ B' (some σ') B = some σB := hB
-    rw [Function.update_apply] at hB'
-    split_ifs at hB' with hb
-    · injection hB' with h2
-      subst hb
-      rw [← h2]
-      exact Or.inr ⟨rfl, le_refl _⟩
-    · dsimp only at hlex
-      have hSF : S.F ⪯ σB.J := Preceq.trans hcF.1 hcond
-      have hold := hinv.keyDom B σB hB' hSF
-      rcases hold with h3 | ⟨h3, h4⟩ <;> rcases hlex with h1 | ⟨h1, h2⟩ <;> omega
-  -- Case 2: justification fired, finalization did not.
+  -- The justification fired: the new record carries the store's pair.
   · exact ⟨B', σ', hself, rfl, rfl⟩
   · rcases hinv.fProv with hgen | ⟨B₀, σ₀, h₀, hF₀⟩
     · exact Or.inl hgen
-    · exact Or.inr ⟨B₀, σ₀, update_keeps hinv.recorded hpost h₀, hF₀⟩
+    · exact Or.inr ⟨B₀, σ₀, hfp σ₀ B₀ h₀, hF₀⟩
   · intro B σB hB hcond
     dsimp only at hcond ⊢
     (try dsimp only at hcJ)
@@ -232,37 +229,13 @@ theorem storeInv_accept {S : Store Node Root} (hinv : StoreInv S)
     · dsimp only at hlex
       have hold := hinv.keyDom B σB hB' hcond
       rcases hold with h3 | ⟨h3, h4⟩ <;> rcases hlex with h1 | ⟨h1, h2⟩ <;> omega
-  -- Case 3: finalization fired, justification did not.
+  -- The justification did not fire: the store keeps its own pair, and the new record's pair
+  -- is what lost the key comparison.
   · obtain ⟨B₀, σ₀, h₀, hJ₀, hh₀⟩ := hinv.jProv
-    exact ⟨B₀, σ₀, update_keeps hinv.recorded hpost h₀, hJ₀, hh₀⟩
-  · exact Or.inr ⟨B', σ', hself, rfl⟩
-  · intro B σB hB hcond
-    dsimp only at hcond ⊢
-    (try dsimp only at hcJ)
-    have hB' : Function.update S.σ B' (some σ') B = some σB := hB
-    rw [Function.update_apply] at hB'
-    split_ifs at hB' with hb
-    · injection hB' with h2
-      subst hb
-      rw [← h2] at hcond ⊢
-      -- the fired finalization puts `S.F` under `σ'.J`, so the justification's own
-      -- condition failed on the key comparison alone
-      have hSF : S.F ⪯ σ'.J := Preceq.trans hcF.1 hch.finJust
-      have h5 : ¬ S.h_j < σ'.h_j := fun h => hcJ ⟨hSF, Or.inl h⟩
-      rcases Nat.lt_or_ge σ'.h_j S.h_j with h7 | h7
-      · exact Or.inl h7
-      · have h8 : σ'.h_j = S.h_j := by omega
-        refine Or.inr ⟨h8, ?_⟩
-        by_contra h9
-        exact hcJ ⟨hSF, Or.inr ⟨h8, by omega⟩⟩
-    · have hSF : S.F ⪯ σB.J := Preceq.trans hcF.1 hcond
-      exact hinv.keyDom B σB hB' hSF
-  -- Case 4: neither update fired.
-  · obtain ⟨B₀, σ₀, h₀, hJ₀, hh₀⟩ := hinv.jProv
-    exact ⟨B₀, σ₀, update_keeps hinv.recorded hpost h₀, hJ₀, hh₀⟩
+    exact ⟨B₀, σ₀, hfp σ₀ B₀ h₀, hJ₀, hh₀⟩
   · rcases hinv.fProv with hgen | ⟨B₀, σ₀, h₀, hF₀⟩
     · exact Or.inl hgen
-    · exact Or.inr ⟨B₀, σ₀, update_keeps hinv.recorded hpost h₀, hF₀⟩
+    · exact Or.inr ⟨B₀, σ₀, hfp σ₀ B₀ h₀, hF₀⟩
   · intro B σB hB hcond
     dsimp only at hcond ⊢
     (try dsimp only at hcJ)
@@ -281,6 +254,34 @@ theorem storeInv_accept {S : Store Node Root} (hinv : StoreInv S)
         exact hcJ ⟨hcond, Or.inr ⟨h8, by omega⟩⟩
     · exact hinv.keyDom B σB hB' hcond
 
+/-- **`update_finalized` preserves the invariant**, given that the block it installs comes
+    from a record — which is the first half of Remark 5 (`hft:rem:fs-invariant`), and is what
+    `fProv` then reports. `keyDom` survives because the update's own condition `Σ.F ≺ F'` puts
+    the new `F` at or above the old one, so that field's hypothesis only narrows; every other
+    field reads a component the update does not touch. -/
+theorem storeInv_updateFinalized {S : Store Node Root} (hinv : StoreInv S) {F' : Blk Node Root}
+    (hprov : ∃ B σB, S.σ B = some σB ∧ σB.F = F') :
+    StoreInv (updateFinalized S F') := by
+  rcases updateFinalized_spec S F' with ⟨hc1, hc2, hc3, heq⟩ | ⟨hc, heq⟩ <;> rw [heq]
+  · refine ⟨hinv.recorded, hinv.domT, hinv.parentT, hinv.jProv, Or.inr hprov, ?_,
+      hinv.hmaxLe, hinv.hmaxEx⟩
+    intro B σB hB hcond
+    dsimp only at hB hcond ⊢
+    exact hinv.keyDom B σB hB (Preceq.trans hc1.1 hcond)
+  · exact hinv
+
+/-- The accept branch of `on_block` preserves the invariant: the two halves above composed,
+    with the newly written record as `update_finalized`'s provenance witness. -/
+theorem storeInv_accept {S : Store Node Root} (hinv : StoreInv S)
+    {B' P : Blk Node Root} {σ' : ChainState Node Root}
+    (hP : B'.parent = some P) (hPT : P ∈ S.T)
+    (hpost : postState B' = .state σ') :
+    StoreInv (updateFinalized (updateJustified
+      { S with σ := Function.update S.σ B' (some σ'), T := S.T ∪ {B'},
+               hmax := max S.hmax σ'.h } σ'.J σ'.h_j) σ'.F) :=
+  storeInv_updateFinalized (storeInv_writes_justified hinv hP hPT hpost)
+    ⟨B', σ', writes_self, rfl⟩
+
 /-- `on_block` preserves the invariant. -/
 theorem storeInv_onBlock {S : Store Node Root} (hinv : StoreInv S) (B' : Blk Node Root) :
     StoreInv (onBlock S B') := by
@@ -292,7 +293,6 @@ theorem storeInv_onBlock {S : Store Node Root} (hinv : StoreInv S) (B' : Blk Nod
       · rename_i σ' hrep
         have hpost : postState B' = .state σ' := replay_postState hinv.recorded hrep
         exact storeInv_accept hinv hP hadm.1 hpost
-          (chained_of_blockPostState (blockPostState_of_postState B' hpost))
       · exact hinv
     · exact hinv
   · exact hinv

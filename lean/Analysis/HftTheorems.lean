@@ -3,6 +3,7 @@ import Spec.Protocol
 import Analysis.Vocabulary
 import Analysis.Proofs.Irreversibility
 import Analysis.Proofs.StoreInvariants
+import Analysis.Proofs.Acceptance
 
 /-!
 # The companion paper's numbered theorems — its Section 3.1
@@ -15,10 +16,10 @@ stated; per the selection rule in `CONTEXT.md`, a lemma gets stated when a proof
 or on instruction. The rules of `Analysis/Theorems.lean` apply unchanged: each docstring
 carries the paper's sentence verbatim, and there is no section-level `variable`.
 
-**Stated on instruction, 2026-08-16; Theorems 3, 4 and 7 are proved, the other three are
-`sorry`.** So `make dev` counts three here and `make check` fails until they are proved;
-each proof, when it lands, becomes a one-line call into `Analysis/Proofs/`, as those of
-Theorems 3, 4 and 7 are.
+**Stated on instruction, 2026-08-16; Theorems 3, 4, 7 and 8 are proved, the other two are
+`sorry`.** So `make dev` counts two here and `make check` fails until they are proved;
+each proof, when it lands, becomes a one-line call into `Analysis/Proofs/`, as the four
+proved ones are.
 
 ## Shared rendering decisions
 
@@ -188,7 +189,8 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
         ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
           (∃ Ca ∈ S'.T, IncludedOn a Ca) ∧
-          (∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b := sorry
+          (∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b :=
+  Proofs.finalityAcceptance h hnew hB
 
 /-- **Theorem 9** (`hft:thm:lockin`, lines 695–697): lock-in.
 

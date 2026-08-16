@@ -58,54 +58,82 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
 /-! ## The disjunct -/
 
 /-- Where the companion paper's theorems allow a retained attestation to sit: on the chain
-    whose replay finalized the block in question, or on a chain the store accepted. Both arms
-    are things a statement about one store can name, which is the point — an attestation the
-    proof can only place "somewhere in the past" would make the disjunct unusable. -/
-def RetainedOn (S : Store Node Root) (B_F : Blk Node Root) (a : Attestation Node Root) : Prop :=
-  IncludedOn a B_F ∨ ∃ C ∈ S.T, IncludedOn a C
+    whose replay finalized the block in question, or on a chain in the accepted tree `T`. Both
+    arms are things a statement about one store can name, which is the point — an attestation
+    the proof can only place "somewhere in the past" would make the disjunct unusable.
 
-/-- "Unless `≥ n/3` validators are slashable", at one store: a set of weight at least `2q − W`
-    — the weight two `q`-quorums must share (Lemma 2, `lem:quorum-intersection`), the count
-    analogue of `n/3` — each of whose members signed an E1 pair, both messages retained.
-    Definition 9 (`hft:def:slashing`) is E1 and nothing else. -/
-def SlashableSet (S : Store Node Root) (B_F : Blk Node Root) : Prop :=
+    Over a `Finset` rather than a `Store` because the tree is all these lemmas read of a store,
+    and because the intermediate stores inside `on_block`'s accept branch are record literals
+    whose `T` is `S.T ∪ {B}`: naming the set keeps those out of the statements. -/
+def RetainedOn (T : Finset (Blk Node Root)) (B_F : Blk Node Root)
+    (a : Attestation Node Root) : Prop :=
+  IncludedOn a B_F ∨ ∃ C ∈ T, IncludedOn a C
+
+/-- "Unless `≥ n/3` validators are slashable": a set of weight at least `2q − W` — the weight
+    two `q`-quorums must share (Lemma 2, `lem:quorum-intersection`), the count analogue of
+    `n/3` — each of whose members signed an E1 pair, both messages retained. Definition 9
+    (`hft:def:slashing`) is E1 and nothing else. -/
+def SlashableSet (T : Finset (Blk Node Root)) (B_F : Blk Node Root) : Prop :=
   ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
     ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-      RetainedOn S B_F a ∧ RetainedOn S B_F b ∧ E1 a b
+      RetainedOn T B_F a ∧ RetainedOn T B_F b ∧ E1 a b
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Retention survives a growing tree, so it survives `ReachesFrom` (`reachesFrom_T`). -/
-theorem RetainedOn.mono {S S' : Store Node Root} {B_F : Blk Node Root}
-    {a : Attestation Node Root} (hT : S.T ⊆ S'.T) (h : RetainedOn S B_F a) :
-    RetainedOn S' B_F a := by
+theorem RetainedOn.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    {a : Attestation Node Root} (hT : T ⊆ T') (h : RetainedOn T B_F a) :
+    RetainedOn T' B_F a := by
   rcases h with h | ⟨C, hC, ha⟩
   · exact Or.inl h
   · exact Or.inr ⟨C, hT hC, ha⟩
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- The usual way one is built: the attestation sits on an accepted chain. -/
-theorem RetainedOn.ofChain {S : Store Node Root} {B_F C : Blk Node Root}
-    {a : Attestation Node Root} (hC : C ∈ S.T) (ha : IncludedOn a C) : RetainedOn S B_F a :=
+theorem RetainedOn.ofChain {T : Finset (Blk Node Root)} {B_F C : Blk Node Root}
+    {a : Attestation Node Root} (hC : C ∈ T) (ha : IncludedOn a C) : RetainedOn T B_F a :=
   Or.inr ⟨C, hC, ha⟩
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- The named chain adds nothing to the tree: retention against a tree with the named block
+    thrown in is retention against the tree. This is what brings evidence found inside
+    `on_block`'s accept branch, where the tree is already `S.T ∪ {B}`, back to the store the
+    call started from. -/
+theorem RetainedOn.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    {a : Attestation Node Root} (h : RetainedOn (T ∪ {B_F}) B_F a) : RetainedOn T B_F a := by
+  rcases h with h | ⟨C, hC, ha⟩
+  · exact Or.inl h
+  · rw [Finset.mem_union, Finset.mem_singleton] at hC
+    rcases hC with hC | rfl
+    · exact Or.inr ⟨C, hC, ha⟩
+    · exact Or.inl ha
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 /-- The set survives a growing tree. -/
-theorem SlashableSet.mono {S S' : Store Node Root} {B_F : Blk Node Root}
-    (hT : S.T ⊆ S'.T) (h : SlashableSet S B_F) : SlashableSet S' B_F := by
+theorem SlashableSet.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    (hT : T ⊆ T') (h : SlashableSet T B_F) : SlashableSet T' B_F := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
   exact ⟨a, b, ha, hb, hra.mono hT, hrb.mono hT, he⟩
 
+omit [Params] [BlockHash Node Root] in
+/-- `RetainedOn.ofUnion`, for a whole set. -/
+theorem SlashableSet.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    (h : SlashableSet (T ∪ {B_F}) B_F) : SlashableSet T B_F := by
+  obtain ⟨A, hw, hev⟩ := h
+  refine ⟨A, hw, fun v hv => ?_⟩
+  obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
+  exact ⟨a, b, ha, hb, hra.ofUnion, hrb.ofUnion, he⟩
+
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 /-- When the finalizing chain is itself a block the store accepted, the two arms of every
     `RetainedOn` collapse into one. This is the shape Theorem 8 (`hft:thm:finlive`) states,
     where the finalized pair comes from a record and so has no chain of its own to name. -/
-theorem SlashableSet.onTree {S : Store Node Root} {B_F : Blk Node Root} (hBF : B_F ∈ S.T)
-    (h : SlashableSet S B_F) :
+theorem SlashableSet.onTree {T : Finset (Blk Node Root)} {B_F : Blk Node Root} (hBF : B_F ∈ T)
+    (h : SlashableSet T B_F) :
     ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
       ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-        (∃ Ca ∈ S.T, IncludedOn a Ca) ∧ (∃ Cb ∈ S.T, IncludedOn b Cb) ∧ E1 a b := by
+        (∃ Ca ∈ T, IncludedOn a Ca) ∧ (∃ Cb ∈ T, IncludedOn b Cb) ∧ E1 a b := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
@@ -145,7 +173,7 @@ theorem certChain [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B₁ : Blk Node Root} {σ₁ : ChainState Node Root} (hB₁ : S.σ B₁ = some σ₁)
     (hle : h_f ≤ σ₁.h_j) :
-    F ⪯ σ₁.J ∨ SlashableSet S B_F := by
+    F ⪯ σ₁.J ∨ SlashableSet S.T B_F := by
   -- the finalizing chain
   have hσF : postState B_F = .state (postState' B_F) := TransitionResult.state_get _ hBF
   have hbpF : BlockPostState (postState' B_F) := blockPostState_of_postState B_F hσF
@@ -222,7 +250,7 @@ theorem upgrade [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B : Blk Node Root} {σB : ChainState Node Root} (hB : S.σ B = some σB)
     (hJ : σB.J = F) (hhj : σB.h_j = h_f) :
-    F ⪯ S.J ∨ SlashableSet S B_F := by
+    F ⪯ S.J ∨ SlashableSet S.T B_F := by
   by_cases hSF : S.F ⪯ F
   · -- the `F`-filter passes, so `keyDom` bounds `h_f` by the store's key height
     have hkey := hinv.keyDom B σB hB (by rw [hJ]; exact hSF)

@@ -56,6 +56,18 @@ theorem updateFinalized_T (S : Store Node Root) (F' : Blk Node Root) :
   simp only [updateFinalized, Id.run]; split_ifs <;> rfl
 
 omit [Electorate Node] [Params] in
+/-- `update_justified` never writes the maximum height. -/
+theorem updateJustified_hmax (S : Store Node Root) (J' : Blk Node Root) (h' : Nat) :
+    (updateJustified S J' h').hmax = S.hmax := by
+  simp only [updateJustified, Id.run]; split_ifs <;> rfl
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- `update_finalized` never writes the maximum height. -/
+theorem updateFinalized_hmax (S : Store Node Root) (F' : Blk Node Root) :
+    (updateFinalized S F').hmax = S.hmax := by
+  simp only [updateFinalized, Id.run]; split_ifs <;> rfl
+
+omit [Electorate Node] [Params] in
 /-- The two updates in `on_block`'s order keep the map: what the intermediate store records,
     the store after both updates records.
 
@@ -216,6 +228,31 @@ theorem reachesFrom_T {sched : Schedule Node}
 
 end Exec
 
+/-! ## `postState'`, from a replay equation
+
+The healing statements name a chain's replayed state as `postState' B`, a definite description
+behind a `Replayable B` proof; the store's records arrive as `postState B = .state σB`. These
+two cross between the spellings, and are what every application of `lemPastFinalized`,
+`finalizedChainE1` or `Certified` to a store record opens with. -/
+
+section PostState
+variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
+  {B : Blk Node Root} {σ : ChainState Node Root}
+
+/-- A block that replays to a state replays. -/
+theorem replayable_of_state (h : postState B = .state σ) : postState B ≠ invalid := by
+  rw [h]; simp
+
+/-- …and the state it replays to is `postState' B`. -/
+theorem postState'_of_state (h : postState B = .state σ) (hne : postState B ≠ invalid) :
+    postState' B hne = σ := by
+  have h2 : postState B = .state (postState' B hne) := TransitionResult.state_get _ hne
+  have h4 : (TransitionResult.state (postState' B hne) : TransitionResult Node Root)
+      = .state σ := h2.symm.trans h
+  injection h4
+
+end PostState
+
 /-! ## What a record hands the healing machinery -/
 
 section Record
@@ -252,17 +289,12 @@ theorem record_mem_T (hinv : StoreInv S) (hB : S.σ B = some σB) : B ∈ S.T :=
 
 /-- A recorded block replays: `Replayable B`, spelled as the healing lemmas' hypothesis. -/
 theorem record_ne_invalid (hinv : StoreInv S) (hB : S.σ B = some σB) :
-    postState B ≠ invalid := by rw [record_postState hinv hB]; simp
+    postState B ≠ invalid := replayable_of_state (record_postState hinv hB)
 
 /-- The record *is* `postState'`, so a hypothesis of a healing lemma phrased over
     `(postState' B).F` can be discharged from `σB.F`. -/
 theorem record_postState' (hinv : StoreInv S) (hB : S.σ B = some σB) (h : Replayable B) :
-    postState' B h = σB := by
-  have h2 : postState B = .state (postState' B h) := TransitionResult.state_get _ h
-  have h3 : postState B = .state σB := record_postState hinv hB
-  have h4 : (TransitionResult.state (postState' B h) : TransitionResult Node Root)
-      = .state σB := h2.symm.trans h3
-  injection h4
+    postState' B h = σB := postState'_of_state (record_postState hinv hB) h
 
 end Record
 
