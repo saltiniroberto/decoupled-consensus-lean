@@ -1913,11 +1913,31 @@ Three notes for the next store proof:
   close by `Preceq.refl` after the read-backs, and `recv` needs only `receiveMsg_F` —
   one `cases` on the `StoreMsg`.
 
+## 2026-08-16 — Theorem 4 proved, and the invariant walker
+
+`Analysis/Proofs/StoreInvariants.lean`. The reusable half is `exec_node_invariant`: a store
+predicate that holds at `Store.gen` and is preserved by `receive` holds at every
+validator's store at every step of every execution — the `Irreversibility.lean` walk with
+the relational motive replaced by preservation of `P`. Theorem 4 is that walker at
+`P S := S.F ⪯ S.J`: each mutator's own condition is the conclusion it must re-establish
+(`update_justified` fires only past the `F`-filter `Σ.F ⪯ J'`; `update_finalized` fires
+only under `F' ⪯ Σ.J`), which is the paper's own two-line proof. `reachable_FJ` keeps the
+store-level core (`S.Reachable → S.F ⪯ S.J`, the previous statement of record) for the
+store-level theorems to consume. `#print axioms thmFPreceqJ`:
+`[propext, Classical.choice, Quot.sound]`. Both prototypes compiled first try in the
+scratchpad — the read-backs plus the walker shape are carrying their weight.
+
+Roberto meanwhile restated Theorem 7 on an execution (its `sorry` now concludes
+`(x[i][p].st).F ⪯ C` from `GetConfirmed (x[j][p].st) C`, `i ≤ j`), naming its store core
+`S.Reachable → GetConfirmed (onBlocks S Bs) C → S.F ⪯ C`.
+
 ## Next
 
-1. Prove `Analysis/HftTheorems.lean`'s five remaining statements: the map-domain coherence
-   invariant first, then Thm 4 (its store core `Reachable → F ⪯ J` plus the execution walk
-   that `Irreversibility.lean` now demonstrates), then the conditional three.
+1. Prove `Analysis/HftTheorems.lean`'s four remaining statements. Theorem 7 next: its
+   store core needs `reachable_FJ` (both `get_confirmed` branches start at or above `F`)
+   plus Theorem 3's fold; the walk is not the plain invariant walker, since the claim
+   relates two steps — `Irreversibility.lean`'s relational shape fits. Then the
+   map-domain coherence invariant, then the conditional three.
    `thmOrderIndependence` quantifies over permutations of a block sequence and is a
    different proof shape (`List.Perm`). Section 3.1's lemmas get stated as the proofs
    demand them.

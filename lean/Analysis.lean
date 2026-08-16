@@ -10,6 +10,8 @@ import Analysis.Proofs.ChainTarget
 import Analysis.Proofs.Compression
 import Analysis.Proofs.Provenance
 import Analysis.Proofs.Finality
+import Analysis.Proofs.Irreversibility
+import Analysis.Proofs.StoreInvariants
 import Analysis.Lemmas
 import Analysis.Theorems
 import Analysis.HftTheorems

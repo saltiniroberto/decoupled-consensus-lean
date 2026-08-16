@@ -2,6 +2,7 @@ import StsMultisetLog.Spec.Execution
 import Spec.Protocol
 import Analysis.Vocabulary
 import Analysis.Proofs.Irreversibility
+import Analysis.Proofs.StoreInvariants
 
 /-!
 # The companion paper's numbered theorems — its Section 3.1
@@ -14,9 +15,10 @@ stated; per the selection rule in `CONTEXT.md`, a lemma gets stated when a proof
 or on instruction. The rules of `Analysis/Theorems.lean` apply unchanged: each docstring
 carries the paper's sentence verbatim, and there is no section-level `variable`.
 
-**Stated on instruction, 2026-08-16; Theorem 3 is proved, the other five are `sorry`.**
-So `make dev` counts five here and `make check` fails until they are proved; each proof,
-when it lands, becomes a one-line call into `Analysis/Proofs/`, as Theorem 3's is.
+**Stated on instruction, 2026-08-16; Theorems 3 and 4 are proved, the other four are
+`sorry`.** So `make dev` counts four here and `make check` fails until they are proved;
+each proof, when it lands, becomes a one-line call into `Analysis/Proofs/`, as those of
+Theorems 3 and 4 are.
 
 ## Shared rendering decisions
 
@@ -111,14 +113,19 @@ theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [Decidable
     form, no hypothesis is left: this is an invariant, and what carried it there as
     `S.Reachable` is carried here by the execution itself, whose `init` field starts every
     validator at the genesis store, where `F = J = genesis`. Timeless, and over corrupted
-    validators too, for the reason in Theorem 3's docstring. The store-level core the
-    proof will establish is the previous statement of record:
-    `S.Reachable → S.F ⪯ S.J`. -/
+    validators too, for the reason in Theorem 3's docstring. The store-level core is
+    `Proofs.reachable_FJ` — the previous statement of record, `S.Reachable → S.F ⪯ S.J`.
+
+    Proved in `Analysis/Proofs/StoreInvariants.lean`: each mutator's own condition is the
+    conclusion it must re-establish — `update_justified` moves `J` only past the
+    `F`-filter, `update_finalized` moves `F` only under `F' ⪯ Σ.J` — and the execution
+    walk is `exec_node_invariant`, the reusable walker that file introduces. -/
 theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
     {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
     (p : Node) (i : Nat) :
-    (x[i][p].st).F ⪯ (x[i][p].st).J := sorry
+    (x[i][p].st).F ⪯ (x[i][p].st).J :=
+  Proofs.fPreceqJ x p i
 
 /-- **Theorem 7** (`hft:thm:fcconsistency`, lines 638–640): fork-choice consistency.
 
