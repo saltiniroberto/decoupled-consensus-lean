@@ -1,5 +1,6 @@
 import Analysis.Proofs.Witnessed
 import Analysis.Proofs.Determinism
+import Analysis.Proofs.Provenance
 
 /-!
 # Proofs: the two tallies' provenance (Lemma 9)
@@ -18,9 +19,25 @@ So the proof here is a re-export of `Witnessed` over `postState`, with the endpo
 `σ.L` to the block by `postState_L`.
 
 The lemma's **second** sentence, "retaining the signed messages is sufficient to prove E1 and E2
-violations", is `targetBitCompressionEvidence` below, for E2. It is that re-export applied twice,
-once per chain: the bits point and the messages prove. Its E1 half is not stated, E1's place in
-that sentence not being rendered.
+violations", is the two `…Evidence` theorems below, one per condition. Both have the same shape —
+the state's own bits point at a validator, and the messages those bits stand for are what prove
+the violation — and they differ only in which bit points and which invariant carries it back:
+
+* E2: two target bits, `Witnessed.target` on each chain;
+* E1: a finality-tally bit on one chain and a height bit on the other, `Certified.commits` for
+  the first and `Witnessed` for the second.
+
+**The E1 half reaches outside the sentence's own two arrays**, and that is not a slip. Lemma 9's
+first sentence is about `target_participation` and `progress`; a commit has no bit in either, and
+what the state retains of one is membership of Definition 13's `P` together with `(J, h_j)`. So
+the E1 half is stated over `P`, and it is the finality-side analogue of the E2 half rather than a
+second reading of the same two arrays.
+
+**The E1 half concludes a disjunction where the E2 half takes a hypothesis.** For E2 the two
+states hold everything needed to see the conflict: two stored targets that differ. For E1 they do
+not — a counted progress bit has forgotten which target its vote named, which is Lemma 9's own
+point — so the second chain may turn out to agree rather than conflict, and "the committed block
+is on that chain" is the disjunct that says so.
 
 **The paper's proof cites Lemma 8; this one does not need it.** The paper reaches "every vote
 counted toward justification names `T_h`" through Lemma 8's transfer argument. In this rendering
@@ -80,6 +97,45 @@ theorem targetBitCompressionEvidence [PositiveWeight Node] {B B' T T' : Blk Node
   subst hT0; subst hT1
   refine ⟨x, y, hx1, hy1, hx3, hy3, σ.h, T, T', hx2, ?_, hne⟩
   rw [hheight]; exact hy2
+
+/-- The second sentence's E1 half: a validator counted in one chain's finality tally and in
+    either tally of another chain at that commitment's height has either committed to a block
+    that other chain contains, or signed the pair that proves E1.
+
+    `Certified.commits` turns the finality-tally bit into an included commit to `(h_j, J)`;
+    `Witnessed` turns the other chain's bit into an included vote at that chain's height, and
+    both of its arms land in E1 — a timeout is E1's second constructor outright, and a target is
+    E1's first once the target differs from `J`. What makes it differ is exactly the disjunction:
+    every block the other chain's bits can vouch for is on that chain, so a target equal to `J`
+    puts `J` there and lands in the left disjunct instead. -/
+theorem targetBitCompressionEvidenceE1 [PositiveWeight Node] {B B' : Blk Node Root}
+    {σ σ' : ChainState Node Root} {i : Node}
+    (hB : postState B = .state σ) (hB' : postState B' = .state σ')
+    (hi : i ∈ σ.P) (hi' : i ∈ σ'.Qtarget ∨ i ∈ σ'.Qprog)
+    (hheight : σ.h_j = σ'.h) :
+    σ.J ⪯ B' ∨ ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+      IncludedOn x B ∧ IncludedOn y B' ∧ E1 x y := by
+  have hbp := blockPostState_of_postState B hB
+  have hbp' := blockPostState_of_postState B' hB'
+  have hL : σ.L = B := postState_L B hB
+  have hL' : σ'.L = B' := postState_L B' hB'
+  obtain ⟨x, hx1, hx2, hx3⟩ := (certified_of_blockPostState hbp).commits i hi
+  by_cases hJ : σ.J ⪯ B'
+  · exact Or.inl hJ
+  refine Or.inr ?_
+  rcases hi' with hi' | hi'
+  · obtain ⟨T0, y, hT0, hy1, hy2, hy3⟩ := (witnessed_of_blockPostState hbp').target i hi'
+    have hT0B' : T0 ⪯ B' := by
+      have h := (fresh_of_blockPostState hbp').onChain T0 hT0
+      rwa [hL'] at h
+    exact ⟨x, y, hx1, hy1, hL ▸ hx3, hL' ▸ hy3, σ.h_j, σ.J, hx2,
+      Or.inl ⟨T0, by rw [hheight]; exact hy2, fun he => hJ (he ▸ hT0B')⟩⟩
+  · obtain ⟨y, hy1, hy2, hy3⟩ := (witnessed_of_blockPostState hbp').progress i hi'
+    refine ⟨x, y, hx1, hy1, hL ▸ hx3, hL' ▸ hy2, σ.h_j, σ.J, hx2, ?_⟩
+    rcases hy3 with harm | ⟨T, harm, hTL⟩
+    · exact Or.inr (by rw [hheight]; exact harm)
+    · refine Or.inl ⟨T, by rw [hheight]; exact harm, fun he => hJ ?_⟩
+      rw [← he]; rwa [hL'] at hTL
 
 end Proofs
 

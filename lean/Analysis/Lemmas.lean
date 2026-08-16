@@ -27,11 +27,9 @@ statements need — `BlockPostState`, Definition 20's `actionState` — live the
 `variable` at section level: each declaration spells out its own binders, so its signature is
 readable where it stands rather than assembled from context above it.
 
-**Present so far: Lemmas 1 to 11, and nothing written down is unproved.** One to 7, 10 and 11
-each cover their paper sentence in full. Lemma 8 is five statements, all proved. Lemma 9 is two,
-both proved, and it is still the one partial row: the second sentence's E1 half is not stated at
-all, E1's place in that sentence being unrendered. Theorem 5 is proved in
-`Analysis/Theorems.lean`.
+**Present so far: Lemmas 1 to 11, every sentence covered and every statement proved.** One to 7,
+10 and 11 are one or two statements each; Lemma 8 is five, one per clause; Lemma 9 is three, its
+second sentence split by slashing condition. Theorem 5 is proved in `Analysis/Theorems.lean`.
 
 Two notions came with Lemma 3, `BlockPostState` and Definition 20's `actionState`, and Lemmas 5 and 6 brought the entries of
 `Analysis/Vocabulary.lean` — Definition 11's E2 and Definition 21's justification and progress
@@ -59,7 +57,7 @@ machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
 | 6 | `lem:height-progression` | 987–994 | **yes, in full, and proved** — landed |
 | 7 | `lem:height-target-freshness` | 1002–1009 | **yes, in full, and proved** — stated over `postState` |
 | 8 | `lem:chain-target-uniqueness` | 1029–1041 | **yes, in five statements, all proved** |
-| 9 | `lem:target-bit-compression` | 1061–1073 | **yes, both sentences proved** — the second for E2, its E1 half absent |
+| 9 | `lem:target-bit-compression` | 1061–1073 | **yes, both sentences proved** — the second in two, one per slashing condition |
 | 10 | `lem:past-finalized` | 1092–1101 | **yes, and proved** — finalization as the recorded pair; Def. 11's E1 landed with it |
 | 11 | `lem:finalized-chain` | 1139–1146 | **yes, and proved** — over two recorded pairs |
 
@@ -687,8 +685,9 @@ theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableE
     current height, the target it named deliberately forgotten. "With each validator counted
     once" is `Q_target` and `Q_prog` being `Finset`s.
 
-    **The second sentence is `lemTargetBitCompressionEvidence`, next** — its E2 half; the E1
-    half is not rendered and waits on Lemma 10, which is why `MAPPING.md`'s row is 🟡 partial.
+    **The second sentence is the two declarations after this one**, `lemTargetBitCompressionEvidence`
+    for E2 and `lemTargetBitCompressionEvidenceE1` for E1. An earlier note here said the E1 half
+    was unrendered and waiting on Lemma 10; E1 landed with Lemma 10 and the half is now stated.
 
     **The paper's proof cites Lemma 8; this proof does not need it.** The paper reaches "every
     vote counted toward justification names `T_h`" through Lemma 8's transfer between branches.
@@ -706,13 +705,17 @@ theorem lemTargetBitCompression {Node Root : Type} [DecidableEq Node] [Decidable
       a.validator = i ∧ a.height = some (postState' B).h ∧ IncludedOn a B :=
   Proofs.targetBitCompression (TransitionResult.state_get _ hB)
 
-/-- **Lemma 9, second sentence** (`lem:target-bit-compression`, lines 1061–1073): the retained
-    messages prove the violation the bits point at.
+/-- **Lemma 9, second sentence, E2 half** (`lem:target-bit-compression`, lines 1061–1073): the
+    retained messages prove the violation the bits point at.
 
     > Retaining the signed messages is sufficient to prove E1 and E2 violations.
 
     Read aloud: if one validator's target bit is counted on two chains at the same height naming
     different targets, then two messages — one included on each chain — prove E2.
+
+    The name does not say "E2" because this declaration landed while the E1 half had none;
+    `lemTargetBitCompressionEvidenceE1` is that half, next, and the two together are the
+    sentence.
 
     "Retaining the signed messages" is `IncludedOn`: a message's retention in this model is its
     inclusion on a chain, the state having forgotten the vote and the chain not. "Sufficient to
@@ -726,9 +729,6 @@ theorem lemTargetBitCompression {Node Root : Type} [DecidableEq Node] [Decidable
     counted toward two different targets at one height — is provable as a violation from what the
     chains retain. Compare `lemTargetUniqueness`, which reaches the same evidence shape from two
     certificates; here two bits suffice.
-
-    **The E1 half is not stated.** E1 is not rendered, and waits on Lemma 10 with the rest of
-    Definition 11.
 
     Proved in `Analysis/Proofs/Compression.lean`, from `lemTargetBitCompression` twice and
     nothing else: each bit hands back an included vote naming that chain's own height and stored
@@ -744,6 +744,57 @@ theorem lemTargetBitCompressionEvidence {Node Root : Type} [DecidableEq Node] [D
       IncludedOn x B ∧ IncludedOn y B' ∧ E2 x y :=
   Proofs.targetBitCompressionEvidence (TransitionResult.state_get _ hB)
     (TransitionResult.state_get _ hB') hi hi' hheight hT hT' hne
+
+/-- **Lemma 9, second sentence, E1 half** (`lem:target-bit-compression`, lines 1061–1073).
+
+    > Retaining the signed messages is sufficient to prove E1 and E2 violations.
+
+    Read aloud: if one validator sits in the finality tally of one chain — so that chain counted
+    its commitment to the justified pair `(h_j, J)` — and either of its bits is counted on
+    another chain whose height is that same `h_j`, then either that other chain contains `J`, or
+    two messages, one included on each chain, prove E1.
+
+    Noun by noun. "Retaining the signed messages" is `IncludedOn`, as in the E2 half: retention
+    in this model is inclusion on a chain, the state having forgotten the message and the chain
+    not. The two pointers the compressed state still holds are `hi`, membership of Definition
+    13's `P`, and `hi'`, a bit in either of Definition 15's two arrays. `hheight` is what makes
+    the two heights the one height E1 compares at.
+
+    **The pointer for E1 is not one of the first sentence's two arrays**, and that is a
+    deviation worth naming rather than glossing. Lemma 9's first sentence is about
+    `target_participation` and `progress`; a finality commitment has a bit in neither, and what
+    the state retains of one is membership of `P` together with `(J, h_j)`. So this half is
+    stated over `P`. It is the finality-side analogue of the E2 half, not a second reading of
+    the same two arrays.
+
+    **The conclusion is a disjunction where the E2 half's is flat**, and the reason is
+    compression itself. For E2 the two states hold everything needed to see the conflict: two
+    stored targets, and `hne` says they differ. For E1 they do not. A counted progress bit has
+    forgotten which target its vote named — which is the first sentence's own point, "the target
+    it named deliberately forgotten" — so the state cannot say whether the other chain conflicts
+    with the commitment or agrees with it. `J ⪯ B'` is that agreement, and it is the case where
+    there is no violation to prove.
+
+    **`Q_target` and `Q_prog` are one hypothesis, not two statements.** Both of E1's arms are
+    reached the same way and neither is a separate sentence of the paper; `Witnessed` covers a
+    timeout, which is E1's second constructor outright, and an exact target, which is its first.
+
+    Proved in `Analysis/Proofs/Compression.lean`, from `Certified.commits` — the sixth
+    invariant, `Witnessed`'s idea applied to the finality fields — on the one chain and
+    `Witnessed` on the other. Compare `lemPastFinalized`, which reaches the same evidence shape
+    from a recorded `(F, h_F)` and a whole quorum; here one bit on each side suffices, and no
+    quorum, no threshold and no fault bound enters. -/
+theorem lemTargetBitCompressionEvidenceE1 {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
+    [Electorate Node] [Params] [PositiveWeight Node] {B B' : Blk Node Root} {i : Node}
+    (hB : postState B ≠ invalid) (hB' : postState B' ≠ invalid)
+    (hi : i ∈ (postState' B).P)
+    (hi' : i ∈ (postState' B').Qtarget ∨ i ∈ (postState' B').Qprog)
+    (hheight : (postState' B).h_j = (postState' B').h) :
+    (postState' B).J ⪯ B' ∨
+      ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
+        IncludedOn x B ∧ IncludedOn y B' ∧ E1 x y :=
+  Proofs.targetBitCompressionEvidenceE1 (TransitionResult.state_get _ hB)
+    (TransitionResult.state_get _ hB') hi hi' hheight
 
 /-- **Lemma 10** (`lem:past-finalized`, lines 1092–1101): a chain past a finalized height
     contains its finalized block.

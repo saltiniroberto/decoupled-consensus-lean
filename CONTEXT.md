@@ -1646,6 +1646,50 @@ stated at all — and not because anything written down is outstanding.
   it is the converse of the two writer lemmas there. Lemma 8 is its only consumer and that file's
   docstring promises Lemma 8's machinery in one place.
 
+## 2026-08-16 — Lemma 9's E1 half, and no partial row left
+
+`lemTargetBitCompressionEvidenceE1` closes the last gap in coverage of Sections 2–4: every
+sentence of Lemmas 1–11 and Theorem 5 is now stated, and every statement is proved.
+`MAPPING.md`'s Lemma 9 row moves from 🟡 to ✅ and no row is 🟡 or 🔨 any more.
+
+The paper's sentence is "retaining the signed messages is sufficient to prove E1 **and** E2
+violations", and its own proof gives the reason for both at once: "E1 and E2 are checked from
+pairs of retained signed messages, so they do not require target roots in the participation
+state" (line 1088). So the two halves are one sentence read twice, and they land as two
+declarations for the same reason Lemma 8's clauses do.
+
+### The E1 pointer is `P`, not one of the sentence's own two arrays
+
+This is the deviation to know about. Lemma 9's first sentence is about `target_participation`
+and `progress`; a finality commitment has a bit in neither. What the compressed state retains of
+one is membership of Definition 13's `P` plus the pair `(J, h_j)`, so the E1 half is stated over
+`P` and is the finality-side analogue of the E2 half rather than a second reading of the same two
+arrays. Said in the docstring as a deviation, per the convention Lemma 8's section started.
+
+### The E1 half concludes a disjunction; the E2 half does not
+
+For E2 the two states hold everything needed to see the conflict — two stored targets, and the
+hypothesis says they differ. For E1 they do not, and the reason is the compression itself: a
+counted progress bit has forgotten which target its vote named, which is the first sentence's own
+point. So the second chain may agree with the commitment rather than conflict with it, and the
+statement's left disjunct `J ⪯ B'` is that case. No extra hypothesis is needed, which makes the
+disjunctive form the stronger one as well as the honest one.
+
+### It costs no new machinery
+
+`Certified.commits` on the commit side and `Witnessed` on the other, both already in place from
+Lemmas 10 and 6. Both of `Witnessed.progress`'s arms land in E1 — a timeout is E1's second
+constructor outright, an exact target its first — and the target-bit arm goes through
+`Fresh.onChain`, which is what says every block the other chain's bits can vouch for is on that
+chain. That is exactly what turns "the target equals `J`" into the left disjunct.
+
+`Analysis/Proofs/Compression.lean` gained `import Analysis.Proofs.Provenance` for `Certified`;
+no cycle, Provenance importing only Freshness.
+
+The two `…Evidence` declarations are **not** renamed to a matching `…E2`/`…E1` pair. The E2 one
+landed alone, when E1 had no statement; renaming it would make this file's earlier entries name a
+declaration that no longer exists. Its docstring says so instead.
+
 ## Next
 
 1. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated and proved.
@@ -1655,4 +1699,3 @@ stated at all — and not because anything written down is outstanding.
    question above is part of it.
 3. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
 4. Figures 3 to 5, and the definitions Sections 5 onward add.
-5. Lemma 9's second sentence for E1, once E1's place in it has something to be stated over.
