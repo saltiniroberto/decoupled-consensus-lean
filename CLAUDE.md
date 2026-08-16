@@ -64,6 +64,16 @@ and leave it.
 ahead: whether a lemma is worth translating turns on what it depends on and on whether anything
 else cites it, and both are known from the paper without writing any Lean.
 
+## Protocol code reads like the paper's pseudocode
+
+Roberto, 2026-08-16. When writing protocol code — the figure renderings and the layers around
+them — aim for the paper's own spelling, line for line. When a Lean type blocks that spelling,
+prefer closing the gap once in the vocabulary or notation layer (the way `⊥`, `w(S)` and the
+assignment arrows are done) over inlining a Lean idiom in the routine; when the gap cannot be
+closed safely, keep the routine's shape as close as the types allow and say in a comment or the
+docstring which line deviates. `CONTEXT.md` records the measured limits of this — overloading
+`∈` is the known one.
+
 ## Proof discipline
 
 Never, at any point: no new `axiom`s, no `native_decide`. Both move a claim off the kernel

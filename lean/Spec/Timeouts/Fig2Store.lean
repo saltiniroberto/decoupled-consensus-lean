@@ -92,14 +92,14 @@ def Store.replay (S : Store Node Root) (B : Blk Node Root) : TransitionResult No
     is why the replay is tested before the figure's `Σ.T ← Σ.T ∪ {B}`. -/
 def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.run do
   let mut S := S
-  if ¬ B.parent.any (· ∈ S.T) ∨ ¬ S.F ⪯ B then  -- lines 531–532: the two asserts
-    return S
-  if let .state σ' := S.replay B then           -- line 534: σ' ← state_transition(Σ.σ[B.parent], B)
-    S.T ← S.T ∪ {B}                             -- line 533
-    S.σ[B] ← some σ'                            -- line 535
-    S.hmax ← max S.hmax σ'.h                    -- line 536
-    S ← updateJustified S σ'.J σ'.h_j           -- line 537
-    S ← updateFinalized S σ'.F                  -- line 538
+  if let some P := B.parent then                -- `B.parent` may be `⊥`; genesis is rejected
+    if P ∈ S.T ∧ S.F ⪯ B then                   -- lines 531–532: the two asserts
+      if let .state σ' := S.replay B then       -- line 534: σ' ← state_transition(Σ.σ[B.parent], B)
+        S.T ← S.T ∪ {B}                         -- line 533
+        S.σ[B] ← some σ'                        -- line 535
+        S.hmax ← max S.hmax σ'.h                -- line 536
+        S ← updateJustified S σ'.J σ'.h_j       -- line 537
+        S ← updateFinalized S σ'.F              -- line 538
   return S                                      -- line 539
 
 /-- `R`, `get_confirmed`'s walk-from block (Figure 2, `hft:alg:store`, line 560): the

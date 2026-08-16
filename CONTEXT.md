@@ -1779,6 +1779,21 @@ Also on instruction: the cascade `if S.hmax = S.h_j + 1 then S.J else S.F` is it
 function, `Store.R` — the figure's identifier for it — rather than a `let` inside
 `GetConfirmed`.
 
+## 2026-08-16 — `∈` cannot be overloaded for `Option` elements: a measured dead end
+
+Wanted: `onBlock`'s admission check spelled as the figure's own `B.parent ∈ Σ.T`, with
+`B.parent : Option (Blk …)`. A scoped `Membership (Option α) (Finset α)` instance breaks
+far more than it buys, and `priority := low` does not save it: `Membership`'s element type
+is an `outParam` driven by the container, so with the instance in scope the binder
+`∃ L ∈ (s : Finset ℕ), …` inferred `L : Option ℕ`, and a plain `a ∈ s` inside another
+definition failed to synthesize outright — resolution commits to the first instance that
+matches the container and does not backtrack on the element type. It broke `viableTree` in
+the very file that introduced it. Both failures measured in the scratchpad before revert.
+
+So the figure's line is rendered as `if let some P := B.parent then if P ∈ S.T ∧ S.F ⪯ B`,
+the second assert verbatim and the first split into existence plus membership. The general
+rule this fed is in `CLAUDE.md` ("Protocol code reads like the paper's pseudocode").
+
 ## Next
 
 1. The companion paper's store results, MAPPING.md's new table: the map-domain coherence
