@@ -1954,6 +1954,14 @@ index-level theorem; both re-measured kernel-clean. The index-level forms stay i
 bound store with a defining reachability hypothesis is the readable form at the
 execution level.
 
+Applied to the whole file the same day, on instruction: Theorems 7, 8 and 9 now bind
+`S`/`S'` with `ReachesFrom` (Theorem 7's `i ≤ j`, Theorem 8's `i`/`i + 1`, Theorem 9's
+"at all future times" all fold into it); Theorem 8 is thereby stated at the recording
+store rather than the accepting step — the same claim once Theorem 3's monotonicity is in
+hand, noted in its docstring. Theorem 10 keeps explicit steps spelled `storeAt`, because
+`deliveredBlocks` is a prefix of the execution and must name how far each validator has
+run.
+
 ## Next
 
 1. Prove `Analysis/HftTheorems.lean`'s four remaining statements. Theorem 7 next: its
