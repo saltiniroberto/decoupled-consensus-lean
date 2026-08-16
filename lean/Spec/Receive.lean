@@ -25,10 +25,13 @@ namespace Decoupled
 
 variable {Node Root : Type}
 
-/-- A message the store reacts to. One case today — see the module header. -/
+/-- A message the store reacts to. One case today — see the module header. Decidable
+    equality because the framework's step relation compares messages (its log is a
+    multiset and views are `Finset`s). -/
 inductive StoreMsg (Node Root : Type) where
   /-- A block message. -/
   | block (B : Blk Node Root)
+  deriving DecidableEq
 
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]

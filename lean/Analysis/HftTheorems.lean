@@ -1,3 +1,5 @@
+import StsMultisetLog.Spec.Execution
+import Spec.Protocol
 import Analysis.Vocabulary
 
 /-!
@@ -17,9 +19,13 @@ lands, becomes a one-line call into `Analysis/Proofs/`.
 
 ## Shared rendering decisions
 
-**Time is the received-block sequence.** `on_block` is the store's only mutator, so "at all
-future times" is "after any further `onBlocks`", and "the store maintains … at all times" is
-a hypothesis `S.Reachable`. Both notions are in `Analysis/Vocabulary.lean`.
+**Time is the received-block sequence — except in Theorem 3, which is on an execution.**
+`on_block` is the store's only mutator, so "at all future times" is "after any further
+`onBlocks`", and "the store maintains … at all times" is a hypothesis `S.Reachable`; both
+notions are in `Analysis/Vocabulary.lean`. Theorem 3 instead reads time as the steps of a
+framework execution of the node protocol (`Spec/Protocol.lean`), on instruction — the
+statement quantifies over `Exec protocol sched` and a validator, and its docstring names
+the store-level core its proof will establish.
 
 **"Unless `≥ n/3` validators are slashable" is the accountable disjunct.** The same
 rendering as `thmAccountableSafety`: the claim holds, or a set of weight at least `2q − W`
@@ -48,22 +54,35 @@ namespace Decoupled
 open scoped Decoupled
 open Framework.StsMultisetLog
 
-/-- **Theorem 3** (`hft:thm:finperm`, lines 583–585): local irreversibility of finality.
+/-- **Theorem 3** (`hft:thm:finperm`, lines 583–585): local irreversibility of finality,
+    stated on an execution — on instruction, 2026-08-16; the other five theorems are
+    store-level for now.
 
     > Once a node sets `Σ.F = F`, `Σ.F` descends from `F` at all future times.
 
-    Read aloud: whatever the store finalizes now is an ancestor of whatever it finalizes
-    after any further receipts.
+    Read aloud: in any execution of the node protocol, under any schedule, a validator's
+    store-finalized block at any step is an ancestor of its store-finalized block at every
+    later step.
 
-    Noun by noun. "A node sets `Σ.F = F`": `F` is `S.F`, no binder needed. "At all future
-    times": after receiving any further list `Bs`, the store is `onBlocks S Bs`. "Descends
-    from" is `⪯`, reflexive as Definition 5 (`def:block-chain`) makes it, so staying put
-    counts. Stronger than the paper's sentence: `S` is any store, not only one the node can
-    hold — `update_finalized`'s condition `F' ≻ Σ.F` needs no history. -/
+    Noun by noun. "A node" is a validator `p`, whose store after `i` steps is
+    `x[i][p].st` — `Spec/Protocol.lean` makes the store the node state. "Sets `Σ.F = F`":
+    `F` is `(x[i][p].st).F`, no binder needed. "At all future times": every step `j ≥ i`
+    of the execution. "Descends from" is `⪯`, reflexive as Definition 5
+    (`def:block-chain`) makes it, so a step that leaves the store alone counts.
+
+    No honesty, timing or fairness hypothesis: the property is timeless in the framework's
+    classification, like accountable safety, and `p` ranges over corrupted validators too —
+    corruption in this framework decides what may be *signed* (`Action.adversarial`
+    touches only the log), while every change to a validator's own store goes through the
+    protocol's reaction, hence through `on_block`. The store-level core the proof will
+    establish is `S.F ⪯ (onBlocks S Bs).F` for an arbitrary store `S` — this theorem over
+    one fold, needing no reachability because `update_finalized`'s condition `F' ≻ Σ.F` is
+    per-step. -/
 theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
-    (S : Store Node Root) (Bs : List (Blk Node Root)) :
-    S.F ⪯ (onBlocks S Bs).F := sorry
+    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
+    (p : Node) {i j : Nat} (hij : i ≤ j) :
+    (x[i][p].st).F ⪯ (x[j][p].st).F := sorry
 
 /-- **Theorem 4** (`hft:thm:fleqr`, lines 591–593): `F ⪯ J`.
 

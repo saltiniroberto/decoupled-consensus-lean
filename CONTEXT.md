@@ -1842,6 +1842,30 @@ header or the docstring where it bites:
   statement-design judgement made before any proof. If a proof cannot place the E1 pair
   there, the statement changes — with Roberto, as with Theorem 5's strengthening.
 
+## 2026-08-16 — Theorem 3 restated on an execution, and `Execution.lean` read
+
+Roberto: express Theorem 3 on an execution. `thmLocalIrreversibility` now quantifies over
+`Exec (protocol …) sched` — the framework's infinite executions of the node protocol under
+an arbitrary schedule — a validator `p`, and steps `i ≤ j`, concluding
+`(x[i][p].st).F ⪯ (x[j][p].st).F`. No honesty, timing or fairness hypothesis: the property
+is timeless in the framework's own classification, and it holds for corrupted validators
+too, because `Action.adversarial` touches only the message log while every change to a
+validator's store goes through the protocol's reaction. The store-level fold form
+(`S.F ⪯ (onBlocks S Bs).F`, arbitrary `S`) moved from statement of record to the named
+core the proof will establish; the other five theorems stay store-level until instructed
+otherwise. `StoreMsg` gained `deriving DecidableEq`, which `Exec` requires of the message
+type, and the deriving handler reaches it (single constructor, no nesting — unlike `Blk`).
+
+The second half of the framework audit: `StsMultisetLog/Spec/Execution.lean` read in full.
+An `Execution` is `cfg : Nat → Config` plus `lbl : Nat → Action` with `Init` and per-step
+`Step` — infinite, labelled so fairness can count occurrences. Every network and timing
+assumption is an à-la-carte predicate on executions (`TimeMonotone`, `TimeStepwise`,
+`ClocksSound`, `SynchronizedClocks`, `TimeDiverges`, `WeakFair`/`StrongFair`, `Diligent`,
+`WakePrecedesTick`, `Synchrony gst delta`, `Relay`), and the file's own taxonomy places
+"timeless" properties — accountable safety, and Theorem 3 above — as needing none of them.
+`Safe`/`Live`/`Secure` are stated abstractly over an output function and prefix order.
+Still unread: `Spec/Schedule.lean`.
+
 ## Next
 
 1. Prove `Analysis/HftTheorems.lean`'s six statements: the map-domain coherence invariant
