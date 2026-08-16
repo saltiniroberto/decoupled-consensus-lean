@@ -1962,16 +1962,41 @@ hand, noted in its docstring. Theorem 10 keeps explicit steps spelled `storeAt`,
 `deliveredBlocks` is a prefix of the execution and must name how far each validator has
 run.
 
+## 2026-08-17 — Theorem 7 proved, and the recorded-replay bridge
+
+Theorem 7 rides Theorems 3 and 4 and is small: `get_confirmed`'s own second conjunct is
+`R ⪯ C`; the walk-from block `R` is `J` or `F`, either at or above `F` once `F ⪯ J` is in
+hand (`F_preceq_R`); Theorem 3 carries the earlier store's `F` up to the later one's.
+Kernel-clean.
+
+The substantial piece is the **recorded-replay bridge**, `Proofs.reaches_recorded`: for a
+held store, `S.σ B = some σB → postState B = .state σB` — the invariant walker at that
+predicate, since the map is written in exactly one place, from `Store.replay`, which reads
+the parent's recorded state. Consequence: a pair recorded in a store IS a pair recorded on
+a replayed post-state, so the healing paper's proved results (`lemPastFinalized`,
+`lemFinalizedChain`, the `Certified`/`Witnessed` machinery) apply to store contents
+directly. Theorems 8–10 stand on it.
+
+The remaining three are the conditional chain, and they need machinery the paper keeps in
+its Section 3.1 lemmas. The plan, in dependency order:
+
+1. More store invariants through the walker: `F`-provenance (`S.F` is genesis or some
+   recorded state's `F` — the analogue of the paper's `hft:rem:fs-invariant`),
+   `J`-provenance (some recorded state has `(S.J, S.h_j)` as its justified pair),
+   `hmax`-exactness, and `T`↔map domain coherence.
+2. The upgrade argument (`hft:lem:upgrade`): through the bridge, healing Lemma 10/11 give
+   the comparability and the E1 evidence at equal heights; the evidence chains are
+   recorded blocks, hence in `S'.T`, which is where the disjuncts promised it.
+3. Viability bookkeeping for Theorems 8 and 9 (`hmax` accounting plus the mainsafety
+   analogue, which is healing Lemma 10 through the bridge).
+4. Theorem 10 additionally needs the fold-equals-execution core
+   (`storeAt x p i = onBlocks Store.gen (deliveredBlocks x p i)`) before its
+   order-independence induction — a different proof shape (`List.Perm`). Section 3.1's
+   lemmas get stated as the proofs demand them.
+
 ## Next
 
-1. Prove `Analysis/HftTheorems.lean`'s four remaining statements. Theorem 7 next: its
-   store core needs `reachable_FJ` (both `get_confirmed` branches start at or above `F`)
-   plus Theorem 3's fold; the walk is not the plain invariant walker, since the claim
-   relates two steps — `Irreversibility.lean`'s relational shape fits. Then the
-   map-domain coherence invariant, then the conditional three.
-   `thmOrderIndependence` quantifies over permutations of a block sequence and is a
-   different proof shape (`List.Perm`). Section 3.1's lemmas get stated as the proofs
-   demand them.
+1. Prove `Analysis/HftTheorems.lean`'s three remaining statements, along the plan above.
 2. Finish the `StsMultisetLog/Spec/` audit: `Execution.lean` and `Schedule.lean`, the
    assumption inventory — the layer where the first attempt's trouble concentrated.
    `Protocol.lean` and `Message.lean` are done, recorded above; the signing question is

@@ -1,9 +1,9 @@
 import Analysis.Proofs.Irreversibility
 
 /-!
-# Theorem 4, and the walker every store invariant will use
+# Theorems 4 and 7, the invariant walker, and the recorded-replay bridge
 
-Two things live here. First, `exec_node_invariant`: a store predicate that holds at the
+Four things live here. First, `exec_node_invariant`: a store predicate that holds at the
 genesis store and is preserved by `receive` holds at every validator's store at every step
 of every execution. This is the reusable half — Theorem 4 consumes it below, and the
 map-domain coherence invariant will consume it next. Its proof is the walk
@@ -16,7 +16,19 @@ fields are genesis — and each mutator preserves it by its own condition. `upda
 moves `J` only past the `F`-filter `Σ.F ⪯ J'`, and `update_finalized` moves `F` only under
 `F' ⪯ Σ.J`; each fired branch's condition is exactly the conclusion it must re-establish,
 which is the paper's own two-line proof. `reachable_FJ` is the store-level core the
-statement of record used to be, kept because the store-level Theorems 7–10 will want it.
+statement of record used to be.
+
+Third, Theorem 7 (`hft:thm:fcconsistency`), which rides Theorems 3 and 4: `get_confirmed`'s
+own second conjunct is `R ⪯ C`, the walk-from block `R` is `J` or `F` — either at or above
+`F` once `F ⪯ J` is in hand — and Theorem 3 carries the earlier store's `F` up to the
+later one's.
+
+Fourth, the **recorded-replay bridge**: every state a held store records is its block's
+replay, `postState B = .state σB`. The store writes its map in exactly one place, from
+`Store.replay`, which reads the parent's recorded state, so the fact is the walker at that
+predicate. This is the bridge to the healing paper's analysis — a pair recorded in a store
+IS a pair recorded on a replayed post-state, so `lemPastFinalized`, `lemFinalizedChain`
+and the certificate machinery apply to store contents. Theorems 8–10 stand on it.
 -/
 
 set_option autoImplicit false
@@ -86,6 +98,95 @@ theorem reachable_FJ {S : Store Node Root} (hS : S.Reachable) : S.F ⪯ S.J := b
   obtain ⟨Bs, rfl⟩ := hS
   exact onBlocks_FJ Bs (Preceq.refl _)
 
+
+/-! ## Theorem 7's store layer -/
+
+omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
+/-- The walk-from block sits at or above the store-finalized block, given `F ⪯ J`. -/
+theorem F_preceq_R {S : Store Node Root} (h : S.F ⪯ S.J) : S.F ⪯ S.R := by
+  unfold Store.R
+  split_ifs with hc
+  · exact h
+  · exact Preceq.refl _
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- Every block `get_confirmed` may return descends from the store-finalized block,
+    given `F ⪯ J`. -/
+theorem getConfirmed_F {S : Store Node Root} {C : Blk Node Root}
+    (hFJ : S.F ⪯ S.J) (hC : GetConfirmed S C) : S.F ⪯ C :=
+  Preceq.trans (F_preceq_R hFJ) hC.2.1
+
+/-! ## The recorded-replay bridge, through each writer -/
+
+omit [Electorate Node] [Params] in
+theorem updateJustified_σ (S : Store Node Root) (J' : Blk Node Root) (h' : Nat) :
+    (updateJustified S J' h').σ = S.σ := by
+  simp only [updateJustified, Id.run]
+  split_ifs <;> rfl
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+theorem updateFinalized_σ (S : Store Node Root) (F' : Blk Node Root) :
+    (updateFinalized S F').σ = S.σ := by
+  simp only [updateFinalized, Id.run]
+  split_ifs <;> rfl
+
+theorem onBlock_recorded {S : Store Node Root} {B' : Blk Node Root}
+    (h : ∀ B σB, S.σ B = some σB → postState B = .state σB)
+    (B : Blk Node Root) (σB : ChainState Node Root)
+    (hB : (onBlock S B').σ B = some σB) : postState B = .state σB := by
+  simp only [onBlock, Id.run] at hB
+  split at hB
+  · rename_i P hP
+    split_ifs at hB with hadm
+    · split at hB
+      · rename_i σ' hrep
+        have hB' : Function.update S.σ B' (some σ') B = some σB := by
+          have h2 : (updateFinalized (updateJustified _ _ _) _).σ B = some σB := hB
+          rwa [updateFinalized_σ, updateJustified_σ] at h2
+        rw [Function.update_apply] at hB'
+        split_ifs at hB' with hBB
+        · subst hBB
+          injection hB' with hσ
+          subst hσ
+          simp only [Store.replay] at hrep
+          split at hrep
+          · rename_i σP hbind
+            rw [hP] at hbind
+            have hσP : S.σ P = some σP := hbind
+            cases B with
+            | genesis => exact absurd hP (by simp [Blk.parent])
+            | mk P₀ s n a r =>
+                have hPP : P₀ = P := by
+                  have h3 : some P₀ = some P := hP
+                  injection h3
+                subst hPP
+                simp only [postState]
+                rw [h P₀ σP hσP]
+                exact hrep
+          · exact absurd hrep (by simp)
+        · exact h B σB hB'
+      · exact h B σB hB
+    · exact h B σB hB
+  · exact h B σB hB
+
+theorem receiveMsg_recorded {S : Store Node Root} (m : StoreMsg Node Root)
+    (h : ∀ B σB, S.σ B = some σB → postState B = .state σB)
+    (B : Blk Node Root) (σB : ChainState Node Root)
+    (hB : (Decoupled.receive S m).σ B = some σB) : postState B = .state σB := by
+  cases m with
+  | block B' => exact onBlock_recorded h B σB hB
+
+omit [BlockHash Node Root] in
+theorem gen_recorded (B : Blk Node Root) (σB : ChainState Node Root)
+    (hB : (Store.gen : Store Node Root).σ B = some σB) : postState B = .state σB := by
+  have hB' : (if B = .genesis then some (ChainState.gen : ChainState Node Root) else none)
+      = some σB := hB
+  split_ifs at hB' with hg
+  subst hg
+  injection hB' with hσ
+  subst hσ
+  rfl
+
 end Store
 
 /-! ## The walker, and Theorem 4 -/
@@ -154,6 +255,34 @@ theorem reaches_FJ {sched : Schedule Node}
     {S : Store Node Root} (h : Reaches x p S) : S.F ⪯ S.J := by
   obtain ⟨i, rfl⟩ := h
   exact fPreceqJ x p i
+
+
+/-- `ReachesFrom` reaches its later store. -/
+theorem reaches_of_reachesFrom {sched : Schedule Node}
+    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
+    {S S' : Store Node Root} (h : ReachesFrom x p S S') : Reaches x p S' := by
+  obtain ⟨i, j, hij, hS, hS'⟩ := h
+  exact ⟨j, hS'⟩
+
+/-- Theorem 7 (`hft:thm:fcconsistency`): `S.F ⪯ S'.F ⪯ S'.J`, and both branches of the
+    walk-from cascade start at or above `S'.F`. -/
+theorem forkChoiceConsistency {sched : Schedule Node}
+    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
+    {S S' : Store Node Root} (h : ReachesFrom x p S S')
+    {C : Blk Node Root} (hC : GetConfirmed S' C) :
+    S.F ⪯ C :=
+  Preceq.trans (reachesFrom_F h) (getConfirmed_F (reaches_FJ (reaches_of_reachesFrom h)) hC)
+
+/-- The bridge over executions: whatever a held store records is the block's replay. -/
+theorem reaches_recorded {sched : Schedule Node}
+    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
+    {S : Store Node Root} (hS : Reaches x p S)
+    {B : Blk Node Root} {σB : ChainState Node Root} (hB : S.σ B = some σB) :
+    postState B = .state σB := by
+  obtain ⟨i, rfl⟩ := hS
+  exact exec_node_invariant
+    (P := fun S => ∀ B σB, S.σ B = some σB → postState B = .state σB)
+    (fun S m h => receiveMsg_recorded m h) gen_recorded x p i B σB hB
 
 end Exec
 

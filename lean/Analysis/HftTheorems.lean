@@ -15,10 +15,10 @@ stated; per the selection rule in `CONTEXT.md`, a lemma gets stated when a proof
 or on instruction. The rules of `Analysis/Theorems.lean` apply unchanged: each docstring
 carries the paper's sentence verbatim, and there is no section-level `variable`.
 
-**Stated on instruction, 2026-08-16; Theorems 3 and 4 are proved, the other four are
-`sorry`.** So `make dev` counts four here and `make check` fails until they are proved;
+**Stated on instruction, 2026-08-16; Theorems 3, 4 and 7 are proved, the other three are
+`sorry`.** So `make dev` counts three here and `make check` fails until they are proved;
 each proof, when it lands, becomes a one-line call into `Analysis/Proofs/`, as those of
-Theorems 3 and 4 are.
+Theorems 3, 4 and 7 are.
 
 ## Shared rendering decisions
 
@@ -144,14 +144,20 @@ theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     validator `p` holds. "At all future times": every `S'` with `ReachesFrom x p S S'`.
     "Returns … for every `Ω`": every `C` with `GetConfirmed S' C` — the relation holds of
     exactly the blocks some `Ω` could pick, so quantifying over its solutions is
-    quantifying over `Ω`. The store-level core the proof will establish is the previous
-    statement of record: `S.Reachable → GetConfirmed (onBlocks S Bs) C → S.F ⪯ C`. -/
+    quantifying over `Ω`. The store-level core is `Proofs.getConfirmed_F`, over any store
+    with `F ⪯ J`.
+
+    Proved in `Analysis/Proofs/StoreInvariants.lean`, riding Theorems 3 and 4:
+    `get_confirmed`'s own second conjunct is `R ⪯ C`, the walk-from block `R` is `J` or
+    `F` — either at or above `F` once `F ⪯ J` is in hand — and Theorem 3 carries the
+    earlier store's `F` up to the later one's. -/
 theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {C : Blk Node Root} (hC : GetConfirmed S' C) :
-    S.F ⪯ C := sorry
+    S.F ⪯ C :=
+  Proofs.forkChoiceConsistency h hC
 
 /-- **Theorem 8** (`hft:thm:finlive`, lines 683–685): local acceptance of finality updates.
 
