@@ -16,31 +16,27 @@ All notation comes from `Spec/Defs/Notation.lean`; read that first.
 The figure prints `on_block` first; Lean needs `update_justified` and `update_finalized`
 declared before the routine that calls them. Nothing else about the order is meant.
 
-## Deviations from the figure's own spelling
+## The one rendering decision: a block that fails admission leaves the store unchanged
 
-**The asserts leave the store unchanged.** The figure opens `on_block` with
-`assert B.parent ∈ Σ.T` and `assert Σ.F ⪯ B`. A block failing either is not accepted —
-that is the reading the paper's own proofs use ("the `on_block` finality-ancestor assertion
-accepts such a maximum-height block", Theorem 10, `hft:thm:orderindep`) — so each assert is
-rendered as `return S` with the store untouched.
+The figure writes two asserts (`B.parent ∈ Σ.T`, `Σ.F ⪯ B`) over a total
+`state_transition` (its own Figure 1, `hft:alg:state-machine`). Here the transition is the
+healing paper's — Figure 1 (`alg:state-replay`), the declared hybrid — which returns
+`invalid` on a block that does not extend the parent state or does not advance the slot,
+and the state map is `Option`-valued. So admission can fail three ways: a failed assert,
+a parent without a recorded state (`Store.replay` returns `invalid` for it; unreachable
+once the map-domain coherence invariant is proved), and an `invalid` replay. All three
+take the same exit, `return S` with the store untouched — the reading the paper's own
+proofs use ("the `on_block` finality-ancestor assertion accepts such a maximum-height
+block", Theorem 10, `hft:thm:orderindep`).
 
-**`state_transition` here can reject, and rejection leaves the store unchanged.** The
-figure's `state_transition` is the companion paper's own (its Figure 1,
-`hft:alg:state-machine`), which is total. This project runs the store over the healing
-paper's transition instead — `stateTransition` of Figure 1 (`alg:state-replay`), the
-declared hybrid — and that one returns `invalid` on a block that does not extend the
-parent state or does not advance the slot. An `invalid` is treated as a failed assert:
-`return S`. For that reason the transition is evaluated *before* the figure's
-`Σ.T ← Σ.T ∪ {B}`, so a rejected block never enters `T`; among the store writes themselves
-the figure's order is kept — `T` before `hmax`, `hmax` before either update, so the
+Enforcing that decision orders the routine: the replay is tested before the figure's
+`Σ.T ← Σ.T ∪ {B}`, so a rejected block never enters `T`. Among the store writes themselves
+the figure's order is kept — `T` before `hmax`, `hmax` before either update — so the
 viability filter inside `update_finalized` sees both the new block and the new maximum,
 which is what the surrounding prose requires and what Lemma 7 (`hft:lem:F-viable`)'s proof
 uses.
 
-**`σ[B.parent]` is read through the map's `Option`.** The `let some σP :=` line has no
-counterpart in the figure, which reads the map knowing `B.parent ∈ Σ.T`. Once the
-map-domain coherence invariant is proved the branch is unreachable; until then it too is a
-failed assert.
+## The remaining deviation
 
 **`get_confirmed` is a relation, not a function.** The figure's `Ω` is "whatever extra
 information the validator uses to disambiguate among viable descendants" — deliberately
@@ -80,26 +76,31 @@ def updateFinalized (S : Store Node Root) (F' : Blk Node Root) :
     S.F ← F'                                                             -- line 553
   return S                                                               -- line 555
 
+/-- `state_transition(Σ.σ[B.parent], B)` (Figure 2, `hft:alg:store`, line 534) with the
+    map's `Option` folded in: `invalid` when `B` has no parent or the parent has no
+    recorded state. The figure reads the map knowing `B.parent ∈ Σ.T`; once the map-domain
+    coherence invariant is proved, the `invalid` from a missing entry cannot arise for a
+    block `on_block`'s checks accept. -/
+def Store.replay (S : Store Node Root) (B : Blk Node Root) : TransitionResult Node Root :=
+  if let some σP := B.parent.bind S.σ then stateTransition σP B else invalid
+
 /-- `on_block(Σ, B)` (Figure 2, `hft:alg:store`, lines 530–540). Admits a block whose
     parent is accepted and which descends from the store-finalized block, replays it from
     its parent's state, and offers the resulting justified pair and finalized block to the
-    two updates. See the module header for the three rendering decisions: asserts as
-    `return S`, the `Option` read of `σ[B.parent]`, and an `invalid` transition rejecting
-    the block before it enters `T`. -/
+    two updates. See the module header for the one rendering decision: a block that fails
+    admission — either assert, or an `invalid` replay — leaves the store unchanged, which
+    is why the replay is tested before the figure's `Σ.T ← Σ.T ∪ {B}`. -/
 def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.run do
   let mut S := S
-  let some P := B.parent | return S           -- line 531: assert B.parent ∈ Σ.T …
-  if P ∉ S.T ∨ ¬ S.F ⪯ B then                 -- … and line 532: assert Σ.F ⪯ B
+  if ¬ B.parent.any (· ∈ S.T) ∨ ¬ S.F ⪯ B then  -- lines 531–532: the two asserts
     return S
-  let some σP := S.σ P | return S             -- the Option read; see the module header
-  let .state σ' := stateTransition σP B       -- line 534: σ' ← state_transition(Σ.σ[B.parent], B)
-    | return S                                -- the hybrid's rejection; see the module header
-  S.T ← S.T ∪ {B}                             -- line 533
-  S.σ[B] ← some σ'                            -- line 535
-  S.hmax ← max S.hmax σ'.h                    -- line 536
-  S ← updateJustified S σ'.J σ'.h_j           -- line 537
-  S ← updateFinalized S σ'.F                  -- line 538
-  return S                                    -- line 539
+  if let .state σ' := S.replay B then           -- line 534: σ' ← state_transition(Σ.σ[B.parent], B)
+    S.T ← S.T ∪ {B}                             -- line 533
+    S.σ[B] ← some σ'                            -- line 535
+    S.hmax ← max S.hmax σ'.h                    -- line 536
+    S ← updateJustified S σ'.J σ'.h_j           -- line 537
+    S ← updateFinalized S σ'.F                  -- line 538
+  return S                                      -- line 539
 
 /-- `R`, `get_confirmed`'s walk-from block (Figure 2, `hft:alg:store`, line 560): the
     store root while it sits at the frontier — `hmax = h_j + 1`, the figure's comment —
