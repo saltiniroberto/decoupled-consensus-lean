@@ -32,10 +32,20 @@ The four citation forms it recognises, all of which occur in the tree:
     **Lemma 10** (`lem:past-finalized`, 1092–1101) a statement header
     | `lem:past-finalized` | Lem. 10 | …           a MAPPING.md table row
 
-Numbers come from `height_filter_healing.aux`, which is a LaTeX **build artefact** and is
-not tracked upstream — the submodule carries only `.tex`.  With no `.aux` this exits 0 with
-a notice rather than failing, so a fresh clone is not blocked; build the paper
-(`cd latex-specs && latexmk -pdf height_filter_healing.tex`) to arm it.
+Two papers, told apart by a label prefix
+----------------------------------------
+A bare label cites `height_filter_healing.tex`.  A label written `hft:def:store` cites the
+companion paper `full/height_filter_and_timeouts.tex` — the store layer's contract since
+2026-08-16 — and is checked against that paper's own `.aux` and line spans.  The prefix is
+required because the two papers reuse label names (`def:height` exists in both), so looking
+a bare label up in both would silently check against the wrong paper.
+
+Numbers come from each paper's `.aux`, a LaTeX **build artefact** that is not tracked
+upstream — the submodule carries only `.tex`.  With no healing `.aux` this exits 0 with a
+notice rather than failing, so a fresh clone is not blocked; build the paper
+(`cd latex-specs && latexmk -pdf height_filter_healing.tex`) to arm it.  With no
+companion `.aux` (`cd latex-specs/full && latexmk -pdf height_filter_and_timeouts.tex`),
+`hft:` citations are counted but unchecked, again with a notice.
 """
 
 from __future__ import annotations
@@ -47,6 +57,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = ROOT / "latex-specs"
 AUX = SPECS / "height_filter_healing.aux"
+HFT_AUX = SPECS / "full" / "height_filter_and_timeouts.aux"
+HFT_TEX = SPECS / "full" / "height_filter_and_timeouts.tex"
 LEMMAS = ROOT / "lean" / "Analysis" / "Lemmas.lean"
 MAPPING = ROOT / "MAPPING.md"
 
@@ -60,7 +72,7 @@ KIND = {"def": "Definition", "ass": "Assumption", "lem": "Lemma",
 SHORT = {"Def": "def", "Ass": "ass", "Lem": "lem", "Cor": "cor",
          "Fig": "alg", "Thm": "thm", "Rem": "rem", "Prop": "prop"}
 
-LABEL = r"(?:def|ass|lem|cor|rem|alg|thm|prop):[a-z0-9-]+"
+LABEL = r"(?:hft:)?(?:def|ass|lem|cor|rem|alg|thm|prop):[a-z0-9-]+"
 KINDS = "|".join(KIND.values())
 DASH = r"[–—-]"
 
@@ -78,14 +90,15 @@ HEADER = re.compile(rf"\*\*({KINDS}) (\d+)\*\* \(`({LABEL})`,[^)]*?(\d+){DASH}(\
 ROW = re.compile(rf"\| `({LABEL})`[^|]*\| (Def|Ass|Lem|Cor|Fig|Thm|Rem|Prop)\. (\d+)")
 
 
-def label_numbers() -> dict[str, str]:
-    return dict(re.findall(r"\\newlabel\{([^}]+)\}\{\{([^}]*)\}", AUX.read_text()))
+def label_numbers(aux: Path, prefix: str = "") -> dict[str, str]:
+    return {prefix + label: num for label, num in
+            re.findall(r"\\newlabel\{([^}]+)\}\{\{([^}]*)\}", aux.read_text())}
 
 
-def environment_spans() -> dict[str, tuple[Path, int, int]]:
+def environment_spans(texs: list[Path], prefix: str = "") -> dict[str, tuple[Path, int, int]]:
     """Where each labelled result environment begins and ends, per source file."""
     spans: dict[str, tuple[Path, int, int]] = {}
-    for tex in sorted(SPECS.glob("*.tex")):
+    for tex in texs:
         lines = tex.read_text().splitlines()
         for i, line in enumerate(lines):
             m = re.match(r"\\begin\{(lemma|theorem|corollary|proposition)\}", line)
@@ -97,7 +110,7 @@ def environment_spans() -> dict[str, tuple[Path, int, int]]:
                     continue
                 end = next((k for k in range(i, len(lines))
                             if lines[k].startswith(rf"\end{{{m.group(1)}}}")), i)
-                spans[lm.group(1)] = (tex, i + 1, end + 1)
+                spans[prefix + lm.group(1)] = (tex, i + 1, end + 1)
                 break
     return spans
 
@@ -108,17 +121,29 @@ def main() -> int:
               f"(cd latex-specs && latexmk -pdf height_filter_healing.tex)")
         return 0
 
-    nums, spans, bad, seen = label_numbers(), environment_spans(), [], 0
+    nums = label_numbers(AUX)
+    spans = environment_spans(sorted(SPECS.glob("*.tex")))
+    hft_armed = HFT_AUX.exists()
+    if hft_armed:
+        nums |= label_numbers(HFT_AUX, "hft:")
+        spans |= environment_spans([HFT_TEX], "hft:")
+    else:
+        print(f"hft: citations UNCHECKED: {HFT_AUX.relative_to(ROOT)} not built "
+              f"(cd latex-specs/full && latexmk -pdf height_filter_and_timeouts.tex)")
+    bad, seen = [], 0
 
     def check(path: Path, lineno: int, kind: str, num: str, label: str) -> None:
         nonlocal seen
         seen += 1
+        if label.startswith("hft:") and not hft_armed:
+            return
+        bare = label.removeprefix("hft:")
         where = f"{path.relative_to(ROOT)}:{lineno}"
         if label not in nums:
             bad.append(f"{where}: `{label}` is not a label in the paper")
-        elif KIND[label.split(':')[0]] != kind:
+        elif KIND[bare.split(':')[0]] != kind:
             bad.append(f"{where}: `{label}` cited as {kind}, "
-                       f"but its prefix says {KIND[label.split(':')[0]]}")
+                       f"but its prefix says {KIND[bare.split(':')[0]]}")
         elif nums[label] != num:
             bad.append(f"{where}: `{label}` cited as {kind} {num}, "
                        f"but the paper numbers it {nums[label]}")
@@ -139,7 +164,8 @@ def main() -> int:
                     check(path, lineno, kind, num, label)
             for num, label in ELIDED.findall(line):
                 if label in nums:
-                    check(path, lineno, KIND[label.split(':')[0]], num, label)
+                    check(path, lineno, KIND[label.removeprefix("hft:").split(':')[0]],
+                          num, label)
                 else:
                     check(path, lineno, "?", num, label)
             for label, short, num in ROW.findall(line):
