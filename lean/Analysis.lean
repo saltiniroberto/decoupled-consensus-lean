@@ -15,6 +15,7 @@ import Analysis.Proofs.StoreInvariants
 import Analysis.Proofs.StoreProvenance
 import Analysis.Proofs.StoreRecords
 import Analysis.Proofs.Upgrade
+import Analysis.Proofs.Viability
 import Analysis.Lemmas
 import Analysis.Theorems
 import Analysis.HftTheorems
