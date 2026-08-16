@@ -5,6 +5,7 @@ import Spec.Fig1SlotReplay
 import Spec.Timeouts.Defs
 import Spec.Timeouts.Fig2Store
 import Spec.Timeouts.Receive
+import Spec.Timeouts.Protocol
 
 /-!
 # The specification
@@ -24,8 +25,9 @@ assignment macros and no protocol content. Each says so in its own docstring.
 `full/height_filter_and_timeouts.tex` — cited with `hft:`-prefixed labels — rather than the
 healing paper; `Spec/Timeouts/Defs.lean` records the decision. The same naming convention
 applies inside it with that paper's figure numbers: `Fig2Store` renders its Figure 2
-(`hft:alg:store`), `Defs` the numbered definitions that figure reads, and `Receive` the
-message-receipt wiring, which renders no figure.
+(`hft:alg:store`), `Defs` the numbered definitions that figure reads, and two files that
+render no figure — `Receive`, the message-receipt wiring, and `Protocol`, the node as a
+`Framework.StsMultisetLog.Protocol` instance.
 
 Present from the healing paper: Figure 1 (`alg:state-replay`) and Figure 2
 (`alg:attestation-processing`), and the vocabulary in `Spec/Defs/Basic.lean` those two

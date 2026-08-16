@@ -1747,16 +1747,48 @@ Encoding decisions, each also in the docstring where it bites:
   instruction — `on_block` is called by the receive function when a block message is
   received. One message case today; votes reach the store inside blocks.
 
+## 2026-08-16 — the node protocol, and what the framework layer provides
+
+`Spec/Timeouts/Protocol.lean`: the `Framework.StsMultisetLog.Protocol` instance. Node state
+is the `Store`, messages are `StoreMsg`, `Ev := Empty`. The reaction folds a delivered
+message into the store through `receive`; `tick` and `wake` change nothing, because neither
+block production nor the voting rule is encoded yet; `send := ∅` everywhere. Consequence
+worth remembering: until honest production lands, every message in flight originates from
+the framework's `adversarial` action — enough for safety statements about what stores
+accept, useless for liveness.
+
+The framework layer, read in full this day (`StsMultisetLog/Spec/Protocol.lean` and
+`Message.lean` — the audit `Next` asked for, partially): a protocol reacts to events only
+(`tick`/`recv`/`wake`/`custom`); `deliver` files the message into the view *before* the
+reaction runs; clocks are per-validator and every timing discipline is an assumption on
+executions, not a fact of the model; signing is structural (`sender = p` *is* signed by
+`p`); `adversarial p m` signs anything for a scheduled-adversarial validator;
+`Protocol.total` is Event-B's FIS and is discharged by the deterministic lift
+(`step … res := res = reaction S e`, `total := ⟨_, rfl⟩`), the idiom the framework's
+docstring and `Examples/CustomEvents.lean` both prescribe. Still unread:
+`Spec/Execution.lean` and `Spec/Schedule.lean`, where the assumption inventory lives —
+that half of the audit stays in `Next`.
+
+Style, Roberto (2026-08-16): **prefer `if` over `match` in protocol functions.** Where a
+branch must bind a constructor argument, a plain `if` cannot name it; `if let` (term or
+`do`) and the `let pat := e | fallback` else-form are the `if`-shaped spellings, and both
+elaborate to the same `match`, so proofs see no difference (`split`, not `split_ifs`,
+handles them). Applied: `reaction` uses `if let .recv m := e`; `onBlock`'s transition
+`match` became `let .state σ' := … | return S`, reading like the admission lines above it.
+Also on instruction: the cascade `if S.hmax = S.h_j + 1 then S.J else S.F` is its own
+function, `Store.R` — the figure's identifier for it — rather than a `let` inside
+`GetConfirmed`.
+
 ## Next
 
 1. The companion paper's store results, MAPPING.md's new table: the map-domain coherence
    invariant first, then `hft:lem:Rs-key-monotone`, `hft:thm:finperm`, `hft:thm:fleqr` —
    the induction-on-operations ones. `hft:thm:orderindep` quantifies over permutations of a
    block sequence and is a different proof shape (`List.Perm`).
-2. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
-   protocol. This is the layer where the first attempt's trouble concentrated — see
-   its assumption inventory — so it wants auditing rather than assuming. Settling the signing
-   question above is part of it. `receive`'s docstring says where the store meets it.
+2. Finish the `StsMultisetLog/Spec/` audit: `Execution.lean` and `Schedule.lean`, the
+   assumption inventory — the layer where the first attempt's trouble concentrated.
+   `Protocol.lean` and `Message.lean` are done, recorded above; the signing question is
+   settled by the framework (structural signing).
 3. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
 4. Healing Figures 4 and 5 and Sections 5 onward, under the store decision above: Figure 3
    only returns if merge/recovery does.
