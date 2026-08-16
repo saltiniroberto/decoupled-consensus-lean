@@ -20,13 +20,19 @@ when it lands, becomes a one-line call into `Analysis/Proofs/`, as Theorem 3's i
 
 ## Shared rendering decisions
 
-**Time is the received-block sequence — except in Theorems 3 and 4, which are on
-executions.** `on_block` is the store's only mutator, so "at all future times" is "after
-any further `onBlocks`", and "the store maintains … at all times" is a hypothesis
-`S.Reachable`; both notions are in `Analysis/Vocabulary.lean`. Theorems 3 and 4 instead
-read time as the steps of a framework execution of the node protocol
-(`Spec/Protocol.lean`), on instruction — each quantifies over `Exec protocol sched` and a
-validator, and each docstring names the store-level core its proof will establish.
+**Time is the execution.** All six statements quantify over `Exec protocol sched` — the
+framework's infinite executions of the node protocol (`Spec/Protocol.lean`) — a validator
+and its steps, on instruction (2026-08-16): "at all future times" is a later step of the
+same execution, "at all times" is every step, and Theorem 10's "the same available set of
+blocks … in any parent-first order" reads each validator's received-block list out of the
+execution with `deliveredBlocks`. Each docstring names the store-level core its proof will
+establish, phrased with the fold vocabulary of `Analysis/Vocabulary.lean` (`onBlocks`,
+`Store.Reachable`, `ParentFirst`) — a validator's store is the fold of what was delivered
+to it, so the execution statement follows from its core by walking the steps, as
+Theorem 3's proof does. No statement carries an honesty, timing or fairness assumption:
+all six are timeless in the framework's classification, and hold of corrupted validators
+too, whose `adversarial` action touches only the message log while their store follows
+the protocol's reaction.
 
 **"Unless `≥ n/3` validators are slashable" is the accountable disjunct.** The same
 rendering as `thmAccountableSafety`: the claim holds, or a set of weight at least `2q − W`
@@ -36,16 +42,19 @@ signed slashable pairs. The paper counts validators where this project weighs th
 companion paper's Definition 9 (`hft:def:slashing`) is the single rule E1, the same relation
 healing's Definition 11 (`def:slashing`) E1 renders, and it has no E2. Each signer's two
 messages are pinned to evidence the statement can name: inclusion on a chain the store
-accepted, or on the named finalizing chain where the theorem has one. The slashable set is
-written `A`, because `S` names the store in this file.
+accepted, or on the named finalizing chain where the theorem has one. In the disjunct the
+slashable set is written `A`, its members `v`, and the attestation pair `a`/`b` — `x` is
+the execution, `i` and `j` are steps, and `q` is the quorum threshold, so none of the
+healing files' letters for these are free here.
 
 **"Finalized at height `h_f` on any chain" is a recorded pair.** As in
 `thmAccountableSafety`: a chain `B_F` whose replayed post-state records `(F, h_F)` — the
 weaker hypothesis, so the statements are stronger than the paper's.
 
-**"Processed by the node" is a recorded state.** `σ[B]` exists in the store's map. For
-Theorem 8's "a block `B` is processed by `on_block`", the block is additionally new
-(`B ∉ S.T`), so the sentence is about the call that accepts it.
+**"Processed by the node" is a recorded state.** `σ[B]` exists in the validator's store's
+map. For Theorem 8's "a block `B` is processed by `on_block`", the block is additionally
+new at step `i` and recorded at step `i + 1`, so the sentence is about the step that
+accepts it.
 -/
 
 set_option autoImplicit false
@@ -56,8 +65,7 @@ open scoped Decoupled
 open Framework.StsMultisetLog
 
 /-- **Theorem 3** (`hft:thm:finperm`, lines 583–585): local irreversibility of finality,
-    stated on an execution — on instruction, 2026-08-16; the other five theorems are
-    store-level for now.
+    stated on an execution — the first to be, and the rest of the file followed.
 
     > Once a node sets `Σ.F = F`, `Σ.F` descends from `F` at all future times.
 
@@ -142,22 +150,25 @@ theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [Decidabl
     finalized, the store's own finalized block ends at or below on `F'`'s chain — or a
     third of the validators exposed themselves.
 
-    Noun by noun. "A block `B` is processed by `on_block`": `B` is new (`B ∉ S.T`) and the
-    call leaves it a recorded state — the `get` hypothesis reads `σ[B]` out of the
-    post-call map. "`σ[B].F = F'`": that recorded state's `F`. "After processing
-    `Σ.F ⪰ F'`": `F' ⪯ (onBlock S B).F`. "Unless `≥ n/3` validators are slashable": the
-    accountable disjunct of the module header, both messages of each signer included on
-    blocks the post-call store accepted. -/
+    Noun by noun. "A block `B` is processed by `on_block`": `B` is new to `p`'s store at
+    step `i` and has a recorded state at step `i + 1` — the `get` hypothesis reads `σ[B]`
+    out of the later store, and the one action that can make the difference is a delivery
+    to `p` running `on_block`. "`σ[B].F = F'`": that recorded state's `F`. "After
+    processing `Σ.F ⪰ F'`": `F' ⪯ (x[i + 1][p].st).F`. "Unless `≥ n/3` validators are
+    slashable": the accountable disjunct of the module header, both messages of each
+    signer included on blocks the step-`i + 1` store accepted. The store-level core is the
+    previous statement of record, over one `onBlock` call on a reachable store. -/
 theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
-    {S : Store Node Root} (hS : S.Reachable) {B : Blk Node Root} {F' : Blk Node Root}
-    (hnew : B ∉ S.T)
-    (hB : get σB from (onBlock S B).σ B; σB.F = F') :
-    F' ⪯ (onBlock S B).F ∨
+    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
+    (p : Node) (i : Nat) {B F' : Blk Node Root}
+    (hnew : B ∉ (x[i][p].st).T)
+    (hB : get σB from (x[i + 1][p].st).σ B; σB.F = F') :
+    F' ⪯ (x[i + 1][p].st).F ∨
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ i ∈ A, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-          (∃ Cx ∈ (onBlock S B).T, IncludedOn x Cx) ∧
-          (∃ Cy ∈ (onBlock S B).T, IncludedOn y Cy) ∧ E1 x y := sorry
+        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
+          (∃ Ca ∈ (x[i + 1][p].st).T, IncludedOn a Ca) ∧
+          (∃ Cb ∈ (x[i + 1][p].st).T, IncludedOn b Cb) ∧ E1 a b := sorry
 
 /-- **Theorem 9** (`hft:thm:lockin`, lines 695–697): lock-in.
 
@@ -172,26 +183,27 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
 
     Noun by noun. "Finalized at height `h_f` on any chain": the recorded pair on `B_F`'s
     replayed post-state, the module header's rendering. "Some block `B` with `σ[B].J = F`
-    and `σ[B].h_j = h_f` has been processed": `B` has a recorded state in `S` with those
-    two fields — the `get` hypothesis. "At all future times" and "always": the store
-    `onBlocks S Bs`, the three claims conjoined under one `Bs`. "For every `Ω`": as in
-    Theorem 7. The disjunct's evidence is included on `B_F`'s chain or on a block the
-    future store accepted, each message independently, since which quorum sits where
-    depends on the case. -/
+    and `σ[B].h_j = h_f` has been processed by the node": `B` has a recorded state in `p`'s
+    store at step `i`, with those two fields — the `get` hypothesis. "At all future times"
+    and "always": every step `j ≥ i`, the three claims conjoined under one `j`. "For every
+    `Ω`": as in Theorem 7. The disjunct's evidence is included on `B_F`'s chain or on a
+    block the step-`j` store accepted, each message independently, since which quorum sits
+    where depends on the case. -/
 theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
-    {S : Store Node Root} (hS : S.Reachable)
+    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
+    (p : Node) {i : Nat}
     {B_F F : Blk Node Root} {h_f : Nat} {B : Blk Node Root}
     (hBF : postState B_F ≠ invalid)
     (hF : (postState' B_F).F = F) (hhf : (postState' B_F).h_F = h_f)
-    (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f)
-    (Bs : List (Blk Node Root)) :
-    (F ⪯ (onBlocks S Bs).J ∧ F ∈ viableTree (onBlocks S Bs) ∧
-      ∀ C, GetConfirmed (onBlocks S Bs) C → F ⪯ C) ∨
+    (hB : get σB from (x[i][p].st).σ B; σB.J = F ∧ σB.h_j = h_f)
+    {j : Nat} (hij : i ≤ j) :
+    (F ⪯ (x[j][p].st).J ∧ F ∈ viableTree (x[j][p].st) ∧
+      ∀ C, GetConfirmed (x[j][p].st) C → F ⪯ C) ∨
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ i ∈ A, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-          (IncludedOn x B_F ∨ ∃ Cx ∈ (onBlocks S Bs).T, IncludedOn x Cx) ∧
-          (IncludedOn y B_F ∨ ∃ Cy ∈ (onBlocks S Bs).T, IncludedOn y Cy) ∧ E1 x y := sorry
+        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
+          (IncludedOn a B_F ∨ ∃ Ca ∈ (x[j][p].st).T, IncludedOn a Ca) ∧
+          (IncludedOn b B_F ∨ ∃ Cb ∈ (x[j][p].st).T, IncludedOn b Cb) ∧ E1 a b := sorry
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
 
@@ -205,32 +217,36 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     order, agree on everything fork choice reads — or a third of the validators exposed
     themselves.
 
-    Noun by noun. "The same available set … in any parent-first order": two lists that are
-    permutations of each other (`List.Perm`), each `ParentFirst`, each folded from the
-    genesis store. "The observable store view" is spelled out as the paper's own "in
-    particular" list: the four fields, membership of the subtree rooted at `F` — the two
-    `F`s being equal by the first conjunct — and the outputs of `get_confirmed`. The
-    paper's third sentence, that the nodes may disagree outside `F`'s subtree, is a caveat
-    rather than a claim, and is not stated; agreement of the recorded states on the shared
-    subtree is derivable (replay is deterministic) and is likewise not stated. The
-    disjunct's evidence is included on a block accepted by either of the two stores. -/
+    Noun by noun. "Two nodes with the same available blocks": two validators `p` and `p'`
+    of one execution, at steps `i` and `j` — what each has folded is its delivered-block
+    list, `deliveredBlocks`, and a validator's store is exactly that fold, so "the same
+    available set" is the two lists being permutations of each other (`List.Perm`). "In
+    any parent-first order": each list `ParentFirst`. "The observable store view" is
+    spelled out as the paper's own "in particular" list: the four fields, membership of
+    the subtree rooted at `F` — the two `F`s being equal by the first conjunct — and the
+    outputs of `get_confirmed`. The paper's third sentence, that the nodes may disagree
+    outside `F`'s subtree, is a caveat rather than a claim, and is not stated; agreement
+    of the recorded states on the shared subtree is derivable (replay is deterministic)
+    and is likewise not stated. The disjunct's evidence is included on a block accepted by
+    either of the two stores. The second validator is `p'`, not `q`, which names the
+    quorum threshold. -/
 theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
-    {Bs₁ Bs₂ : List (Blk Node Root)} (hperm : Bs₁.Perm Bs₂)
-    (hp₁ : ParentFirst Bs₁) (hp₂ : ParentFirst Bs₂) :
-    ((onBlocks Store.gen Bs₁).F = (onBlocks Store.gen Bs₂).F ∧
-     (onBlocks Store.gen Bs₁).J = (onBlocks Store.gen Bs₂).J ∧
-     (onBlocks Store.gen Bs₁).h_j = (onBlocks Store.gen Bs₂).h_j ∧
-     (onBlocks Store.gen Bs₁).hmax = (onBlocks Store.gen Bs₂).hmax ∧
-     (∀ C, (onBlocks Store.gen Bs₁).F ⪯ C →
-       (C ∈ (onBlocks Store.gen Bs₁).T ↔ C ∈ (onBlocks Store.gen Bs₂).T)) ∧
-     (∀ C, GetConfirmed (onBlocks Store.gen Bs₁) C ↔
-       GetConfirmed (onBlocks Store.gen Bs₂) C)) ∨
+    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
+    {p p' : Node} {i j : Nat}
+    (hperm : (deliveredBlocks x p i).Perm (deliveredBlocks x p' j))
+    (hp : ParentFirst (deliveredBlocks x p i))
+    (hp' : ParentFirst (deliveredBlocks x p' j)) :
+    ((x[i][p].st).F = (x[j][p'].st).F ∧
+     (x[i][p].st).J = (x[j][p'].st).J ∧
+     (x[i][p].st).h_j = (x[j][p'].st).h_j ∧
+     (x[i][p].st).hmax = (x[j][p'].st).hmax ∧
+     (∀ C, (x[i][p].st).F ⪯ C → (C ∈ (x[i][p].st).T ↔ C ∈ (x[j][p'].st).T)) ∧
+     (∀ C, GetConfirmed (x[i][p].st) C ↔ GetConfirmed (x[j][p'].st) C)) ∨
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ i ∈ A, ∃ x y : Attestation Node Root, x.validator = i ∧ y.validator = i ∧
-          (∃ Cx, (Cx ∈ (onBlocks Store.gen Bs₁).T ∨ Cx ∈ (onBlocks Store.gen Bs₂).T) ∧
-            IncludedOn x Cx) ∧
-          (∃ Cy, (Cy ∈ (onBlocks Store.gen Bs₁).T ∨ Cy ∈ (onBlocks Store.gen Bs₂).T) ∧
-            IncludedOn y Cy) ∧ E1 x y := sorry
+        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
+          (∃ Ca, (Ca ∈ (x[i][p].st).T ∨ Ca ∈ (x[j][p'].st).T) ∧ IncludedOn a Ca) ∧
+          (∃ Cb, (Cb ∈ (x[i][p].st).T ∨ Cb ∈ (x[j][p'].st).T) ∧ IncludedOn b Cb) ∧
+          E1 a b := sorry
 
 end Decoupled

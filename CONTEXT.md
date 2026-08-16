@@ -1842,7 +1842,7 @@ header or the docstring where it bites:
   statement-design judgement made before any proof. If a proof cannot place the E1 pair
   there, the statement changes — with Roberto, as with Theorem 5's strengthening.
 
-## 2026-08-16 — Theorems 3 and 4 restated on executions, and `Execution.lean` read
+## 2026-08-16 — the six store theorems restated on executions, and `Execution.lean` read
 
 Roberto: express Theorem 3 on an execution, then Theorem 4 likewise. `thmLocalIrreversibility` now quantifies over
 `Exec (protocol …) sched` — the framework's infinite executions of the node protocol under
@@ -1852,12 +1852,28 @@ is timeless in the framework's own classification, and it holds for corrupted va
 too, because `Action.adversarial` touches only the message log while every change to a
 validator's store goes through the protocol's reaction. The store-level fold form
 (`S.F ⪯ (onBlocks S Bs).F`, arbitrary `S`) moved from statement of record to the named
-core the proof will establish; the remaining theorems stay store-level until instructed
-otherwise. Theorem 4 (`thmFPreceqJ`) followed the same day, and gained from the move: the
-`S.Reachable` hypothesis dissolves, because an execution's `init` field starts every
-validator at the genesis store — the execution carries the reachability an invariant
-needs. Its store-level form (`S.Reachable → S.F ⪯ S.J`) is now the named core of its
-future proof. `StoreMsg` gained `deriving DecidableEq`, which `Exec` requires of the message
+core the proof will establish. Theorem 4 (`thmFPreceqJ`) followed the same day, and gained
+from the move: the `S.Reachable` hypothesis dissolves, because an execution's `init` field
+starts every validator at the genesis store — the execution carries the reachability an
+invariant needs. Then, on instruction, the remaining four followed, so the whole of
+`Analysis/HftTheorems.lean` is on executions, each docstring naming its store-level core:
+
+* Theorem 7 takes Theorem 3's two-step shape — `F` at step `i`, `GetConfirmed` at step
+  `j ≥ i` — and its `Reachable` hypothesis dissolves like Theorem 4's.
+* Theorem 8's "processed by `on_block`" is one execution step: `B ∉ (x[i][p].st).T` and
+  recorded in `x[i + 1][p].st` — the only action that can make that difference is a
+  delivery to `p`.
+* Theorem 9 anchors the processed-`B` hypothesis at step `i` and concludes for every
+  `j ≥ i`, evidence on `B_F`'s chain or the step-`j` store.
+* Theorem 10's "two nodes with the same available blocks" is two validators of one
+  execution: `deliveredBlocks x p i`, new in `Vocabulary.lean`, reads the list of blocks
+  delivered to `p` out of the labels (`x.lbl`), and the hypothesis is that the two lists
+  are permutations, each `ParentFirst`. A validator's store being the fold of its
+  delivered list is the bridging fact the proof will need.
+
+Binder conventions forced by the move, recorded in the file header: the slashable set is
+`A`, its members `v`, the attestation pair `a`/`b` — `x` is the execution, `i`/`j` steps,
+`q` the quorum threshold, and Theorem 10's second validator is `p'` because `q` is taken. `StoreMsg` gained `deriving DecidableEq`, which `Exec` requires of the message
 type, and the deriving handler reaches it (single constructor, no nesting — unlike `Blk`).
 
 The second half of the framework audit: `StsMultisetLog/Spec/Execution.lean` read in full.

@@ -1,5 +1,7 @@
 import Analysis.Proofs.SlotClosure
 import Spec.HftFig2Store
+import Spec.Protocol
+import StsMultisetLog.Spec.Execution
 
 /-!
 # The vocabulary the statements need, which no figure reads
@@ -146,20 +148,23 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
 /-! ## The store theorems' temporal vocabulary
 
 The companion paper's store theorems (`Analysis/HftTheorems.lean`) are claims about one
-node's store over time. Time here is the sequence of received blocks, since `on_block` is
-the store's only mutator, so the three notions below are what "at all future times", "the
-node['s store]" and Theorem 10 (`hft:thm:orderindep`)'s "parent-first order" quantify over. -/
+node's store over time, and are stated over the framework's executions of the node
+protocol (`Spec/Protocol.lean`). `deliveredBlocks` reads a validator's received-block
+list out of an execution; the fold vocabulary — `onBlocks`, `Store.Reachable`,
+`ParentFirst` — is what the statements' *store-level cores* are phrased with, since
+`on_block` is the store's only mutator and a validator's store is the fold of what was
+delivered to it. -/
 
 /-- The store after receiving `Bs`, oldest first: `on_block` folded over the list — the
-    "folding … through `on_block`" of Theorem 10 (`hft:thm:orderindep`). A store theorem's
-    "at all future times" is "after any further `onBlocks`". -/
+    "folding … through `on_block`" of Theorem 10 (`hft:thm:orderindep`). At the store
+    level, "at all future times" is "after any further `onBlocks`". -/
 def onBlocks (S : Store Node Root) (Bs : List (Blk Node Root)) : Store Node Root :=
   Bs.foldl onBlock S
 
 /-- A store the node can hold: reached from the genesis store by some sequence of receipts.
-    The chain results quantify over blocks (`BlockPostState`); a store theorem's "the store
-    maintains … at all times" is instead a claim about every state of one evolving store,
-    and this is that quantification. -/
+    The execution statements need no such hypothesis — an execution starts every validator
+    at `Store.gen` — so this is the store-level cores' spelling of what the execution
+    carries by construction. -/
 def Store.Reachable (S : Store Node Root) : Prop :=
   ∃ Bs : List (Blk Node Root), S = onBlocks Store.gen Bs
 
@@ -168,6 +173,20 @@ def Store.Reachable (S : Store Node Root) : Prop :=
 def ParentFirst (Bs : List (Blk Node Root)) : Prop :=
   ∀ (i : Nat) (hi : i < Bs.length) (P : Blk Node Root),
     Bs[i].parent = some P → P = .genesis ∨ P ∈ Bs.take i
+
+/-- The blocks delivered to `p` in the first `i` steps of `x`, oldest first — the list
+    `on_block` was fed, a `deliver` to `p` being the one action that runs the store's
+    `receive`. Theorem 10 (`hft:thm:orderindep`)'s "the same available set of blocks …
+    in any parent-first order" quantifies over these lists. -/
+def deliveredBlocks {sched : Schedule Node}
+    (x : Exec (protocol (Node := Node) (Root := Root)) sched) (p : Node) :
+    Nat → List (Blk Node Root)
+  | 0 => []
+  | i + 1 =>
+      deliveredBlocks x p i ++
+        match x.lbl i with
+        | .deliver q m => if q = p then (match m.msg with | .block B => [B]) else []
+        | _ => []
 
 end
 
