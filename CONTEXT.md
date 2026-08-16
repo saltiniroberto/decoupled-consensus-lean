@@ -1690,12 +1690,73 @@ The two `…Evidence` declarations are **not** renamed to a matching `…E2`/`�
 landed alone, when E1 had no statement; renaming it would make this file's earlier entries name a
 declaration that no longer exists. Its docstring says so instead.
 
+## 2026-08-16 — the store layer follows the companion paper, not Figure 3
+
+Roberto, after examining Figure 3 (`alg:store`) piece by piece: the store this project
+encodes is the **incremental** one of `full/height_filter_and_timeouts.tex`, Figure 2
+(`hft:alg:store`) — a stateful `Σ = (σ, T, F, J, h_j, hmax)` updated as blocks arrive — not
+the healing paper's raw-evidence store with derived fork choice. Now in
+`Spec/Timeouts/{Defs,Fig2Store,Receive}.lean`; the `hft:` citation prefix and its checker
+support landed the same day (`tools/check_citations.py`).
+
+What the examination found, kept here because it was the basis of the choice:
+
+* `on_object` is called nowhere in either healing file; its `objects` field has no reader.
+  Kept in mind (not encoded) for a future Goldfish extension, on Roberto's judgement.
+* `derive_block_states` is called once (healing Figure 4) but is the definition of
+  "accepted block state", which everything downstream of the healing store quantifies over,
+  and Lemma 12's second sentence is about it specifically.
+* The two stores are one design refactored: healing's `derive_fork_choice(S)` returns the
+  tuple the companion paper maintains incrementally, same field names. Healing's
+  order-independence is unconditional by construction; the companion paper's is its
+  Theorem 10 (`hft:thm:orderindep`), conditional on the fault bound and parent-first
+  folding. Merge exists only on the healing side.
+* So the choice defers, not abandons: healing's Lemma 12, Theorem 7, Corollary 1 and the
+  recovery sections are about the raw store and merge, and come back only if that store is
+  encoded later; `hft:thm:orderindep` would be the bridge between the designs.
+
+**The hybrid**: the store runs over *this project's* `stateTransition` (healing Figures 1
+and 2), not the companion paper's own state machine. Its store theorems' proofs cite its
+chain-layer lemmas (`hft:lem:slotmono`, `hft:lem:fresh-equiv`, `hft:thm:finlive`), so when
+those results are stated here their proofs get re-derived against what this project has
+proved — expect missing invariants to surface mid-proof, as usual.
+
+Encoding decisions, each also in the docstring where it bites:
+
+* The paper's `Σ` is written `S`: `Σ` is a reserved token (the dependent-pair binder),
+  measured — `def f (Σ : Nat)` is a parse error.
+* The state map is `Blk → Option (ChainState …)`; that it is defined exactly on `T` is a
+  coherence invariant to prove, not typing. It is the first machinery any store proof will
+  want.
+* `BlockHash` supplies the tiebreak `hash(·)` abstractly, `Nat`-valued, **no injectivity**:
+  Figure 2 reads only the value. The collision-freedom idealization joins when a proof
+  needs it.
+* The figure's two asserts are rendered as `return S` — a violating block leaves the store
+  unchanged, the reading `hft:thm:orderindep`'s own proof uses.
+* Our `stateTransition` can return `invalid` (the companion paper's own is total); an
+  `invalid` also leaves the store unchanged, and the transition is evaluated before the
+  figure's `Σ.T ← Σ.T ∪ {B}` so a rejected block never enters `T`. Among the store writes
+  the figure's order is kept — `T`, then `hmax`, then the two updates — because
+  `update_finalized`'s viability check must see both the new block and the new maximum
+  (`hft:lem:F-viable`'s proof depends on it).
+* `viableTree` is encoded by Definition 11's own closed form ("some leaf `L ⪰ B` has
+  `σ[L].h ≥ hmax − 1`"); the recursive form is left as a lemma to prove.
+* `get_confirmed` is a relation, `GetConfirmed S B`: the figure's `Ω` is deliberately
+  unspecified, and the framework's own `Protocol.step` sets the relation precedent.
+* `StoreMsg`/`receive` (`Spec/Timeouts/Receive.lean`) render no figure: wiring on
+  instruction — `on_block` is called by the receive function when a block message is
+  received. One message case today; votes reach the store inside blocks.
+
 ## Next
 
-1. Section 5 and Figure 3, now that every numbered result of Sections 2–4 is stated and proved.
+1. The companion paper's store results, MAPPING.md's new table: the map-domain coherence
+   invariant first, then `hft:lem:Rs-key-monotone`, `hft:thm:finperm`, `hft:thm:fleqr` —
+   the induction-on-operations ones. `hft:thm:orderindep` quantifies over permutations of a
+   block sequence and is a different proof shape (`List.Perm`).
 2. Read `StsMultisetLog/Spec/` and record here what it provides and what it leaves to the
    protocol. This is the layer where the first attempt's trouble concentrated — see
    its assumption inventory — so it wants auditing rather than assuming. Settling the signing
-   question above is part of it.
+   question above is part of it. `receive`'s docstring says where the store meets it.
 3. Section 1 of `height_filter_healing.tex`, and the audit method the rest will follow.
-4. Figures 3 to 5, and the definitions Sections 5 onward add.
+4. Healing Figures 4 and 5 and Sections 5 onward, under the store decision above: Figure 3
+   only returns if merge/recovery does.
