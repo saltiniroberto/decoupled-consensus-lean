@@ -1,4 +1,5 @@
 import Analysis.Proofs.SlotClosure
+import Spec.HftFig2Store
 
 /-!
 # The vocabulary the statements need, which no figure reads
@@ -135,6 +136,38 @@ def ProgressCertificate (B : Blk Node Root) (h : Nat) : Prop :=
   (∃ (σp σ : ChainState Node Root) (X : Blk Node Root),
     BlockPostState σp ∧ X ⪯ B ∧ stateTransition σp X = .state σ ∧
       σp.h = h ∧ σ.h = h + 1 ∧ σ.J = σp.J)
+
+end
+
+section
+variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
+  [BlockHash Node Root]
+
+/-! ## The store theorems' temporal vocabulary
+
+The companion paper's store theorems (`Analysis/HftTheorems.lean`) are claims about one
+node's store over time. Time here is the sequence of received blocks, since `on_block` is
+the store's only mutator, so the three notions below are what "at all future times", "the
+node['s store]" and Theorem 10 (`hft:thm:orderindep`)'s "parent-first order" quantify over. -/
+
+/-- The store after receiving `Bs`, oldest first: `on_block` folded over the list — the
+    "folding … through `on_block`" of Theorem 10 (`hft:thm:orderindep`). A store theorem's
+    "at all future times" is "after any further `onBlocks`". -/
+def onBlocks (S : Store Node Root) (Bs : List (Blk Node Root)) : Store Node Root :=
+  Bs.foldl onBlock S
+
+/-- A store the node can hold: reached from the genesis store by some sequence of receipts.
+    The chain results quantify over blocks (`BlockPostState`); a store theorem's "the store
+    maintains … at all times" is instead a claim about every state of one evolving store,
+    and this is that quantification. -/
+def Store.Reachable (S : Store Node Root) : Prop :=
+  ∃ Bs : List (Blk Node Root), S = onBlocks Store.gen Bs
+
+/-- Theorem 10 (`hft:thm:orderindep`)'s "parent-first order": every block's parent is
+    genesis — accepted already in the genesis store — or appears earlier in the list. -/
+def ParentFirst (Bs : List (Blk Node Root)) : Prop :=
+  ∀ (i : Nat) (hi : i < Bs.length) (P : Blk Node Root),
+    Bs[i].parent = some P → P = .genesis ∨ P ∈ Bs.take i
 
 end
 

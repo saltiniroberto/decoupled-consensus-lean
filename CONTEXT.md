@@ -1805,12 +1805,50 @@ So the figure's line is rendered as `if let some P := B.parent then if P ∈ S.T
 the second assert verbatim and the first split into existence plus membership. The general
 rule this fed is in `CLAUDE.md` ("Protocol code reads like the paper's pseudocode").
 
+## 2026-08-16 — Section 3.1's six theorems stated, statements only
+
+`Analysis/HftTheorems.lean`, on instruction: the six theorem environments of the companion
+paper's Section 3.1 ("Store invariants and safety"), each a `sorry` — `thmLocalIrreversibility`
+(Thm 3, `hft:thm:finperm`), `thmFPreceqJ` (Thm 4, `hft:thm:fleqr`), `thmForkChoiceConsistency`
+(Thm 7, `hft:thm:fcconsistency`), `thmFinalityAcceptance` (Thm 8, `hft:thm:finlive`),
+`thmLockIn` (Thm 9, `hft:thm:lockin`), `thmOrderIndependence` (Thm 10, `hft:thm:orderindep`).
+The section's lemmas and corollary are deliberately not stated: per the selection rule above,
+they get stated when a proof demands them. MAPPING.md's status flips wait for instruction, per
+the pause.
+
+Statement vocabulary added to `Analysis/Vocabulary.lean`: `onBlocks` (fold of `onBlock`;
+"at all future times"), `Store.Reachable` (folds from `Store.gen`; "the store maintains … at
+all times"), `ParentFirst` (Theorem 10's order). Rendering decisions, each also in the file
+header or the docstring where it bites:
+
+* "Unless `≥ n/3` validators are slashable" is the accountable disjunct in
+  `thmAccountableSafety`'s shape — weight `2q − W`, which is the intersection weight of two
+  `q`-quorums and the count analogue of `n/3`. Slashable is **E1 alone**: the companion
+  paper's Definition 9 (`hft:def:slashing`) is the single rule E1, the same relation as
+  healing's E1, and defines no E2. The slashable set is written `A`, `S` naming stores there.
+* "Finalized at height `h_f` on any chain" is the recorded pair on `postState' B_F` —
+  Theorem 5's rendering, hypotheses weaker, statements stronger.
+* Theorem 3 is stated over an arbitrary store, reachable or not — stronger than the paper,
+  and true because `update_finalized`'s condition is per-step. Theorems 4 and 7 carry
+  `Store.Reachable`; they are invariants and the hypothesis is not droppable.
+* Theorem 8's "a block `B` is processed" is `B ∉ S.T` plus a recorded state in the post-call
+  map, read with `get … from`.
+* Theorem 10's "observable store view" is the paper's own "in particular" list: the four
+  fields, membership of the subtree rooted at `F`, and `GetConfirmed` as an iff. Its third
+  sentence is a caveat, not a claim, and the σ-agreement on the shared subtree is derivable;
+  neither is stated.
+* **A risk to re-check at proof time**: where the three conditional disjuncts pin their
+  evidence (accepted blocks of the final store; `B_F`'s chain where named) is a
+  statement-design judgement made before any proof. If a proof cannot place the E1 pair
+  there, the statement changes — with Roberto, as with Theorem 5's strengthening.
+
 ## Next
 
-1. The companion paper's store results, MAPPING.md's new table: the map-domain coherence
-   invariant first, then `hft:lem:Rs-key-monotone`, `hft:thm:finperm`, `hft:thm:fleqr` —
-   the induction-on-operations ones. `hft:thm:orderindep` quantifies over permutations of a
-   block sequence and is a different proof shape (`List.Perm`).
+1. Prove `Analysis/HftTheorems.lean`'s six statements: the map-domain coherence invariant
+   first, then the induction-on-operations ones (Thm 3, Thm 4), then the conditional three.
+   `thmOrderIndependence` quantifies over permutations of a block sequence and is a
+   different proof shape (`List.Perm`). Section 3.1's lemmas get stated as the proofs
+   demand them.
 2. Finish the `StsMultisetLog/Spec/` audit: `Execution.lean` and `Schedule.lean`, the
    assumption inventory — the layer where the first attempt's trouble concentrated.
    `Protocol.lean` and `Message.lean` are done, recorded above; the signing question is

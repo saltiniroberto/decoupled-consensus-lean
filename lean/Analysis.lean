@@ -12,16 +12,18 @@ import Analysis.Proofs.Provenance
 import Analysis.Proofs.Finality
 import Analysis.Lemmas
 import Analysis.Theorems
+import Analysis.HftTheorems
 
 /-!
 # The analysis
 
-One import per file under `Analysis/`. The paper's numbered results, stated and proved against
+One import per file under `Analysis/`. The papers' numbered results, stated and proved against
 the specification in `Spec`.
 
-Present: `Lemmas.lean` and `Theorems.lean`, the statements of record; `Vocabulary.lean`, the
-paper's definitions that no figure reads and a statement needs; and `Proofs/`, which holds the
-arguments. `Corollaries.lean` is absent.
+Present: `Lemmas.lean` and `Theorems.lean`, the healing paper's statements of record;
+`HftTheorems.lean`, the companion paper's Section 3.1 theorems, stated and not yet proved —
+each is a `sorry`; `Vocabulary.lean`, the papers' definitions that no figure reads and a
+statement needs; and `Proofs/`, which holds the arguments. `Corollaries.lean` is absent.
 
 **A statement in `Lemmas.lean` is proved by a one-line call into `Proofs/`**, so that a statement
 can be read against the paper without a proof between it and the reader. `Lemmas.lean` also holds
