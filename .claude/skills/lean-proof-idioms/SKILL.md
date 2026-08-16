@@ -904,3 +904,65 @@ The direction of the discrepancy is worth remembering: `lean` without `--setup` 
 *stricter*, so it yields false **failures**, never false passes. A single-file check that
 came back clean is still good evidence; one that failed needs re-running properly before you
 believe it.
+
+## 26. `Step.elim` with an invariant: put it in the motive
+
+**Measured in this repository, 2026-08-17**, proving the companion paper's Theorems 8–10.
+
+`Step.elim` hands each case an **arbitrary** configuration `d` and only instantiates it at the
+application. So a case body cannot use a fact about *the* configuration — `StoreInv (x[i][p].st)`,
+say — because inside the case there is no `x[i]`, only `d`.
+
+Do not try to obtain it inside the case. Put it in the motive as a hypothesis, and discharge it
+once, at the application:
+
+    refine Step.elim (motive := fun _ c c' => StoreInv (c[p].st) → R (c[p].st) (c'[p].st))
+      (x.step i) (fun d t _ => hrefl _) ?tick ?deliver ?wake
+      (fun d q ev res he hp _ => ev.elim) (fun d q m he _ => hrefl _)
+      (exec_node_invariant (P := StoreInv) (fun S m h => storeInv_receive h m) storeInv_gen x p i)
+
+Each case then opens with one extra `intro`, and the reacting case that needs the invariant has
+it about its own `d`. `exec_step_mono` in `Analysis/Proofs/StoreRecords.lean` is the worked
+example; it is what lifts a *relation* between two stores across a step, where
+`exec_node_invariant` lifts a predicate.
+
+The same shape gives a finer step lemma when the conclusion must name the action: make the
+motive's first argument do the work — `fun a c c' => c'[p].st = onBlocks (c[p].st) (blocksOf a p)`
+— and every case reduces `blocksOf` on its own constructor. `exec_step_delivered`
+(`Analysis/Proofs/Fold.lean`) is that one, and it is what makes "a validator's store is the fold
+of what was delivered to it" a two-line induction.
+
+## 27. `subst` and `cases h : e` both rewrite behind your back
+
+Two small traps, each of which cost a compile cycle in the Theorem 10 development.
+
+**`subst hCB` on `hCB : C = Bs[n]` erases `C`.** Every later `by_cases hCT : C ∈ …` in the same
+block then fails with *unknown identifier `C`*, and the context prints `sorry` where the
+hypothesis should be. When the goal is the only place the substitution is wanted, rewrite the
+goal instead and leave the variable alone:
+
+    rw [← hCB]          -- goal now speaks of `C`; every hypothesis about `C` still applies
+
+**`cases h : e` has already replaced `e` in the goal**, so inside the branch the witness is
+`rfl`, not `h`:
+
+    obtain ⟨σC, hσC⟩ : ∃ σC, S.σ L = some σC := by
+      cases hL : S.σ L with
+      | none => …
+      | some σL => exact ⟨σL, rfl⟩      -- `hL` here is an application type mismatch
+
+The error reads *"has type `S.σ L = some σL` but is expected to have type `some σL = some σL`"*,
+which points at the term rather than at the tactic that moved the goal.
+
+## 28. Small frictions, batch four
+
+- **`push_neg` is deprecated** on 4.32.2. The replacement is `push Not at h`.
+- **`simp only [f, if_pos rfl, hm]` can leave `if True then a else b`.** `if_pos` rewrote the
+  *condition* rather than the `ite`. Plain `simp [f, hm]` finishes it.
+- **A record-update literal in a top-level `theorem` statement still needs its continuation
+  fields aligned to the first field's column** (section 18's rule is not only about tactic
+  positions): indenting them to the `by` block's column gives `unexpected identifier; expected
+  '}'` pointing at the second field.
+- **`Finset.exists_max_image` is not in this project's Mathlib import graph.** `Spec` stops at
+  `Finset.Defs` and `Weights.lean` adds only the big-operators files; picking a maximum needs
+  `import Mathlib.Data.Finset.Max`.
