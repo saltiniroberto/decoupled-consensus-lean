@@ -153,7 +153,10 @@ protocol (`Spec/Protocol.lean`). `deliveredBlocks` reads a validator's received-
 list out of an execution; the fold vocabulary — `onBlocks`, `Store.Reachable`,
 `ParentFirst` — is what the statements' *store-level cores* are phrased with, since
 `on_block` is the store's only mutator and a validator's store is the fold of what was
-delivered to it. -/
+delivered to it. `storeAt`, `Reaches` and `ReachesFrom` (Roberto, 2026-08-17) name a
+validator's store at a step and its reachability over an execution, so an execution
+statement reads as the paper's sentence — "the store maintains … at all times",
+"once … , at all future times" — rather than as index arithmetic. -/
 
 /-- The store after receiving `Bs`, oldest first: `on_block` folded over the list — the
     "folding … through `on_block`" of Theorem 10 (`hft:thm:orderindep`). At the store
@@ -187,6 +190,31 @@ def deliveredBlocks {sched : Schedule Node}
         match x.lbl i with
         | .deliver q m => if q = p then (match m.msg with | .block B => [B]) else []
         | _ => []
+
+/-- Validator `p`'s store after `i` steps of `x`. -/
+def storeAt {sched : Schedule Node}
+    (x : Exec (protocol (Node := Node) (Root := Root)) sched) (p : Node)
+    (i : Nat) : Store Node Root :=
+  x[i][p].st
+
+/-- `p` holds the store `S` at some step of `x`: reachability of a store, for one node,
+    over one execution. The execution statements' "the node['s store]" and "at all
+    times". The fold-level counterpart is `Store.Reachable`; that every store a node
+    reaches over an execution is `Store.Reachable` is a fact to prove, not part of this
+    definition. -/
+def Reaches {sched : Schedule Node}
+    (x : Exec (protocol (Node := Node) (Root := Root)) sched) (p : Node)
+    (S : Store Node Root) : Prop :=
+  ∃ i, storeAt x p i = S
+
+/-- `p` holds `S`, and at the same or a later step holds `S'`. The execution statements'
+    "once … , at all future times": what holds of every such pair holds from the moment
+    of `S` onward. Same-step pairs are included, so a reflexive conclusion loses
+    nothing. -/
+def ReachesFrom {sched : Schedule Node}
+    (x : Exec (protocol (Node := Node) (Root := Root)) sched) (p : Node)
+    (S S' : Store Node Root) : Prop :=
+  ∃ i j, i ≤ j ∧ storeAt x p i = S ∧ storeAt x p j = S'
 
 end
 

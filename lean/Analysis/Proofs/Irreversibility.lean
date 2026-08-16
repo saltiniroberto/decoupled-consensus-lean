@@ -181,6 +181,13 @@ theorem localIrreversibility {sched : Schedule Node}
   | base => exact Preceq.refl _
   | succ j hij ih => exact Preceq.trans ih (exec_step_F x p j)
 
+/-- Theorem 3 in the reachability vocabulary: obtain the two steps and walk. -/
+theorem reachesFrom_F {sched : Schedule Node}
+    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
+    {S S' : Store Node Root} (h : ReachesFrom x p S S') : S.F ⪯ S'.F := by
+  obtain ⟨i, j, hij, rfl, rfl⟩ := h
+  exact localIrreversibility x p hij
+
 end Exec
 
 end Proofs

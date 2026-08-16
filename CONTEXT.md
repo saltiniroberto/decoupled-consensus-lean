@@ -1931,6 +1931,29 @@ Roberto meanwhile restated Theorem 7 on an execution (its `sorry` now concludes
 `(x[i][p].st).F ⪯ C` from `GetConfirmed (x[j][p].st) C`, `i ≤ j`), naming its store core
 `S.Reachable → GetConfirmed (onBlocks S Bs) C → S.F ⪯ C`.
 
+## 2026-08-17 — the reachability vocabulary, and Theorems 3 and 4 restated over it
+
+Roberto: readability wants a named notion of a node's state being reachable over an
+execution, used in the theorem statements — tried on Theorems 3 and 4 first.
+`Analysis/Vocabulary.lean` gains three definitions beside the fold vocabulary:
+
+* `storeAt x p i` — validator `p`'s store after `i` steps of `x` (`x[i][p].st`);
+* `Reaches x p S` — `∃ i, storeAt x p i = S`: `p` holds `S` at some step, the execution
+  statements' "the node['s store]" and "at all times";
+* `ReachesFrom x p S S'` — `∃ i j, i ≤ j ∧ …`: `p` holds `S` and, at the same or a later
+  step, `S'` — "once …, at all future times". Same-step pairs included, so a reflexive
+  conclusion loses nothing.
+
+The two statements of record now read as the paper's sentences:
+`thmLocalIrreversibility : ReachesFrom x p S S' → S.F ⪯ S'.F` and
+`thmFPreceqJ : Reaches x p S → S.F ⪯ S.J`. Each is a one-line call to a wrapper
+(`Proofs.reachesFrom_F`, `Proofs.reaches_FJ`) that obtains the indices and invokes the
+index-level theorem; both re-measured kernel-clean. The index-level forms stay in
+`Proofs/` as the machinery the walks produce. Note the earlier statement-shape rule
+("no bound σ/σ' — write the value") is deliberately relaxed here on instruction: the
+bound store with a defining reachability hypothesis is the readable form at the
+execution level.
+
 ## Next
 
 1. Prove `Analysis/HftTheorems.lean`'s four remaining statements. Theorem 7 next: its

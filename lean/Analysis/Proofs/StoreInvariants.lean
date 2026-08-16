@@ -148,6 +148,13 @@ theorem fPreceqJ {sched : Schedule Node}
   exec_node_invariant (P := fun S => S.F ⪯ S.J)
     (fun _ m h => receiveMsg_FJ m h) (Preceq.refl _) x p i
 
+/-- Theorem 4 in the reachability vocabulary: obtain the step and read the invariant. -/
+theorem reaches_FJ {sched : Schedule Node}
+    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
+    {S : Store Node Root} (h : Reaches x p S) : S.F ⪯ S.J := by
+  obtain ⟨i, rfl⟩ := h
+  exact fPreceqJ x p i
+
 end Exec
 
 end Proofs

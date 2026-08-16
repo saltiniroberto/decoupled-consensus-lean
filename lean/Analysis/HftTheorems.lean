@@ -75,11 +75,13 @@ open Framework.StsMultisetLog
     store-finalized block at any step is an ancestor of its store-finalized block at every
     later step.
 
-    Noun by noun. "A node" is a validator `p`, whose store after `i` steps is
-    `x[i][p].st` — `Spec/Protocol.lean` makes the store the node state. "Sets `Σ.F = F`":
-    `F` is `(x[i][p].st).F`, no binder needed. "At all future times": every step `j ≥ i`
-    of the execution. "Descends from" is `⪯`, reflexive as Definition 5
-    (`def:block-chain`) makes it, so a step that leaves the store alone counts.
+    Noun by noun. "A node" is a validator `p` — `Spec/Protocol.lean` makes the store the
+    node state, and `Reaches`/`ReachesFrom` in `Analysis/Vocabulary.lean` name the stores
+    it holds as `x` runs. "Sets `Σ.F = F`": `F` is `S.F`, `S` being any store `p` holds.
+    "At all future times": every `S'` the same validator holds at the same or a later
+    step — `ReachesFrom x p S S'`. "Descends from" is `⪯`, reflexive as Definition 5
+    (`def:block-chain`) makes it, so a step that leaves the store alone counts, and so
+    does the same-step pair.
 
     No honesty, timing or fairness hypothesis: the property is timeless in the framework's
     classification, like accountable safety, and `p` ranges over corrupted validators too —
@@ -95,10 +97,10 @@ open Framework.StsMultisetLog
     `Step.elim` per step and `Nat.le_induction` across them. -/
 theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
-    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
-    (p : Node) {i j : Nat} (hij : i ≤ j) :
-    (x[i][p].st).F ⪯ (x[j][p].st).F :=
-  Proofs.localIrreversibility x p hij
+    {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
+    {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S') :
+    S.F ⪯ S'.F :=
+  Proofs.reachesFrom_F h
 
 /-- **Theorem 4** (`hft:thm:fleqr`, lines 591–593): `F ⪯ J`, stated on an execution — on
     instruction, 2026-08-16, like Theorem 3.
@@ -108,9 +110,10 @@ theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [Decidable
     Read aloud: at every step of any execution of the node protocol, under any schedule,
     every validator's store-finalized block is an ancestor of its store root.
 
-    Noun by noun. "The store" is `x[i][p].st`, validator `p`'s store after `i` steps.
-    "Maintains … at all times" is the quantification over `i` — and unlike the store-level
-    form, no hypothesis is left: this is an invariant, and what carried it there as
+    Noun by noun. "The store" is any store `S` that validator `p` holds as `x` runs —
+    `Reaches x p S`, the reachability vocabulary of `Analysis/Vocabulary.lean`.
+    "Maintains … at all times" is that quantification — and unlike the store-level form,
+    no further hypothesis is left: this is an invariant, and what carried it there as
     `S.Reachable` is carried here by the execution itself, whose `init` field starts every
     validator at the genesis store, where `F = J = genesis`. Timeless, and over corrupted
     validators too, for the reason in Theorem 3's docstring. The store-level core is
@@ -122,10 +125,10 @@ theorem thmLocalIrreversibility {Node Root : Type} [DecidableEq Node] [Decidable
     walk is `exec_node_invariant`, the reusable walker that file introduces. -/
 theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root]
-    {sched : Schedule Node} (x : Exec (protocol (Node := Node) (Root := Root)) sched)
-    (p : Node) (i : Nat) :
-    (x[i][p].st).F ⪯ (x[i][p].st).J :=
-  Proofs.fPreceqJ x p i
+    {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
+    {p : Node} {S : Store Node Root} (h : Reaches x p S) :
+    S.F ⪯ S.J :=
+  Proofs.reaches_FJ h
 
 /-- **Theorem 7** (`hft:thm:fcconsistency`, lines 638–640): fork-choice consistency.
 
