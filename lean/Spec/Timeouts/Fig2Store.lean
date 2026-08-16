@@ -92,23 +92,28 @@ def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.ru
   if P ∉ S.T ∨ ¬ S.F ⪯ B then                 -- … and line 532: assert Σ.F ⪯ B
     return S
   let some σP := S.σ P | return S             -- the Option read; see the module header
-  match stateTransition σP B with             -- line 534: σ' ← state_transition(Σ.σ[B.parent], B)
-  | invalid => return S                       -- the hybrid's rejection; see the module header
-  | .state σ' =>
-    S.T ← S.T ∪ {B}                           -- line 533
-    S.σ[B] ← some σ'                          -- line 535
-    S.hmax ← max S.hmax σ'.h                  -- line 536
-    S ← updateJustified S σ'.J σ'.h_j         -- line 537
-    S ← updateFinalized S σ'.F                -- line 538
-    return S                                  -- line 539
+  let .state σ' := stateTransition σP B       -- line 534: σ' ← state_transition(Σ.σ[B.parent], B)
+    | return S                                -- the hybrid's rejection; see the module header
+  S.T ← S.T ∪ {B}                             -- line 533
+  S.σ[B] ← some σ'                            -- line 535
+  S.hmax ← max S.hmax σ'.h                    -- line 536
+  S ← updateJustified S σ'.J σ'.h_j           -- line 537
+  S ← updateFinalized S σ'.F                  -- line 538
+  return S                                    -- line 539
+
+/-- `R`, `get_confirmed`'s walk-from block (Figure 2, `hft:alg:store`, line 560): the
+    store root while it sits at the frontier — `hmax = h_j + 1`, the figure's comment —
+    and the store-finalized block once a timeout has moved some chain one height further.
+    The figure binds `R` inside `get_confirmed`; it is its own function here so the
+    cascade rule is nameable outside the figure. -/
+def Store.R (S : Store Node Root) : Blk Node Root :=
+  if S.hmax = S.h_j + 1 then S.J else S.F                                -- line 560
 
 /-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562), as the relation the
-    figure's return line defines — see the module header on `Ω`. `R` is the walk-from
-    block: the store root while it sits at the frontier, the store-finalized block once a
-    timeout has moved some chain past it. -/
+    figure's return line defines — see the module header on `Ω`. The walk-from block `R`
+    is `Store.R` above. -/
 def GetConfirmed (S : Store Node Root) (B : Blk Node Root) : Prop :=
-  let R := if S.hmax = S.h_j + 1 then S.J else S.F                       -- line 560
-  B ∈ viableTree S ∧ R ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1)      -- line 561
+  B ∈ viableTree S ∧ S.R ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1)    -- line 561
 
 end
 
