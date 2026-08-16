@@ -1696,7 +1696,7 @@ Roberto, after examining Figure 3 (`alg:store`) piece by piece: the store this p
 encodes is the **incremental** one of `full/height_filter_and_timeouts.tex`, Figure 2
 (`hft:alg:store`) — a stateful `Σ = (σ, T, F, J, h_j, hmax)` updated as blocks arrive — not
 the healing paper's raw-evidence store with derived fork choice. Now in
-`Spec/Timeouts/{Defs,Fig2Store,Receive}.lean`; the `hft:` citation prefix and its checker
+`Spec/Defs/Store.lean` and `Spec/HftFig2Store.lean`; the `hft:` citation prefix and its checker
 support landed the same day (`tools/check_citations.py`).
 
 What the examination found, kept here because it was the basis of the choice:
@@ -1743,13 +1743,13 @@ Encoding decisions, each also in the docstring where it bites:
   `σ[L].h ≥ hmax − 1`"); the recursive form is left as a lemma to prove.
 * `get_confirmed` is a relation, `GetConfirmed S B`: the figure's `Ω` is deliberately
   unspecified, and the framework's own `Protocol.step` sets the relation precedent.
-* `StoreMsg`/`receive` (`Spec/Timeouts/Receive.lean`) render no figure: wiring on
+* `StoreMsg`/`receive` (`Spec/Receive.lean`) render no figure: wiring on
   instruction — `on_block` is called by the receive function when a block message is
   received. One message case today; votes reach the store inside blocks.
 
 ## 2026-08-16 — the node protocol, and what the framework layer provides
 
-`Spec/Timeouts/Protocol.lean`: the `Framework.StsMultisetLog.Protocol` instance. Node state
+`Spec/Protocol.lean`: the `Framework.StsMultisetLog.Protocol` instance. Node state
 is the `Store`, messages are `StoreMsg`, `Ev := Empty`. The reaction folds a delivered
 message into the store through `receive`; `tick` and `wake` change nothing, because neither
 block production nor the voting rule is encoded yet; `send := ∅` everywhere. Consequence
@@ -1778,6 +1778,17 @@ handles them). Applied: `reaction` uses `if let .recv m := e`; `onBlock`'s trans
 Also on instruction: the cascade `if S.hmax = S.h_j + 1 then S.J else S.F` is its own
 function, `Store.R` — the figure's identifier for it — rather than a `let` inside
 `GetConfirmed`.
+
+## 2026-08-16 — no `Timeouts/` folder: one protocol, paper told by a name prefix
+
+Roberto: what is being built is one protocol mixing the two papers, so a folder split by
+paper misrepresents it. `Spec/Timeouts/` is dissolved: the store vocabulary is
+`Spec/Defs/Store.lean` beside `Basic.lean`, the figure is `Spec/HftFig2Store.lean`, and the
+paper-free wiring is `Spec/Receive.lean` and `Spec/Protocol.lean`. The convention, stated
+in `Spec.lean`: a healing figure is `Fig<n><Subject>`, a companion-paper figure is
+`HftFig<n><Subject>` — the same `hft` that prefixes its citation labels — each `<n>` the
+printed number in its own paper. Paths in the entries above and in `MAPPING.md` were
+updated in place, same day.
 
 ## 2026-08-16 — `∈` cannot be overloaded for `Option` elements: a measured dead end
 

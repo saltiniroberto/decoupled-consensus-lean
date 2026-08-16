@@ -20,7 +20,7 @@ the raw store and merge).
 
 This file carries what that figure reads and is not itself the figure: the store record
 and its genesis value, the viable subtree, and the hash the justification tiebreak
-compares. The figure's routines are in `Spec/Timeouts/Fig2Store.lean`.
+compares. The figure's routines are in `Spec/HftFig2Store.lean`.
 
 ## The paper's `Σ` is written `S`
 

@@ -250,7 +250,7 @@ paper's raw-evidence store with derived fork choice. The chain layer is unchange
 store runs over this project's `stateTransition`, so the healing paper remains the
 contract for Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`) and for
 Lemmas 1 to 11 with Theorem 5, and the companion paper is the contract for the store.
-`Spec/Timeouts/Defs.lean` and `CONTEXT.md` carry the reasoning and what the choice defers
+`Spec/Defs/Store.lean` and `CONTEXT.md` carry the reasoning and what the choice defers
 (the healing paper's Lemma 12, Theorem 7, Corollary 1 and the recovery sections, which are
 about the raw store and merge). Labels of this paper carry the `hft:` prefix — see
 "A second paper" above.
@@ -259,11 +259,11 @@ about the raw store and merge). Labels of this paper carry the `hft:` prefix —
 
 | Paper | № | Lean file | Lean declarations |
 | --- | --- | --- | --- |
-| `hft:alg:store` | Fig. 2 | `Spec/Timeouts/Fig2Store.lean` | `updateJustified`, `updateFinalized`, `onBlock`, `GetConfirmed`; the genesis store is `Store.gen` in `Spec/Timeouts/Defs.lean` |
-| `hft:def:store` | Def. 10 | `Spec/Timeouts/Defs.lean` | `Store`, `Store.gen`, `BlockHash` (the key's `hash(·)`, abstract) |
-| `hft:def:viable` | Def. 11 | `Spec/Timeouts/Defs.lean` | `viableTree`, by the definition's own closed form |
+| `hft:alg:store` | Fig. 2 | `Spec/HftFig2Store.lean` | `updateJustified`, `updateFinalized`, `onBlock`, `Store.replay`, `Store.R`, `GetConfirmed`; the genesis store is `Store.gen` in `Spec/Defs/Store.lean` |
+| `hft:def:store` | Def. 10 | `Spec/Defs/Store.lean` | `Store`, `Store.gen`, `BlockHash` (the key's `hash(·)`, abstract) |
+| `hft:def:viable` | Def. 11 | `Spec/Defs/Store.lean` | `viableTree`, by the definition's own closed form |
 
-`Spec/Timeouts/Receive.lean` renders no figure: it is the message-receipt wiring —
+`Spec/Receive.lean` renders no figure: it is the message-receipt wiring —
 `StoreMsg`, and `receive`, which passes a block message to `onBlock` — introduced on
 instruction, 2026-08-16.
 

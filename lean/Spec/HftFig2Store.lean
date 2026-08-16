@@ -1,12 +1,12 @@
 import Spec.Fig1SlotReplay
-import Spec.Timeouts.Defs
+import Spec.Defs.Store
 
 /-!
 # The companion paper's Figure 2 (`hft:alg:store`) — store and fork-choice root
 
 `full/height_filter_and_timeouts.tex`, Figure 2 (`hft:alg:store`), lines 520–566:
 `on_block`, `update_justified`, `update_finalized` and `get_confirmed`. The store record,
-its genesis value and the viable subtree are in `Spec/Timeouts/Defs.lean`, which also
+its genesis value and the viable subtree are in `Spec/Defs/Store.lean`, which also
 records why this paper's store is the one encoded.
 
 All notation comes from `Spec/Defs/Notation.lean`; read that first.

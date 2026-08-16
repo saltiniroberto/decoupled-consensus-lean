@@ -1,5 +1,5 @@
 import StsMultisetLog.Spec.Protocol
-import Spec.Timeouts.Receive
+import Spec.Receive
 
 /-!
 # The node protocol, in the framework
@@ -16,7 +16,7 @@ the view), `wake`, and `custom` events of its own choosing. The instance owes fo
 `enabled` for the custom events. Delivery is the framework's `deliver` action, which files
 the message into the view and then runs the reaction on `Event.recv` — so `receive` here
 is called exactly when a message is received, which is the wiring
-`Spec/Timeouts/Receive.lean` exists for.
+`Spec/Receive.lean` exists for.
 
 ## What the node does today: receipt, and nothing else
 

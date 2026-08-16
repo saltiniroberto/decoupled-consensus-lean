@@ -1,4 +1,4 @@
-import Spec.Timeouts.Fig2Store
+import Spec.HftFig2Store
 
 /-!
 # Message receipt — the store's entry point
