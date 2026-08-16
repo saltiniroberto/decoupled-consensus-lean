@@ -1994,9 +1994,36 @@ its Section 3.1 lemmas. The plan, in dependency order:
    order-independence induction — a different proof shape (`List.Perm`). Section 3.1's
    lemmas get stated as the proofs demand them.
 
+## 2026-08-17 — `StoreInv`: the invariant bundle, plan step 1 done
+
+`Analysis/Proofs/StoreProvenance.lean`: one structure, `StoreInv`, preserved by `on_block`
+and carried to every held store by the walker (`reaches_storeInv`). Eight fields:
+`recorded` (the bridge, as a field — preservation of the others needs it mid-proof),
+`domT`/`parentT` (the tree is the map's domain, parent-closed), `jProv` (some recorded
+state carries `(S.J, S.h_j)`), `fProv` (the paper's `hft:rem:fs-invariant` first half),
+`keyDom` (its second half, **made a state invariant**: every recorded justified pair on
+the current `F`'s chain has key at most the store's — quantifying against the current `F`
+avoids the paper's "at the moment of offering" history, because `F` only ascends so the
+condition only narrows), `hmaxLe`/`hmaxEx` (`hmax` is exactly the max recorded height).
+
+Proof shape worth reusing: each update got a `spec` lemma — the record equation stating
+exactly what fired and what the store became (skill §5's positive shape) — and the
+preservation is four cases differing only in the provenance fields. The one interesting
+case is `keyDom` with finalization fired and justification not: the new `F` sits under the
+new record's own `J` by healing's `Chained` (through the bridge), so the justification
+can only have failed on the key comparison. Frictions measured, all skill-known:
+`set`-bound names and record-literal projections block `rw`/`omega` — defeq re-ascription
+and `dsimp only` at the offending hypotheses fix it; `omega` does not split disjunctive
+hypotheses — `rcases` them first.
+
 ## Next
 
-1. Prove `Analysis/HftTheorems.lean`'s three remaining statements, along the plan above.
+1. Prove `Analysis/HftTheorems.lean`'s three remaining statements. `StoreInv` is in hand;
+   next is the upgrade argument (`hft:lem:upgrade`) as a store-level lemma — `keyDom` plus
+   healing Lemma 10/11 through the bridge, quorum intersection at equal heights giving the
+   E1 pair on recorded chains — then viability bookkeeping (leaf existence above the
+   `hmax` witness via `prec_slot_lt`-bounded ascent), then Theorem 8's accepting-step
+   walk, then Theorem 9, then Theorem 10's fold-equals-execution core.
 2. Finish the `StsMultisetLog/Spec/` audit: `Execution.lean` and `Schedule.lean`, the
    assumption inventory — the layer where the first attempt's trouble concentrated.
    `Protocol.lean` and `Message.lean` are done, recorded above; the signing question is

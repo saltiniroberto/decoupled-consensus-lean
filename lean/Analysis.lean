@@ -12,6 +12,7 @@ import Analysis.Proofs.Provenance
 import Analysis.Proofs.Finality
 import Analysis.Proofs.Irreversibility
 import Analysis.Proofs.StoreInvariants
+import Analysis.Proofs.StoreProvenance
 import Analysis.Lemmas
 import Analysis.Theorems
 import Analysis.HftTheorems
