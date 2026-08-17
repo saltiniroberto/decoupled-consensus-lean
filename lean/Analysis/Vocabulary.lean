@@ -151,10 +151,17 @@ pair.
 `Slashable` is that shape, once. Its parameter is where each of the two messages is allowed to
 sit, because that is the only thing the four uses differ in: Theorem 5 pins each message to one
 of two named chains, Theorem 8 to a chain the store accepted, Theorem 9 to either the named
-finalizing chain or an accepted one, Theorem 10 to a chain either of two stores accepted.
-Retention is what makes the disjunct usable — a pair the proof can only place "somewhere in the
+finalizing chain or an accepted one, Theorem 10 to a chain either of two stores accepted. That
+parameter is what makes the disjunct usable — a pair the proof can only place "somewhere in the
 past" is evidence of nothing — and `Analysis/Proofs/Finality.lean`'s docstring records that
-three healing lemmas had to be restated to carry it.
+three healing lemmas had to be restated to carry the inclusions.
+
+**"Included", not "retained".** Definition 9 (`def:valid-attestation-inclusion`) and
+Definition 21 (`def:certificates`, "their valid inclusions on one chain") make *inclusion* the
+paper's word for a message sitting on a chain, which is what these predicates say. The paper's
+*retention* is a different notion — Lemma 9's "retaining the signed messages is sufficient to
+prove E1 and E2 violations" is about keeping a message rather than compressing it into a
+participation bit — and `Analysis/Lemmas.lean` keeps that word for that sentence.
 
 **`2q − W` is the count analogue of `n/3`.** The paper counts validators where this project
 weighs them (Definition 3, `def:validator-weights`), and `2q − W` is the weight the
@@ -164,18 +171,19 @@ intersection of two `q`-quorums must carry (Lemma 2, `lem:quorum-intersection`).
 single rule E1 and defines no E2. The healing paper's Definition 11 has both, and its own
 statements of record in `Analysis/Lemmas.lean` keep `E1 x y ∨ E2 x y` rather than using this. -/
 
-/-- An attestation retained on some chain of `T` — the usual place a store theorem can point
-    to, `T` being the accepted tree. -/
-def RetainedIn (T : Finset (Blk Node Root)) (a : Attestation Node Root) : Prop :=
+/-- An attestation included on some chain of `T` — the usual place a store theorem can point
+    to, `T` being the accepted tree. The argument order is the container first, so that a
+    partial application is a predicate on attestations and `Slashable` can take it. -/
+def IncludedIn (T : Finset (Blk Node Root)) (a : Attestation Node Root) : Prop :=
   ∃ C ∈ T, IncludedOn a C
 
 /-- "Unless `≥ n/3` validators are slashable": a set of weight at least `2q − W`, each of whose
-    members signed two attestations forming an E1 pair, both retained where `Retained` allows.
+    members signed two attestations forming an E1 pair, both included where `Included` allows.
     See the section docstring. -/
-def Slashable (Retained : Attestation Node Root → Prop) : Prop :=
+def Slashable (Included : Attestation Node Root → Prop) : Prop :=
   ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
     ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-      Retained a ∧ Retained b ∧ E1 a b
+      Included a ∧ Included b ∧ E1 a b
 
 end
 

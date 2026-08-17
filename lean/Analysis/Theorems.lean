@@ -26,7 +26,7 @@ open Framework.StsMultisetLog
     > weight is provably E1- or E2-slashable.
 
     Read aloud: if two conflicting blocks are both finalized, there is a set of validators of
-    weight at least `2q − W`, each of which signed a slashable pair of messages retained on the
+    weight at least `2q − W`, each of which signed a slashable pair of messages included on the
     two chains.
 
     Noun by noun. "Both finalize" is one recorded pair per chain: `B_F` replays to a state with
@@ -35,7 +35,7 @@ open Framework.StsMultisetLog
     `Conflicts`. "Cannot … unless" is rendered
     as the paper's "unless" made the conclusion, as in Lemma 5: both certificates in hand, the
     slashable set exists. "Provably E1- or E2-slashable" is the pair `x, y` with
-    `E1 x y ∨ E2 x y`, each message retained — included — on one of the two chains, in either
+    `E1 x y ∨ E2 x y`, each message included on one of the two chains, in either
     order, since which chain carries the finality commitment depends on which height is lower.
     "For some height `h`": the height lives inside E1 and E2's own pairs and is not separately
     quantified.

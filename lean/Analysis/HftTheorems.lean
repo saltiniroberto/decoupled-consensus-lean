@@ -53,7 +53,7 @@ the single rule E1, the same relation healing's Definition 11 (`def:slashing`) E
 and it has no E2.
 
 `Slashable`'s parameter is where each of a signer's two messages may sit, which is the only
-thing the three uses below differ in — `RetainedIn S'.T` for Theorem 8, either that or the
+thing the three uses below differ in — `IncludedIn S'.T` for Theorem 8, either that or the
 named finalizing chain for Theorem 9, either of two accepted trees for Theorem 10. That
 parameter is not decoration: a pair the proof can only place "somewhere in the past" is
 evidence of nothing, and three healing lemmas had to be restated to carry it
@@ -202,7 +202,7 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {B : Blk Node Root} (hnew : B ∉ S.T) (hB : B ∈ S'.σ) :
-    S'.σ[B].F ⪯ S'.F ∨ Slashable (RetainedIn S'.T) :=
+    S'.σ[B].F ⪯ S'.F ∨ Slashable (IncludedIn S'.T) :=
   Proofs.finalityAcceptance h hnew ⟨S'.σ[B], (Option.some_get hB).symm, rfl⟩
 
 /-- **Theorem 9** (`hft:thm:lockin`, lines 695–697): lock-in.
@@ -241,7 +241,7 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     (hF : (postState' B_F).F = S.σ[B].J) (hhf : (postState' B_F).h_F = S.σ[B].h_j) :
     (S.σ[B].J ⪯ S'.J ∧ S.σ[B].J ∈ viableTree S' ∧
       ∀ C, GetConfirmed S' C → S.σ[B].J ⪯ C) ∨
-      Slashable (fun a => IncludedOn a B_F ∨ RetainedIn S'.T a) :=
+      Slashable (fun a => IncludedOn a B_F ∨ IncludedIn S'.T a) :=
   Proofs.lockIn h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
@@ -302,7 +302,7 @@ theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq 
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
      (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
       Slashable (fun a =>
-        RetainedIn (storeAt x p i).T a ∨ RetainedIn (storeAt x p' j).T a) :=
+        IncludedIn (storeAt x p i).T a ∨ IncludedIn (storeAt x p' j).T a) :=
   Proofs.orderIndependence hperm hp hp'
 
 end Decoupled

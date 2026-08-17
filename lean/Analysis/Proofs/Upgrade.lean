@@ -6,10 +6,10 @@ import Analysis.Proofs.StoreRecords
 Two things live here.
 
 **The disjunct, at a store.** `Slashable` (`Analysis/Vocabulary.lean`) is the accountable
-disjunct itself, parameterized by where each of a signer's two messages may sit. `RetainedOn`
-is the retention predicate the store-level results want — on the chain that finalized the
-block in question, or on a chain in the accepted tree — and `SlashableSet` is `Slashable` at
-that predicate, so the proofs have one name for the shape they build over and over.
+disjunct itself, parameterized by where each of a signer's two messages may sit.
+`IncludedInOrOn` is the inclusion predicate the store-level results want — in the accepted
+tree, or on the chain that finalized the block in question — and `SlashableSet` is `Slashable`
+at that predicate, so the proofs have one name for the shape they build over and over.
 Definition 9 (`hft:def:slashing`) is the single rule E1 and has no E2, which is why
 `Slashable` names E1 alone; `finalizedChainE1` (`Analysis/Proofs/Finality.lean`) is the
 healing result restated to match.
@@ -58,36 +58,37 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
 
 /-! ## The disjunct -/
 
-/-- Where the companion paper's theorems allow a retained attestation to sit: on the chain
-    whose replay finalized the block in question, or on a chain in the accepted tree `T`. Both
-    arms are things a statement about one store can name, which is the point — an attestation
-    the proof can only place "somewhere in the past" would make the disjunct unusable.
+/-- Where the companion paper's theorems allow an attestation to sit: on some chain in the
+    accepted tree `T`, or on the chain `B_F` whose replay finalized the block in question —
+    hence the name, "included in `T` or on `B_F`". Both arms are things a statement about one
+    store can name, which is the point: an attestation the proof can only place "somewhere in
+    the past" would make the disjunct unusable.
 
     Over a `Finset` rather than a `Store` because the tree is all these lemmas read of a store,
     and because the intermediate stores inside `on_block`'s accept branch are record literals
     whose `T` is `S.T ∪ {B}`: naming the set keeps those out of the statements. -/
-def RetainedOn (T : Finset (Blk Node Root)) (B_F : Blk Node Root)
+def IncludedInOrOn (T : Finset (Blk Node Root)) (B_F : Blk Node Root)
     (a : Attestation Node Root) : Prop :=
-  IncludedOn a B_F ∨ RetainedIn T a
+  IncludedOn a B_F ∨ IncludedIn T a
 
 /-- `Slashable` at the store-level retention predicate: the shape every conditional result
     under `Analysis/Proofs/` concludes with. -/
 def SlashableSet (T : Finset (Blk Node Root)) (B_F : Blk Node Root) : Prop :=
-  Slashable (RetainedOn T B_F)
+  Slashable (IncludedInOrOn T B_F)
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
-/-- Retention survives a growing tree, so it survives `ReachesFrom` (`reachesFrom_T`). -/
-theorem RetainedOn.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
-    {a : Attestation Node Root} (hT : T ⊆ T') (h : RetainedOn T B_F a) :
-    RetainedOn T' B_F a := by
+/-- Inclusion survives a growing tree, so it survives `ReachesFrom` (`reachesFrom_T`). -/
+theorem IncludedInOrOn.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    {a : Attestation Node Root} (hT : T ⊆ T') (h : IncludedInOrOn T B_F a) :
+    IncludedInOrOn T' B_F a := by
   rcases h with h | ⟨C, hC, ha⟩
   · exact Or.inl h
   · exact Or.inr ⟨C, hT hC, ha⟩
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- The usual way one is built: the attestation sits on an accepted chain. -/
-theorem RetainedOn.ofChain {T : Finset (Blk Node Root)} {B_F C : Blk Node Root}
-    {a : Attestation Node Root} (hC : C ∈ T) (ha : IncludedOn a C) : RetainedOn T B_F a :=
+theorem IncludedInOrOn.ofChain {T : Finset (Blk Node Root)} {B_F C : Blk Node Root}
+    {a : Attestation Node Root} (hC : C ∈ T) (ha : IncludedOn a C) : IncludedInOrOn T B_F a :=
   Or.inr ⟨C, hC, ha⟩
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
@@ -95,8 +96,8 @@ omit [Electorate Node] [Params] [BlockHash Node Root] in
     thrown in is retention against the tree. This is what brings evidence found inside
     `on_block`'s accept branch, where the tree is already `S.T ∪ {B}`, back to the store the
     call started from. -/
-theorem RetainedOn.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
-    {a : Attestation Node Root} (h : RetainedOn (T ∪ {B_F}) B_F a) : RetainedOn T B_F a := by
+theorem IncludedInOrOn.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    {a : Attestation Node Root} (h : IncludedInOrOn (T ∪ {B_F}) B_F a) : IncludedInOrOn T B_F a := by
   rcases h with h | ⟨C, hC, ha⟩
   · exact Or.inl h
   · rw [Finset.mem_union, Finset.mem_singleton] at hC
@@ -114,7 +115,7 @@ theorem SlashableSet.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
   exact ⟨a, b, ha, hb, hra.mono hT, hrb.mono hT, he⟩
 
 omit [Params] [BlockHash Node Root] in
-/-- `RetainedOn.ofUnion`, for a whole set. -/
+/-- `IncludedInOrOn.ofUnion`, for a whole set. -/
 theorem SlashableSet.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
     (h : SlashableSet (T ∪ {B_F}) B_F) : SlashableSet T B_F := by
   obtain ⟨A, hw, hev⟩ := h
@@ -124,10 +125,10 @@ theorem SlashableSet.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 /-- When the finalizing chain is itself a block the store accepted, the two arms of every
-    `RetainedOn` collapse into one. This is the shape Theorem 8 (`hft:thm:finlive`) states,
+    `IncludedInOrOn` collapse into one. This is the shape Theorem 8 (`hft:thm:finlive`) states,
     where the finalized pair comes from a record and so has no chain of its own to name. -/
 theorem SlashableSet.onTree {T : Finset (Blk Node Root)} {B_F : Blk Node Root} (hBF : B_F ∈ T)
-    (h : SlashableSet T B_F) : Slashable (RetainedIn T) := by
+    (h : SlashableSet T B_F) : Slashable (IncludedIn T) := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
@@ -216,14 +217,14 @@ theorem certChain [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S
           rw [hL₁] at hbi
           rw [heq] at hbp
           refine ⟨a, b, hav, hbv, Or.inl (by rwa [hLF] at hai),
-            RetainedOn.ofChain hT₁ hbi, ?_⟩
+            IncludedInOrOn.ofChain hT₁ hbi, ?_⟩
           exact ⟨h_f, F, hap, Or.inl ⟨σ₁.J, hbp, hJFeq⟩⟩
   · -- `F` off the record's chain, past its finalized height, is the evidence
     right
     obtain ⟨A, hw, hev⟩ := pastFinalized_evidence hBF hF hhF hpost₁ h1 hlt hFB₁
     refine ⟨A, hw, fun v hv => ?_⟩
     obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-    exact ⟨a, b, hav, hbv, Or.inl hai, RetainedOn.ofChain hT₁ hbi, he⟩
+    exact ⟨a, b, hav, hbv, Or.inl hai, IncludedInOrOn.ofChain hT₁ hbi, he⟩
 
 /-! ## Lemma 9 (`hft:lem:upgrade`), at one store -/
 
@@ -267,12 +268,12 @@ theorem upgrade [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
       · exact Or.inl (Preceq.trans hpre hFJ)
       · refine Or.inr ⟨A, hw, fun v hv => ?_⟩
         obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-        exact ⟨a, b, hav, hbv, Or.inl hai, RetainedOn.ofChain hT₀ hbi, he⟩
+        exact ⟨a, b, hav, hbv, Or.inl hai, IncludedInOrOn.ofChain hT₀ hbi, he⟩
     · rcases finalizedChainE1 hne₀ hF₀' hhF₀' hBF hF hhF hle with hpre | ⟨A, hw, hev⟩
       · exact absurd hpre hSF
       · refine Or.inr ⟨A, hw, fun v hv => ?_⟩
         obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-        exact ⟨a, b, hav, hbv, RetainedOn.ofChain hT₀ hai, Or.inl hbi, he⟩
+        exact ⟨a, b, hav, hbv, IncludedInOrOn.ofChain hT₀ hai, Or.inl hbi, he⟩
 
 end Store
 

@@ -2277,6 +2277,24 @@ moved — `SlashablePair.symm`, `SlashableSet.toPairLeft`/`toPairRight`, and thr
 sites in `hmax_le_of_agree` and `fold_F_comparable` — each of them `⟨C, Or.inl hT, hi⟩`
 becoming `Or.inl ⟨C, hT, hi⟩`.
 
+### "Included", not "retained" — corrected the same day
+
+Roberto: `Included` is the better word, and checking the papers settles it. *Inclusion* is
+their word for a message sitting on a chain — Definition 9 (`def:valid-attestation-inclusion`,
+"An attestation included in block `B`") and Definition 21's "their valid inclusions on one
+chain". *Retention* is a different notion: Lemma 9's "Retaining the signed messages is
+sufficient to prove E1 and E2 violations" is about keeping a message rather than compressing
+it into a participation bit, and the healing store sections use it the same way ("the logical
+store retains every raw object"). So a placement predicate called `Retained…` was importing
+the wrong paper notion, which is exactly what `CLAUDE.md`'s rule about undefined terms is for.
+
+Renamed: `RetainedIn` → `IncludedIn`, `Proofs.RetainedOn` → `Proofs.IncludedInOrOn` (in the
+accepted tree, or on the named chain — the name matches the argument order), and `Slashable`'s
+parameter `Retained` → `Included`. Prose in `Analysis/Theorems.lean` and
+`Analysis/Proofs/Upgrade.lean` followed; one line there already read "retained — included —",
+which was the tension showing. `Analysis/Lemmas.lean` and `Analysis/Proofs/Compression.lean`
+**keep** "retain", because there it quotes Lemma 9 and means storage.
+
 **`Analysis/Lemmas.lean` deliberately does not use `Slashable`.** The healing paper's
 Definition 11 has E1 *and* E2, and `lemPastFinalized`, `lemFinalizedChain` and
 `thmAccountableSafety` conclude `E1 x y ∨ E2 x y`; `Slashable` names E1 alone, which is the
