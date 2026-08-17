@@ -2436,11 +2436,12 @@ the shape, everything line-linked for audit. `Spec/Defs/Voting.lean`, definition
   ordering). All pure functions over explicit inputs, which is how the paper states them.
 * `ordinaryContext`/`ordinaryVote` — Definition 47 **in its own no-source-proposal
   branch** (the paper defines it: "uses `Y_i = Q_i^r` and `σ_i = σ_a[Q_i^r]` directly"),
-  wired over the hybrid: the gate is `getConfirmed S` standing in for the deepest
-  official confirmation (Definition 46 needs the unrendered recovery apparatus,
-  Definitions 28–46), and `σ_i` is the gate's finality action state — Definition 20's
-  `process_slots(σ[X], slot)`, spec-computable now that the store's map is `σ[·]`.
-  `hC = k` in this wiring since the context state is the gate's own; Definition 48's
+  wired over the hybrid: the confirmed block `C_i` is `getConfirmed S`, standing in for
+  the deepest official confirmation (Definition 46 needs the unrendered recovery
+  apparatus, Definitions 28–46), and `σ_i` is that block's finality action state —
+  Definition 20's `process_slots(σ[X], slot)`, spec-computable now that the store's map
+  is `σ[·]`. `hC = k` in this wiring since the context state is the confirmed block's
+  own; Definition 48's
   `σ_a[C_i].h ≥ k` check bites only in the unrendered source-proposal branch.
 * **Two inputs deliberately explicit**: `h_F` (the store carries no `h_F`; whether to
   derive it from provenance or extend `Store` is an open decision) and `hasJC`

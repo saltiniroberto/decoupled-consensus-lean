@@ -12,9 +12,11 @@ work and is not here.
 
 ## What is rendered, and from which sentences
 
-The signing rules are stated by the paper over explicit inputs — a confirmation gate
-`C_i`, a context triple `(k, T, ν)`, the fork-choice fields `(J, h_j)` and `(F, h_F)`,
-and the durable history `H_i` — and they are rendered here the same way: `heightVote` and
+The signing rules are stated by the paper over explicit inputs — a block `C_i` the
+validator currently takes as confirmed (the paper's word for it is avoided here; see
+`heightVote`'s docstring for what `C_i` does), a context triple `(k, T, ν)`, the
+fork-choice fields `(J, h_j)` and `(F, h_F)`, and the durable history `H_i` — and they
+are rendered here the same way: `heightVote` and
 `finalityVote` are pure functions of those inputs, returning the signed pair **and the
 updated history**, because the paper's "record and sign" and "writes each value before
 releasing the signature" (Definition 12) make the write part of the rule. `fgVote` is
@@ -26,16 +28,17 @@ keeps one attestation from being its own E1 pair.
 
 `ordinaryContext` and `ordinaryVote` wire the rules over this project's store:
 
-* **The gate is `getConfirmed`.** The paper's gate is `Q_i^r`, the deepest official
-  confirmation (Definition 46, `def:official-confirmation`), whose derivation needs the
-  recovery apparatus (grades, TSQ views, rounds — Definitions 28–46, none rendered). In
-  the declared hybrid the store's own confirmation function stands in; the companion
-  paper's voting rule (its Figure 4, `hft:alg:voting-rule`) reads its gate from
-  `get_confirmed` the same way.
+* **The confirmed block is `getConfirmed`'s pick.** The paper's `C_i` is `Q_i^r`, the
+  deepest official confirmation (Definition 46, `def:official-confirmation`), whose
+  derivation needs the recovery apparatus (grades, TSQ views, rounds — Definitions 28–46,
+  none rendered). In the declared hybrid the store's own confirmation function stands in;
+  the companion paper's voting rule (its Figure 4, `hft:alg:voting-rule`) reads its
+  confirmed block from `get_confirmed` the same way.
 * **The context triple is Definition 47's own no-source-proposal branch.** Definition 47
   distinguishes a source-proposal case from a fallback the paper states explicitly: "it
   uses `Y_i = Q_i^r` and `σ_i = σ̄_i = σ_a[Q_i^r]` directly" (lines 1819–1823). That
-  branch is what `ordinaryContext` renders: `σ_i` is the gate's finality action state —
+  branch is what `ordinaryContext` renders: `σ_i` is the confirmed block's finality
+  action state —
   `process_slots(σ[X], slot)` per Definition 20 (`def:finality-action-state`), which the
   store's map makes spec-computable — and `(k, ν) = (σ_i.h, σ_i.nj)` with the target
   fallback of lines 1858–1860: `T_i = σ_i.T_h`, or `Y_i` itself when that field is empty
@@ -113,12 +116,20 @@ section
 variable [DecidableEq Node] [DecidableEq Root]
 
 /-- Definition 48 (`def:height-vote-rule`, lines 1952–1981): the current-height signing
-    rule, "choose in this order". `C` is the confirmation gate `C_i` (`⊥` → "the
-    current-height pair is empty", line 1957); `(k, T, ν)` is Definition 47's context;
-    `hC` is `σ_a[C_i].h`, the gate's closed-state height the rule compares against `k`
-    (in `ordinaryVote`'s wiring the context state *is* the gate's, so `hC = k`); `H` is
-    the durable history. Returns the pair and the history after the rule's own writes —
-    "every durable write completes before signature release" (line 1976).
+    rule, "choose in this order". `C` is the paper's `C_i` (`⊥` → "the current-height
+    pair is empty", line 1957); `(k, T, ν)` is Definition 47's context; `hC` is
+    `σ_a[C_i].h` (in `ordinaryVote`'s wiring the context state *is* `C`'s own, so
+    `hC = k`); `H` is the durable history. Returns the pair and the history after the
+    rule's own writes — "every durable write completes before signature release"
+    (line 1976).
+
+    In plain words, what `C` is: the block this validator currently takes as confirmed —
+    in the paper its deepest official confirmation, here `getConfirmed`'s pick — and the
+    rule signs nothing beyond it. Every branch checks its candidate against `C` before
+    signing: a target is signed only when it lies on `C`'s chain (`T ⪯ C`), a timeout
+    only when `C`'s own replayed state has reached height `k` (that is `hC ≥ k`), and
+    with no confirmed block at all, nothing is signed. So `C` is the ceiling on what the
+    validator will vouch for.
 
     The five numbered cases below are the definition's five, in its order — "timeout
     history has precedence over target history" (lines 1976–1977) is the order itself,
@@ -195,11 +206,13 @@ section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
   [BlockHash Node Root]
 
-/-- Definition 47's context triple, carried with its gate. Named after the definition's
-    own symbols: `(k_i, T_i, ν_i)` (lines 1856–1860). -/
+/-- Definition 47's context triple, carried with the confirmed block it was read from.
+    Named after the definition's own symbols: `C_i` and `(k_i, T_i, ν_i)`
+    (lines 1856–1860). -/
 structure VoteContext (Node Root : Type) where
-  /-- The confirmation gate `C_i` the pair is checked against. -/
-  gate : Blk Node Root
+  /-- `C_i`: the block the validator currently takes as confirmed. Every target the
+      current-height rule signs must lie on this block's chain. -/
+  C : Blk Node Root
   /-- `k_i`, the current height. -/
   k : Nat
   /-- `T_i`, the current-height target, possibly `⊥`. -/
@@ -210,12 +223,13 @@ structure VoteContext (Node Root : Type) where
 /-- Definition 47 (`def:ordinary-current-target`, lines 1814–1869), in its own
     no-source-proposal branch: "it uses `Y_i = Q_i^r` and `σ_i = σ̄_i = σ_a[Q_i^r]`
     directly when its deepest official confirmation `Q_i^r` is nonempty … and emits no
-    current-height pair when `Q_i^r` is empty" (lines 1819–1824). The gate here is
-    `getConfirmed S` — the hybrid's stand-in for `Q_i^r`, see the module header — and
-    "emits no current-height pair" is the `none` this returns when the gate has no
-    recorded state to read.
+    current-height pair when `Q_i^r` is empty" (lines 1819–1824). The confirmed block
+    here is `getConfirmed S` — the hybrid's stand-in for `Q_i^r`, see the module
+    header — and "emits no current-height pair" is the `none` this returns when that
+    block has no recorded state to read.
 
-    `σ_i` is the gate's finality action state for the action's slot: Definition 20
+    `σ_i` is the confirmed block's finality action state for the action's slot:
+    Definition 20
     (`def:finality-action-state`), `σ_a[X] = process_slots(σ[X], slot(a))`, computable
     here because the store's map is `σ[·]`. Then `k_i = σ_i.h`, `ν_i = σ_i.nj`
     (line 1857) and "normally `T_i = σ_i.T_{k_i}`. If that target field is empty and
@@ -227,25 +241,25 @@ def ordinaryContext [Omega Node Root] (S : Store Node Root) (t : Time) :
   let C := getConfirmed S
   if let some σC := S.σ C then
     let σi := processSlots σC t
-    some { gate := C, k := σi.h, ν := σi.nj,
+    some { C := C, k := σi.h, ν := σi.nj,
            T := if σi.T_h = ⊥ ∧ C.slot ≥ σi.s_h then some C else σi.T_h }
   else none
 
-/-- Definition 50 over the store: derive the gate and context, then `fgVote`. The
-    fork-choice fields `(J, h_j)` and `F` are the store's (the hybrid's fork-choice
-    state); `h_F` and `hasJC` stay explicit — see the module header. When the gate has no
-    recorded state, the current-height pair is empty but the finality rule still runs:
-    Definition 49 "is total: the fork-choice action state exists at every action,
-    including one whose SG head and current-height pair are empty" (lines 1988–1990).
-    `hC = k` because the context state is the gate's own — Definition 48's
-    `σ_a[C_i].h ≥ k` check bites only in Definition 47's source-proposal branch, which is
-    not rendered. -/
+/-- Definition 50 over the store: derive the confirmed block and its context, then
+    `fgVote`. The fork-choice fields `(J, h_j)` and `F` are the store's (the hybrid's
+    fork-choice state); `h_F` and `hasJC` stay explicit — see the module header. When the
+    confirmed block has no recorded state, the current-height pair is empty but the
+    finality rule still runs: Definition 49 "is total: the fork-choice action state
+    exists at every action, including one whose SG head and current-height pair are
+    empty" (lines 1988–1990). `hC = k` because the context state is the confirmed
+    block's own — Definition 48's `σ_a[C_i].h ≥ k` check bites only in Definition 47's
+    source-proposal branch, which is not rendered. -/
 def ordinaryVote [Omega Node Root] (S : Store Node Root) (t : Time)
     (i : Node) (r : Nat) (head : Option (Blk Node Root))
     (h_F : Nat) (hasJC : Bool) (H : SigningHistory Node Root) :
     Attestation Node Root × SigningHistory Node Root :=
   if let some ctx := ordinaryContext S t then
-    fgVote i r head S.J S.h_j S.F h_F hasJC (some ctx.gate) ctx.k ctx.T ctx.ν ctx.k H
+    fgVote i r head S.J S.h_j S.F h_F hasJC (some ctx.C) ctx.k ctx.T ctx.ν ctx.k H
   else
     fgVote i r head S.J S.h_j S.F h_F hasJC ⊥ 0 ⊥ false 0 H
 
