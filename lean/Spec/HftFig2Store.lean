@@ -38,15 +38,15 @@ uses.
 
 ## The remaining deviation
 
-**`get_confirmed` is a candidate set and an `Ω`-ambient pick.** The figure's `Ω` is
-"whatever extra information the validator uses to disambiguate among viable descendants" —
-deliberately unspecified — so the return line is rendered as `getConfirmedSet`, the
-computable set of blocks some `Ω` could pick, and `getConfirmed`, the paper's
-`get_confirmed(Σ, Ω)` as a deterministic function with `Ω` ambient through the `Omega`
-class of `Spec/Defs/Store.lean`, where the design and its two accepted costs are recorded.
-The per-block reading is membership, characterized by `Proofs.mem_getConfirmedSet`. A
-`Prop`-valued relation `GetConfirmed` preceded the set and was replaced by it on
-instruction (2026-08-17); git history has it.
+**`get_confirmed` is one total function, `Ω`-ambient.** The figure's `Ω` is "whatever
+extra information the validator uses to disambiguate among viable descendants" —
+deliberately unspecified — so `getConfirmed` computes the candidates the return line
+admits, adds the walk-from block `Store.R` so the choice is never over an empty set, and
+lets the ambient `Ω` (the `Omega` class of `Spec/Defs/Store.lean`, where the design and
+its two accepted costs are recorded) pick.
+A `Prop`-valued relation `GetConfirmed`, then a named candidate set `getConfirmedSet`
+with a `Nonempty` argument on the function, preceded this shape and were replaced on
+instruction (2026-08-17); git history has both.
 -/
 
 set_option autoImplicit false
@@ -114,31 +114,21 @@ def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.ru
 def Store.R (S : Store Node Root) : Blk Node Root :=
   if S.hmax = S.h_j + 1 then S.J else S.F                                -- line 560
 
-end
-
-section
-variable [DecidableEq Node] [DecidableEq Root]
-
-/-- The candidate set of `get_confirmed` (Figure 2, `hft:alg:store`, line 561): the blocks
-    the figure's return line admits — in the viable subtree, at or above the walk-from
+/-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562) as a total
+    deterministic function of the store, `Ω` ambient — see `Omega`'s docstring in
+    `Spec/Defs/Store.lean` for the design and its two accepted costs. The candidates are
+    the blocks the return line admits — in the viable subtree, at or above the walk-from
     block `Store.R`, at state-height at least `hmax − 1`, the height read through the
-    map's `Option`. Computable. The per-block characterization, with the height conjunct
-    in `get … from` form, is `Proofs.mem_getConfirmedSet` in
-    `Analysis/Proofs/StoreInvariants.lean` — a theorem, so it lives outside `Spec/`. -/
-def getConfirmedSet (S : Store Node Root) : Finset (Blk Node Root) :=
-  (viableTree S).filter fun B =>
-    S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1                    -- line 561
-
-/-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562) as a deterministic
-    function of the store, `Ω` ambient — see `Omega`'s docstring in `Spec/Defs/Store.lean`
-    for the design and its two accepted costs. The nonemptiness argument is Corollary 1's
-    obligation (`hft:cor:getConfirmed-total`): for an arbitrary store the candidate set can
-    be empty; for held stores it is discharged by the store invariants. That the output
-    is a candidate is `Proofs.getConfirmed_spec`, beside the membership
-    characterization. -/
-def getConfirmed [Omega Node Root] (S : Store Node Root)
-    (h : (getConfirmedSet S).Nonempty) : Blk Node Root :=
-  (Omega.choose (getConfirmedSet S) h).val
+    map's `Option` (line 561) — **plus the walk-from block itself**, which is what makes
+    the set nonempty and the function total (Roberto, 2026-08-17). The figure has no such
+    addition: for a held store, Corollary 1 (`hft:cor:getConfirmed-total`) says the return
+    line's own candidates are never empty, so the added block is a rendering device rather
+    than a behaviour the paper describes — and `Ω` may pick it, which any statement about
+    the output has to admit. -/
+def getConfirmed [Omega Node Root] (S : Store Node Root) : Blk Node Root :=
+  let candidates := insert S.R ((viableTree S).filter fun B =>
+    S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1)                   -- line 561
+  (Omega.choose candidates (Finset.insert_nonempty _ _)).val
 
 end
 

@@ -74,6 +74,18 @@ closed safely, keep the routine's shape as close as the types allow and say in a
 docstring which line deviates. `CONTEXT.md` records the measured limits of this — overloading
 `∈` is the known one.
 
+## A spec change stops at the spec
+
+Roberto, 2026-08-17. When a `Spec/` definition changes, change `Spec/` and **stop** — do not
+reshape the statements of record or repair the proofs in the same motion, however mechanical
+the fix looks. A changed definition changes what the theorems *say*, and what each should now
+say is Roberto's call, made looking at the new definition — not read off a diff that already
+rewrote everything downstream. So: land the spec edit, say plainly that the build is red and
+which declarations fail, sketch what each failing statement could become, and wait for the
+word. The `getConfirmed` totalization is the precedent: adding the walk-from block to the
+candidates changed Theorem 9's truth, and an automatic repair would have picked its new
+shape silently.
+
 ## `Spec/` holds definitions, never theorems
 
 Roberto, 2026-08-17. **A `theorem` in a `Spec/` file is a bug.** The specification layer is
