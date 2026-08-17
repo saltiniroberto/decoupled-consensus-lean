@@ -298,10 +298,7 @@ theorem viableTree_witness {S : Store Node Root} {B : Blk Node Root} (h : B ∈ 
 /-- The accountable disjunct with two trees and no named finalizing chain: Theorem 10
     (`hft:thm:orderindep`)'s, where the evidence may sit on a chain either node accepted. -/
 def SlashablePair (T T' : Finset (Blk Node Root)) : Prop :=
-  ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-    ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-      (∃ Ca, (Ca ∈ T ∨ Ca ∈ T') ∧ IncludedOn a Ca) ∧
-      (∃ Cb, (Cb ∈ T ∨ Cb ∈ T') ∧ IncludedOn b Cb) ∧ E1 a b
+  Slashable (fun a => RetainedIn T a ∨ RetainedIn T' a)
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 theorem SlashableSet.toPairLeft {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
@@ -310,12 +307,12 @@ theorem SlashableSet.toPairLeft {T T' : Finset (Blk Node Root)} {B_F : Blk Node 
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
   refine ⟨a, b, ha, hb, ?_, ?_, he⟩
-  · rcases hra with h1 | ⟨C, hC, h1⟩
-    · exact ⟨B_F, hBF, h1⟩
-    · exact ⟨C, Or.inl hC, h1⟩
-  · rcases hrb with h1 | ⟨C, hC, h1⟩
-    · exact ⟨B_F, hBF, h1⟩
-    · exact ⟨C, Or.inl hC, h1⟩
+  · rcases hra with h1 | h1
+    · exact hBF.imp (fun hf => ⟨B_F, hf, h1⟩) (fun hf => ⟨B_F, hf, h1⟩)
+    · exact Or.inl h1
+  · rcases hrb with h1 | h1
+    · exact hBF.imp (fun hf => ⟨B_F, hf, h1⟩) (fun hf => ⟨B_F, hf, h1⟩)
+    · exact Or.inl h1
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 theorem SlashableSet.toPairRight {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
@@ -324,12 +321,12 @@ theorem SlashableSet.toPairRight {T T' : Finset (Blk Node Root)} {B_F : Blk Node
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
   refine ⟨a, b, ha, hb, ?_, ?_, he⟩
-  · rcases hra with h1 | ⟨C, hC, h1⟩
-    · exact ⟨B_F, hBF, h1⟩
-    · exact ⟨C, Or.inr hC, h1⟩
-  · rcases hrb with h1 | ⟨C, hC, h1⟩
-    · exact ⟨B_F, hBF, h1⟩
-    · exact ⟨C, Or.inr hC, h1⟩
+  · rcases hra with h1 | h1
+    · exact hBF.imp (fun hf => ⟨B_F, hf, h1⟩) (fun hf => ⟨B_F, hf, h1⟩)
+    · exact Or.inr h1
+  · rcases hrb with h1 | h1
+    · exact hBF.imp (fun hf => ⟨B_F, hf, h1⟩) (fun hf => ⟨B_F, hf, h1⟩)
+    · exact Or.inr h1
 
 end Store
 

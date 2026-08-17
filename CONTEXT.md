@@ -2246,6 +2246,44 @@ binder between the statement and the record it is about.
   `postState B` is a function of `B` alone that nothing rewrites; `S.σ B` is a store field
   that `updateFinalized_σ`, `updateJustified_σ` and `update_keeps` rewrite constantly.
 
+## 2026-08-17 — `Slashable`, one definition for the accountable disjunct
+
+Roberto: the "unless `≥ n/3` validators are slashable" shape was written out three times in
+`Analysis/HftTheorems.lean` and twice more under `Analysis/Proofs/`; make it one definition.
+`Analysis/Vocabulary.lean` gains two:
+
+    RetainedIn (T) (a)          -- `∃ C ∈ T, IncludedOn a C`
+    Slashable (Retained)        -- `∃ A, w(A) ≥ 2q − W ∧ ∀ v ∈ A, ∃ a b, …
+                                --   Retained a ∧ Retained b ∧ E1 a b`
+
+**The parameter is where the two messages may sit**, because that is the only thing the uses
+differ in — and it is not decoration: a pair the proof can only place "somewhere in the past"
+is evidence of nothing, which is why three healing lemmas had to be restated to carry the
+inclusions (recorded 2026-08-16 under the `IncludedOn` note in `Analysis/Proofs/Finality.lean`).
+The three statements of record now read
+
+    Theorem 8   Slashable (RetainedIn S'.T)
+    Theorem 9   Slashable (fun a => IncludedOn a B_F ∨ RetainedIn S'.T a)
+    Theorem 10  Slashable (fun a => RetainedIn (storeAt x p i).T a ∨ RetainedIn (storeAt x p' j).T a)
+
+and the two proof-layer notions are the same definition at their own predicates:
+`Proofs.SlashableSet T B_F = Slashable (RetainedOn T B_F)` and
+`Proofs.SlashablePair T T' = Slashable (fun a => RetainedIn T a ∨ RetainedIn T' a)`.
+
+Theorems 8 and 9 needed no proof change — the new spellings are definitionally the old ones.
+Theorem 10's did: its disjunct used to distribute as `∃ Ca, (Ca ∈ T ∨ Ca ∈ T') ∧ IncludedOn a Ca`
+and now reads `RetainedIn T a ∨ RetainedIn T' a`, which is equivalent but not defeq. Six sites
+moved — `SlashablePair.symm`, `SlashableSet.toPairLeft`/`toPairRight`, and three construction
+sites in `hmax_le_of_agree` and `fold_F_comparable` — each of them `⟨C, Or.inl hT, hi⟩`
+becoming `Or.inl ⟨C, hT, hi⟩`.
+
+**`Analysis/Lemmas.lean` deliberately does not use `Slashable`.** The healing paper's
+Definition 11 has E1 *and* E2, and `lemPastFinalized`, `lemFinalizedChain` and
+`thmAccountableSafety` conclude `E1 x y ∨ E2 x y`; `Slashable` names E1 alone, which is the
+companion paper's Definition 9. Widening it to a relation parameter would let one definition
+cover both, but it would also let a reader stop noticing which paper's slashing rule a
+statement means, so the two stay apart.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the

@@ -71,8 +71,8 @@ theorem SlashablePair.symm {T T' : Finset (Blk Node Root)} (h : SlashablePair T 
     SlashablePair T' T := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
-  obtain ⟨a, b, ha, hb, ⟨Ca, hCa, hia⟩, ⟨Cb, hCb, hib⟩, he⟩ := hev v hv
-  exact ⟨a, b, ha, hb, ⟨Ca, hCa.symm, hia⟩, ⟨Cb, hCb.symm, hib⟩, he⟩
+  obtain ⟨a, b, ha, hb, hia, hib, he⟩ := hev v hv
+  exact ⟨a, b, ha, hb, hia.symm, hib.symm, he⟩
 
 /-! ## `hmax` -/
 
@@ -106,7 +106,7 @@ theorem hmax_le_of_agree [PositiveWeight Node] {S S' : Store Node Root}
         pastFinalized_evidence hne (by rw [hps]; exact hFE) (by rw [hps]) hpm h1 hlt hFBm
       refine ⟨A, hw, fun v hv => ?_⟩
       obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-      exact ⟨a, b, hav, hbv, ⟨E, Or.inl hTE, hai⟩, ⟨Bm, Or.inl hTm, hbi⟩, he⟩
+      exact ⟨a, b, hav, hbv, Or.inl ⟨E, hTE, hai⟩, Or.inl ⟨Bm, hTm, hbi⟩, he⟩
     · left
       have hFT : S.F ∈ S.T := F_mem_T hinv hgS
       obtain ⟨σF2, hσF2⟩ := record_of_mem hinv hFT
@@ -211,14 +211,14 @@ theorem fold_F_comparable [PositiveWeight Node] (Bs Bs' : List (Blk Node Root)) 
     · exact Or.inl (by rw [← hFE, ← hFE']; exact hpre)
     · refine Or.inr (Or.inr ⟨A, hw, fun v hv => ?_⟩)
       obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-      exact ⟨a, b, hav, hbv, ⟨E, Or.inl hT, hai⟩, ⟨E', Or.inr hT', hbi⟩, he⟩
+      exact ⟨a, b, hav, hbv, Or.inl ⟨E, hT, hai⟩, Or.inr ⟨E', hT', hbi⟩, he⟩
   · rcases finalizedChainE1 (C := σE'.F) (h := σE'.h_F) (C' := σE.F) (h' := σE.h_F)
         hne' (by rw [hps']) (by rw [hps']) hne (by rw [hps]) (by rw [hps]) hle with
       hpre | ⟨A, hw, hev⟩
     · exact Or.inr (Or.inl (by rw [← hFE, ← hFE']; exact hpre))
     · refine Or.inr (Or.inr ⟨A, hw, fun v hv => ?_⟩)
       obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-      exact ⟨a, b, hav, hbv, ⟨E', Or.inr hT', hai⟩, ⟨E, Or.inl hT, hbi⟩, he⟩
+      exact ⟨a, b, hav, hbv, Or.inr ⟨E', hT', hai⟩, Or.inl ⟨E, hT, hbi⟩, he⟩
 
 /-! ## The larger finalized block is reached in the other order too -/
 
@@ -372,11 +372,8 @@ theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
      (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
-      ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-          (∃ Ca, (Ca ∈ (storeAt x p i).T ∨ Ca ∈ (storeAt x p' j).T) ∧ IncludedOn a Ca) ∧
-          (∃ Cb, (Cb ∈ (storeAt x p i).T ∨ Cb ∈ (storeAt x p' j).T) ∧ IncludedOn b Cb) ∧
-          E1 a b := by
+      Slashable (fun a =>
+        RetainedIn (storeAt x p i).T a ∨ RetainedIn (storeAt x p' j).T a) := by
   rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
   exact foldOrderIndependence hperm hp hp'
 

@@ -5,13 +5,14 @@ import Analysis.Proofs.StoreRecords
 
 Two things live here.
 
-**The disjunct, named.** `RetainedOn` and `SlashableSet` are the shape the companion paper's
-conditional results all conclude with: a set of validators of weight at least `2q − W`, each
-with two signed attestations forming an E1 pair, and each attestation retained somewhere the
-theorem can name — on the chain that finalized the block the theorem is about, or on a chain
-the store accepted. Definition 9 (`hft:def:slashing`) is the single rule E1 and has no E2,
-which is why `SlashableSet` names E1 alone; `finalizedChainE1`
-(`Analysis/Proofs/Finality.lean`) is the healing result restated to match.
+**The disjunct, at a store.** `Slashable` (`Analysis/Vocabulary.lean`) is the accountable
+disjunct itself, parameterized by where each of a signer's two messages may sit. `RetainedOn`
+is the retention predicate the store-level results want — on the chain that finalized the
+block in question, or on a chain in the accepted tree — and `SlashableSet` is `Slashable` at
+that predicate, so the proofs have one name for the shape they build over and over.
+Definition 9 (`hft:def:slashing`) is the single rule E1 and has no E2, which is why
+`Slashable` names E1 alone; `finalizedChainE1` (`Analysis/Proofs/Finality.lean`) is the
+healing result restated to match.
 
 **The upgrade argument.** Lemma 9 (`hft:lem:upgrade`): a block whose recorded state justifies a
 finalized `F` at that block's finalized height puts the store root at or below `F`'s chain, or
@@ -67,16 +68,12 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
     whose `T` is `S.T ∪ {B}`: naming the set keeps those out of the statements. -/
 def RetainedOn (T : Finset (Blk Node Root)) (B_F : Blk Node Root)
     (a : Attestation Node Root) : Prop :=
-  IncludedOn a B_F ∨ ∃ C ∈ T, IncludedOn a C
+  IncludedOn a B_F ∨ RetainedIn T a
 
-/-- "Unless `≥ n/3` validators are slashable": a set of weight at least `2q − W` — the weight
-    two `q`-quorums must share (Lemma 2, `lem:quorum-intersection`), the count analogue of
-    `n/3` — each of whose members signed an E1 pair, both messages retained. Definition 9
-    (`hft:def:slashing`) is E1 and nothing else. -/
+/-- `Slashable` at the store-level retention predicate: the shape every conditional result
+    under `Analysis/Proofs/` concludes with. -/
 def SlashableSet (T : Finset (Blk Node Root)) (B_F : Blk Node Root) : Prop :=
-  ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-    ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-      RetainedOn T B_F a ∧ RetainedOn T B_F b ∧ E1 a b
+  Slashable (RetainedOn T B_F)
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Retention survives a growing tree, so it survives `ReachesFrom` (`reachesFrom_T`). -/
@@ -130,10 +127,7 @@ omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
     `RetainedOn` collapse into one. This is the shape Theorem 8 (`hft:thm:finlive`) states,
     where the finalized pair comes from a record and so has no chain of its own to name. -/
 theorem SlashableSet.onTree {T : Finset (Blk Node Root)} {B_F : Blk Node Root} (hBF : B_F ∈ T)
-    (h : SlashableSet T B_F) :
-    ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-      ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-        (∃ Ca ∈ T, IncludedOn a Ca) ∧ (∃ Cb ∈ T, IncludedOn b Cb) ∧ E1 a b := by
+    (h : SlashableSet T B_F) : Slashable (RetainedIn T) := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv

@@ -139,6 +139,44 @@ def ProgressCertificate (B : Blk Node Root) (h : Nat) : Prop :=
     BlockPostState σp ∧ X ⪯ B ∧ stateTransition σp X = .state σ ∧
       σp.h = h ∧ σ.h = h + 1 ∧ σ.J = σp.J)
 
+/-! ## "Unless `≥ n/3` validators are slashable" — the accountable disjunct
+
+The companion paper's Section 3.1 states four results in the form *claim, unless `≥ n/3`
+validators are slashable*, and the healing paper's Lemmas 10 and 11 and Theorem 5 do the same
+with their own fault bound. The bound itself cannot be *stated* — `Electorate` carries no
+Byzantine set — so what these results conclude is its **violation**, exhibited: a set of
+validators heavy enough that two `q`-quorums must share it, each of whom signed a slashable
+pair.
+
+`Slashable` is that shape, once. Its parameter is where each of the two messages is allowed to
+sit, because that is the only thing the four uses differ in: Theorem 5 pins each message to one
+of two named chains, Theorem 8 to a chain the store accepted, Theorem 9 to either the named
+finalizing chain or an accepted one, Theorem 10 to a chain either of two stores accepted.
+Retention is what makes the disjunct usable — a pair the proof can only place "somewhere in the
+past" is evidence of nothing — and `Analysis/Proofs/Finality.lean`'s docstring records that
+three healing lemmas had to be restated to carry it.
+
+**`2q − W` is the count analogue of `n/3`.** The paper counts validators where this project
+weighs them (Definition 3, `def:validator-weights`), and `2q − W` is the weight the
+intersection of two `q`-quorums must carry (Lemma 2, `lem:quorum-intersection`).
+
+**E1 alone**, for the companion paper's results: its Definition 9 (`hft:def:slashing`) is the
+single rule E1 and defines no E2. The healing paper's Definition 11 has both, and its own
+statements of record in `Analysis/Lemmas.lean` keep `E1 x y ∨ E2 x y` rather than using this. -/
+
+/-- An attestation retained on some chain of `T` — the usual place a store theorem can point
+    to, `T` being the accepted tree. -/
+def RetainedIn (T : Finset (Blk Node Root)) (a : Attestation Node Root) : Prop :=
+  ∃ C ∈ T, IncludedOn a C
+
+/-- "Unless `≥ n/3` validators are slashable": a set of weight at least `2q − W`, each of whose
+    members signed two attestations forming an E1 pair, both retained where `Retained` allows.
+    See the section docstring. -/
+def Slashable (Retained : Attestation Node Root → Prop) : Prop :=
+  ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
+    ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
+      Retained a ∧ Retained b ∧ E1 a b
+
 end
 
 section

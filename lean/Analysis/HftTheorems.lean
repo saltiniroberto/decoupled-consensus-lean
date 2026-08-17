@@ -44,18 +44,23 @@ all six are timeless in the framework's classification, and hold of corrupted va
 too, whose `adversarial` action touches only the message log while their store follows
 the protocol's reaction.
 
-**"Unless `≥ n/3` validators are slashable" is the accountable disjunct.** The same
-rendering as `thmAccountableSafety`: the claim holds, or a set of weight at least `2q − W`
-signed slashable pairs. The paper counts validators where this project weighs them
-(Definition 3, `def:validator-weights`), and `2q − W` is the weight the intersection of two
-`q`-quorums must carry — the count analogue is exactly `n/3`. Slashable is **E1 alone**: the
-companion paper's Definition 9 (`hft:def:slashing`) is the single rule E1, the same relation
-healing's Definition 11 (`def:slashing`) E1 renders, and it has no E2. Each signer's two
-messages are pinned to evidence the statement can name: inclusion on a chain the store
-accepted, or on the named finalizing chain where the theorem has one. In the disjunct the
-slashable set is written `A`, its members `v`, and the attestation pair `a`/`b` — `x` is
-the execution, `i` and `j` are steps, and `q` is the quorum threshold, so none of the
-healing files' letters for these are free here.
+**"Unless `≥ n/3` validators are slashable" is `Slashable`**, one definition in
+`Analysis/Vocabulary.lean`, whose docstring carries the rendering: a set of weight at least
+`2q − W` — the count analogue of `n/3`, since the paper counts validators where this project
+weighs them (Definition 3, `def:validator-weights`) — each of whose members signed an E1 pair.
+Slashable is **E1 alone** here: the companion paper's Definition 9 (`hft:def:slashing`) is
+the single rule E1, the same relation healing's Definition 11 (`def:slashing`) E1 renders,
+and it has no E2.
+
+`Slashable`'s parameter is where each of a signer's two messages may sit, which is the only
+thing the three uses below differ in — `RetainedIn S'.T` for Theorem 8, either that or the
+named finalizing chain for Theorem 9, either of two accepted trees for Theorem 10. That
+parameter is not decoration: a pair the proof can only place "somewhere in the past" is
+evidence of nothing, and three healing lemmas had to be restated to carry it
+(`Analysis/Proofs/Finality.lean`). Inside the definition the slashable set is written `A`,
+its members `v`, and the attestation pair `a`/`b` — `x` is the execution, `i` and `j` are
+steps, and `q` is the quorum threshold, so none of the healing files' letters for these are
+free here.
 
 **"Finalized at height `h_f` on any chain" is a recorded pair.** As in
 `thmAccountableSafety`: a chain `B_F` whose replayed post-state records `(F, h_F)` — the
@@ -197,11 +202,7 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {B : Blk Node Root} (hnew : B ∉ S.T) (hB : B ∈ S'.σ) :
-    S'.σ[B].F ⪯ S'.F ∨
-      ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-          (∃ Ca ∈ S'.T, IncludedOn a Ca) ∧
-          (∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b :=
+    S'.σ[B].F ⪯ S'.F ∨ Slashable (RetainedIn S'.T) :=
   Proofs.finalityAcceptance h hnew ⟨S'.σ[B], (Option.some_get hB).symm, rfl⟩
 
 /-- **Theorem 9** (`hft:thm:lockin`, lines 695–697): lock-in.
@@ -240,10 +241,7 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     (hF : (postState' B_F).F = S.σ[B].J) (hhf : (postState' B_F).h_F = S.σ[B].h_j) :
     (S.σ[B].J ⪯ S'.J ∧ S.σ[B].J ∈ viableTree S' ∧
       ∀ C, GetConfirmed S' C → S.σ[B].J ⪯ C) ∨
-      ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-          (IncludedOn a B_F ∨ ∃ Ca ∈ S'.T, IncludedOn a Ca) ∧
-          (IncludedOn b B_F ∨ ∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b :=
+      Slashable (fun a => IncludedOn a B_F ∨ RetainedIn S'.T a) :=
   Proofs.lockIn h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
@@ -303,11 +301,8 @@ theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq 
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
      (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
-      ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
-        ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
-          (∃ Ca, (Ca ∈ (storeAt x p i).T ∨ Ca ∈ (storeAt x p' j).T) ∧ IncludedOn a Ca) ∧
-          (∃ Cb, (Cb ∈ (storeAt x p i).T ∨ Cb ∈ (storeAt x p' j).T) ∧ IncludedOn b Cb) ∧
-          E1 a b :=
+      Slashable (fun a =>
+        RetainedIn (storeAt x p i).T a ∨ RetainedIn (storeAt x p' j).T a) :=
   Proofs.orderIndependence hperm hp hp'
 
 end Decoupled
