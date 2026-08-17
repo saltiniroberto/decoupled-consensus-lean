@@ -1,6 +1,7 @@
 import Spec.Defs.Basic
 import Spec.Defs.Notation
 import Spec.Defs.Store
+import Spec.Defs.Voting
 import Spec.Fig2AttestationProcessing
 import Spec.Fig1SlotReplay
 import Spec.HftFig2Store
@@ -23,8 +24,9 @@ paper at the pinned revision. So `Fig2AttestationProcessing` is healing's Figure
 
 Everything the figures are written in terms of sits one level down, in `Spec/Defs/`:
 `Basic.lean` holds the healing paper's numbered definitions, `Store.lean` the companion
-paper's, and `Notation.lean` the assignment macros and no protocol content. Each says so
-in its own docstring.
+paper's, `Voting.lean` the healing paper's voting strategy (Definitions 12 and 47–50)
+wired over the hybrid's store, and `Notation.lean` the assignment macros and no protocol
+content. Each says so in its own docstring.
 
 Two files render no figure: `Receive.lean`, the message-receipt wiring — a block message
 is passed to `on_block` — and `Protocol.lean`, the node as a

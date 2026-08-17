@@ -2419,6 +2419,41 @@ closer, rewrite the filter equality **before** the `R` equality — `rw [hR]` fi
 `S.R` inside the filter and the set equation no longer matches. All six theorems
 re-measured kernel-clean.
 
+## 2026-08-17 — the healing paper's voting strategy, over the hybrid
+
+Roberto: encode the healing paper's voting strategy, judged unclear in places; my call on
+the shape, everything line-linked for audit. `Spec/Defs/Voting.lean`, definitions only:
+
+* `SigningHistory` — Definition 12 (`def:signing-history`): per-height first target,
+  timeout flag, finality lock, with the three durable writes as named functions. The
+  rules return the updated history with the pair, because "writes each value before
+  releasing the signature" makes the write part of the rule. Restart recovery is not
+  modelled (the framework has no crashes).
+* `heightVote` — Definition 48's five cases, in order, one `if` arm per case with the
+  paper's line numbers alongside; `finalityVote` — Definition 49, one condition, lock
+  written on the signing branch; `fgVote` — Definition 50's composition, finality first
+  so the lock write is visible to the height rule's read (the paper's own no-self-E1
+  ordering). All pure functions over explicit inputs, which is how the paper states them.
+* `ordinaryContext`/`ordinaryVote` — Definition 47 **in its own no-source-proposal
+  branch** (the paper defines it: "uses `Y_i = Q_i^r` and `σ_i = σ_a[Q_i^r]` directly"),
+  wired over the hybrid: the gate is `getConfirmed S` standing in for the deepest
+  official confirmation (Definition 46 needs the unrendered recovery apparatus,
+  Definitions 28–46), and `σ_i` is the gate's finality action state — Definition 20's
+  `process_slots(σ[X], slot)`, spec-computable now that the store's map is `σ[·]`.
+  `hC = k` in this wiring since the context state is the gate's own; Definition 48's
+  `σ_a[C_i].h ≥ k` check bites only in the unrendered source-proposal branch.
+* **Two inputs deliberately explicit**: `h_F` (the store carries no `h_F`; whether to
+  derive it from provenance or extend `Store` is an open decision) and `hasJC`
+  (Definition 49's "knows the certificate" is evidence-relative; the execution layer will
+  discharge it).
+
+Not rendered, recorded here so nobody hunts for it: Definitions 28–46 (rounds, grades,
+official confirmations, source proposals), SG-head derivation (`head` is an input), and
+the action schedule — wiring votes into `Spec/Protocol.lean` changes `NodeState`
+(`Store × SigningHistory`) and waits for its own decision, per the stop-at-the-spec rule.
+The `Analysis/` target these exist for is `lem:signer-safety`: honest attestations are
+never E1- or E2-slashable.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
