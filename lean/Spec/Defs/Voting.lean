@@ -1,14 +1,27 @@
 import Spec.HftFig2Store
 
 /-!
-# The healing paper's voting strategy — Definitions 12 and 47–50
+# The healing paper's voting strategy — Definitions 12, 33–36, 45 and 47–50
 
-`height_filter_healing.tex` Definition 12 (`def:signing-history`, lines 522–530), and
-`recovery_core.tex` Definitions 47–50: `def:ordinary-current-target` (lines 1814–1869),
-`def:height-vote-rule` (lines 1952–1981), `def:finality-vote-rule` (lines 1982–2012),
-`def:fg-rule` (lines 2014–2033). Definitions only; the safety result these are built for —
+`height_filter_healing.tex` Definition 12 (`def:signing-history`, lines 522–530) and
+Assumption 3 (`ass:goldfish-committees`, lines 250–258); `recovery_core.tex`
+Definitions 33 (`def:counting-rule`, lines 383–404), 34 (`def:sg-head`, lines 491–514),
+35 (`def:grade-support`, lines 515–536), 36 (`def:grades`, lines 537–559),
+45 (`def:recovery-goldfish-vote`, lines 1587–1603) and 47–50:
+`def:ordinary-current-target` (lines 1814–1869), `def:height-vote-rule`
+(lines 1952–1981), `def:finality-vote-rule` (lines 1982–2012), `def:fg-rule`
+(lines 2014–2033). Definitions only; the safety result the FG rules are built for —
 `lem:signer-safety`, honest attestations are never E1- or E2-slashable — is `Analysis/`
 work and is not here.
+
+The paper's vote types, and where each lands in this file: the **current-height vote**
+(target or timeout) and the **finality vote** are the FG signing rules, `heightVote` and
+`finalityVote`, combined by `fgVote`; the **SG head** is the third field of the same
+attestation — its signing condition is `sgHeadOk` and its supporting grade machinery is
+`SGEquivocation`/`eligibleBatch`/`directSupport`/`favorableSupport`/`G3`–`G0`, while the
+rule *producing* a head (Definition 46, via the stable root, Definitions 38–42) is not
+rendered and `head` stays an input; the **raw Goldfish vote** is `goldfishVote`, the
+vote-time GHOST walk over explicit votes, tree and root.
 
 ## What is rendered, and from which sentences
 
@@ -53,12 +66,18 @@ keeps one attestation from being its own E1 pair.
 
 ## What is deliberately absent
 
-Definitions 28–46 (recovery timing, grades, official confirmations, source proposals),
-the SG head derivation — `head` is an input, as Definition 50's attestation just carries
-it — and the action schedule (when a validator votes), which is what would wire these
-into `Spec/Protocol.lean`'s reaction and is a separate `NodeState` decision. Definition
-12's "restores the values after restart" is about crashes, which the framework does not
-model; the history is a value threaded through the rules here.
+The stable-root machinery and its consumers — Definitions 28–32 and 37–44 and 46
+(recovery timing and the four views, activation, walk standing, grade-root choices, TSQ
+views and confirmations, stable root, action root, proposals, official confirmation) —
+so the head *production* rule is absent while its signing condition (`sgHeadOk`) is
+present, and the Goldfish walk's context (which votes, which tree, which root) enters as
+arguments. Definition 37 (`def:active-grade`) is likewise absent: its third clause, "`B`
+conflicts with no finalized root whose evidence `u` has processed", is evidence-relative
+the way `hasJC` is, and it belongs with the stable root that consumes it. Also absent:
+the action schedule (when a validator votes), which is what would wire these into
+`Spec/Protocol.lean`'s reaction and is a separate `NodeState` decision. Definition 12's
+"restores the values after restart" is about crashes, which the framework does not model;
+the history is a value threaded through the rules here.
 -/
 
 set_option autoImplicit false
@@ -262,6 +281,210 @@ def ordinaryVote [Omega Node Root] (S : Store Node Root) (t : Time)
     fgVote i r head S.J S.h_j S.F h_F hasJC (some ctx.C) ctx.k ctx.T ctx.ν ctx.k H
   else
     fgVote i r head S.J S.h_j S.F h_F hasJC ⊥ 0 ⊥ false 0 H
+
+end
+
+/-! ## Definition 34 — SG equivocation, the eligible batch, and the head condition -/
+
+section
+variable [DecidableEq Node] [DecidableEq Root]
+
+/-- Definition 34 (`def:sg-head`, lines 491–514): "Two signed attestations from one
+    identity in one round are SG equivocation exactly when their head fields differ and
+    at least one is nonempty" (lines 504–506). Note an empty head against a nonempty one
+    counts: silence is not a second head, but a second message disagreeing about the head
+    is. -/
+def SGEquivocation (a b : Attestation Node Root) : Bool :=
+  decide (a.validator = b.validator ∧ a.round = b.round ∧ a.head ≠ b.head ∧
+    (a.head ≠ ⊥ ∨ b.head ≠ ⊥))
+
+/-- Definition 34, second paragraph (lines 508–511): "Round `r > 0` grades exactly the
+    heads signed in round `r − 1`. Older and newer heads are ineligible. The first
+    recovery round has an empty eligible batch." `X` is a view: the signed attestations
+    the validator can see, per Definition 28 (`def:recovery-timing`)'s four snapshots,
+    which enter the grade definitions below as explicit arguments. -/
+def eligibleBatch (X : Finset (Attestation Node Root)) (r : Nat) :
+    Finset (Attestation Node Root) :=
+  if r = 0 then ∅ else X.filter fun a => a.round = r - 1 ∧ a.head ≠ ⊥
+
+/-- `i` has an SG equivocation among the graded round's attestations in the view `X` —
+    what Definition 35's "no SG equivocation by `i` in `X`" reads. Checked over `X`'s
+    round-`(r − 1)` attestations unfiltered, because an empty head equivocates against a
+    nonempty one and the eligible batch keeps only nonempty heads. -/
+def equivocatesIn (i : Node) (X : Finset (Attestation Node Root)) (r : Nat) : Bool :=
+  if r = 0 then false
+  else decide (∃ a ∈ X, ∃ b ∈ X, a.validator = i ∧ a.round = r - 1 ∧
+    SGEquivocation a b)
+
+/-- Definition 34's normative signing condition (lines 496–503): "An honest validator
+    puts a head in that field only when `S_{i,act}^r ⪯ B` and `B` is viable in
+    `Σ_{i,act}^r`."
+
+    `S_{i,act}^r` is `simplex_root` of the fork-choice action state — healing
+    Definition 26 (`def:finality-root`) and Figure 4 (`alg:fork-choice-state`), whose
+    cascade "`J` if `hmax = h_j + 1` else `F`" is word for word the companion store's
+    walk-from block `Store.R` (Figure 2, `hft:alg:store`, line 560). So over the hybrid
+    the condition reads: the head sits at or above the store's walk-from block, and is
+    viable there.
+
+    In plain words: a validator may advertise a head only if the head extends the block
+    its fork choice walks from, on a branch the height filter has not discarded. This is
+    the condition an honest head must pass; the rule that *produces* a head satisfying it
+    (Definition 46, `def:official-confirmation`) needs the stable-root machinery
+    (Definitions 38–42) and is not rendered — `head` stays an input to `fgVote`. -/
+def sgHeadOk (S : Store Node Root) (B : Blk Node Root) : Bool :=
+  decide (S.R ⪯ B ∧ B ∈ viableTree S)
+
+end
+
+/-! ## Definitions 35 and 36 — support and the four SG grades -/
+
+section
+variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
+
+/-- Definition 35 (`def:grade-support`, lines 515–536): `D_X(B)`, the identities "whose
+    single eligible head `B_i` in `X` satisfies `B ⪯ B_i`, with no SG equivocation by
+    `i` in `X`; an identity with SG equivocation supplies no direct support". No
+    equivocation is what makes the eligible head single, so the set is spelled as the
+    no-equivocation conjunct plus an eligible head above `B`. -/
+def directSupporters (X : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) :
+    Finset Node :=
+  Electorate.V.filter fun i => ¬ equivocatesIn i X r ∧
+    ∃ a ∈ eligibleBatch X r, a.validator = i ∧ ∃ hB, a.head = some hB ∧ B ⪯ hB
+
+/-- Definition 35: `directSupport_X(B) = ∑_{i ∈ D_X(B)} w(i)`. -/
+def directSupport (X : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) :
+    Nat :=
+  w(directSupporters X r B)
+
+/-- Definition 35: `Φ_X(B)`, the identities "with an eligible head `B_i` in `X`
+    satisfying `B ⪯ B_i`, together with every identity that has an SG equivocation in
+    `X`, each identity counted once". -/
+def favorableSupporters (X : Finset (Attestation Node Root)) (r : Nat)
+    (B : Blk Node Root) : Finset Node :=
+  Electorate.V.filter fun i => equivocatesIn i X r ∨
+    ∃ a ∈ eligibleBatch X r, a.validator = i ∧ ∃ hB, a.head = some hB ∧ B ⪯ hB
+
+/-- Definition 35: `favorableSupport_X(B) = ∑_{i ∈ Φ_X(B)} w(i)`. -/
+def favorableSupport (X : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) :
+    Nat :=
+  w(favorableSupporters X r B)
+
+/-- Definition 35: `D_u^{-,1}(B)`, the identities "whose unique eligible head is the same
+    block `B_i` in both `X_u^-` and `X_u^1`, satisfies `B ⪯ B_i`, with no SG equivocation
+    in `X_u^1`". Uniqueness in each view is the corresponding no-equivocation conjunct —
+    a second differing message, empty head included, is exactly an equivocation. -/
+def directSupportersTwoView (Xm X1 : Finset (Attestation Node Root)) (r : Nat)
+    (B : Blk Node Root) : Finset Node :=
+  Electorate.V.filter fun i => ¬ equivocatesIn i Xm r ∧ ¬ equivocatesIn i X1 r ∧
+    ∃ a ∈ eligibleBatch Xm r, ∃ b ∈ eligibleBatch X1 r,
+      a.validator = i ∧ b.validator = i ∧ a.head = b.head ∧
+      ∃ hB, a.head = some hB ∧ B ⪯ hB
+
+/-- Definition 36 (`def:grades`, lines 537–559): `G3_u(B) ⟺ directSupport_u^{-,1}(B) ≥ m`,
+    over the `−Δ` and `+Δ` views `X_u^-` and `X_u^1` of Definition 28. -/
+def G3 (Xm X1 : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) : Prop :=
+  w(directSupportersTwoView Xm X1 r B)≥m
+
+/-- Definition 36: `G2_u(B) ⟺ directSupport_{X_u^0}(B) ≥ m`. -/
+def G2 (X0 : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) : Prop :=
+  w(directSupporters X0 r B)≥m
+
+/-- Definition 36: `G1_u(B) ⟺ favorableSupport_{X_u^1}(B) ≥ m`. -/
+def G1 (X1 : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) : Prop :=
+  w(favorableSupporters X1 r B)≥m
+
+/-- Definition 36: `G0_u(B) ⟺ favorableSupport_{X_u^2}(B) ≥ m`. -/
+def G0 (X2 : Finset (Attestation Node Root)) (r : Nat) (B : Blk Node Root) : Prop :=
+  w(favorableSupporters X2 r B)≥m
+
+end
+
+/-! ## Definitions 33 and 45 — the raw Goldfish vote -/
+
+/-- The raw Goldfish vote: Assumption 3 (`ass:goldfish-committees`,
+    `height_filter_healing.tex` lines 250–258) has each slot's committee — "a known
+    subset of `V`" — "cast that slot's raw Goldfish votes, counted one unit per member".
+    The object names its signer, its slot, and the block it supports; the healing store
+    keeps such votes as evidence (Definition 22, `def:stored-data`). How committees are
+    drawn is outside the paper's scope and outside this rendering's. -/
+structure GoldfishVote (Node Root : Type) where
+  /-- The committee member casting the vote. -/
+  validator : Node
+  /-- The slot the vote belongs to. -/
+  slot : Time
+  /-- The block the vote supports. -/
+  target : Blk Node Root
+  deriving DecidableEq
+
+section
+variable [DecidableEq Node] [DecidableEq Root]
+
+/-- The weight a walk assigns a block: the number of distinct voters in `votes` whose
+    vote supports a block in `B`'s subtree — "counted one unit per member" (Assumption 3),
+    and per Definition 33 (`def:counting-rule`, lines 383–404) counted "of the full known
+    block tree, whether or not those blocks are in the candidate tree", which is why no
+    tree constrains this count. The caller passes the votes that count — the slot's
+    committee votes in the view the walk reads — so committee membership is the caller's
+    fact, not re-checked here. A member voting for two conflicting descendants still
+    counts once: the image collapses it. -/
+def goldfishWeight (votes : Finset (GoldfishVote Node Root)) (B : Blk Node Root) : Nat :=
+  ((votes.filter fun v => B ⪯ v.target).image fun v => v.validator).card
+
+end
+
+section
+variable [DecidableEq Node] [DecidableEq Root] [BlockHash Node Root]
+
+/-- Vote-time GHOST (Definition 45, `def:recovery-goldfish-vote`, lines 1587–1603),
+    fuel-indexed: from the current block, step to the heaviest child *in the candidate
+    tree* — Definition 33: "the candidate tree constrains the walk's choices, not the
+    counted weights" — and stop when no child remains. Ties break by larger `hash(·)`,
+    then by the list's order; the source breaks ties deterministically without fixing
+    how, so the tie-break is this rendering's choice, recorded here.
+
+    The fuel only serves termination: every step moves to a member of `tree` strictly
+    deeper in the block tree, so `tree.length` steps suffice — the paper's totality
+    statement is `lem:aged-walk-total` — and exhausted fuel returns the current block,
+    which no run started with `tree.length` reaches. The candidate tree is a list rather
+    than a `Finset` so the walk stays computable and deterministic; its order matters
+    only to break exact `(weight, hash)` ties. -/
+def ghostFrom (votes : Finset (GoldfishVote Node Root)) (tree : List (Blk Node Root)) :
+    Nat → Blk Node Root → Blk Node Root
+  | 0, root => root
+  | fuel + 1, root =>
+      let step := (tree.filter fun C => C.parent = some root).foldl
+        (fun best C =>
+          match best with
+          | none => some C
+          | some D =>
+              if goldfishWeight votes D < goldfishWeight votes C ∨
+                  (goldfishWeight votes C = goldfishWeight votes D ∧
+                    hash(D) < hash(C)) then
+                some C
+              else some D)
+        none
+      match step with
+      | some next => ghostFrom votes tree fuel next
+      | none => root
+
+/-- The walk, with the fuel it needs. -/
+def ghost (votes : Finset (GoldfishVote Node Root)) (tree : List (Blk Node Root))
+    (root : Blk Node Root) : Blk Node Root :=
+  ghostFrom votes tree tree.length root
+
+/-- Definition 45 (`def:recovery-goldfish-vote`, lines 1587–1603): the committee member
+    "runs vote-time GHOST from its accepted stable root within the aged tree …, with the
+    proposal-path exemption of Definition 33, and votes for that output". Which votes,
+    which tree and which root are the recovery context — the frozen slot view and
+    proposal-view merge of Definition 28, the aged trees of Definition 38
+    (`def:tsq-views`), the proposal-path exemption, and the stable root of Definition 41
+    (`def:stable-root`) — none of it rendered: they enter as the arguments, the same
+    explicit-inputs pattern as the FG rules above. The rule itself is: walk, and vote the
+    output. -/
+def goldfishVote (i : Node) (s : Time) (votes : Finset (GoldfishVote Node Root))
+    (tree : List (Blk Node Root)) (root : Blk Node Root) : GoldfishVote Node Root :=
+  { validator := i, slot := s, target := ghost votes tree root }
 
 end
 

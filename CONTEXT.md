@@ -2455,6 +2455,40 @@ the action schedule — wiring votes into `Spec/Protocol.lean` changes `NodeStat
 The `Analysis/` target these exist for is `lem:signer-safety`: honest attestations are
 never E1- or E2-slashable.
 
+## 2026-08-18 — the remaining vote types: SG head condition, grades, Goldfish vote
+
+`Spec/Defs/Voting.lean` grew the availability-side votes, same explicit-inputs pattern:
+
+* `SGEquivocation`, `eligibleBatch`, `equivocatesIn` — Definition 34's equivocation
+  clause and "round `r > 0` grades exactly the heads signed in round `r − 1`".
+  Equivocation is checked on the graded round's attestations *unfiltered*, because an
+  empty head against a nonempty one counts and the eligible batch keeps only nonempty
+  heads.
+* `directSupporters`/`favorableSupporters`/`directSupportersTwoView` and their weights,
+  and the four grades `G3`–`G0` — Definitions 35 and 36 over four explicit view
+  `Finset`s. Definition 35's "unique eligible head" is rendered as the no-equivocation
+  conjunct; the two-view set needed the bounded-existential spelling (`∃ a ∈ …, ∃ b ∈ …,
+  a.head = b.head ∧ …`) — the head-first spelling has an unbounded `∃ hB` and no
+  `DecidablePred`.
+* `sgHeadOk` — Definition 34's normative signing condition, over the hybrid:
+  `simplex_root` of the fork-choice action state (healing Definition 26/Figure 4) is
+  word for word the companion store's `Store.R`, so the condition is
+  `S.R ⪯ B ∧ B ∈ viableTree S`. The head *production* rule (Definition 46, via the
+  stable root) stays unrendered; `head` stays an input to `fgVote`.
+* `GoldfishVote`, `goldfishWeight`, `ghostFrom`/`ghost`, `goldfishVote` — Assumption 3's
+  unit-per-member counting (distinct voters via `Finset.image`), Definition 33's "the
+  candidate tree constrains the walk's choices, not the counted weights", and
+  Definition 45's walk-and-vote. Rendering decisions, each in its docstring: the walk is
+  **fuel-indexed** (`tree.length` steps suffice; the paper's totality is
+  `lem:aged-walk-total`) rather than proved terminating, keeping `Spec/` proof-free; the
+  candidate tree is a `List` because `Finset.toList` is noncomputable and a max-by fold
+  over a `Finset` needs a commutativity proof; ties break by larger `hash(·)` then list
+  order — the source fixes no tie-break, so this is ours.
+
+Still absent, listed in the module header: Definitions 28–32, 37–44, 46 (the stable-root
+machinery, so which votes/tree/root feed the walk is the caller's), and Definition 37,
+whose third clause is evidence-relative like `hasJC`.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
