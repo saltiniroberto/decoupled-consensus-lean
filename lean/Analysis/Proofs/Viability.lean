@@ -130,7 +130,7 @@ theorem viable_of_height_lt [PositiveWeight Node] {S : Store Node Root} (hinv : 
     obtain ⟨A, hw, hev⟩ := pastFinalized_evidence hBF hF hhF hpost₂ h1 hlt₂ hFB₂
     refine ⟨A, hw, fun v hv => ?_⟩
     obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-    exact ⟨a, b, hav, hbv, Or.inl hai, IncludedInOrOn.ofChain hT₂ hbi, he⟩
+    exact ⟨a, b, hav, hbv, Or.inl hai, IncludedOnEither.ofChain hT₂ hbi, he⟩
 
 end Store
 

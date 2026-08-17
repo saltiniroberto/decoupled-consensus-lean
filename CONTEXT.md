@@ -2252,9 +2252,9 @@ Roberto: the "unless `≥ n/3` validators are slashable" shape was written out t
 `Analysis/HftTheorems.lean` and twice more under `Analysis/Proofs/`; make it one definition.
 `Analysis/Vocabulary.lean` gains two:
 
-    RetainedIn (T) (a)          -- `∃ C ∈ T, IncludedOn a C`
-    Slashable (Retained)        -- `∃ A, w(A) ≥ 2q − W ∧ ∀ v ∈ A, ∃ a b, …
-                                --   Retained a ∧ Retained b ∧ E1 a b`
+    IncludedOnSome (a) (T)      -- `∃ C ∈ T, IncludedOn a C`
+    Slashable (Included)        -- `∃ A, w(A) ≥ 2q − W ∧ ∀ v ∈ A, ∃ a b, …
+                                --   Included a ∧ Included b ∧ E1 a b`
 
 **The parameter is where the two messages may sit**, because that is the only thing the uses
 differ in — and it is not decoration: a pair the proof can only place "somewhere in the past"
@@ -2262,13 +2262,13 @@ is evidence of nothing, which is why three healing lemmas had to be restated to 
 inclusions (recorded 2026-08-16 under the `IncludedOn` note in `Analysis/Proofs/Finality.lean`).
 The three statements of record now read
 
-    Theorem 8   Slashable (RetainedIn S'.T)
-    Theorem 9   Slashable (fun a => IncludedOn a B_F ∨ RetainedIn S'.T a)
-    Theorem 10  Slashable (fun a => RetainedIn (storeAt x p i).T a ∨ RetainedIn (storeAt x p' j).T a)
+    Theorem 8   Slashable (fun a => IncludedOnSome a S'.T)
+    Theorem 9   Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T)
+    Theorem 10  Slashable (fun a => IncludedOnSome a … ∨ IncludedOnSome a …)
 
 and the two proof-layer notions are the same definition at their own predicates:
-`Proofs.SlashableSet T B_F = Slashable (RetainedOn T B_F)` and
-`Proofs.SlashablePair T T' = Slashable (fun a => RetainedIn T a ∨ RetainedIn T' a)`.
+`Proofs.SlashableSet T B_F = Slashable (fun a => IncludedOnEither a B_F T)` and
+`Proofs.SlashablePair T T' = Slashable (fun a => IncludedOnSome a T ∨ IncludedOnSome a T')`.
 
 Theorems 8 and 9 needed no proof change — the new spellings are definitionally the old ones.
 Theorem 10's did: its disjunct used to distribute as `∃ Ca, (Ca ∈ T ∨ Ca ∈ T') ∧ IncludedOn a Ca`
@@ -2288,9 +2288,19 @@ it into a participation bit, and the healing store sections use it the same way 
 store retains every raw object"). So a placement predicate called `Retained…` was importing
 the wrong paper notion, which is exactly what `CLAUDE.md`'s rule about undefined terms is for.
 
-Renamed: `RetainedIn` → `IncludedIn`, `Proofs.RetainedOn` → `Proofs.IncludedInOrOn` (in the
-accepted tree, or on the named chain — the name matches the argument order), and `Slashable`'s
-parameter `Retained` → `Included`. Prose in `Analysis/Theorems.lean` and
+Renamed: `RetainedIn` → `IncludedOnSome`, `Proofs.RetainedOn` → `Proofs.IncludedOnEither`, and
+`Slashable`'s parameter `Retained` → `Included`.
+
+**The attestation comes first in all three inclusion predicates**, matching `IncludedOn a C` —
+Roberto caught the first pass putting the container first, which read backwards ("included in
+`T` … `a`"). So `IncludedOnSome a T` and `IncludedOnEither a B_F T` alongside `IncludedOn a C`:
+subject, preposition, object, every time. The cost is that a use inside `Slashable` is a
+`fun a => …` rather than a partial application, which is what all three statements of record
+now write, uniformly:
+
+    Theorem 8   Slashable (fun a => IncludedOnSome a S'.T)
+    Theorem 9   Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T)
+    Theorem 10  Slashable (fun a => IncludedOnSome a … ∨ IncludedOnSome a …) Prose in `Analysis/Theorems.lean` and
 `Analysis/Proofs/Upgrade.lean` followed; one line there already read "retained — included —",
 which was the tension showing. `Analysis/Lemmas.lean` and `Analysis/Proofs/Compression.lean`
 **keep** "retain", because there it quotes Lemma 9 and means storage.

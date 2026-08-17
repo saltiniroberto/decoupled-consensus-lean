@@ -373,7 +373,7 @@ theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
      (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
       Slashable (fun a =>
-        IncludedIn (storeAt x p i).T a ∨ IncludedIn (storeAt x p' j).T a) := by
+        IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) := by
   rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
   exact foldOrderIndependence hperm hp hp'
 

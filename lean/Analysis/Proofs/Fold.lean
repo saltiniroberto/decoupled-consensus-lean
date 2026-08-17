@@ -298,7 +298,7 @@ theorem viableTree_witness {S : Store Node Root} {B : Blk Node Root} (h : B ∈ 
 /-- The accountable disjunct with two trees and no named finalizing chain: Theorem 10
     (`hft:thm:orderindep`)'s, where the evidence may sit on a chain either node accepted. -/
 def SlashablePair (T T' : Finset (Blk Node Root)) : Prop :=
-  Slashable (fun a => IncludedIn T a ∨ IncludedIn T' a)
+  Slashable (fun a => IncludedOnSome a T ∨ IncludedOnSome a T')
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 theorem SlashableSet.toPairLeft {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}

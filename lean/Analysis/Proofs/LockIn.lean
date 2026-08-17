@@ -112,7 +112,7 @@ theorem lockIn_store [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
     pastFinalized_evidence hBF hF hhF (record_postState hinv hσC') h1f hltC hFC
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-  exact ⟨a, b, hav, hbv, Or.inl hai, IncludedInOrOn.ofChain (record_mem_T hinv hσC') hbi, he⟩
+  exact ⟨a, b, hav, hbv, Or.inl hai, IncludedOnEither.ofChain (record_mem_T hinv hσC') hbi, he⟩
 
 end Store
 
@@ -132,7 +132,7 @@ theorem lockIn [PositiveWeight Node] {sched : Schedule Node}
     (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
     (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
       ∀ C, GetConfirmed S' C → F ⪯ C) ∨
-      Slashable (fun a => IncludedOn a B_F ∨ IncludedIn S'.T a) := by
+      Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) := by
   obtain ⟨σB, hσB, hJ, hhj⟩ := hB
   have hσB' : S.σ B = some σB := hσB
   exact lockIn_store (reaches_storeInv (reaches_of_reachesFrom h))

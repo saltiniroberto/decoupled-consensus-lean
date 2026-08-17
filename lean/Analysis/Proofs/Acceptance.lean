@@ -89,14 +89,14 @@ theorem accept_notPrec [PositiveWeight Node] {S : Store Node Root} (hinv : Store
     · exact Or.inl hpre
     · refine Or.inr ⟨A, hw, fun v hv => ?_⟩
       obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-      exact ⟨a, b, hav, hbv, Or.inl hai, IncludedInOrOn.ofChain hT₀ hbi, he⟩
+      exact ⟨a, b, hav, hbv, Or.inl hai, IncludedOnEither.ofChain hT₀ hbi, he⟩
   · rcases finalizedChainE1 (C := S.F) (h := σ₀.h_F) (C' := σ'.F) (h' := σ'.h_F)
         hne₀ (by rw [hps₀]; exact hF₀) (by rw [hps₀]) hne (by rw [hps]) (by rw [hps]) hle with
       hpre | ⟨A, hw, hev⟩
     · exact absurd hpre hnp
     · refine Or.inr ⟨A, hw, fun v hv => ?_⟩
       obtain ⟨a, b, hav, hbv, hai, hbi, he⟩ := hev v hv
-      exact ⟨a, b, hav, hbv, IncludedInOrOn.ofChain hT₀ hai, Or.inl hbi, he⟩
+      exact ⟨a, b, hav, hbv, IncludedOnEither.ofChain hT₀ hai, Or.inl hbi, he⟩
 
 /-- The second condition, in the case where `update_justified` did not fire. Its hypothesis is
     what the failed key comparison leaves: the offered justified height is at or below the
@@ -320,7 +320,7 @@ theorem finalityAcceptance [PositiveWeight Node] {sched : Schedule Node}
     {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {B F' : Blk Node Root} (hnew : B ∉ S.T)
     (hB : get σB from S'.σ B; σB.F = F') :
-    F' ⪯ S'.F ∨ Slashable (IncludedIn S'.T) := by
+    F' ⪯ S'.F ∨ Slashable (fun a => IncludedOnSome a S'.T) := by
   obtain ⟨i, j, hij, rfl, rfl⟩ := h
   obtain ⟨σB, hσB, hF'⟩ := hB
   have hσB' : (storeAt x p j).σ B = some σB := hσB

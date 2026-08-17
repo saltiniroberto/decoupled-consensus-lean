@@ -172,9 +172,13 @@ single rule E1 and defines no E2. The healing paper's Definition 11 has both, an
 statements of record in `Analysis/Lemmas.lean` keep `E1 x y ∨ E2 x y` rather than using this. -/
 
 /-- An attestation included on some chain of `T` — the usual place a store theorem can point
-    to, `T` being the accepted tree. The argument order is the container first, so that a
-    partial application is a predicate on attestations and `Slashable` can take it. -/
-def IncludedIn (T : Finset (Blk Node Root)) (a : Attestation Node Root) : Prop :=
+    to, `T` being the accepted tree.
+
+    The attestation comes first, as in `IncludedOn a C`: both read subject, preposition,
+    object. The cost is that a use inside `Slashable` is a `fun a => …` rather than a partial
+    application, which is what the three statements of record in `Analysis/HftTheorems.lean`
+    write, uniformly. -/
+def IncludedOnSome (a : Attestation Node Root) (T : Finset (Blk Node Root)) : Prop :=
   ∃ C ∈ T, IncludedOn a C
 
 /-- "Unless `≥ n/3` validators are slashable": a set of weight at least `2q − W`, each of whose
