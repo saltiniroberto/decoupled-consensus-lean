@@ -155,10 +155,10 @@ theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     Noun by noun. "Once a node sets `Σ.F = F`": `F` is `S.F`, `S` being any store
     validator `p` holds. "At all future times": every `S'` with `ReachesFrom x p S S'`.
     "Returns … for every `Ω`": the ambient `Omega` instance — binding it quantifies over
-    every selection rule — and `getConfirmed S' hne` is what it returns, the nonemptiness
-    witness being Corollary 1's obligation (`hft:cor:getConfirmed-total`). The per-block
-    form, over every candidate, is `Proofs.forkChoiceConsistency`; the store-level
-    core is `Proofs.getConfirmed_F`, over any store with `F ⪯ J`.
+    every selection rule — and the conclusion covers whatever `getConfirmed` returns,
+    fallback included: a proper candidate sits above the walk-from block, the fallback is
+    the walk-from block, and the walk-from block sits at or above `F` either way. The
+    store-level core is `Proofs.getConfirmed_F`, over any store with `F ⪯ J`.
 
     Proved in `Analysis/Proofs/StoreInvariants.lean`, riding Theorems 3 and 4:
     `get_confirmed`'s own second conjunct is `R ⪯ C`, the walk-from block `R` is `J` or
@@ -167,10 +167,9 @@ theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
 theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [Omega Node Root]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
-    {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    (hne : (getConfirmedSet S').Nonempty) :
-    S.F ⪯ getConfirmed S' hne :=
-  Proofs.forkChoiceConsistency h (Proofs.getConfirmed_spec S' hne)
+    {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S') :
+    S.F ⪯ getConfirmed S' :=
+  Proofs.forkChoiceConsistency h
 
 /-- **Theorem 8** (`hft:thm:finlive`, lines 683–685): local acceptance of finality updates.
 
@@ -225,8 +224,11 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     all — what remains of them is the other direction, "finalized at height `h_f` on any
     chain", which is `hF` and `hhf`: `B_F`'s replayed post-state records exactly that pair.
     "At all future times" and "always": every `S'` with `ReachesFrom x p S S'`, the three
-    claims conjoined under one `S'`. "For every `Ω`": as in Theorem 7, through the
-    ambient instance and `getConfirmed`; the per-block form is `Proofs.lockIn`. The
+    claims conjoined under one `S'`. "For every `Ω`": every block the figure's return
+    line admits — which covers every choice any `Ω` could make among the paper's own
+    candidates. `getConfirmed`'s inserted walk-from fallback is a rendering device the
+    paper does not describe (its docstring says so), so it sits outside this claim, and
+    the statement needs no `Omega` instance. The
     disjunct's
     evidence is included on `B_F`'s chain or on a block `S'` accepted, each message
     independently, since which quorum sits where depends on the case.
@@ -238,16 +240,16 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     some other chain finalized. -/
 theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
-    [Omega Node Root]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {B_F B : Blk Node Root}
     (hBF : postState B_F ≠ invalid) (hB : B ∈ S.σ)
     (hF : (postState' B_F).F = S.σ[B].J) (hhf : (postState' B_F).h_F = S.σ[B].h_j) :
     (S.σ[B].J ⪯ S'.J ∧ S.σ[B].J ∈ viableTree S' ∧
-      ∀ hne : (getConfirmedSet S').Nonempty, S.σ[B].J ⪯ getConfirmed S' hne) ∨
+      ∀ C, (C ∈ viableTree S' ∧ S'.R ⪯ C ∧
+        (get st from S'.σ C; st.h ≥ S'.hmax - 1)) → S.σ[B].J ⪯ C) ∨
       SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) :=
-  Proofs.lockInOmega h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
+  Proofs.lockIn h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
 
@@ -268,10 +270,9 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     any parent-first order": each list `ParentFirst`. "The observable store view" is
     spelled out as the paper's own "in particular" list: the four fields, membership of
     the subtree rooted at `F` — the two `F`s being equal by the first conjunct — and the
-    outputs of `get_confirmed` — through the function: the candidate sets agree (the
-    wrapper's core), so for the ambient `Ω` the two validators confirm the same block,
-    whichever nonemptiness witnesses they hold; the per-block form is
-    `Proofs.orderIndependence`. The paper's third sentence, that the nodes may disagree
+    outputs of `get_confirmed` — through the function: the walk-from blocks and the
+    candidates agree, so for the ambient `Ω` the two `getConfirmed`s are equal outright,
+    fallback included. The paper's third sentence, that the nodes may disagree
     outside `F`'s subtree, is a caveat rather than a claim, and is not stated; agreement
     of the recorded states on the shared subtree is derivable (replay is deterministic)
     and is likewise not stated. The disjunct's evidence is included on a block accepted by
@@ -308,11 +309,9 @@ theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq 
      (storeAt x p i).h_j = (storeAt x p' j).h_j ∧
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
-     ∀ (h₁ : (getConfirmedSet (storeAt x p i)).Nonempty)
-       (h₂ : (getConfirmedSet (storeAt x p' j)).Nonempty),
-       getConfirmed (storeAt x p i) h₁ = getConfirmed (storeAt x p' j) h₂) ∨
+     getConfirmed (storeAt x p i) = getConfirmed (storeAt x p' j)) ∨
       SlashableThird (fun a =>
         IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) :=
-  Proofs.orderIndependenceOmega hperm hp hp'
+  Proofs.orderIndependence hperm hp hp'
 
 end Decoupled

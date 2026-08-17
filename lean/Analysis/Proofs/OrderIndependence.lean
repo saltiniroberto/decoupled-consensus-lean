@@ -157,8 +157,9 @@ theorem getConfirmed_sub {S S' : Store Node Root} (hinv : StoreInv S) (hinv' : S
     (hFJ : S.F ⪯ S.J)
     (hsub : ∀ C, S.F ⪯ C → C ∈ S.T → C ∈ S'.T)
     (hsub' : ∀ C, S.F ⪯ C → C ∈ S'.T → C ∈ S.T)
-    {C : Blk Node Root} (hC : C ∈ getConfirmedSet S) : C ∈ getConfirmedSet S' := by
-  replace hC := mem_getConfirmedSet.mp hC
+    {C : Blk Node Root}
+    (hC : (C ∈ viableTree S ∧ S.R ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1))) :
+    (C ∈ viableTree S' ∧ S'.R ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1)) := by
   have hR : S.R = S'.R := by unfold Store.R; rw [hFeq, hJeq, hhj, hhmax]
   have hFC : S.F ⪯ C := Preceq.trans (F_preceq_R hFJ) hC.2.1
   obtain ⟨hCT, L, σL, hLT, hleaf, hCL, hσL, hh⟩ := viableTree_witness hC.1
@@ -171,8 +172,7 @@ theorem getConfirmed_sub {S S' : Store Node Root} (hinv : StoreInv S) (hinv' : S
   have hleaf' : ∀ D ∈ S'.T, ¬ L ≺ D := by
     intro D hD hlt
     exact hleaf D (hsub' D (Preceq.trans hFL hlt.1) hD) hlt
-  refine mem_getConfirmedSet.mpr
-    ⟨mem_viableTree hCT' hLT' hleaf' hCL hσL' (by rw [← hhmax]; exact hh), ?_, ?_⟩
+  refine ⟨mem_viableTree hCT' hLT' hleaf' hCL hσL' (by rw [← hhmax]; exact hh), ?_, ?_⟩
   · rw [← hR]; exact hC.2.1
   · obtain ⟨σC, hσC, hhC⟩ := hC.2.2
     have hσC' : S.σ C = some σC := hσC
@@ -287,8 +287,12 @@ theorem foldOrderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (onBlocks Store.gen Bs).hmax = (onBlocks Store.gen Bs').hmax ∧
      (∀ C, (onBlocks Store.gen Bs).F ⪯ C →
         (C ∈ (onBlocks Store.gen Bs).T ↔ C ∈ (onBlocks Store.gen Bs').T)) ∧
-     (∀ C, C ∈ getConfirmedSet (onBlocks Store.gen Bs) ↔
-       C ∈ getConfirmedSet (onBlocks Store.gen Bs'))) ∨
+     (∀ C, (C ∈ viableTree (onBlocks Store.gen Bs) ∧ (onBlocks Store.gen Bs).R ⪯ C ∧
+         (get st from (onBlocks Store.gen Bs).σ C;
+           st.h ≥ (onBlocks Store.gen Bs).hmax - 1)) ↔
+       (C ∈ viableTree (onBlocks Store.gen Bs') ∧ (onBlocks Store.gen Bs').R ⪯ C ∧
+         (get st from (onBlocks Store.gen Bs').σ C;
+           st.h ≥ (onBlocks Store.gen Bs').hmax - 1)))) ∨
       SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
   rcases fold_F_eq hperm hp hp' with hFeq | hev
   case inr => exact Or.inr hev
@@ -364,27 +368,6 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
 /-- **Theorem 10 (`hft:thm:orderindep`)'s content.** The fold-level theorem, read at two
     validators of one execution through `storeAt_eq_fold`. -/
 theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
-    {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
-    {p p' : Node} {i j : Nat}
-    (hperm : (deliveredBlocks x p i).Perm (deliveredBlocks x p' j))
-    (hp : ParentFirst (deliveredBlocks x p i))
-    (hp' : ParentFirst (deliveredBlocks x p' j)) :
-    ((storeAt x p i).F = (storeAt x p' j).F ∧
-     (storeAt x p i).J = (storeAt x p' j).J ∧
-     (storeAt x p i).h_j = (storeAt x p' j).h_j ∧
-     (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
-     (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
-     (∀ C, C ∈ getConfirmedSet (storeAt x p i) ↔ C ∈ getConfirmedSet (storeAt x p' j))) ∨
-      SlashableThird (fun a =>
-        IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) := by
-  rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
-  exact foldOrderIndependence hperm hp hp'
-
-/-- `orderIndependence`, with the outputs claim through the function `getConfirmed`: the
-    candidate sets are equal (from the relation agreeing block by block), so for the
-    ambient `Ω` the two validators' confirmations are the same block, whichever witnesses
-    they hold. The statement of record calls this form. -/
-theorem orderIndependenceOmega [PositiveWeight Node] [HashInjective Node Root]
     [Omega Node Root]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p p' : Node} {i j : Nat}
@@ -396,16 +379,17 @@ theorem orderIndependenceOmega [PositiveWeight Node] [HashInjective Node Root]
      (storeAt x p i).h_j = (storeAt x p' j).h_j ∧
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
-     ∀ (h₁ : (getConfirmedSet (storeAt x p i)).Nonempty)
-       (h₂ : (getConfirmedSet (storeAt x p' j)).Nonempty),
-       getConfirmed (storeAt x p i) h₁ = getConfirmed (storeAt x p' j) h₂) ∨
+     getConfirmed (storeAt x p i) = getConfirmed (storeAt x p' j)) ∨
       SlashableThird (fun a =>
         IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) := by
-  refine (orderIndependence hperm hp hp').imp (fun hc => ?_) id
+  rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
+  refine (foldOrderIndependence hperm hp hp').imp (fun hc => ?_) id
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hc
-  have hset : getConfirmedSet (storeAt x p i) = getConfirmedSet (storeAt x p' j) :=
-    Finset.ext h6
-  exact ⟨h1, h2, h3, h4, h5, fun h₁ h₂ => getConfirmed_congr hset h₁ h₂⟩
+  have hR : (onBlocks Store.gen (deliveredBlocks x p i)).R
+      = (onBlocks Store.gen (deliveredBlocks x p' j)).R := by
+    unfold Store.R
+    rw [h1, h2, h3, h4]
+  exact ⟨h1, h2, h3, h4, h5, getConfirmed_congr hR h6⟩
 
 end Exec
 

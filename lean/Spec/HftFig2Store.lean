@@ -123,8 +123,8 @@ def Store.R (S : Store Node Root) : Blk Node Root :=
     the set nonempty and the function total (Roberto, 2026-08-17). The figure has no such
     addition: for a held store, Corollary 1 (`hft:cor:getConfirmed-total`) says the return
     line's own candidates are never empty, so the added block is a rendering device rather
-    than a behaviour the paper describes — and `Ω` may pick it, which any statement about
-    the output has to admit. -/
+    than a behaviour the paper describes — and `Ω` may pick it, which every statement
+    about the output must allow for. -/
 def getConfirmed [Omega Node Root] (S : Store Node Root) : Blk Node Root :=
   let candidates := insert S.R ((viableTree S).filter fun B =>
     S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1)                   -- line 561

@@ -110,13 +110,13 @@ theorem F_preceq_R {S : Store Node Root} (h : S.F ⪯ S.J) : S.F ⪯ S.R := by
   · exact Preceq.refl _
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- The per-block reading of the candidate set: in the viable subtree, at or above the
-    walk-from block, and recorded at state-height at least `hmax − 1` — the height
-    conjunct in `get … from` form, so it destructures the way statements read. -/
-theorem mem_getConfirmedSet {S : Store Node Root} {B : Blk Node Root} :
-    B ∈ getConfirmedSet S ↔
+/-- The per-block reading of `getConfirmed`'s candidate filter: in the viable subtree, at
+    or above the walk-from block, and recorded at state-height at least `hmax − 1` — the
+    height conjunct in `get … from` form, so it destructures the way statements read. -/
+theorem mem_candidates {S : Store Node Root} {B : Blk Node Root} :
+    (B ∈ (viableTree S).filter fun B =>
+        S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1) ↔
       B ∈ viableTree S ∧ S.R ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1) := by
-  unfold getConfirmedSet
   rw [Finset.mem_filter]
   constructor
   · rintro ⟨h1, h2, h3⟩
@@ -134,19 +134,28 @@ theorem mem_getConfirmedSet {S : Store Node Root} {B : Blk Node Root} :
     omega
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- Every block `get_confirmed` may return descends from the store-finalized block,
-    given `F ⪯ J`. -/
-theorem getConfirmed_F {S : Store Node Root} {C : Blk Node Root}
-    (hFJ : S.F ⪯ S.J) (hC : C ∈ getConfirmedSet S) : S.F ⪯ C :=
-  Preceq.trans (F_preceq_R hFJ) (mem_getConfirmedSet.mp hC).2.1
+/-- What `getConfirmed` returns: the walk-from block, or a block the figure's return line
+    admits — the two cases of the inserted candidate set. -/
+theorem getConfirmed_spec [Omega Node Root] (S : Store Node Root) :
+    getConfirmed S = S.R ∨
+      (getConfirmed S ∈ viableTree S ∧ S.R ⪯ getConfirmed S ∧
+        (get st from S.σ (getConfirmed S); st.h ≥ S.hmax - 1)) := by
+  have h := (Omega.choose (insert S.R ((viableTree S).filter fun B =>
+      S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1))
+    (Finset.insert_nonempty _ _)).property
+  rcases Finset.mem_insert.mp h with h | h
+  · exact Or.inl h
+  · exact Or.inr (mem_candidates.mp h)
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- Whatever `getConfirmed` returns is a candidate: every statement over membership
-    applies to the function's output unchanged. -/
-theorem getConfirmed_spec [Omega Node Root] (S : Store Node Root)
-    (h : (getConfirmedSet S).Nonempty) :
-    getConfirmed S h ∈ getConfirmedSet S :=
-  (Omega.choose (getConfirmedSet S) h).property
+/-- Whatever `getConfirmed` returns sits at or above the store-finalized block, given
+    `F ⪯ J`: a proper candidate sits above the walk-from block, and the fallback is the
+    walk-from block. -/
+theorem getConfirmed_F [Omega Node Root] {S : Store Node Root} (hFJ : S.F ⪯ S.J) :
+    S.F ⪯ getConfirmed S := by
+  rcases getConfirmed_spec S with h | ⟨-, h2, -⟩
+  · rw [h]; exact F_preceq_R hFJ
+  · exact Preceq.trans (F_preceq_R hFJ) h2
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Equal candidate sets, equal choice: the `Nonempty` witnesses are proofs, hence
@@ -158,13 +167,18 @@ theorem Omega.choose_congr [Omega Node Root] {s t : Finset (Blk Node Root)} (hst
   rfl
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- Two stores with the same candidates confirm the same block, whatever the ambient
-    `Ω`. -/
-theorem getConfirmed_congr [Omega Node Root] {S S' : Store Node Root}
-    (hset : getConfirmedSet S = getConfirmedSet S')
-    (h₁ : (getConfirmedSet S).Nonempty) (h₂ : (getConfirmedSet S').Nonempty) :
-    getConfirmed S h₁ = getConfirmed S' h₂ :=
-  Omega.choose_congr hset h₁ h₂
+/-- Stores agreeing on the walk-from block, and on the candidates block by block, confirm
+    identically, whatever the ambient `Ω`. -/
+theorem getConfirmed_congr [Omega Node Root] {S S' : Store Node Root} (hR : S.R = S'.R)
+    (h : ∀ C, (C ∈ viableTree S ∧ S.R ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1)) ↔
+      (C ∈ viableTree S' ∧ S'.R ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1))) :
+    getConfirmed S = getConfirmed S' := by
+  have hset : ((viableTree S).filter fun B =>
+        S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1) =
+      (viableTree S').filter fun B =>
+        S'.R ⪯ B ∧ (S'.σ B).any fun st => st.h ≥ S'.hmax - 1 :=
+    Finset.ext fun C => (mem_candidates.trans (h C)).trans mem_candidates.symm
+  exact Omega.choose_congr (by rw [hset, hR]) _ _
 
 /-! ## The recorded-replay bridge, through each writer -/
 
@@ -316,12 +330,11 @@ theorem reaches_of_reachesFrom {sched : Schedule Node}
 
 /-- Theorem 7 (`hft:thm:fcconsistency`): `S.F ⪯ S'.F ⪯ S'.J`, and both branches of the
     walk-from cascade start at or above `S'.F`. -/
-theorem forkChoiceConsistency {sched : Schedule Node}
+theorem forkChoiceConsistency [Omega Node Root] {sched : Schedule Node}
     {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
-    {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    {C : Blk Node Root} (hC : C ∈ getConfirmedSet S') :
-    S.F ⪯ C :=
-  Preceq.trans (reachesFrom_F h) (getConfirmed_F (reaches_FJ (reaches_of_reachesFrom h)) hC)
+    {S S' : Store Node Root} (h : ReachesFrom x p S S') :
+    S.F ⪯ getConfirmed S' :=
+  Preceq.trans (reachesFrom_F h) (getConfirmed_F (reaches_FJ (reaches_of_reachesFrom h)))
 
 /-- The bridge over executions: whatever a held store records is the block's replay. -/
 theorem reaches_recorded {sched : Schedule Node}

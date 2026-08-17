@@ -56,7 +56,8 @@ theorem lockIn_store [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B : Blk Node Root} {σB : ChainState Node Root} (hB : S.σ B = some σB)
     (hJ : σB.J = F) (hhj : σB.h_j = h_f) :
-    (F ⪯ S.J ∧ F ∈ viableTree S ∧ ∀ C ∈ getConfirmedSet S, F ⪯ C) ∨
+    (F ⪯ S.J ∧ F ∈ viableTree S ∧
+      ∀ C, (C ∈ viableTree S ∧ S.R ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1)) → F ⪯ C) ∨
       SlashableThirdOn S.T B_F := by
   -- `F` is on the record's chain, so the store has accepted it, and its height is below the
   -- store's maximum: `h_f = σB.h_j < σB.h ≤ Σ.hmax`.
@@ -73,11 +74,10 @@ theorem lockIn_store [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
   case inr => exact Or.inr hev
   rcases viable_of_height_lt hinv hBF hF hhF hFT hlt with h2 | hev
   case inr => exact Or.inr hev
-  by_cases h3 : ∀ C ∈ getConfirmedSet S, F ⪯ C
+  by_cases h3 : ∀ C, (C ∈ viableTree S ∧ S.R ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1)) → F ⪯ C
   · exact Or.inl ⟨h1, h2, h3⟩
   push Not at h3
   obtain ⟨C, hC, hFC⟩ := h3
-  replace hC := mem_getConfirmedSet.mp hC
   right
   -- the finalized height cannot be `0`: genesis precedes everything, `C` included
   have hσF : postState B_F = .state (postState' B_F hBF) := TransitionResult.state_get _ hBF
@@ -133,28 +133,12 @@ theorem lockIn [PositiveWeight Node] {sched : Schedule Node}
     (hF : (postState' B_F).F = F) (hhf : (postState' B_F).h_F = h_f)
     (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
     (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
-      ∀ C ∈ getConfirmedSet S', F ⪯ C) ∨
+      ∀ C, (C ∈ viableTree S' ∧ S'.R ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1)) → F ⪯ C) ∨
       SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) := by
   obtain ⟨σB, hσB, hJ, hhj⟩ := hB
   have hσB' : S.σ B = some σB := hσB
   exact lockIn_store (reaches_storeInv (reaches_of_reachesFrom h))
     (reaches_FJ (reaches_of_reachesFrom h)) hBF hF hhf (reachesFrom_record h hσB') hJ hhj
-
-/-- `lockIn`, with the confirmation claim through the function `getConfirmed`: for the
-    ambient `Ω` and every witness that candidates exist, the confirmation descends from
-    `F`. The statement of record calls this form. -/
-theorem lockInOmega [PositiveWeight Node] [Omega Node Root] {sched : Schedule Node}
-    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
-    {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    {B_F F : Blk Node Root} {h_f : Nat} {B : Blk Node Root}
-    (hBF : postState B_F ≠ invalid)
-    (hF : (postState' B_F).F = F) (hhf : (postState' B_F).h_F = h_f)
-    (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
-    (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
-      ∀ hne : (getConfirmedSet S').Nonempty, F ⪯ getConfirmed S' hne) ∨
-      SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) :=
-  (lockIn h hBF hF hhf hB).imp
-    (fun hc => ⟨hc.1, hc.2.1, fun hne => hc.2.2 _ (getConfirmed_spec S' hne)⟩) id
 
 end Exec
 

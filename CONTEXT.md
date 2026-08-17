@@ -2391,6 +2391,34 @@ to `∀ C ∈ getConfirmedSet …, …` and from the relation-iff to the members
 theorems re-measured kernel-clean; the only remaining mention of the name is the
 history note in the figure file's header.
 
+## 2026-08-17 — the statements over the total `getConfirmed`, Theorem 9 reshaped
+
+The lemma layer caught up with the insert-`R` totalization, on the word "go" after the
+stop-at-the-spec pause. The shapes, per the agreed options:
+
+* **Theorem 7 got stronger and unconditional**: `S.F ⪯ getConfirmed S'` — a proper
+  candidate sits above the walk-from block, the fallback *is* the walk-from block, and
+  `F ⪯ R` either way (`getConfirmed_F`, now hypothesis-free on the output side).
+* **Theorem 9's descent conjunct is the per-candidate form** (option (b), recommended and
+  accepted): every block satisfying the return line's three conjuncts descends from the
+  record's `J`. The inserted walk-from fallback is a rendering device the paper does not
+  describe, so it sits outside the claim, and the statement needs no `Omega` instance.
+  The unconditional `… ⪯ getConfirmed S'` is **false** under insert-`R` — `Ω` may pick
+  `S'.R = S'.F` on the cascade's `F`-branch while the store's own `F` still sits below
+  the record's `J` — which is why the spec change stopped for the decision.
+* **Theorem 10 stays an outright equality**: `getConfirmed (storeAt x p i) =
+  getConfirmed (storeAt x p' j)`, fallback included, via `getConfirmed_congr` (walk-from
+  blocks equal from the four field equalities, filters equal from the per-block iff).
+
+Proofs glue: `mem_candidates` (the per-block reading of the inline filter),
+`getConfirmed_spec` (`= S.R` or the three conjuncts hold of it — `Finset.mem_insert` on
+the choice's property), `Omega.choose_congr` unchanged. The `Omega`-form wrappers
+(`lockInOmega`, `orderIndependenceOmega`) are gone; the statements of record call
+`lockIn`/`orderIndependence` directly. One `rw` ordering catch: in `getConfirmed_congr`'s
+closer, rewrite the filter equality **before** the `R` equality — `rw [hR]` first rewrites
+`S.R` inside the filter and the set equation no longer matches. All six theorems
+re-measured kernel-clean.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
