@@ -38,11 +38,16 @@ uses.
 
 ## The remaining deviation
 
-**`get_confirmed` is a relation, not a function.** The figure's `Ω` is "whatever extra
-information the validator uses to disambiguate among viable descendants" — deliberately
-unspecified. `GetConfirmed S B` holds of exactly the blocks the figure's return line
-admits, and a choice of `Ω` is a choice among them. The framework sets the precedent:
-`Protocol.step` is a relation for the same reason. Capitalized like every `Prop` here.
+**`get_confirmed` is a relation first, and a function on top.** The figure's `Ω` is
+"whatever extra information the validator uses to disambiguate among viable descendants" —
+deliberately unspecified — so the specification is the relation `GetConfirmed S B`, which
+holds of exactly the blocks the figure's return line admits; a choice of `Ω` is a choice
+among them, and the framework sets the precedent, `Protocol.step` being a relation for the
+same reason. Capitalized like every `Prop` here. Beside it (2026-08-17, on instruction)
+sit `getConfirmedSet` — the same blocks as a computable `Finset`, `mem_getConfirmedSet`
+pinning the two together — and `getConfirmed`, the paper's `get_confirmed(Σ, Ω)` as a
+deterministic function with `Ω` ambient through the `Omega` class of
+`Spec/Defs/Store.lean`, where the design and its two accepted costs are recorded.
 -/
 
 set_option autoImplicit false
@@ -115,6 +120,54 @@ def Store.R (S : Store Node Root) : Blk Node Root :=
     is `Store.R` above. -/
 def GetConfirmed (S : Store Node Root) (B : Blk Node Root) : Prop :=
   B ∈ viableTree S ∧ S.R ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1)    -- line 561
+
+end
+
+section
+variable [DecidableEq Node] [DecidableEq Root]
+
+/-- The candidate set of `get_confirmed` (Figure 2, `hft:alg:store`, line 561): the blocks
+    some `Ω` could pick. Computable; `mem_getConfirmedSet` says membership is exactly the
+    relation `GetConfirmed`, so the two views cannot drift apart. -/
+def getConfirmedSet (S : Store Node Root) : Finset (Blk Node Root) :=
+  (viableTree S).filter fun B => S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1
+
+/-- The candidate set is the relation: a statement over `GetConfirmed` and one over
+    membership in `getConfirmedSet` say the same thing. -/
+theorem mem_getConfirmedSet {S : Store Node Root} {B : Blk Node Root} :
+    B ∈ getConfirmedSet S ↔ GetConfirmed S B := by
+  unfold getConfirmedSet GetConfirmed
+  rw [Finset.mem_filter]
+  constructor
+  · rintro ⟨h1, h2, h3⟩
+    refine ⟨h1, h2, ?_⟩
+    cases hσ : S.σ B with
+    | none => rw [hσ] at h3; exact absurd h3 (by simp)
+    | some st =>
+        rw [hσ] at h3
+        exact ⟨st, rfl, by simpa using h3⟩
+  · rintro ⟨h1, h2, st, hst, h3⟩
+    have hst' : S.σ B = some st := hst
+    refine ⟨h1, h2, ?_⟩
+    rw [hst']
+    simp
+    omega
+
+/-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562) as a deterministic
+    function of the store, `Ω` ambient — see `Omega`'s docstring in `Spec/Defs/Store.lean`
+    for the design and its two accepted costs. The nonemptiness argument is Corollary 1's
+    obligation (`hft:cor:getConfirmed-total`): for an arbitrary store the candidate set can
+    be empty; for held stores it is discharged by the store invariants. -/
+def getConfirmed [Omega Node Root] (S : Store Node Root)
+    (h : (getConfirmedSet S).Nonempty) : Blk Node Root :=
+  (Omega.choose (getConfirmedSet S) h).val
+
+/-- Whatever the function returns, the relation admits: every statement over
+    `GetConfirmed` applies to the function's output unchanged. -/
+theorem getConfirmed_spec [Omega Node Root] (S : Store Node Root)
+    (h : (getConfirmedSet S).Nonempty) :
+    GetConfirmed S (getConfirmed S h) :=
+  mem_getConfirmedSet.mp (Omega.choose (getConfirmedSet S) h).property
 
 end
 

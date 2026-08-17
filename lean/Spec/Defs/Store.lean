@@ -62,6 +62,28 @@ class BlockHash (Node Root : Type) where
 
 @[inherit_doc] scoped notation:max "hash(" B ")" => BlockHash.hash B
 
+/-- The selection the paper writes as `Ω` — "whatever extra information the validator uses
+    to disambiguate among viable descendants of the walk-from block". An instance is one
+    selection rule; a statement binding `[Omega Node Root]` quantifies over all of them,
+    which is the paper's "for every `Ω`". Ambient by typeclass, as `hash(·)` is, so
+    `get_confirmed` can be a deterministic function without carrying `Ω` explicitly
+    (Roberto, 2026-08-17).
+
+    Two accepted costs, decided with the design: an instance is fixed for its whole
+    context, so the paper's "a single validator may pass different `Ω` at different call
+    sites" is not expressible (a per-validator rule would add a `Node` argument to
+    `choose` when something needs it); and `Ω` stays **out of the store** — Definition 10
+    (`hft:def:store`) lists six components, and the paper treats `Ω` as call-time input,
+    not consensus state.
+
+    No `Classical.choice` anywhere: `choose` is a data field, so `getConfirmed` stays
+    computable relative to the instance, and computable instances exist — a `Finset`
+    carries its elements, so picking, say, the least `hash(·)` is real code. -/
+class Omega (Node Root : Type) where
+  /-- Pick a block from a nonempty candidate set. The subtype carries the membership
+      proof, so anything picked satisfies `GetConfirmed`. -/
+  choose : (s : Finset (Blk Node Root)) → s.Nonempty → {B // B ∈ s}
+
 /-- **The paper's collision-freedom idealization**, as a separate class so that only the
     results that need it carry it — the same treatment `PositiveWeight`
     (`Analysis/Proofs/Weights.lean`) gets.

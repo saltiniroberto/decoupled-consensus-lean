@@ -2328,6 +2328,29 @@ companion paper's Definition 9. Widening it to a relation parameter would let on
 cover both, but it would also let a reader stop noticing which paper's slashing rule a
 statement means, so the two stay apart.
 
+## 2026-08-17 — `Ω` ambient: `get_confirmed` as a deterministic function
+
+Roberto, after weighing three placements: `Ω` stays **out of the store** (Definition 10
+lists six components, and the paper treats `Ω` as call-time input) and out of explicit
+signatures — the device is the `Omega` typeclass in `Spec/Defs/Store.lean`, ambient the way
+`BlockHash` is. Beside the relation in `Spec/HftFig2Store.lean` now sit `getConfirmedSet`
+(the candidates as a computable `Finset`), `mem_getConfirmedSet` (membership ↔
+`GetConfirmed`, so the two views cannot drift), `getConfirmed [Omega] (S) (h : Nonempty …)`
+(the paper's `get_confirmed(Σ, Ω)` with `Ω` invisible), and `getConfirmed_spec` (its output
+satisfies the relation, by the subtype's membership proof). The relation remains the
+specification; nothing existing changed.
+
+Recorded costs, in `Omega`'s docstring: a fixed instance cannot express the paper's
+per-call-site `Ω` variation (per-validator would add a `Node` argument to `choose` when
+needed); and the nonemptiness argument is Corollary 1's obligation
+(`hft:cor:getConfirmed-total`), dischargeable for held stores from the store invariants.
+No `Classical.choice`: `choose` is a data field, so everything stays computable relative
+to the instance — a `Finset` carries its elements, so computable instances exist (least
+`hash(·)`, say). Alternatives rejected: an `Ω` field in `Store` (a seventh component
+Definition 10 does not have, policy mixed into mergeable evidence, and Theorem 10's
+"observable view" would need an exception); `Classical.choose` over the relation
+(noncomputable, and not nondeterministic — one fixed unknowable witness).
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
