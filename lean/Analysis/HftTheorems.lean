@@ -189,9 +189,9 @@ theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [Decidabl
     accepted. The store-level core is the previous statement of record, over one `onBlock`
     call on a reachable store.
 
-    Theorem 9 below keeps its `get … from` binder, because the two fields it reads off the
-    record are named again in its own hypotheses and conclusion; here nothing else mentions
-    the state, so the bracket carries the whole of it. -/
+    Theorem 9 below is written the same way, over `S.σ[B].J` and `S.σ[B].h_j`; between them
+    the two are the only statements in this file that read a record, and neither now has a
+    binder standing between it and the store. -/
 theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
@@ -215,29 +215,36 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     chain, the store root stays at or below it on its chain, it stays viable, and every
     confirmation descends from it — or a third of the validators exposed themselves.
 
-    Noun by noun. "Finalized at height `h_f` on any chain": the recorded pair on `B_F`'s
-    replayed post-state, the module header's rendering. "Some block `B` with `σ[B].J = F`
-    and `σ[B].h_j = h_f` has been processed by the node": `B` has a recorded state, with
-    those two fields, in a store `S` the node holds — the `get` hypothesis. "At all future
-    times" and "always": every `S'` with `ReachesFrom x p S S'`, the three claims conjoined
-    under one `S'`. "For every `Ω`": as in Theorem 7. The disjunct's evidence is included
-    on `B_F`'s chain or on a block `S'` accepted, each message independently, since which
-    quorum sits where depends on the case. -/
+    Noun by noun. "Some block `B` with `σ[B].J = F` and `σ[B].h_j = h_f` has been processed
+    by the node": `B` has a recorded state in a store `S` the node holds (`B ∈ S.σ`), and
+    the paper's `F` and `h_f` **are** that state's two fields, `S.σ[B].J` and `S.σ[B].h_j`.
+    So neither takes a binder here, and the paper's two equations are not hypotheses at
+    all — what remains of them is the other direction, "finalized at height `h_f` on any
+    chain", which is `hF` and `hhf`: `B_F`'s replayed post-state records exactly that pair.
+    "At all future times" and "always": every `S'` with `ReachesFrom x p S S'`, the three
+    claims conjoined under one `S'`. "For every `Ω`": as in Theorem 7. The disjunct's
+    evidence is included on `B_F`'s chain or on a block `S'` accepted, each message
+    independently, since which quorum sits where depends on the case.
+
+    The paper names `F`; this does not, and spells `S.σ[B].J` at each of its four uses
+    instead. That is the price of leaving no binder between the statement and the record it
+    is about, and it is the same trade Theorem 8 makes with `F'`. Note that the field is
+    `J`, not `F`: the block this theorem is about is the record's *justified* block, which
+    some other chain finalized. -/
 theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    {B_F F : Blk Node Root} {h_f : Nat} {B : Blk Node Root}
-    (hBF : postState B_F ≠ invalid)
-    (hF : (postState' B_F).F = F) (hhf : (postState' B_F).h_F = h_f)
-    (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
-    (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
-      ∀ C, GetConfirmed S' C → F ⪯ C) ∨
+    {B_F B : Blk Node Root}
+    (hBF : postState B_F ≠ invalid) (hB : B ∈ S.σ)
+    (hF : (postState' B_F).F = S.σ[B].J) (hhf : (postState' B_F).h_F = S.σ[B].h_j) :
+    (S.σ[B].J ⪯ S'.J ∧ S.σ[B].J ∈ viableTree S' ∧
+      ∀ C, GetConfirmed S' C → S.σ[B].J ⪯ C) ∨
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
         ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
           (IncludedOn a B_F ∨ ∃ Ca ∈ S'.T, IncludedOn a Ca) ∧
           (IncludedOn b B_F ∨ ∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b :=
-  Proofs.lockIn h hBF hF hhf hB
+  Proofs.lockIn h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
 

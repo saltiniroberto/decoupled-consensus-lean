@@ -2201,9 +2201,18 @@ which is the paper's `Σ.F ⪰ σ[B].F` with no binder in between. `F'` is gone:
 `#print axioms` is unchanged. `Proofs.finalityAcceptance` keeps the binder-and-hypothesis
 shape, so nothing under `Analysis/Proofs/` moved.
 
-Theorem 9 keeps its `get … from` binder: the two fields it reads off the record (`J` and
-`h_j`) are named again in its own hypotheses and conclusion, so the state cannot collapse
-into a single bracket the way Theorem 8's can.
+Theorem 9 followed the same day. Its `F` and `h_f` binders are gone too, replaced by
+`S.σ[B].J` and `S.σ[B].h_j`, and its `get … from` hypothesis by `B ∈ S.σ`; the paper's two
+equations `σ[B].J = F`, `σ[B].h_j = h_f` therefore vanish, and what survives of them is the
+other direction — `hF` and `hhf`, saying `B_F`'s chain finalized exactly that pair. Note the
+field is `J` and not `F`: the block Theorem 9 is about is the record's *justified* block,
+which some other chain finalized. An earlier draft of this entry said Theorem 9 could not
+collapse; that was wrong, and the reason given for it — that the two fields are named again
+in its own hypotheses — is exactly why the collapse is worth having.
+
+Both theorems pay the same price: the paper names `F'`, `F` and `h_f`, and these statements
+spell `S.σ[B].F`, `S.σ[B].J` and `S.σ[B].h_j` at each use instead. That is what leaves no
+binder between the statement and the record it is about.
 
 ### What was measured while choosing this shape
 
