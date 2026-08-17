@@ -98,6 +98,56 @@ structure Store (Node Root : Type) where
   /-- `hmax`, the maximum state-height `σ[B].h` over `B ∈ T`. -/
   hmax : Nat
 
+/-! ## Definition 10's `σ[B]`, through `GetElem`
+
+The paper writes `Σ.σ[B]` for the state the store records for `B`, and writes it
+unconditionally, because in its model the map is defined exactly on the accepted blocks. Here
+the field is `Option`-valued — see the module header for why — so a bare read owes a proof that
+`B` is recorded.
+
+The standard `GetElem` class is that shape already: `xs[i]` elaborates to
+`getElem xs i (by get_elem_tactic)`, and `get_elem_tactic` tries `assumption` before anything
+else. So the paper's spelling comes back with no new syntax at all, and no autoparam of this
+project's own:
+
+* `S.σ[B] : ChainState Node Root`, with `(S.σ B).isSome` taken from the context;
+* `S.σ[B]? : Option (ChainState Node Root)`, which **is** `S.σ B`, definitionally;
+* `S.σ[B]!` would panic, and nothing uses it.
+
+The instances are on the **map's type** rather than on `Store`, which is what makes the
+notation read `S.σ[B]` and not `S[B]`. They are `scoped`, so they reach only what opens this
+namespace, and the read carries its proof, so `rw` on a store fails inside one with "motive is
+not type correct" where `simp only` succeeds — the friction `CONTEXT.md` recorded on
+2026-08-15 for `TransitionResult.get`, which is why no statement of record uses this yet.
+
+`Spec/Defs/Notation.lean`'s `idxAssign` claims `ident noWs "[" term "]" " ← " term` as a
+`doElem`, which is how `on_block` writes `S.σ[B] ← some σ'`. That macro still wins in `do`
+position; the build is what checks it. -/
+
+/-- `σ[B]`: the state recorded for `B`, given that `B` is recorded. -/
+scoped instance stateMapGetElem :
+    GetElem (Blk Node Root → Option (ChainState Node Root)) (Blk Node Root)
+      (ChainState Node Root) (fun σ B => (σ B).isSome) where
+  getElem σ B h := (σ B).get h
+
+/-- `σ[B]?`: the same read with no side condition, which is the map itself. -/
+scoped instance stateMapGetElemOpt :
+    GetElem? (Blk Node Root → Option (ChainState Node Root)) (Blk Node Root)
+      (ChainState Node Root) (fun σ B => (σ B).isSome) where
+  getElem? σ B := σ B
+
+/-- The two agree, which is what lets the core `getElem?_pos`/`getElem?_neg` lemmas fire. -/
+scoped instance stateMapLawfulGetElem :
+    LawfulGetElem (Blk Node Root → Option (ChainState Node Root)) (Blk Node Root)
+      (ChainState Node Root) (fun σ B => (σ B).isSome) where
+  getElem?_def σ B _ := by
+    by_cases hb : (σ B).isSome = true
+    · rw [dif_pos hb]
+      exact (Option.some_get hb).symm
+    · rw [dif_neg hb]
+      have h2 : σ B = none := by simpa using hb
+      exact h2
+
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
