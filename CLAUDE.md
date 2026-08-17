@@ -74,6 +74,18 @@ closed safely, keep the routine's shape as close as the types allow and say in a
 docstring which line deviates. `CONTEXT.md` records the measured limits of this — overloading
 `∈` is the known one.
 
+## `Spec/` holds definitions, never theorems
+
+Roberto, 2026-08-17. **A `theorem` in a `Spec/` file is a bug.** The specification layer is
+what a reader audits against the paper, and every proved fact about it belongs under
+`Analysis/`. When a definition wants a companion fact — a membership characterization, a
+"the output satisfies the relation" lemma — define the function in `Spec/`, put the theorem
+in `Analysis/Proofs/`, and point to it from the definition's docstring
+(`getConfirmedSet`/`Proofs.mem_getConfirmedSet` is the worked pair). The one tolerated
+exception is a proof a *definition itself* cannot exist without, such as the `…Beq_iff`
+soundness theorems behind `Spec/Defs/Basic.lean`'s decidability instances; do not add to
+that set without instruction.
+
 ## Proof discipline
 
 Never, at any point: no new `axiom`s, no `native_decide`. Both move a claim off the kernel
