@@ -116,6 +116,55 @@ theorem getConfirmed_F {S : Store Node Root} {C : Blk Node Root}
     (hFJ : S.F ⪯ S.J) (hC : GetConfirmed S C) : S.F ⪯ C :=
   Preceq.trans (F_preceq_R hFJ) hC.2.1
 
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- The candidate set is the relation: a statement over `GetConfirmed` and one over
+    membership in `getConfirmedSet` say the same thing, so the function view in
+    `Spec/HftFig2Store.lean` and the relation cannot drift apart. -/
+theorem mem_getConfirmedSet {S : Store Node Root} {B : Blk Node Root} :
+    B ∈ getConfirmedSet S ↔ GetConfirmed S B := by
+  unfold getConfirmedSet GetConfirmed
+  rw [Finset.mem_filter]
+  constructor
+  · rintro ⟨h1, h2, h3⟩
+    refine ⟨h1, h2, ?_⟩
+    cases hσ : S.σ B with
+    | none => rw [hσ] at h3; exact absurd h3 (by simp)
+    | some st =>
+        rw [hσ] at h3
+        exact ⟨st, rfl, by simpa using h3⟩
+  · rintro ⟨h1, h2, st, hst, h3⟩
+    have hst' : S.σ B = some st := hst
+    refine ⟨h1, h2, ?_⟩
+    rw [hst']
+    simp
+    omega
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- Whatever `getConfirmed` returns, the relation admits: every statement over
+    `GetConfirmed` applies to the function's output unchanged. -/
+theorem getConfirmed_spec [Omega Node Root] (S : Store Node Root)
+    (h : (getConfirmedSet S).Nonempty) :
+    GetConfirmed S (getConfirmed S h) :=
+  mem_getConfirmedSet.mp (Omega.choose (getConfirmedSet S) h).property
+
+omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
+/-- Equal candidate sets, equal choice: the `Nonempty` witnesses are proofs, hence
+    irrelevant. -/
+theorem Omega.choose_congr [Omega Node Root] {s t : Finset (Blk Node Root)} (hst : s = t)
+    (h₁ : s.Nonempty) (h₂ : t.Nonempty) :
+    (Omega.choose s h₁).val = (Omega.choose t h₂).val := by
+  subst hst
+  rfl
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- Two stores with the same candidates confirm the same block, whatever the ambient
+    `Ω`. -/
+theorem getConfirmed_congr [Omega Node Root] {S S' : Store Node Root}
+    (hset : getConfirmedSet S = getConfirmedSet S')
+    (h₁ : (getConfirmedSet S).Nonempty) (h₂ : (getConfirmedSet S').Nonempty) :
+    getConfirmed S h₁ = getConfirmed S' h₂ :=
+  Omega.choose_congr hset h₁ h₂
+
 /-! ## The recorded-replay bridge, through each writer -/
 
 omit [Electorate Node] [Params] in

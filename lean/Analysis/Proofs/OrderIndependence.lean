@@ -377,6 +377,33 @@ theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
   rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
   exact foldOrderIndependence hperm hp hp'
 
+/-- `orderIndependence`, with the outputs claim through the function `getConfirmed`: the
+    candidate sets are equal (from the relation agreeing block by block), so for the
+    ambient `Ω` the two validators' confirmations are the same block, whichever witnesses
+    they hold. The statement of record calls this form. -/
+theorem orderIndependenceOmega [PositiveWeight Node] [HashInjective Node Root]
+    [Omega Node Root]
+    {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
+    {p p' : Node} {i j : Nat}
+    (hperm : (deliveredBlocks x p i).Perm (deliveredBlocks x p' j))
+    (hp : ParentFirst (deliveredBlocks x p i))
+    (hp' : ParentFirst (deliveredBlocks x p' j)) :
+    ((storeAt x p i).F = (storeAt x p' j).F ∧
+     (storeAt x p i).J = (storeAt x p' j).J ∧
+     (storeAt x p i).h_j = (storeAt x p' j).h_j ∧
+     (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
+     (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
+     ∀ (h₁ : (getConfirmedSet (storeAt x p i)).Nonempty)
+       (h₂ : (getConfirmedSet (storeAt x p' j)).Nonempty),
+       getConfirmed (storeAt x p i) h₁ = getConfirmed (storeAt x p' j) h₂) ∨
+      SlashableThird (fun a =>
+        IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) := by
+  refine (orderIndependence hperm hp hp').imp (fun hc => ?_) id
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hc
+  have hset : getConfirmedSet (storeAt x p i) = getConfirmedSet (storeAt x p' j) :=
+    Finset.ext fun C => (mem_getConfirmedSet.trans (h6 C)).trans mem_getConfirmedSet.symm
+  exact ⟨h1, h2, h3, h4, h5, fun h₁ h₂ => getConfirmed_congr hset h₁ h₂⟩
+
 end Exec
 
 end Proofs

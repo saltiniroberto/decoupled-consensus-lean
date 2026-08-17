@@ -2351,6 +2351,31 @@ Definition 10 does not have, policy mixed into mergeable evidence, and Theorem 1
 "observable view" would need an exception); `Classical.choose` over the relation
 (noncomputable, and not nondeterministic — one fixed unknowable witness).
 
+## 2026-08-17 — no theorems in `Spec/`, and the statements read through `getConfirmed`
+
+Roberto, two instructions on the heels of the `Omega` adoption. First, **a `theorem` in a
+`Spec/` file is a bug** — now a `CLAUDE.md` section. `mem_getConfirmedSet` and
+`getConfirmed_spec` moved to `Analysis/Proofs/StoreInvariants.lean`, each pointed to from
+the `Spec/` definition's docstring; the tolerated exception (proofs a definition cannot
+exist without, like `Spec/Defs/Basic.lean`'s `…Beq_iff`) is recorded in the rule.
+
+Second, the statements of record use the **function in place of the relation**:
+
+* Theorem 7 concludes `S.F ⪯ getConfirmed S' hne` for the ambient `Ω` and every
+  nonemptiness witness;
+* Theorem 9's confirmation conjunct is `∀ hne, S.σ[B].J ⪯ getConfirmed S' hne`;
+* Theorem 10's outputs conjunct is `getConfirmed (storeAt x p i) h₁ =
+  getConfirmed (storeAt x p' j) h₂` for all witnesses — proved by candidate-set equality
+  (`Finset.ext` over the old iff) plus `getConfirmed_congr`, whose core is
+  `Omega.choose_congr`: `subst` the set equality and the `Nonempty` proofs are irrelevant.
+
+Each statement gained `[Omega Node Root]`; the relation forms stay as
+`Proofs.forkChoiceConsistency`/`lockIn`/`orderIndependence`, with `Omega`-form wrappers
+(`lockInOmega`, `orderIndependenceOmega`) beside them. All three re-measured kernel-clean.
+`GetConfirmed` remains in `Spec/` as the figure's rendering; the `congr`-through-subtype
+dead end (dependent `congr 1` demands a function-type equality) is why `choose_congr`
+generalizes to two set variables first.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the

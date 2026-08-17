@@ -138,6 +138,22 @@ theorem lockIn [PositiveWeight Node] {sched : Schedule Node}
   exact lockIn_store (reaches_storeInv (reaches_of_reachesFrom h))
     (reaches_FJ (reaches_of_reachesFrom h)) hBF hF hhf (reachesFrom_record h hσB') hJ hhj
 
+/-- `lockIn`, with the confirmation claim through the function `getConfirmed`: for the
+    ambient `Ω` and every witness that candidates exist, the confirmation descends from
+    `F`. The statement of record calls this form. -/
+theorem lockInOmega [PositiveWeight Node] [Omega Node Root] {sched : Schedule Node}
+    {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
+    {S S' : Store Node Root} (h : ReachesFrom x p S S')
+    {B_F F : Blk Node Root} {h_f : Nat} {B : Blk Node Root}
+    (hBF : postState B_F ≠ invalid)
+    (hF : (postState' B_F).F = F) (hhf : (postState' B_F).h_F = h_f)
+    (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
+    (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
+      ∀ hne : (getConfirmedSet S').Nonempty, F ⪯ getConfirmed S' hne) ∨
+      SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) :=
+  (lockIn h hBF hF hhf hB).imp
+    (fun hc => ⟨hc.1, hc.2.1, fun hne => hc.2.2 _ (getConfirmed_spec S' hne)⟩) id
+
 end Exec
 
 end Proofs
