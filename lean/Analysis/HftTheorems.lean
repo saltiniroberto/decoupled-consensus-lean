@@ -175,11 +175,12 @@ theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [Decidabl
     third of the validators exposed themselves.
 
     Noun by noun. "A block `B` is processed by `on_block`": `B` is absent from a store
-    the node holds (`B ∉ S.T`) and recorded in a later one (`(S'.σ B).isSome`) — so the
-    processing call lies between the two, a delivery to `p` running `on_block` being the
-    one action that can make the difference. "`σ[B].F`" is `S'.σ[B].F`, the paper's own
-    spelling: the bracket is the `GetElem` reading of Definition 10's state map
-    (`Spec/Defs/Store.lean`), and it takes "`B` is recorded" from `hB`. So the paper's
+    the node holds (`B ∉ S.T`) and recorded in a later one (`B ∈ S'.σ`, membership of the
+    state map's domain) — so the processing call lies between the two, a delivery to `p`
+    running `on_block` being the one action that can make the difference. "`σ[B].F`" is
+    `S'.σ[B].F`, the paper's own spelling: the bracket is the `GetElem` reading of
+    Definition 10's state map (`Spec/Defs/Store.lean`), and it takes "`B` is recorded"
+    from `hB`. So the paper's
     `F'` needs no binder here — it *is* `S'.σ[B].F`, and "after processing `Σ.F ⪰ F'`"
     is the conclusion read left to right. That conclusion is stated at the recording store
     rather than at the accepting step: the same claim once Theorem 3's monotonicity is in
@@ -195,7 +196,7 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    {B : Blk Node Root} (hnew : B ∉ S.T) (hB : (S'.σ B).isSome) :
+    {B : Blk Node Root} (hnew : B ∉ S.T) (hB : B ∈ S'.σ) :
     S'.σ[B].F ⪯ S'.F ∨
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
         ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧

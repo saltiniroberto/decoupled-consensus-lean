@@ -98,54 +98,80 @@ structure Store (Node Root : Type) where
   /-- `hmax`, the maximum state-height `σ[B].h` over `B ∈ T`. -/
   hmax : Nat
 
-/-! ## Definition 10's `σ[B]`, through `GetElem`
+/-! ## Definition 10's `B ∈ σ` and `σ[B]`, through `Membership` and `GetElem`
 
 The paper writes `Σ.σ[B]` for the state the store records for `B`, and writes it
 unconditionally, because in its model the map is defined exactly on the accepted blocks. Here
 the field is `Option`-valued — see the module header for why — so a bare read owes a proof that
-`B` is recorded.
+`B` is recorded, and that proof needs a name of its own.
 
-The standard `GetElem` class is that shape already: `xs[i]` elaborates to
-`getElem xs i (by get_elem_tactic)`, and `get_elem_tactic` tries `assumption` before anything
-else. So the paper's spelling comes back with no new syntax at all, and no autoparam of this
-project's own:
+Both come from standard classes, so this adds no syntax:
 
-* `S.σ[B] : ChainState Node Root`, with `(S.σ B).isSome` taken from the context;
-* `S.σ[B]? : Option (ChainState Node Root)`, which **is** `S.σ B`, definitionally;
+* `B ∈ S.σ` — `Membership` on the map, "the map is defined at `B`". Definitionally
+  `(S.σ B).isSome`.
+* `S.σ[B] : ChainState Node Root` — `GetElem`. `xs[i]` elaborates to
+  `getElem xs i (by get_elem_tactic)`, and `get_elem_tactic` tries `assumption` before
+  anything else, so the side condition `B ∈ S.σ` comes from the context.
+* `S.σ[B]? : Option (ChainState Node Root)` — which **is** `S.σ B`, definitionally.
 * `S.σ[B]!` would panic, and nothing uses it.
 
 The instances are on the **map's type** rather than on `Store`, which is what makes the
-notation read `S.σ[B]` and not `S[B]`. They are `scoped`, so they reach only what opens this
-namespace, and the read carries its proof, so `rw` on a store fails inside one with "motive is
-not type correct" where `simp only` succeeds — the friction `CONTEXT.md` recorded on
-2026-08-15 for `TransitionResult.get`, which is why no statement of record uses this yet.
+notation read `S.σ[B]` and not `S[B]`, and all are `scoped`.
+
+## Two hazards, both measured
+
+**`∈` says two different things about this one field.** In `B ∈ S.σ` the element is a *key*;
+in `st ∈ S.σ B` — core's `Option` membership, which means `S.σ B = some st` — it is a *value*.
+No ambiguity reaches the elaborator, the container types being different, but the two readings
+sit close enough that this note exists.
+
+The `Membership` dead end `CONTEXT.md` records for 2026-08-16 does **not** apply: that one
+gave `Finset α` a second instance and lost, because the element type is an `outParam` driven
+by the container and resolution does not backtrack. A function type has no competing instance.
+
+**The `∀ x ∈ s` binder does not reach the bracket.** `∀ B ∈ S.σ, S.σ[B].h ≥ 1` fails, because
+that is `∀ B, B ∈ S.σ → …` and an arrow's antecedent is not a binder, so `assumption` has
+nothing to find. Write `∀ B (_ : B ∈ S.σ), …`. This is the bracket's property, not the
+instance's — `(S.σ B).isSome` fails the same way.
+
+## And the friction that keeps this out of the proof layer
+
+The read carries its proof, so `rw` on a store inside one fails with "motive is not type
+correct" where `simp only` succeeds — `CONTEXT.md`'s 2026-08-15 entry on
+`TransitionResult.get`, measured again for this shape. Only statements of record use it.
 
 `Spec/Defs/Notation.lean`'s `idxAssign` claims `ident noWs "[" term "]" " ← " term` as a
 `doElem`, which is how `on_block` writes `S.σ[B] ← some σ'`. That macro still wins in `do`
 position; the build is what checks it. -/
 
+/-- `B ∈ σ`: the map is defined at `B`. -/
+scoped instance stateMapMembership :
+    Membership (Blk Node Root) (Blk Node Root → Option (ChainState Node Root)) where
+  mem σ B := (σ B).isSome
+
 /-- `σ[B]`: the state recorded for `B`, given that `B` is recorded. -/
 scoped instance stateMapGetElem :
     GetElem (Blk Node Root → Option (ChainState Node Root)) (Blk Node Root)
-      (ChainState Node Root) (fun σ B => (σ B).isSome) where
+      (ChainState Node Root) (fun σ B => B ∈ σ) where
   getElem σ B h := (σ B).get h
 
 /-- `σ[B]?`: the same read with no side condition, which is the map itself. -/
 scoped instance stateMapGetElemOpt :
     GetElem? (Blk Node Root → Option (ChainState Node Root)) (Blk Node Root)
-      (ChainState Node Root) (fun σ B => (σ B).isSome) where
+      (ChainState Node Root) (fun σ B => B ∈ σ) where
   getElem? σ B := σ B
 
 /-- The two agree, which is what lets the core `getElem?_pos`/`getElem?_neg` lemmas fire. -/
 scoped instance stateMapLawfulGetElem :
     LawfulGetElem (Blk Node Root → Option (ChainState Node Root)) (Blk Node Root)
-      (ChainState Node Root) (fun σ B => (σ B).isSome) where
+      (ChainState Node Root) (fun σ B => B ∈ σ) where
   getElem?_def σ B _ := by
-    by_cases hb : (σ B).isSome = true
+    by_cases hb : B ∈ σ
     · rw [dif_pos hb]
       exact (Option.some_get hb).symm
     · rw [dif_neg hb]
-      have h2 : σ B = none := by simpa using hb
+      have hb' : ¬ (σ B).isSome = true := hb
+      have h2 : σ B = none := by simpa using hb'
       exact h2
 
 section

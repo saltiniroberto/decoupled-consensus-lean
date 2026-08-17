@@ -2163,13 +2163,14 @@ instruction. The rows to flip when that comes: `hft:thm:finperm`, `hft:thm:fleqr
 three lemmas now proved as machinery rather than as statements of record —
 `hft:lem:certchain`, `hft:lem:upgrade`, `hft:lem:viable-finalized`.
 
-## 2026-08-17 — `Σ.σ[B]` through `GetElem`, and Theorem 8 restated over it
+## 2026-08-17 — `B ∈ σ` and `Σ.σ[B]` through `Membership`/`GetElem`, and Theorem 8 over them
 
 Roberto: the store's state map should read as the paper's `Σ.σ[B]`. `Spec/Defs/Store.lean`
-gains three `scoped` instances on the **map's type**, `Blk Node Root → Option (ChainState
-Node Root)` — `GetElem`, `GetElem?` and `LawfulGetElem`:
+gains four `scoped` instances on the **map's type**, `Blk Node Root → Option (ChainState
+Node Root)` — `Membership`, `GetElem`, `GetElem?` and `LawfulGetElem`:
 
-    S.σ[B]   : ChainState Node Root     -- `(S.σ B).isSome` taken from the context
+    B ∈ S.σ  : Prop                     -- the map is defined at `B`; `(S.σ B).isSome`
+    S.σ[B]   : ChainState Node Root     -- `B ∈ S.σ` taken from the context
     S.σ[B]?  : Option (ChainState …)    -- which *is* `S.σ B`, definitionally
     S.σ[B]!  -- would panic; nothing uses it
 
@@ -2192,7 +2193,7 @@ then by the green build.
 
 it now reads
 
-    {B : Blk …} (hnew : B ∉ S.T) (hB : (S'.σ B).isSome) : S'.σ[B].F ⪯ S'.F ∨ …
+    {B : Blk …} (hnew : B ∉ S.T) (hB : B ∈ S'.σ) : S'.σ[B].F ⪯ S'.F ∨ …
 
 which is the paper's `Σ.F ⪰ σ[B].F` with no binder in between. `F'` is gone: it *is*
 `S'.σ[B].F`. The proof is still one line, now
@@ -2219,6 +2220,16 @@ into a single bracket the way Theorem 8's can.
   `_root_.Option` declaration in everyone's namespace. Its one advantage is a sharper error
   — `get_elem_tactic` also tries `omega` and `simp +arith` after `assumption`, so a missing
   hypothesis fails slower and less pointedly.
+* **`B ∈ σ` came with it**, same day and same instruction: a `Membership` instance on the
+  map's type, so the side condition reads as membership of the map's domain and is what
+  `get_elem_tactic`'s `assumption` picks up. The `GetElem` instances' `valid` is written
+  `fun σ B => B ∈ σ`, so the pair is coherent — `B ∈ S.σ` names the condition, `S.σ[B]`
+  reads the value. Two hazards, both measured and both in the file's own docstring: `∈`
+  now says two different things about this field (`B ∈ S.σ` has `B` as a *key*, while core's
+  `st ∈ S.σ B` has `st` as a *value*), and `∀ B ∈ S.σ, S.σ[B]…` does **not** elaborate,
+  because an arrow's antecedent is not a binder — write `∀ B (_ : B ∈ S.σ), …`. The
+  2026-08-16 `Membership` dead end does not apply: that one gave `Finset α` a second
+  instance and lost to the `outParam`; a function type has no competing instance.
 * **The friction is unchanged and is why no other statement uses the bracket**: the read
   carries its proof, so `rw` on a store inside one fails with *motive is not type correct*
   where `simp only` succeeds. This is `CONTEXT.md`'s 2026-08-15 entry on
