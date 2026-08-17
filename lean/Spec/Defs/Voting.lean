@@ -488,4 +488,52 @@ def goldfishVote (i : Node) (s : Time) (votes : Finset (GoldfishVote Node Root))
 
 end
 
+/-! ## Definition 28 — the round schedule: when the votes above are cast -/
+
+/-- Definition 28 (`def:recovery-timing`, lines 87–222): the recovery round layout, as
+    the ambient clock the protocol's tick reaction reads. `start r` is the paper's `d_r`,
+    round `r`'s first proposal time; `Δ` is the network-delivery bound. The paper's
+    per-slot phase list (lines 172–178) is "`d` proposal, `d + Δ` vote, `d + 2Δ`
+    confirmation input, `d + 3Δ` slot-view freeze", with slots `4Δ` long; the round's
+    SG/FG action time is `a_r = d_r + 4Δ + 2Δ` (lines 146–150); and the public round
+    spacing `a_r + Δ ≤ d_{r+1} − Δ` (lines 196–199) is carried in added form,
+    `d_r + 8Δ ≤ d_{r+1}`, which also gives the definition's "contains at least two slots
+    of length `4Δ`". How `d_r` values are chosen is the environment's business, exactly
+    like the electorate: a class, so statements quantify over every schedule meeting the
+    paper's constraints. Named `Rounds` because the framework already uses `Schedule` for
+    the adversary's awake/corrupt choices. -/
+class Rounds where
+  /-- `d_r`, round `r`'s first proposal time. -/
+  start : Nat → Time
+  /-- `Δ`, the network-delivery bound. -/
+  Δ : Time
+  /-- The bound is positive — the phase offsets below are distinct. -/
+  Δ_pos : 0 < Δ
+  /-- The public round spacing (lines 196–199), in added form: `a_r + Δ ≤ d_{r+1} − Δ`
+      with `a_r = d_r + 6Δ` is `d_r + 8Δ ≤ d_{r+1}`. -/
+  spaced : ∀ r, start r + 8 * Δ ≤ start (r + 1)
+
+namespace Rounds
+variable [Rounds]
+
+/-- `a_r = d_r + 4Δ + 2Δ` (lines 146–150): "two network-delivery bounds into the round's
+    second slot", when the validator "performs the round's SG and FG action". -/
+def actionTime (r : Nat) : Time :=
+  start r + 6 * Δ
+
+/-- Which round a clock reading falls in: the `r` with `d_r ≤ t < d_{r+1}`, none before
+    `d_0`. The bounded search is enough: `spaced` and `Δ_pos` grow `start` by at least 8
+    per round, so the round number never exceeds the reading. -/
+def roundAt (t : Time) : Option Nat :=
+  (List.range (t + 1)).find? fun r => start r ≤ t ∧ t < start (r + 1)
+
+/-- `t` is a Goldfish vote time of round `r`: the `+Δ` phase of one of the round's `4Δ`
+    slots (lines 172–178) — "Goldfish votes at `+Δ`" (line 200), and "every slot of the
+    round runs ordinary Goldfish" (lines 191–193). The caller has established
+    `start r ≤ t` via `roundAt`. -/
+def isVoteTime (r : Nat) (t : Time) : Bool :=
+  decide ((t - start r) % (4 * Δ) = Δ)
+
+end Rounds
+
 end Decoupled

@@ -2489,9 +2489,45 @@ Still absent, listed in the module header: Definitions 28–32, 37–44, 46 (the
 machinery, so which votes/tree/root feed the walk is the caller's), and Definition 37,
 whose third clause is evidence-relative like `hasJC`.
 
+## 2026-08-18 — the votes fire on tick: Definition 28's schedule, wired; **build red**
+
+Roberto: specify when the votes are sent, called from the framework's time advance. Landed
+as a spec change, and per the stop-at-the-spec rule the statement layer is **deliberately
+red** below `Analysis/Vocabulary.lean` — nothing there was touched.
+
+The spec:
+
+* `Rounds` (in `Spec/Defs/Voting.lean`) — Definition 28 as a class: `start r` (= `d_r`),
+  `Δ`, positivity, and the round spacing in added form (`d_r + 8Δ ≤ d_{r+1}`, which is
+  `a_r + Δ ≤ d_{r+1} − Δ` plus "at least two slots"). Derived: `actionTime r = d_r + 6Δ`,
+  `roundAt` (bounded search, sound because `start` grows by ≥ 8 per round), `isVoteTime`
+  (the `+Δ` phase of a `4Δ` slot).
+* `StoreMsg` gained `attestation` and `gVote`; `receive` leaves the store unchanged on
+  both — deliberate retention discipline: raw attestations and Goldfish votes reach chain
+  state only through blocks, and the framework's log and views retain them as evidence,
+  which is the healing store's `objects` component played by the framework.
+* `Spec/Protocol.lean`: node state is now `ValidatorState` (store + Definition 12's
+  signing history). The reaction reads the validator's identity and clock; on `tick` at
+  reading `t`: at `actionTime r`, sign the combined attestation via `ordinaryVote`
+  (history updated before the send) and broadcast it; at a slot's `+Δ`, broadcast the raw
+  Goldfish vote. Three placeholder inputs, flagged in the header and at the call sites:
+  head `⊥` (honest, never live), empty Goldfish vote view and candidate tree (the vote
+  targets the store's walk-from block), and `h_F = 0` with `hasJC = false` (the finality
+  pair stays empty until those decisions land).
+
+What the red layer needs, sketched for the fixing round: `storeAt x p i` becomes
+`x[i][p].st.store` (and `deliveredBlocks`'s match gains the two no-op arms);
+`Irreversibility`/`StoreInvariants`' walkers add the tick case, which changes `hist` and
+`send` but never the store, so every store invariant survives with one more
+defeq-preserved arm; the six statements of record then stand as written once `storeAt`
+reads through `ValidatorState`. Whether they *should* stand — or whether any wants the
+history in view — is the review question for that round.
+
 ## Next
 
-1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
+1. **Fix the statement layer over `ValidatorState`** (sketch in the entry above), on the
+   word.
+2. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
    one decision taken without agreement, and the alternative is recorded.
 2. Flip MAPPING.md's `hft:` rows and regenerate `mapping.html`, on instruction; refresh
    `README.md` before the next push. Both are paused per `CLAUDE.local.md`.
