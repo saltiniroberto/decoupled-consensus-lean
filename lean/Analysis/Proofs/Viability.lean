@@ -104,7 +104,7 @@ theorem viable_of_height_lt [PositiveWeight Node] {S : Store Node Root} (hinv : 
     (hBF : postState B_F ≠ invalid)
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     (hFT : F ∈ S.T) (hlt : h_f < S.hmax) :
-    F ∈ viableTree S ∨ SlashableSet S.T B_F := by
+    F ∈ viableTree S ∨ SlashableThirdOn S.T B_F := by
   have hσF : postState B_F = .state (postState' B_F hBF) := TransitionResult.state_get _ hBF
   have hcertF := certified_of_blockPostState (blockPostState_of_postState B_F hσF)
   obtain ⟨B₂, σ₂, hB₂, hh₂⟩ := hinv.hmaxEx

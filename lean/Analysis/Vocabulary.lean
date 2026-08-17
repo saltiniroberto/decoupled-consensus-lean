@@ -148,7 +148,7 @@ Byzantine set — so what these results conclude is its **violation**, exhibited
 validators heavy enough that two `q`-quorums must share it, each of whom signed a slashable
 pair.
 
-`Slashable` is that shape, once. Its parameter is where each of the two messages is allowed to
+`SlashableThird` is that shape, once. Its parameter is where each of the two messages is allowed to
 sit, because that is the only thing the four uses differ in: Theorem 5 pins each message to one
 of two named chains, Theorem 8 to a chain the store accepted, Theorem 9 to either the named
 finalizing chain or an accepted one, Theorem 10 to a chain either of two stores accepted. That
@@ -163,9 +163,15 @@ paper's word for a message sitting on a chain, which is what these predicates sa
 prove E1 and E2 violations" is about keeping a message rather than compressing it into a
 participation bit — and `Analysis/Lemmas.lean` keeps that word for that sentence.
 
-**`2q − W` is the count analogue of `n/3`.** The paper counts validators where this project
-weighs them (Definition 3, `def:validator-weights`), and `2q − W` is the weight the
-intersection of two `q`-quorums must carry (Lemma 2, `lem:quorum-intersection`).
+**Why "Third".** The paper counts validators where this project weighs them (Definition 3,
+`def:validator-weights`), and `2q − W` is the weight the intersection of two `q`-quorums must
+carry (Lemma 2, `lem:quorum-intersection`). It is also a third of the electorate's weight
+outright, not merely the analogue of one: `3 * (2 * q Node - W Node) ≥ W Node`, by `unfold q;
+omega`. So the name says what the paper's sentence says.
+
+The name is not `SlashableThreshold`: `Spec/Defs/Basic.lean`'s `section Thresholds` already
+gives `q` and `m` that word, and a threshold is a quantity where this is the claim that a set
+reaches one.
 
 **E1 alone**, for the companion paper's results: its Definition 9 (`hft:def:slashing`) is the
 single rule E1 and defines no E2. The healing paper's Definition 11 has both, and its own
@@ -175,16 +181,17 @@ statements of record in `Analysis/Lemmas.lean` keep `E1 x y ∨ E2 x y` rather t
     to, `T` being the accepted tree.
 
     The attestation comes first, as in `IncludedOn a C`: both read subject, preposition,
-    object. The cost is that a use inside `Slashable` is a `fun a => …` rather than a partial
+    object. The cost is that a use inside `SlashableThird` is a `fun a => …` rather than a partial
     application, which is what the three statements of record in `Analysis/HftTheorems.lean`
     write, uniformly. -/
 def IncludedOnSome (a : Attestation Node Root) (T : Finset (Blk Node Root)) : Prop :=
   ∃ C ∈ T, IncludedOn a C
 
-/-- "Unless `≥ n/3` validators are slashable": a set of weight at least `2q − W`, each of whose
-    members signed two attestations forming an E1 pair, both included where `Included` allows.
-    See the section docstring. -/
-def Slashable (Included : Attestation Node Root → Prop) : Prop :=
+/-- "Unless `≥ n/3` validators are slashable": a set carrying at least a third of the
+    electorate's weight — `2q − W`, what two `q`-quorums must share — each of whose members
+    signed two attestations forming an E1 pair, both included where `Included` allows. See the
+    section docstring. -/
+def SlashableThird (Included : Attestation Node Root → Prop) : Prop :=
   ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
     ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
       Included a ∧ Included b ∧ E1 a b

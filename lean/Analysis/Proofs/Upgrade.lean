@@ -5,14 +5,15 @@ import Analysis.Proofs.StoreRecords
 
 Two things live here.
 
-**The disjunct, at a store.** `Slashable` (`Analysis/Vocabulary.lean`) is the accountable
+**The disjunct, at a store.** `SlashableThird` (`Analysis/Vocabulary.lean`) is the accountable
 disjunct itself, parameterized by where each of a signer's two messages may sit.
 `IncludedOnEither` is the inclusion predicate the store-level results want — on the chain that
-finalized the block in question, or on some chain of the accepted tree — and `SlashableSet` is
-`Slashable` at that predicate, so the proofs have one name for the shape they build over and
-over.
+finalized the block in question, or on some chain of the accepted tree — and `SlashableThirdOn`
+is `SlashableThird` at that predicate, so the proofs have one name for the shape they build
+over and over. `SlashableThirdAcross` (`Analysis/Proofs/Fold.lean`) is the same at the
+two-tree predicate Theorem 10 needs.
 Definition 9 (`hft:def:slashing`) is the single rule E1 and has no E2, which is why
-`Slashable` names E1 alone; `finalizedChainE1` (`Analysis/Proofs/Finality.lean`) is the
+`SlashableThird` names E1 alone; `finalizedChainE1` (`Analysis/Proofs/Finality.lean`) is the
 healing result restated to match.
 
 **The upgrade argument.** Lemma 9 (`hft:lem:upgrade`): a block whose recorded state justifies a
@@ -72,10 +73,10 @@ def IncludedOnEither (a : Attestation Node Root) (B_F : Blk Node Root)
     (T : Finset (Blk Node Root)) : Prop :=
   IncludedOn a B_F ∨ IncludedOnSome a T
 
-/-- `Slashable` at the store-level retention predicate: the shape every conditional result
+/-- `SlashableThird` at the store-level retention predicate: the shape every conditional result
     under `Analysis/Proofs/` concludes with. -/
-def SlashableSet (T : Finset (Blk Node Root)) (B_F : Blk Node Root) : Prop :=
-  Slashable (fun a => IncludedOnEither a B_F T)
+def SlashableThirdOn (T : Finset (Blk Node Root)) (B_F : Blk Node Root) : Prop :=
+  SlashableThird (fun a => IncludedOnEither a B_F T)
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Inclusion survives a growing tree, so it survives `ReachesFrom` (`reachesFrom_T`). -/
@@ -109,8 +110,8 @@ theorem IncludedOnEither.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Ro
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 /-- The set survives a growing tree. -/
-theorem SlashableSet.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
-    (hT : T ⊆ T') (h : SlashableSet T B_F) : SlashableSet T' B_F := by
+theorem SlashableThirdOn.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    (hT : T ⊆ T') (h : SlashableThirdOn T B_F) : SlashableThirdOn T' B_F := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
@@ -118,8 +119,8 @@ theorem SlashableSet.mono {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
 
 omit [Params] [BlockHash Node Root] in
 /-- `IncludedOnEither.ofUnion`, for a whole set. -/
-theorem SlashableSet.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
-    (h : SlashableSet (T ∪ {B_F}) B_F) : SlashableSet T B_F := by
+theorem SlashableThirdOn.ofUnion {T : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    (h : SlashableThirdOn (T ∪ {B_F}) B_F) : SlashableThirdOn T B_F := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
@@ -129,8 +130,8 @@ omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
 /-- When the finalizing chain is itself a block the store accepted, the two arms of every
     `IncludedOnEither` collapse into one. This is the shape Theorem 8 (`hft:thm:finlive`) states,
     where the finalized pair comes from a record and so has no chain of its own to name. -/
-theorem SlashableSet.onTree {T : Finset (Blk Node Root)} {B_F : Blk Node Root} (hBF : B_F ∈ T)
-    (h : SlashableSet T B_F) : Slashable (fun a => IncludedOnSome a T) := by
+theorem SlashableThirdOn.onTree {T : Finset (Blk Node Root)} {B_F : Blk Node Root} (hBF : B_F ∈ T)
+    (h : SlashableThirdOn T B_F) : SlashableThird (fun a => IncludedOnSome a T) := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
@@ -170,7 +171,7 @@ theorem certChain [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B₁ : Blk Node Root} {σ₁ : ChainState Node Root} (hB₁ : S.σ B₁ = some σ₁)
     (hle : h_f ≤ σ₁.h_j) :
-    F ⪯ σ₁.J ∨ SlashableSet S.T B_F := by
+    F ⪯ σ₁.J ∨ SlashableThirdOn S.T B_F := by
   -- the finalizing chain
   have hσF : postState B_F = .state (postState' B_F) := TransitionResult.state_get _ hBF
   have hbpF : BlockPostState (postState' B_F) := blockPostState_of_postState B_F hσF
@@ -247,7 +248,7 @@ theorem upgrade [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B : Blk Node Root} {σB : ChainState Node Root} (hB : S.σ B = some σB)
     (hJ : σB.J = F) (hhj : σB.h_j = h_f) :
-    F ⪯ S.J ∨ SlashableSet S.T B_F := by
+    F ⪯ S.J ∨ SlashableThirdOn S.T B_F := by
   by_cases hSF : S.F ⪯ F
   · -- the `F`-filter passes, so `keyDom` bounds `h_f` by the store's key height
     have hkey := hinv.keyDom B σB hB (by rw [hJ]; exact hSF)

@@ -56,7 +56,7 @@ theorem lockIn_store [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B : Blk Node Root} {σB : ChainState Node Root} (hB : S.σ B = some σB)
     (hJ : σB.J = F) (hhj : σB.h_j = h_f) :
-    (F ⪯ S.J ∧ F ∈ viableTree S ∧ ∀ C, GetConfirmed S C → F ⪯ C) ∨ SlashableSet S.T B_F := by
+    (F ⪯ S.J ∧ F ∈ viableTree S ∧ ∀ C, GetConfirmed S C → F ⪯ C) ∨ SlashableThirdOn S.T B_F := by
   -- `F` is on the record's chain, so the store has accepted it, and its height is below the
   -- store's maximum: `h_f = σB.h_j < σB.h ≤ Σ.hmax`.
   have hchB : Chained σB := record_chained hinv hB
@@ -132,7 +132,7 @@ theorem lockIn [PositiveWeight Node] {sched : Schedule Node}
     (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
     (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
       ∀ C, GetConfirmed S' C → F ⪯ C) ∨
-      Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) := by
+      SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) := by
   obtain ⟨σB, hσB, hJ, hhj⟩ := hB
   have hσB' : S.σ B = some σB := hσB
   exact lockIn_store (reaches_storeInv (reaches_of_reachesFrom h))

@@ -71,7 +71,7 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
     two finalized pairs cannot be (`finalizedChainE1`) without a slashable set. -/
 theorem accept_notPrec [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     {B : Blk Node Root} {σ' : ChainState Node Root} (hpost : postState B = .state σ')
-    (hc : ¬ (S.F ≺ σ'.F)) : σ'.F ⪯ S.F ∨ SlashableSet S.T B := by
+    (hc : ¬ (S.F ≺ σ'.F)) : σ'.F ⪯ S.F ∨ SlashableThirdOn S.T B := by
   have hne : postState B ≠ invalid := replayable_of_state hpost
   have hps : postState' B hne = σ' := postState'_of_state hpost hne
   by_cases heq : S.F = σ'.F
@@ -104,7 +104,7 @@ theorem accept_notPrec [PositiveWeight Node] {S : Store Node Root} (hinv : Store
     the record `jProv` names concludes. -/
 theorem accept_underJ [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     {B : Blk Node Root} {σ' : ChainState Node Root} (hpost : postState B = .state σ')
-    (hle : σ'.h_j ≤ S.h_j) : σ'.F ⪯ S.J ∨ SlashableSet S.T B := by
+    (hle : σ'.h_j ≤ S.h_j) : σ'.F ⪯ S.J ∨ SlashableThirdOn S.T B := by
   have hne : postState B ≠ invalid := replayable_of_state hpost
   have hps : postState' B hne = σ' := postState'_of_state hpost hne
   have hch' : Chained σ' := chained_of_blockPostState (blockPostState_of_postState B hpost)
@@ -125,7 +125,7 @@ theorem accept_viable [PositiveWeight Node] {S : Store Node Root} (hinv : StoreI
     (hP : B.parent = some P) (hPT : P ∈ S.T) (hpost : postState B = .state σ') :
     σ'.F ∈ viableTree (updateJustified
       { S with σ := Function.update S.σ B (some σ'), T := S.T ∪ {B},
-               hmax := max S.hmax σ'.h } σ'.J σ'.h_j) ∨ SlashableSet S.T B := by
+               hmax := max S.hmax σ'.h } σ'.J σ'.h_j) ∨ SlashableThirdOn S.T B := by
   obtain ⟨S₂, hS₂⟩ : ∃ V : Store Node Root, V = updateJustified
       { S with σ := Function.update S.σ B (some σ'), T := S.T ∪ {B},
                hmax := max S.hmax σ'.h } σ'.J σ'.h_j := ⟨_, rfl⟩
@@ -153,7 +153,7 @@ theorem accept_viable [PositiveWeight Node] {S : Store Node Root} (hinv : StoreI
   · exact Or.inl h
   · right
     rw [hT₂] at h
-    exact SlashableSet.ofUnion h
+    exact SlashableThirdOn.ofUnion h
 
 /-! ## The store-side core -/
 
@@ -173,7 +173,7 @@ theorem accept_F [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     σ'.F ⪯ (updateFinalized (updateJustified
       { S with σ := Function.update S.σ B (some σ'), T := S.T ∪ {B},
                hmax := max S.hmax σ'.h } σ'.J σ'.h_j) σ'.F).F
-      ∨ SlashableSet S.T B := by
+      ∨ SlashableThirdOn S.T B := by
   have hch' : Chained σ' := chained_of_blockPostState (blockPostState_of_postState B hpost)
   obtain ⟨S₂, hS₂⟩ : ∃ V : Store Node Root, V = updateJustified
       { S with σ := Function.update S.σ B (some σ'), T := S.T ∪ {B},
@@ -191,7 +191,7 @@ theorem accept_F [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
       by_contra hlt
       have hlt' : S.h_j < σ'.h_j := by omega
       exact hcJ ⟨hSF, Or.inl hlt'⟩
-  have hviab : σ'.F ∈ viableTree S₂ ∨ SlashableSet S.T B := by
+  have hviab : σ'.F ∈ viableTree S₂ ∨ SlashableThirdOn S.T B := by
     rw [hS₂]; exact accept_viable hinv hP hPT hpost
   rcases updateFinalized_spec S₂ σ'.F with ⟨-, -, -, hFeq⟩ | ⟨hcF, hFeq⟩
   · rw [hFeq]; exact Or.inl (Preceq.refl _)
@@ -199,7 +199,7 @@ theorem accept_F [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     by_cases h1 : S.F ≺ σ'.F
     · have hc1 : S₂.F ≺ σ'.F := by rw [hF₂]; exact h1
       have hSFJ : S.F ⪯ σ'.J := Preceq.trans h1.1 hch'.finJust
-      have hc2 : σ'.F ⪯ S₂.J ∨ SlashableSet S.T B := by
+      have hc2 : σ'.F ⪯ S₂.J ∨ SlashableThirdOn S.T B := by
         rcases hJ₂ with hj | ⟨hj, hkey⟩
         · exact Or.inl (by rw [hj]; exact hch'.finJust)
         · rcases accept_underJ hinv hpost (hkey hSFJ) with g | g
@@ -225,7 +225,7 @@ theorem accept_new_F [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
     σB.F ⪯ (updateFinalized (updateJustified
       { S with σ := Function.update S.σ B' (some σ'), T := S.T ∪ {B'},
                hmax := max S.hmax σ'.h } σ'.J σ'.h_j) σ'.F).F
-      ∨ SlashableSet S.T B := by
+      ∨ SlashableThirdOn S.T B := by
   have hmap : Function.update S.σ B' (some σ') B = some σB := by
     rw [updateFinalized_σ, updateJustified_σ] at hrec; exact hrec
   rw [Function.update_apply] at hmap
@@ -242,7 +242,7 @@ theorem accept_new_F [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
 theorem onBlock_new_F [PositiveWeight Node] {S : Store Node Root} (hinv : StoreInv S)
     (B' : Blk Node Root) {B : Blk Node Root} {σB : ChainState Node Root}
     (hnew : B ∉ S.T) :
-    (onBlock S B').σ B = some σB → σB.F ⪯ (onBlock S B').F ∨ SlashableSet S.T B := by
+    (onBlock S B').σ B = some σB → σB.F ⪯ (onBlock S B').F ∨ SlashableThirdOn S.T B := by
   simp only [onBlock, Id.run]
   split
   · rename_i P hP
@@ -314,13 +314,13 @@ theorem exec_step_shape {sched : Schedule Node}
     The record at that step is the same state as the one the statement names, because both are
     `B`'s replay (the bridge). Then Theorem 3 carries the finalized block forward to the later
     store, and `reachesFrom_T` carries the evidence — which sits on chains the earlier store
-    accepted, `B_F` being `B` itself, hence `SlashableSet.onTree`. -/
+    accepted, `B_F` being `B` itself, hence `SlashableThirdOn.onTree`. -/
 theorem finalityAcceptance [PositiveWeight Node] {sched : Schedule Node}
     {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
     {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {B F' : Blk Node Root} (hnew : B ∉ S.T)
     (hB : get σB from S'.σ B; σB.F = F') :
-    F' ⪯ S'.F ∨ Slashable (fun a => IncludedOnSome a S'.T) := by
+    F' ⪯ S'.F ∨ SlashableThird (fun a => IncludedOnSome a S'.T) := by
   obtain ⟨i, j, hij, rfl, rfl⟩ := h
   obtain ⟨σB, hσB, hF'⟩ := hB
   have hσB' : (storeAt x p j).σ B = some σB := hσB
@@ -354,7 +354,7 @@ theorem finalityAcceptance [PositiveWeight Node] {sched : Schedule Node}
       have hstep' : σk.F ⪯ (storeAt x p (k + 1)).F := by rw [hstep]; exact hpre
       exact Preceq.trans hstep' (localIrreversibility x p hkj)
     · right
-      refine SlashableSet.onTree hBj (SlashableSet.mono ?_ hev)
+      refine SlashableThirdOn.onTree hBj (SlashableThirdOn.mono ?_ hev)
       exact reachesFrom_T (x := x) (p := p) ⟨k, j, Nat.le_of_lt hkj, rfl, rfl⟩
 
 end Exec

@@ -160,7 +160,7 @@ theorem onBlocks_prefix_F (S : Store Node Root) (Bs : List (Blk Node Root)) (k :
 omit [Params] [BlockHash Node Root] in
 theorem gen_record_F : ∀ (E : Blk Node Root) (σE : ChainState Node Root),
     (Store.gen : Store Node Root).σ E = some σE →
-      σE.F ⪯ (Store.gen : Store Node Root).F ∨ SlashableSet (Store.gen : Store Node Root).T E := by
+      σE.F ⪯ (Store.gen : Store Node Root).F ∨ SlashableThirdOn (Store.gen : Store Node Root).T E := by
   intro E σE hE
   have hE' : (if E = Blk.genesis then some (ChainState.gen : ChainState Node Root) else none)
       = some σE := hE
@@ -171,9 +171,9 @@ theorem gen_record_F : ∀ (E : Blk Node Root) (σE : ChainState Node Root),
 
 theorem onBlocks_record_F [PositiveWeight Node] {S₀ : Store Node Root} :
     ∀ (Bs : List (Blk Node Root)), StoreInv S₀ →
-      (∀ E σE, S₀.σ E = some σE → σE.F ⪯ S₀.F ∨ SlashableSet S₀.T E) →
+      (∀ E σE, S₀.σ E = some σE → σE.F ⪯ S₀.F ∨ SlashableThirdOn S₀.T E) →
       ∀ E σE, (onBlocks S₀ Bs).σ E = some σE →
-        σE.F ⪯ (onBlocks S₀ Bs).F ∨ SlashableSet (onBlocks S₀ Bs).T E
+        σE.F ⪯ (onBlocks S₀ Bs).F ∨ SlashableThirdOn (onBlocks S₀ Bs).T E
   | [], _, hbase, E, σE, h => hbase E σE h
   | B :: Bs, hinv, hbase, E, σE, h => by
       rw [onBlocks_cons] at h ⊢
@@ -187,15 +187,15 @@ theorem onBlocks_record_F [PositiveWeight Node] {S₀ : Store Node Root} :
         subst heq
         rcases hbase E' σ₀ hσ₀ with hpre | hev
         · exact Or.inl (Preceq.trans hpre (onBlock_F S₀ B))
-        · exact Or.inr (SlashableSet.mono (onBlock_T_mono S₀ B) hev)
+        · exact Or.inr (SlashableThirdOn.mono (onBlock_T_mono S₀ B) hev)
       · rcases onBlock_new_F hinv B hmem hE' with h1 | h1
         · exact Or.inl h1
-        · exact Or.inr (SlashableSet.mono (onBlock_T_mono S₀ B) h1)
+        · exact Or.inr (SlashableThirdOn.mono (onBlock_T_mono S₀ B) h1)
 
 theorem fold_record_F [PositiveWeight Node] (Bs : List (Blk Node Root))
     {E : Blk Node Root} {σE : ChainState Node Root}
     (hE : (onBlocks Store.gen Bs).σ E = some σE) :
-    σE.F ⪯ (onBlocks Store.gen Bs).F ∨ SlashableSet (onBlocks Store.gen Bs).T E :=
+    σE.F ⪯ (onBlocks Store.gen Bs).F ∨ SlashableThirdOn (onBlocks Store.gen Bs).T E :=
   onBlocks_record_F Bs storeInv_gen gen_record_F E σE hE
 
 /-! ## Acceptance -/
@@ -297,12 +297,12 @@ theorem viableTree_witness {S : Store Node Root} {B : Blk Node Root} (h : B ∈ 
 
 /-- The accountable disjunct with two trees and no named finalizing chain: Theorem 10
     (`hft:thm:orderindep`)'s, where the evidence may sit on a chain either node accepted. -/
-def SlashablePair (T T' : Finset (Blk Node Root)) : Prop :=
-  Slashable (fun a => IncludedOnSome a T ∨ IncludedOnSome a T')
+def SlashableThirdAcross (T T' : Finset (Blk Node Root)) : Prop :=
+  SlashableThird (fun a => IncludedOnSome a T ∨ IncludedOnSome a T')
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
-theorem SlashableSet.toPairLeft {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
-    (hBF : B_F ∈ T ∨ B_F ∈ T') (h : SlashableSet T B_F) : SlashablePair T T' := by
+theorem SlashableThirdOn.toAcrossLeft {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    (hBF : B_F ∈ T ∨ B_F ∈ T') (h : SlashableThirdOn T B_F) : SlashableThirdAcross T T' := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv
@@ -315,8 +315,8 @@ theorem SlashableSet.toPairLeft {T T' : Finset (Blk Node Root)} {B_F : Blk Node 
     · exact Or.inl h1
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
-theorem SlashableSet.toPairRight {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
-    (hBF : B_F ∈ T ∨ B_F ∈ T') (h : SlashableSet T' B_F) : SlashablePair T T' := by
+theorem SlashableThirdOn.toAcrossRight {T T' : Finset (Blk Node Root)} {B_F : Blk Node Root}
+    (hBF : B_F ∈ T ∨ B_F ∈ T') (h : SlashableThirdOn T' B_F) : SlashableThirdAcross T T' := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hra, hrb, he⟩ := hev v hv

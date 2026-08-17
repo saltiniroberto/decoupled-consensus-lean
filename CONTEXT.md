@@ -2030,7 +2030,7 @@ its own definition of done):
 * `StoreRecords.lean` — records persist and the tree grows through `on_block` and across
   `ReachesFrom`; the `record_…` family turning a store record into a `BlockPostState`,
   `Chained`, `Certified`, its endpoint and its `postState'`.
-* `Upgrade.lean` — `RetainedOn`/`SlashableSet`, then `certChain` (Lem 8, `hft:lem:certchain`)
+* `Upgrade.lean` — `IncludedOnEither`/`SlashableThirdOn`, then `certChain` (Lem 8, `hft:lem:certchain`)
   and `upgrade` (Lem 9, `hft:lem:upgrade`).
 * `Viability.lean` — `exists_leaf`, `mem_T_of_preceq`, and `viable_of_height_lt`
   (Lem 10, `hft:lem:viable-finalized`).
@@ -2246,14 +2246,30 @@ binder between the statement and the record it is about.
   `postState B` is a function of `B` alone that nothing rewrites; `S.σ B` is a store field
   that `updateFinalized_σ`, `updateJustified_σ` and `update_keeps` rewrite constantly.
 
-## 2026-08-17 — `Slashable`, one definition for the accountable disjunct
+## 2026-08-17 — `SlashableThird`, one definition for the accountable disjunct
+
+**On the name**, after two rounds with Roberto. `Slashable` alone was rejected: it does not say
+*how many* are slashable, which is the whole content. `SlashableThreshold` was rejected too —
+`Spec/Defs/Basic.lean`'s `section Thresholds` already gives that word to `q` and `m`, and a
+threshold is a quantity where this is the claim that a set reaches one. `SlashableThird` says
+the paper's own sentence, and "third" is literal rather than an analogy:
+`3 * (2 * q Node - W Node) ≥ W Node`, checked by `unfold q; omega`, so the exhibited set
+carries at least a third of the electorate's weight. Also weighed and rejected:
+`FaultBoundViolated` (healing's own phrasing, but Assumption 1 is not among these statements'
+hypotheses, so "violated" claims a step they do not take) and `AccountableFault` (carries the
+quantity only by literature convention).
+
+The two proof-layer wrappers follow the head name — `SlashableThirdOn T B_F` for the accepted
+tree plus a named chain, `SlashableThirdAcross T T'` for two trees. `SlashableSet` and
+`SlashablePair` named the *shape of the argument* rather than the notion, and would have read
+as a different family once the head changed.
 
 Roberto: the "unless `≥ n/3` validators are slashable" shape was written out three times in
 `Analysis/HftTheorems.lean` and twice more under `Analysis/Proofs/`; make it one definition.
 `Analysis/Vocabulary.lean` gains two:
 
     IncludedOnSome (a) (T)      -- `∃ C ∈ T, IncludedOn a C`
-    Slashable (Included)        -- `∃ A, w(A) ≥ 2q − W ∧ ∀ v ∈ A, ∃ a b, …
+    SlashableThird (Included)        -- `∃ A, w(A) ≥ 2q − W ∧ ∀ v ∈ A, ∃ a b, …
                                 --   Included a ∧ Included b ∧ E1 a b`
 
 **The parameter is where the two messages may sit**, because that is the only thing the uses
@@ -2262,18 +2278,18 @@ is evidence of nothing, which is why three healing lemmas had to be restated to 
 inclusions (recorded 2026-08-16 under the `IncludedOn` note in `Analysis/Proofs/Finality.lean`).
 The three statements of record now read
 
-    Theorem 8   Slashable (fun a => IncludedOnSome a S'.T)
-    Theorem 9   Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T)
-    Theorem 10  Slashable (fun a => IncludedOnSome a … ∨ IncludedOnSome a …)
+    Theorem 8   SlashableThird (fun a => IncludedOnSome a S'.T)
+    Theorem 9   SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T)
+    Theorem 10  SlashableThird (fun a => IncludedOnSome a … ∨ IncludedOnSome a …)
 
 and the two proof-layer notions are the same definition at their own predicates:
-`Proofs.SlashableSet T B_F = Slashable (fun a => IncludedOnEither a B_F T)` and
-`Proofs.SlashablePair T T' = Slashable (fun a => IncludedOnSome a T ∨ IncludedOnSome a T')`.
+`Proofs.SlashableThirdOn T B_F = SlashableThird (fun a => IncludedOnEither a B_F T)` and
+`Proofs.SlashableThirdAcross T T' = SlashableThird (fun a => IncludedOnSome a T ∨ IncludedOnSome a T')`.
 
 Theorems 8 and 9 needed no proof change — the new spellings are definitionally the old ones.
 Theorem 10's did: its disjunct used to distribute as `∃ Ca, (Ca ∈ T ∨ Ca ∈ T') ∧ IncludedOn a Ca`
-and now reads `RetainedIn T a ∨ RetainedIn T' a`, which is equivalent but not defeq. Six sites
-moved — `SlashablePair.symm`, `SlashableSet.toPairLeft`/`toPairRight`, and three construction
+and now reads `IncludedOnSome a T ∨ IncludedOnSome a T'`, equivalent but not defeq. Six sites
+moved — `SlashableThirdAcross.symm`, `SlashableThirdOn.toAcrossLeft`/`toAcrossRight`, and three construction
 sites in `hmax_le_of_agree` and `fold_F_comparable` — each of them `⟨C, Or.inl hT, hi⟩`
 becoming `Or.inl ⟨C, hT, hi⟩`.
 
@@ -2289,25 +2305,25 @@ store retains every raw object"). So a placement predicate called `Retained…` 
 the wrong paper notion, which is exactly what `CLAUDE.md`'s rule about undefined terms is for.
 
 Renamed: `RetainedIn` → `IncludedOnSome`, `Proofs.RetainedOn` → `Proofs.IncludedOnEither`, and
-`Slashable`'s parameter `Retained` → `Included`.
+`SlashableThird`'s parameter `Retained` → `Included`.
 
 **The attestation comes first in all three inclusion predicates**, matching `IncludedOn a C` —
 Roberto caught the first pass putting the container first, which read backwards ("included in
 `T` … `a`"). So `IncludedOnSome a T` and `IncludedOnEither a B_F T` alongside `IncludedOn a C`:
-subject, preposition, object, every time. The cost is that a use inside `Slashable` is a
+subject, preposition, object, every time. The cost is that a use inside `SlashableThird` is a
 `fun a => …` rather than a partial application, which is what all three statements of record
 now write, uniformly:
 
-    Theorem 8   Slashable (fun a => IncludedOnSome a S'.T)
-    Theorem 9   Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T)
-    Theorem 10  Slashable (fun a => IncludedOnSome a … ∨ IncludedOnSome a …) Prose in `Analysis/Theorems.lean` and
+    Theorem 8   SlashableThird (fun a => IncludedOnSome a S'.T)
+    Theorem 9   SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T)
+    Theorem 10  SlashableThird (fun a => IncludedOnSome a … ∨ IncludedOnSome a …) Prose in `Analysis/Theorems.lean` and
 `Analysis/Proofs/Upgrade.lean` followed; one line there already read "retained — included —",
 which was the tension showing. `Analysis/Lemmas.lean` and `Analysis/Proofs/Compression.lean`
 **keep** "retain", because there it quotes Lemma 9 and means storage.
 
-**`Analysis/Lemmas.lean` deliberately does not use `Slashable`.** The healing paper's
+**`Analysis/Lemmas.lean` deliberately does not use `SlashableThird`.** The healing paper's
 Definition 11 has E1 *and* E2, and `lemPastFinalized`, `lemFinalizedChain` and
-`thmAccountableSafety` conclude `E1 x y ∨ E2 x y`; `Slashable` names E1 alone, which is the
+`thmAccountableSafety` conclude `E1 x y ∨ E2 x y`; `SlashableThird` names E1 alone, which is the
 companion paper's Definition 9. Widening it to a relation parameter would let one definition
 cover both, but it would also let a reader stop noticing which paper's slashing rule a
 statement means, so the two stay apart.

@@ -44,15 +44,15 @@ all six are timeless in the framework's classification, and hold of corrupted va
 too, whose `adversarial` action touches only the message log while their store follows
 the protocol's reaction.
 
-**"Unless `≥ n/3` validators are slashable" is `Slashable`**, one definition in
+**"Unless `≥ n/3` validators are slashable" is `SlashableThird`**, one definition in
 `Analysis/Vocabulary.lean`, whose docstring carries the rendering: a set of weight at least
 `2q − W` — the count analogue of `n/3`, since the paper counts validators where this project
 weighs them (Definition 3, `def:validator-weights`) — each of whose members signed an E1 pair.
-Slashable is **E1 alone** here: the companion paper's Definition 9 (`hft:def:slashing`) is
+SlashableThird is **E1 alone** here: the companion paper's Definition 9 (`hft:def:slashing`) is
 the single rule E1, the same relation healing's Definition 11 (`def:slashing`) E1 renders,
 and it has no E2.
 
-`Slashable`'s parameter is where each of a signer's two messages may sit, which is the only
+`SlashableThird`'s parameter is where each of a signer's two messages may sit, which is the only
 thing the three uses below differ in — inclusion on a chain of `S'.T` for Theorem 8, either
 that or the
 named finalizing chain for Theorem 9, either of two accepted trees for Theorem 10. That
@@ -203,7 +203,7 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
     {B : Blk Node Root} (hnew : B ∉ S.T) (hB : B ∈ S'.σ) :
-    S'.σ[B].F ⪯ S'.F ∨ Slashable (fun a => IncludedOnSome a S'.T) :=
+    S'.σ[B].F ⪯ S'.F ∨ SlashableThird (fun a => IncludedOnSome a S'.T) :=
   Proofs.finalityAcceptance h hnew ⟨S'.σ[B], (Option.some_get hB).symm, rfl⟩
 
 /-- **Theorem 9** (`hft:thm:lockin`, lines 695–697): lock-in.
@@ -242,7 +242,7 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     (hF : (postState' B_F).F = S.σ[B].J) (hhf : (postState' B_F).h_F = S.σ[B].h_j) :
     (S.σ[B].J ⪯ S'.J ∧ S.σ[B].J ∈ viableTree S' ∧
       ∀ C, GetConfirmed S' C → S.σ[B].J ⪯ C) ∨
-      Slashable (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) :=
+      SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) :=
   Proofs.lockIn h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
 
 /-- **Theorem 10** (`hft:thm:orderindep`, lines 705–709): order independence.
@@ -302,7 +302,7 @@ theorem thmOrderIndependence {Node Root : Type} [DecidableEq Node] [DecidableEq 
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
      (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
-      Slashable (fun a =>
+      SlashableThird (fun a =>
         IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) :=
   Proofs.orderIndependence hperm hp hp'
 

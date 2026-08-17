@@ -67,8 +67,8 @@ variable {Node Root : Type} [DecidableEq Node] [DecidableEq Root] [Electorate No
   [BlockHash Node Root]
 
 omit [DecidableEq Node] [DecidableEq Root] [Params] [BlockHash Node Root] in
-theorem SlashablePair.symm {T T' : Finset (Blk Node Root)} (h : SlashablePair T T') :
-    SlashablePair T' T := by
+theorem SlashableThirdAcross.symm {T T' : Finset (Blk Node Root)} (h : SlashableThirdAcross T T') :
+    SlashableThirdAcross T' T := by
   obtain ⟨A, hw, hev⟩ := h
   refine ⟨A, hw, fun v hv => ?_⟩
   obtain ⟨a, b, ha, hb, hia, hib, he⟩ := hev v hv
@@ -79,7 +79,7 @@ theorem SlashablePair.symm {T T' : Finset (Blk Node Root)} (h : SlashablePair T 
 theorem hmax_le_of_agree [PositiveWeight Node] {S S' : Store Node Root}
     (hinv : StoreInv S) (hinv' : StoreInv S') (hgS : (Blk.genesis : Blk Node Root) ∈ S.T)
     (hsub : ∀ C, S.F ⪯ C → C ∈ S.T → C ∈ S'.T) :
-    S.hmax ≤ S'.hmax ∨ SlashablePair S.T S'.T := by
+    S.hmax ≤ S'.hmax ∨ SlashableThirdAcross S.T S'.T := by
   obtain ⟨Bm, σm, hBm, hhm⟩ := hinv.hmaxEx
   have hTm : Bm ∈ S.T := record_mem_T hinv hBm
   have hpm : postState Bm = .state σm := record_postState hinv hBm
@@ -191,7 +191,7 @@ theorem onBlocks_accept_all {Bs : List (Blk Node Root)} (hpf : ParentFirst Bs)
 theorem fold_F_comparable [PositiveWeight Node] (Bs Bs' : List (Blk Node Root)) :
     (onBlocks Store.gen Bs).F ⪯ (onBlocks Store.gen Bs').F ∨
       (onBlocks Store.gen Bs').F ⪯ (onBlocks Store.gen Bs).F ∨
-      SlashablePair (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
+      SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
   have hinv : StoreInv (onBlocks Store.gen Bs) := storeInv_onBlocks storeInv_gen _
   have hinv' : StoreInv (onBlocks Store.gen Bs') := storeInv_onBlocks storeInv_gen _
   rcases hinv.fProv with hg | ⟨E, σE, hE, hFE⟩
@@ -226,7 +226,7 @@ theorem fold_F_ge [PositiveWeight Node] {Bs Bs' : List (Blk Node Root)}
     (hmem : ∀ C, C ∈ Bs' → C ∈ Bs) (hp : ParentFirst Bs)
     (hle : (onBlocks Store.gen Bs).F ⪯ (onBlocks Store.gen Bs').F) :
     (onBlocks Store.gen Bs').F ⪯ (onBlocks Store.gen Bs).F ∨
-      SlashablePair (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
+      SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
   have hinv : StoreInv (onBlocks Store.gen Bs) := storeInv_onBlocks storeInv_gen _
   have hinv' : StoreInv (onBlocks Store.gen Bs') := storeInv_onBlocks storeInv_gen _
   rcases hinv'.fProv with hg | ⟨E, σE, hE, hFE⟩
@@ -259,12 +259,12 @@ theorem fold_F_ge [PositiveWeight Node] {Bs Bs' : List (Blk Node Root)}
   subst hσ
   rcases fold_record_F Bs hE2 with hpre | hev
   · exact Or.inl (by rw [← hFE]; exact hpre)
-  · exact Or.inr (SlashableSet.toPairLeft (Or.inl hacc) hev)
+  · exact Or.inr (SlashableThirdOn.toAcrossLeft (Or.inl hacc) hev)
 
 theorem fold_F_eq [PositiveWeight Node] {Bs Bs' : List (Blk Node Root)} (hperm : Bs.Perm Bs')
     (hp : ParentFirst Bs) (hp' : ParentFirst Bs') :
     (onBlocks Store.gen Bs).F = (onBlocks Store.gen Bs').F ∨
-      SlashablePair (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
+      SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
   rcases fold_F_comparable Bs Bs' with h1 | h1 | hev
   · rcases fold_F_ge (fun C hC => hperm.mem_iff.2 hC) hp h1 with h2 | hev
     · exact Or.inl (Preceq.antisymm h1 h2)
@@ -286,7 +286,7 @@ theorem foldOrderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (∀ C, (onBlocks Store.gen Bs).F ⪯ C →
         (C ∈ (onBlocks Store.gen Bs).T ↔ C ∈ (onBlocks Store.gen Bs').T)) ∧
      (∀ C, GetConfirmed (onBlocks Store.gen Bs) C ↔ GetConfirmed (onBlocks Store.gen Bs') C)) ∨
-      SlashablePair (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
+      SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
   rcases fold_F_eq hperm hp hp' with hFeq | hev
   case inr => exact Or.inr hev
   have hinv : StoreInv (onBlocks Store.gen Bs) := storeInv_onBlocks storeInv_gen _
@@ -372,7 +372,7 @@ theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
      (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
-      Slashable (fun a =>
+      SlashableThird (fun a =>
         IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) := by
   rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
   exact foldOrderIndependence hperm hp hp'
