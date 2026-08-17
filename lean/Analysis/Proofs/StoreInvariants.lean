@@ -110,19 +110,13 @@ theorem F_preceq_R {S : Store Node Root} (h : S.F ⪯ S.J) : S.F ⪯ S.R := by
   · exact Preceq.refl _
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- Every block `get_confirmed` may return descends from the store-finalized block,
-    given `F ⪯ J`. -/
-theorem getConfirmed_F {S : Store Node Root} {C : Blk Node Root}
-    (hFJ : S.F ⪯ S.J) (hC : GetConfirmed S C) : S.F ⪯ C :=
-  Preceq.trans (F_preceq_R hFJ) hC.2.1
-
-omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- The candidate set is the relation: a statement over `GetConfirmed` and one over
-    membership in `getConfirmedSet` say the same thing, so the function view in
-    `Spec/HftFig2Store.lean` and the relation cannot drift apart. -/
+/-- The per-block reading of the candidate set: in the viable subtree, at or above the
+    walk-from block, and recorded at state-height at least `hmax − 1` — the height
+    conjunct in `get … from` form, so it destructures the way statements read. -/
 theorem mem_getConfirmedSet {S : Store Node Root} {B : Blk Node Root} :
-    B ∈ getConfirmedSet S ↔ GetConfirmed S B := by
-  unfold getConfirmedSet GetConfirmed
+    B ∈ getConfirmedSet S ↔
+      B ∈ viableTree S ∧ S.R ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1) := by
+  unfold getConfirmedSet
   rw [Finset.mem_filter]
   constructor
   · rintro ⟨h1, h2, h3⟩
@@ -140,12 +134,19 @@ theorem mem_getConfirmedSet {S : Store Node Root} {B : Blk Node Root} :
     omega
 
 omit [Electorate Node] [Params] [BlockHash Node Root] in
-/-- Whatever `getConfirmed` returns, the relation admits: every statement over
-    `GetConfirmed` applies to the function's output unchanged. -/
+/-- Every block `get_confirmed` may return descends from the store-finalized block,
+    given `F ⪯ J`. -/
+theorem getConfirmed_F {S : Store Node Root} {C : Blk Node Root}
+    (hFJ : S.F ⪯ S.J) (hC : C ∈ getConfirmedSet S) : S.F ⪯ C :=
+  Preceq.trans (F_preceq_R hFJ) (mem_getConfirmedSet.mp hC).2.1
+
+omit [Electorate Node] [Params] [BlockHash Node Root] in
+/-- Whatever `getConfirmed` returns is a candidate: every statement over membership
+    applies to the function's output unchanged. -/
 theorem getConfirmed_spec [Omega Node Root] (S : Store Node Root)
     (h : (getConfirmedSet S).Nonempty) :
-    GetConfirmed S (getConfirmed S h) :=
-  mem_getConfirmedSet.mp (Omega.choose (getConfirmedSet S) h).property
+    getConfirmed S h ∈ getConfirmedSet S :=
+  (Omega.choose (getConfirmedSet S) h).property
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Equal candidate sets, equal choice: the `Nonempty` witnesses are proofs, hence
@@ -318,7 +319,7 @@ theorem reaches_of_reachesFrom {sched : Schedule Node}
 theorem forkChoiceConsistency {sched : Schedule Node}
     {x : Exec (protocol (Node := Node) (Root := Root)) sched} {p : Node}
     {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    {C : Blk Node Root} (hC : GetConfirmed S' C) :
+    {C : Blk Node Root} (hC : C ∈ getConfirmedSet S') :
     S.F ⪯ C :=
   Preceq.trans (reachesFrom_F h) (getConfirmed_F (reaches_FJ (reaches_of_reachesFrom h)) hC)
 

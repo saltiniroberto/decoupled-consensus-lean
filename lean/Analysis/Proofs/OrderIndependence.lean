@@ -157,7 +157,8 @@ theorem getConfirmed_sub {S S' : Store Node Root} (hinv : StoreInv S) (hinv' : S
     (hFJ : S.F ⪯ S.J)
     (hsub : ∀ C, S.F ⪯ C → C ∈ S.T → C ∈ S'.T)
     (hsub' : ∀ C, S.F ⪯ C → C ∈ S'.T → C ∈ S.T)
-    {C : Blk Node Root} (hC : GetConfirmed S C) : GetConfirmed S' C := by
+    {C : Blk Node Root} (hC : C ∈ getConfirmedSet S) : C ∈ getConfirmedSet S' := by
+  replace hC := mem_getConfirmedSet.mp hC
   have hR : S.R = S'.R := by unfold Store.R; rw [hFeq, hJeq, hhj, hhmax]
   have hFC : S.F ⪯ C := Preceq.trans (F_preceq_R hFJ) hC.2.1
   obtain ⟨hCT, L, σL, hLT, hleaf, hCL, hσL, hh⟩ := viableTree_witness hC.1
@@ -170,7 +171,8 @@ theorem getConfirmed_sub {S S' : Store Node Root} (hinv : StoreInv S) (hinv' : S
   have hleaf' : ∀ D ∈ S'.T, ¬ L ≺ D := by
     intro D hD hlt
     exact hleaf D (hsub' D (Preceq.trans hFL hlt.1) hD) hlt
-  refine ⟨mem_viableTree hCT' hLT' hleaf' hCL hσL' (by rw [← hhmax]; exact hh), ?_, ?_⟩
+  refine mem_getConfirmedSet.mpr
+    ⟨mem_viableTree hCT' hLT' hleaf' hCL hσL' (by rw [← hhmax]; exact hh), ?_, ?_⟩
   · rw [← hR]; exact hC.2.1
   · obtain ⟨σC, hσC, hhC⟩ := hC.2.2
     have hσC' : S.σ C = some σC := hσC
@@ -285,7 +287,8 @@ theorem foldOrderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (onBlocks Store.gen Bs).hmax = (onBlocks Store.gen Bs').hmax ∧
      (∀ C, (onBlocks Store.gen Bs).F ⪯ C →
         (C ∈ (onBlocks Store.gen Bs).T ↔ C ∈ (onBlocks Store.gen Bs').T)) ∧
-     (∀ C, GetConfirmed (onBlocks Store.gen Bs) C ↔ GetConfirmed (onBlocks Store.gen Bs') C)) ∨
+     (∀ C, C ∈ getConfirmedSet (onBlocks Store.gen Bs) ↔
+       C ∈ getConfirmedSet (onBlocks Store.gen Bs'))) ∨
       SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
   rcases fold_F_eq hperm hp hp' with hFeq | hev
   case inr => exact Or.inr hev
@@ -371,7 +374,7 @@ theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (storeAt x p i).h_j = (storeAt x p' j).h_j ∧
      (storeAt x p i).hmax = (storeAt x p' j).hmax ∧
      (∀ C, (storeAt x p i).F ⪯ C → (C ∈ (storeAt x p i).T ↔ C ∈ (storeAt x p' j).T)) ∧
-     (∀ C, GetConfirmed (storeAt x p i) C ↔ GetConfirmed (storeAt x p' j) C)) ∨
+     (∀ C, C ∈ getConfirmedSet (storeAt x p i) ↔ C ∈ getConfirmedSet (storeAt x p' j))) ∨
       SlashableThird (fun a =>
         IncludedOnSome a (storeAt x p i).T ∨ IncludedOnSome a (storeAt x p' j).T) := by
   rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
@@ -401,7 +404,7 @@ theorem orderIndependenceOmega [PositiveWeight Node] [HashInjective Node Root]
   refine (orderIndependence hperm hp hp').imp (fun hc => ?_) id
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hc
   have hset : getConfirmedSet (storeAt x p i) = getConfirmedSet (storeAt x p' j) :=
-    Finset.ext fun C => (mem_getConfirmedSet.trans (h6 C)).trans mem_getConfirmedSet.symm
+    Finset.ext h6
   exact ⟨h1, h2, h3, h4, h5, fun h₁ h₂ => getConfirmed_congr hset h₁ h₂⟩
 
 end Exec

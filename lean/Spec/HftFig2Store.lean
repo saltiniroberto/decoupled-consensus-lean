@@ -38,16 +38,15 @@ uses.
 
 ## The remaining deviation
 
-**`get_confirmed` is a relation first, and a function on top.** The figure's `Ω` is
+**`get_confirmed` is a candidate set and an `Ω`-ambient pick.** The figure's `Ω` is
 "whatever extra information the validator uses to disambiguate among viable descendants" —
-deliberately unspecified — so the specification is the relation `GetConfirmed S B`, which
-holds of exactly the blocks the figure's return line admits; a choice of `Ω` is a choice
-among them, and the framework sets the precedent, `Protocol.step` being a relation for the
-same reason. Capitalized like every `Prop` here. Beside it (2026-08-17, on instruction)
-sit `getConfirmedSet` — the same blocks as a computable `Finset`, `mem_getConfirmedSet`
-pinning the two together — and `getConfirmed`, the paper's `get_confirmed(Σ, Ω)` as a
-deterministic function with `Ω` ambient through the `Omega` class of
-`Spec/Defs/Store.lean`, where the design and its two accepted costs are recorded.
+deliberately unspecified — so the return line is rendered as `getConfirmedSet`, the
+computable set of blocks some `Ω` could pick, and `getConfirmed`, the paper's
+`get_confirmed(Σ, Ω)` as a deterministic function with `Ω` ambient through the `Omega`
+class of `Spec/Defs/Store.lean`, where the design and its two accepted costs are recorded.
+The per-block reading is membership, characterized by `Proofs.mem_getConfirmedSet`. A
+`Prop`-valued relation `GetConfirmed` preceded the set and was replaced by it on
+instruction (2026-08-17); git history has it.
 -/
 
 set_option autoImplicit false
@@ -115,31 +114,28 @@ def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.ru
 def Store.R (S : Store Node Root) : Blk Node Root :=
   if S.hmax = S.h_j + 1 then S.J else S.F                                -- line 560
 
-/-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562), as the relation the
-    figure's return line defines — see the module header on `Ω`. The walk-from block `R`
-    is `Store.R` above. -/
-def GetConfirmed (S : Store Node Root) (B : Blk Node Root) : Prop :=
-  B ∈ viableTree S ∧ S.R ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1)    -- line 561
-
 end
 
 section
 variable [DecidableEq Node] [DecidableEq Root]
 
 /-- The candidate set of `get_confirmed` (Figure 2, `hft:alg:store`, line 561): the blocks
-    some `Ω` could pick. Computable. That membership is exactly the relation `GetConfirmed`
-    is `Proofs.mem_getConfirmedSet` in `Analysis/Proofs/StoreInvariants.lean` — a theorem,
-    so it lives outside `Spec/`. -/
+    the figure's return line admits — in the viable subtree, at or above the walk-from
+    block `Store.R`, at state-height at least `hmax − 1`, the height read through the
+    map's `Option`. Computable. The per-block characterization, with the height conjunct
+    in `get … from` form, is `Proofs.mem_getConfirmedSet` in
+    `Analysis/Proofs/StoreInvariants.lean` — a theorem, so it lives outside `Spec/`. -/
 def getConfirmedSet (S : Store Node Root) : Finset (Blk Node Root) :=
-  (viableTree S).filter fun B => S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1
+  (viableTree S).filter fun B =>
+    S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1                    -- line 561
 
 /-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562) as a deterministic
     function of the store, `Ω` ambient — see `Omega`'s docstring in `Spec/Defs/Store.lean`
     for the design and its two accepted costs. The nonemptiness argument is Corollary 1's
     obligation (`hft:cor:getConfirmed-total`): for an arbitrary store the candidate set can
     be empty; for held stores it is discharged by the store invariants. That the output
-    satisfies `GetConfirmed` is `Proofs.getConfirmed_spec`, beside the membership
-    theorem. -/
+    is a candidate is `Proofs.getConfirmed_spec`, beside the membership
+    characterization. -/
 def getConfirmed [Omega Node Root] (S : Store Node Root)
     (h : (getConfirmedSet S).Nonempty) : Blk Node Root :=
   (Omega.choose (getConfirmedSet S) h).val

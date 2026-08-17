@@ -81,7 +81,7 @@ class BlockHash (Node Root : Type) where
     carries its elements, so picking, say, the least `hash(·)` is real code. -/
 class Omega (Node Root : Type) where
   /-- Pick a block from a nonempty candidate set. The subtype carries the membership
-      proof, so anything picked satisfies `GetConfirmed`. -/
+      proof, so anything picked is one of the candidates. -/
   choose : (s : Finset (Blk Node Root)) → s.Nonempty → {B // B ∈ s}
 
 /-- **The paper's collision-freedom idealization**, as a separate class so that only the

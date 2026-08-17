@@ -2376,6 +2376,21 @@ Each statement gained `[Omega Node Root]`; the relation forms stay as
 dead end (dependent `congr 1` demands a function-type equality) is why `choose_congr`
 generalizes to two set variables first.
 
+## 2026-08-17 — the relation `GetConfirmed` is gone; the candidate set carries the figure
+
+Roberto, completing the `Ω` adoption: the `Prop`-valued relation was removed from
+`Spec/HftFig2Store.lean` (git history has it). The figure's return line is now rendered by
+`getConfirmedSet` alone, with `getConfirmed` the `Ω`-ambient pick; the per-block reading is
+membership, characterized by `Proofs.mem_getConfirmedSet`, whose right-hand side is the
+conjunction the relation used to be — so every proof that destructured the relation
+(`hC.1`, `hC.2.1`, `hC.2.2`) survived with one `replace hC := mem_getConfirmedSet.mp hC`
+at the binder, and every construction site with one `.mpr`. `getConfirmed_spec` simplified
+to the subtype's `.property`. Statement conjuncts moved from `∀ C, GetConfirmed … C → …`
+to `∀ C ∈ getConfirmedSet …, …` and from the relation-iff to the membership-iff (whence
+`orderIndependenceOmega`'s set equality is now `Finset.ext h6`, no round trip). All six
+theorems re-measured kernel-clean; the only remaining mention of the name is the
+history note in the figure file's header.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the

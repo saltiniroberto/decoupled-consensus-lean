@@ -56,7 +56,8 @@ theorem lockIn_store [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
     (hF : (postState' B_F).F = F) (hhF : (postState' B_F).h_F = h_f)
     {B : Blk Node Root} {σB : ChainState Node Root} (hB : S.σ B = some σB)
     (hJ : σB.J = F) (hhj : σB.h_j = h_f) :
-    (F ⪯ S.J ∧ F ∈ viableTree S ∧ ∀ C, GetConfirmed S C → F ⪯ C) ∨ SlashableThirdOn S.T B_F := by
+    (F ⪯ S.J ∧ F ∈ viableTree S ∧ ∀ C ∈ getConfirmedSet S, F ⪯ C) ∨
+      SlashableThirdOn S.T B_F := by
   -- `F` is on the record's chain, so the store has accepted it, and its height is below the
   -- store's maximum: `h_f = σB.h_j < σB.h ≤ Σ.hmax`.
   have hchB : Chained σB := record_chained hinv hB
@@ -72,10 +73,11 @@ theorem lockIn_store [PositiveWeight Node] {S : Store Node Root} (hinv : StoreIn
   case inr => exact Or.inr hev
   rcases viable_of_height_lt hinv hBF hF hhF hFT hlt with h2 | hev
   case inr => exact Or.inr hev
-  by_cases h3 : ∀ C, GetConfirmed S C → F ⪯ C
+  by_cases h3 : ∀ C ∈ getConfirmedSet S, F ⪯ C
   · exact Or.inl ⟨h1, h2, h3⟩
   push Not at h3
   obtain ⟨C, hC, hFC⟩ := h3
+  replace hC := mem_getConfirmedSet.mp hC
   right
   -- the finalized height cannot be `0`: genesis precedes everything, `C` included
   have hσF : postState B_F = .state (postState' B_F hBF) := TransitionResult.state_get _ hBF
@@ -131,7 +133,7 @@ theorem lockIn [PositiveWeight Node] {sched : Schedule Node}
     (hF : (postState' B_F).F = F) (hhf : (postState' B_F).h_F = h_f)
     (hB : get σB from S.σ B; σB.J = F ∧ σB.h_j = h_f) :
     (F ⪯ S'.J ∧ F ∈ viableTree S' ∧
-      ∀ C, GetConfirmed S' C → F ⪯ C) ∨
+      ∀ C ∈ getConfirmedSet S', F ⪯ C) ∨
       SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) := by
   obtain ⟨σB, hσB, hJ, hhj⟩ := hB
   have hσB' : S.σ B = some σB := hσB

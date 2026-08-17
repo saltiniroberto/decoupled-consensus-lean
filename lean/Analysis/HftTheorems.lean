@@ -156,8 +156,8 @@ theorem thmFPreceqJ {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     validator `p` holds. "At all future times": every `S'` with `ReachesFrom x p S S'`.
     "Returns … for every `Ω`": the ambient `Omega` instance — binding it quantifies over
     every selection rule — and `getConfirmed S' hne` is what it returns, the nonemptiness
-    witness being Corollary 1's obligation (`hft:cor:getConfirmed-total`). The relation
-    form, over every admissible block, is `Proofs.forkChoiceConsistency`; the store-level
+    witness being Corollary 1's obligation (`hft:cor:getConfirmed-total`). The per-block
+    form, over every candidate, is `Proofs.forkChoiceConsistency`; the store-level
     core is `Proofs.getConfirmed_F`, over any store with `F ⪯ J`.
 
     Proved in `Analysis/Proofs/StoreInvariants.lean`, riding Theorems 3 and 4:
@@ -226,7 +226,7 @@ theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq
     chain", which is `hF` and `hhf`: `B_F`'s replayed post-state records exactly that pair.
     "At all future times" and "always": every `S'` with `ReachesFrom x p S S'`, the three
     claims conjoined under one `S'`. "For every `Ω`": as in Theorem 7, through the
-    ambient instance and `getConfirmed`; the relation form is `Proofs.lockIn`. The
+    ambient instance and `getConfirmed`; the per-block form is `Proofs.lockIn`. The
     disjunct's
     evidence is included on `B_F`'s chain or on a block `S'` accepted, each message
     independently, since which quorum sits where depends on the case.
@@ -270,7 +270,7 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     the subtree rooted at `F` — the two `F`s being equal by the first conjunct — and the
     outputs of `get_confirmed` — through the function: the candidate sets agree (the
     wrapper's core), so for the ambient `Ω` the two validators confirm the same block,
-    whichever nonemptiness witnesses they hold; the relation form is
+    whichever nonemptiness witnesses they hold; the per-block form is
     `Proofs.orderIndependence`. The paper's third sentence, that the nodes may disagree
     outside `F`'s subtree, is a caveat rather than a claim, and is not stated; agreement
     of the recorded states on the shared subtree is derivable (replay is deterministic)
