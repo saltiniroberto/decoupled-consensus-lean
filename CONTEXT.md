@@ -2163,6 +2163,69 @@ instruction. The rows to flip when that comes: `hft:thm:finperm`, `hft:thm:fleqr
 three lemmas now proved as machinery rather than as statements of record —
 `hft:lem:certchain`, `hft:lem:upgrade`, `hft:lem:viable-finalized`.
 
+## 2026-08-17 — `Σ.σ[B]` through `GetElem`, and Theorem 8 restated over it
+
+Roberto: the store's state map should read as the paper's `Σ.σ[B]`. `Spec/Defs/Store.lean`
+gains three `scoped` instances on the **map's type**, `Blk Node Root → Option (ChainState
+Node Root)` — `GetElem`, `GetElem?` and `LawfulGetElem`:
+
+    S.σ[B]   : ChainState Node Root     -- `(S.σ B).isSome` taken from the context
+    S.σ[B]?  : Option (ChainState …)    -- which *is* `S.σ B`, definitionally
+    S.σ[B]!  -- would panic; nothing uses it
+
+No autoparam of this project's own is involved: `xs[i]` already elaborates to
+`getElem xs i (by get_elem_tactic)`, and `get_elem_tactic` tries `assumption` before
+anything else (hardcoded, `Init/Tactics.lean`). The instances sit on the map's type rather
+than on `Store`, which is what makes the notation read `S.σ[B]` and not `S[B]`.
+`LawfulGetElem` is included so `getElem?_pos`/`getElem?_neg` relate the two spellings; core
+provides no connection without it.
+
+**The parsing hazard, checked.** `Spec/Defs/Notation.lean`'s `idxAssign` claims
+`ident noWs "[" term "]" " ← " term` as a `doElem`, which is how `on_block` writes
+`S.σ[B] ← some σ'`. That macro still wins in `do` position — measured by re-elaborating
+`on_block` with the instances in scope and finding the two definitions equal by `rfl`, and
+then by the green build.
+
+**Theorem 8's statement changed** (`hft:thm:finlive`), on instruction. Where it read
+
+    {B F' : Blk …} (hnew : B ∉ S.T) (hB : get σB from S'.σ B; σB.F = F') : F' ⪯ S'.F ∨ …
+
+it now reads
+
+    {B : Blk …} (hnew : B ∉ S.T) (hB : (S'.σ B).isSome) : S'.σ[B].F ⪯ S'.F ∨ …
+
+which is the paper's `Σ.F ⪰ σ[B].F` with no binder in between. `F'` is gone: it *is*
+`S'.σ[B].F`. The proof is still one line, now
+`Proofs.finalityAcceptance h hnew ⟨S'.σ[B], (Option.some_get hB).symm, rfl⟩`, and
+`#print axioms` is unchanged. `Proofs.finalityAcceptance` keeps the binder-and-hypothesis
+shape, so nothing under `Analysis/Proofs/` moved.
+
+Theorem 9 keeps its `get … from` binder: the two fields it reads off the record (`J` and
+`h_j`) are named again in its own hypotheses and conclusion, so the state cannot collapse
+into a single bracket the way Theorem 8's can.
+
+### What was measured while choosing this shape
+
+* **`x = y` with `x : Option α` and `y : α` already elaborates**, and Lean resolves it by
+  coercing `y` **up** — it means `x = some y`, which is exactly `Holds.mem`, which is what
+  `get … from` expands to. A reverse `Option α → α` coercion is therefore not needed for
+  hypotheses, and would fight the existing one.
+* A reverse coercion is possible but never automatic: `CoeDep` on `some a` fires only when
+  the value is syntactically `some a`, and `CoeDep` with `[Fact (o.isSome = true)]` needs a
+  `haveI` at each use site, because a local hypothesis is not an instance.
+* **`Option.getA` with a plain `(h : o.isSome := by assumption)` autoparam works**, and
+  notation over it fires the autoparam too, since the autoparam lives in the function's
+  type. It is not landed: the bracket is closer to the paper, and `getA` would be a
+  `_root_.Option` declaration in everyone's namespace. Its one advantage is a sharper error
+  — `get_elem_tactic` also tries `omega` and `simp +arith` after `assumption`, so a missing
+  hypothesis fails slower and less pointedly.
+* **The friction is unchanged and is why no other statement uses the bracket**: the read
+  carries its proof, so `rw` on a store inside one fails with *motive is not type correct*
+  where `simp only` succeeds. This is `CONTEXT.md`'s 2026-08-15 entry on
+  `TransitionResult.get`, measured again for this shape. `postState'` escapes it because
+  `postState B` is a function of `B` alone that nothing rewrites; `S.σ B` is a store field
+  that `updateFinalized_σ`, `updateJustified_σ` and `update_keeps` rewrite constantly.
+
 ## Next
 
 1. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the

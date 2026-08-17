@@ -175,27 +175,33 @@ theorem thmForkChoiceConsistency {Node Root : Type} [DecidableEq Node] [Decidabl
     third of the validators exposed themselves.
 
     Noun by noun. "A block `B` is processed by `on_block`": `B` is absent from a store
-    the node holds (`B ∉ S.T`) and recorded in a later one — the `get` hypothesis reads
-    `σ[B]` out of `S'` — so the processing call lies between the two, a delivery to `p`
-    running `on_block` being the one action that can make the difference. "`σ[B].F = F'`":
-    that recorded state's `F`. "After processing `Σ.F ⪰ F'`": `F' ⪯ S'.F` — stated at the
-    recording store rather than at the accepting step, the same claim once Theorem 3's
-    monotonicity is in hand, and the readable one. "Unless `≥ n/3` validators are
-    slashable": the accountable disjunct of the module header, both messages of each
-    signer included on blocks `S'` accepted. The store-level core is the previous
-    statement of record, over one `onBlock` call on a reachable store. -/
+    the node holds (`B ∉ S.T`) and recorded in a later one (`(S'.σ B).isSome`) — so the
+    processing call lies between the two, a delivery to `p` running `on_block` being the
+    one action that can make the difference. "`σ[B].F`" is `S'.σ[B].F`, the paper's own
+    spelling: the bracket is the `GetElem` reading of Definition 10's state map
+    (`Spec/Defs/Store.lean`), and it takes "`B` is recorded" from `hB`. So the paper's
+    `F'` needs no binder here — it *is* `S'.σ[B].F`, and "after processing `Σ.F ⪰ F'`"
+    is the conclusion read left to right. That conclusion is stated at the recording store
+    rather than at the accepting step: the same claim once Theorem 3's monotonicity is in
+    hand, and the readable one. "Unless `≥ n/3` validators are slashable": the accountable
+    disjunct of the module header, both messages of each signer included on blocks `S'`
+    accepted. The store-level core is the previous statement of record, over one `onBlock`
+    call on a reachable store.
+
+    Theorem 9 below keeps its `get … from` binder, because the two fields it reads off the
+    record are named again in its own hypotheses and conclusion; here nothing else mentions
+    the state, so the bracket carries the whole of it. -/
 theorem thmFinalityAcceptance {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     [Electorate Node] [Params] [BlockHash Node Root] [PositiveWeight Node]
     {sched : Schedule Node} {x : Exec (protocol (Node := Node) (Root := Root)) sched}
     {p : Node} {S S' : Store Node Root} (h : ReachesFrom x p S S')
-    {B F' : Blk Node Root} (hnew : B ∉ S.T)
-    (hB : get σB from S'.σ B; σB.F = F') :
-    F' ⪯ S'.F ∨
+    {B : Blk Node Root} (hnew : B ∉ S.T) (hB : (S'.σ B).isSome) :
+    S'.σ[B].F ⪯ S'.F ∨
       ∃ A : Finset Node, w(A) ≥ 2 * q Node - W Node ∧
         ∀ v ∈ A, ∃ a b : Attestation Node Root, a.validator = v ∧ b.validator = v ∧
           (∃ Ca ∈ S'.T, IncludedOn a Ca) ∧
           (∃ Cb ∈ S'.T, IncludedOn b Cb) ∧ E1 a b :=
-  Proofs.finalityAcceptance h hnew hB
+  Proofs.finalityAcceptance h hnew ⟨S'.σ[B], (Option.some_get hB).symm, rfl⟩
 
 /-- **Theorem 9** (`hft:thm:lockin`, lines 695–697): lock-in.
 
