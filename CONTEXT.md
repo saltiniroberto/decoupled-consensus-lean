@@ -2523,6 +2523,45 @@ defeq-preserved arm; the six statements of record then stand as written once `st
 reads through `ValidatorState`. Whether they *should* stand — or whether any wants the
 history in view — is the review question for that round.
 
+## 2026-08-18 — clickable citations: a label map and a local VS Code extension
+
+Built to `PLAN_CITATION_LINKS.md`, which is deleted with this entry. Ctrl+click a paper
+citation in a `.lean` file — the label, or the line span beside it — and the cited `.tex`
+opens at the cited line.
+
+* `tools/citation_links.py` (`make citation-links`) writes the gitignored
+  `.citation-links.json`: for every `\label` in either paper, the repository-relative
+  `.tex` path and the label's line, plus the span for the results `check_citations.py`
+  already spans. 372 labels, 133 with spans. It **imports** `SPECS`, `HFT_TEX` and
+  `environment_spans` from the checker, so which paper a label belongs to has one owner.
+* `tools/vscode-citations/` is the extension: `package.json`, `extension.js`, README, no
+  build step, no dependency. Not installed on this machine — the local hook denies writes
+  to `~/.vscode/extensions`; `CONTEXT_LOCAL.md` carries the one-line symlink command.
+
+Three decisions worth keeping:
+
+* **The extension matches the backticked label, not the five citation forms.** Every form
+  `check_citations.py` recognises carries its label in backticks, so one small regex
+  covers all of them and cannot drift from the checker. It also settles the
+  false-positive question: a backticked `kind:label` is not Lean syntax, and all 318
+  occurrences under `lean/` are in docstrings or comments (measured).
+* **Links go through a registered command, not a `file:` URI with an `L<n>` fragment.**
+  The fragment form is shorter and probably works, but it cannot be verified without a
+  running editor, and the plan said not to ship it unverified. `openAt` in `extension.js`
+  is the single function to change if someone confirms it.
+* **A citation without a label cannot be linked**, since the label is what resolves the
+  file. Hence the convention, adopted with this work: a citation that states line numbers
+  carries its label beside them. Label-less re-mentions and the per-line figure comments
+  (`-- line 531`) stay plain text by design, anchored by the enclosing docstring's own
+  labelled citation.
+
+Verified headlessly with a stubbed `vscode` module over the real tree: 365 links across
+every `.lean` file, no unresolved label, spans landing on the same line as their label.
+`hft:alg:store` resolves to `full/height_filter_and_timeouts.tex:521` — the plan guessed
+520, which is the `\begin{figure}`; the map records where the `\label` itself sits, one
+line into the environment, which is the more useful target. What stays unverified until
+the extension is installed is only that the links render and click through in the editor.
+
 ## Next
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the entry above), on the
