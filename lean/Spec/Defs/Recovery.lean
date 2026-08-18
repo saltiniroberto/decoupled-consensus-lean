@@ -942,8 +942,8 @@ end
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
-/-- Definition 42 (`def:action-root`, lines 1256–1308). `stableWalkStart` is the round's
-    vote-time stable root — after a mid-round re-derivation, the re-derived root. The cases, in the
+/-- Definition 42 (`def:action-root`, lines 1256–1308). `latestGoldfishWalkStart` is
+    the round's vote-time stable root — after a mid-round re-derivation, the re-derived root. The cases, in the
     definition's order: proposal-free (no accepted proposal, or the accepted proposal
     block evicted from the action candidate tree while the root ancestry holds) reads no
     proposal block; off-path (the vote-time root or the action-state Simplex root not an
@@ -1050,7 +1050,7 @@ def sgfgVoteWalkStart
     -- `Σ_{u,act}^r`: the activation-filtered store at the SG/FG vote
     (filteredStoreAtSGFGVote : Store Node Root)
     -- the round's vote-time stable root — after a mid-round re-derivation, the re-derived root
-    (stableWalkStart : Blk Node Root)
+    (latestGoldfishWalkStart : Blk Node Root)
     -- the round's accepted distinguished proposal, `none` on every failure path
     (acceptedProposal : Option (RecoveryProposal Node Root))
     -- `X_u^1`, the grade view raw grade 1 is tested in
@@ -1058,14 +1058,15 @@ def sgfgVoteWalkStart
     -- finalized roots whose evidence was processed by this reading
     (processedFinalizedAtSGFGVote : Finset (Blk Node Root)) : Option (Blk Node Root) :=
   let admittedWalkStart : Option (Blk Node Root) :=
-    if stableWalkStart ∈ candidateTree filteredStoreAtSGFGVote ∧
-        (stableWalkStart = filteredStoreAtSGFGVote.walkStartFromFGVotes ∨
-          (G1 attsAtRoundStartPlusΔ r stableWalkStart ∧
-            ConflictFree processedFinalizedAtSGFGVote stableWalkStart)) then
-      some stableWalkStart
+    if latestGoldfishWalkStart ∈ candidateTree filteredStoreAtSGFGVote ∧
+        (latestGoldfishWalkStart = filteredStoreAtSGFGVote.walkStartFromFGVotes ∨
+          (G1 attsAtRoundStartPlusΔ r latestGoldfishWalkStart ∧
+            ConflictFree processedFinalizedAtSGFGVote latestGoldfishWalkStart)) then
+      some latestGoldfishWalkStart
     else none
   if let some p := acceptedProposal then
-    if stableWalkStart ⪯ p.block ∧ filteredStoreAtSGFGVote.walkStartFromFGVotes ⪯ p.block then
+    if latestGoldfishWalkStart ⪯ p.block ∧
+      filteredStoreAtSGFGVote.walkStartFromFGVotes ⪯ p.block then
       if p.block ∈ candidateTree filteredStoreAtSGFGVote then
         admittedWalkStart                           -- case 3, with the proposal in play
       else admittedWalkStart                        -- case 1: evicted proposal, root ancestry holds
@@ -1127,16 +1128,17 @@ structure ActionOutputs (Node Root : Type) where
     grade-0 majority vetoes; without one, the validator may still publish a veto-free
     prefix of its fixed root, but it cannot sign a current-height choice. -/
 def officialConfirmation [Omega Node Root] (Sact : Store Node Root)
-    (stableWalkStart : Blk Node Root) (admittedWalkStart : Option (Blk Node Root))
+    (latestGoldfishWalkStart : Blk Node Root) (admittedWalkStart : Option (Blk Node Root))
     (committee : Finset Node)
     (s : Time) (Vm Vp : Finset (GoldfishVote Node Root))
     (X2 : Finset (Attestation Node Root)) (r : Nat)
     (pfFreeze processedF : Finset (Blk Node Root)) : ActionOutputs Node Root :=
-  if admittedWalkStart = none ∨ stableWalkStart ∉ candidateTree Sact then { head := ⊥, C := ⊥ }
+  if admittedWalkStart = none ∨ latestGoldfishWalkStart ∉ candidateTree Sact then
+    { head := ⊥, C := ⊥ }
   else
     let Cav := deepest (Sact.T.filter fun B => AvailableConfirmed Vm Vp s committee B)
     let G := ghostWalk (Vp.filter fun v => v.slot = s) (candidateTree Sact)
-      (candidateTree Sact).card stableWalkStart
+      (candidateTree Sact).card latestGoldfishWalkStart
     let officials :=
       match Cav with
       | some c =>
@@ -1243,7 +1245,7 @@ def castSGFGVote [Omega Node Root]
     -- `Σ_{u,act}^r`, the action state: the store under the activation filter at this reading
     (filteredStoreAtSGFGVote : Store Node Root)
     -- the round's stable root (Definition 41), as the records hold it
-    (stableWalkStart : Blk Node Root)
+    (latestGoldfishWalkStart : Blk Node Root)
     -- the round's accepted distinguished proposal, `none` on every failure path
     (acceptedProposal : Option (RecoveryProposal Node Root))
     -- Definition 47's source proposal, from round `r − 1`
@@ -1261,10 +1263,10 @@ def castSGFGVote [Omega Node Root]
     -- `H_i`, Definition 12's durable signing history
     (history : SigningHistory Node Root) :
     Attestation Node Root × SigningHistory Node Root :=
-  let admittedWalkStart := sgfgVoteWalkStart filteredStoreAtSGFGVote stableWalkStart
+  let admittedWalkStart := sgfgVoteWalkStart filteredStoreAtSGFGVote latestGoldfishWalkStart
     acceptedProposal
     attsAtRoundStartPlusΔ r processedFinalizedAtSGFGVote
-  let outs := officialConfirmation filteredStoreAtSGFGVote stableWalkStart
+  let outs := officialConfirmation filteredStoreAtSGFGVote latestGoldfishWalkStart
     admittedWalkStart committee
     firstSlotVoteTime votesAtSupportFreeze votesAtSGFGVote attsAtRoundStartPlus2Δ r
     processedFinalizedAtFreeze processedFinalizedAtSGFGVote

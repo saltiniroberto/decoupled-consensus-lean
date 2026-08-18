@@ -286,7 +286,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               (i := i) (r := r) (t := t)
               (filteredStoreAtSGFGVote :=
                 st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
-              (stableWalkStart := st.round.goldfishWalkStart)
+              (latestGoldfishWalkStart := st.round.goldfishWalkStart)
               (acceptedProposal := st.round.accepted)
               (sourceProposal := st.prevProposal)
               (committee := Committees.committee (roundStart + Δ))
