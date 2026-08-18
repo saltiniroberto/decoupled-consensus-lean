@@ -377,7 +377,7 @@ end
     the carried set is kept for the vote-referenced blocks it also names. -/
 structure RecoveryProposal (Node Root : Type) where
   /-- The round `r` the proposal opens. -/
-  round : Nat
+  r : Nat
   /-- `O_p^r`, the carried ordinary Goldfish blocks. -/
   carriedBlocks : Finset (Blk Node Root)
   /-- `V_{p,GF}^r`, "the proposer's set of raw Goldfish votes for the preceding slot" —
@@ -408,7 +408,7 @@ variable [DecidableEq Node] [DecidableEq Root]
     proposer's own obligation and unobservable here; the rest is checked. Everything
     else Definition 41's items re-check per receiver. -/
 def RecoveryProposal.wellFormed (p : RecoveryProposal Node Root) (r : Nat) : Prop :=
-  p.round = r ∧ p.proposedRoot ⪯ p.parent ∧ p.block.parent = some p.parent
+  p.r = r ∧ p.proposedRoot ⪯ p.parent ∧ p.block.parent = some p.parent
 
 instance (p : RecoveryProposal Node Root) (r : Nat) : Decidable (p.wellFormed r) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _))
