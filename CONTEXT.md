@@ -2669,6 +2669,14 @@ into the *verbatim* blocks of the definitions downstream, because each marker's 
 next marker; verbatim blocks must be located by their own delimiters, never as "the rest of the
 segment".
 
+Break #5, same day: `sourceProposal` is `prevRoundProposal` — Definition 47's defined term
+"source proposal" names a role, and the fact (from round `r − 1`) is what a reader can check;
+`ValidatorState.prevProposal` renamed with it so the value has one name end to end (both hold the
+proposal's *block*). Definition 47 gained its dual text with the package, translating "source
+proposal" → "the previous-round proposal" and the `a_r` "action" → "the SG/FG vote", while
+Definition 20's own term "finality action state" stays — it is the other paper's word and its
+`Analysis` rendering is untouched.
+
 **The dual-text convention, now in `CLAUDE.md`**: where renamed vocabulary appears inside a
 definition's own text, the docstring carries the paper's text verbatim and then the same text
 in the new terminology, sentence for sentence. Applied to Definitions 29, 40, 41, 42, 45 and

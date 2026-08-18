@@ -1186,7 +1186,7 @@ def Store.hasJC (S : Store Node Root) : Bool :=
 
 /-- Definition 47 (`def:ordinary-current-target`, lines 1814–1869), both branches, over
     an explicit confirmation and source. `deepestConfirmation` is the action's deepest
-    official confirmation `Q_i^r` (Definition 46); `sourceProposal` is "the unique
+    official confirmation `Q_i^r` (Definition 46); `prevRoundProposal` is "the unique
     distinguished proposal
     from round `r − 1`, whose SG batch this action grades", or `none` when that round
     recognized none. With `Q_i^r` empty, no current-height pair (`none` — Definition 48
@@ -1200,19 +1200,98 @@ def Store.hasJC (S : Store Node Root) : Bool :=
     `Y_i.slot ≥ σ_i.s_{k_i}`, else `⊥` — the `else` arm returns the field, `⊥` in
     exactly the remaining case.
 
+    **The paper's text, verbatim (Definition 47, `def:ordinary-current-target`,
+    lines 1814–1869):**
+
+    > The *source proposal* for action `r` is the unique distinguished proposal from
+    > round `r − 1`, whose SG batch this action grades. If the local round-`(r−1)`
+    > record has no unique distinguished proposal — the proposer equivocated, or no
+    > proposal was recognized — then action `r` has no source proposal at that
+    > validator. In that case the validator skips every source-state option: it uses
+    > `Y_i = Q_i^r` and `σ_i = σ̄_i = σ_a[Q_i^r]` directly when its deepest official
+    > confirmation `Q_i^r` is nonempty, with the same `k_i, ν_i, T_i` assignments as
+    > below, and emits no current-height pair when `Q_i^r` is empty. When local winners
+    > differ, a winner is untimely, or a winner equivocated, recognition may differ
+    > between honest validators, so this branch is per-validator; the common-context
+    > results below therefore always require universal recognition, stated as a premise
+    > by Definition 44 (`def:usable-honest-round`) and discharged at
+    > honest-round-proposer rounds by Lemma 36 (`lem:common-recognition`).
+    >
+    > Each proposal therefore supplies the context of exactly one action. Suppose the
+    > source proposal is `B`. The action signs the authenticated state of its deepest
+    > official confirmation `Q_i^r`; no separate symbol is needed for this block. When
+    > `Q_i^r` is empty, the validator emits no current-height pair by Definition 48
+    > (`def:height-vote-rule`) below, no context block is signed, and none of the
+    > quantities defined below is read. Let `σ̄_i = σ_a[Q_i^r]` be the finality action
+    > state of `Q_i^r` for this action's slot (Definition 20,
+    > `def:finality-action-state`): the authenticated state with every pre-action slot
+    > closed. The closure changes no height or participation field (Lemma 3,
+    > `lem:empty-slot-noop`); it can only materialize a pending target name, which the
+    > fallback below would otherwise supply, and reading it keeps one state name for
+    > every signed field of the action. If `B ⪯ Q_i^r` and `σ_a[B].h = σ̄_i.h`,
+    > validator `i` uses `Y_i = B` and `σ_i = σ_a[B]`, the finality action state of `B`
+    > for the same slot. Otherwise it uses `Y_i = Q_i^r` and `σ_i = σ̄_i`. Define the
+    > action's current-height context by `k_i = σ_i.h`, `ν_i = σ_i.nj`, and normally
+    > set `T_i = σ_i.T_{k_i}`. If that target field is empty and
+    > `Y_i.slot ≥ σ_i.s_{k_i}`, set `T_i = Y_i`; otherwise set `T_i = ⊥`.
+    >
+    > Thus, when the source proposal is officially confirmed and its height is still
+    > current, its authenticated post-state fixes the complete triple
+    > `ctx(B) = (k_B, T_B, ν_B)` for that action. A proposal is carried for this
+    > purpose through exactly the action that grades its SG batch, and no farther.
+
+    **The same text, in this file's terminology** — source proposal → the
+    previous-round proposal, the action → the SG/FG vote; "finality action state" is
+    Definition 20's own term and stays:
+
+    > The previous-round proposal for the SG/FG vote of round `r` is the unique
+    > distinguished proposal from round `r − 1`, whose SG batch this vote grades. If the
+    > local round-`(r−1)` record has no unique distinguished proposal — the proposer
+    > equivocated, or no proposal was recognized — then round `r`'s SG/FG vote has no
+    > previous-round proposal at that validator. In that case the validator skips every
+    > source-state option: it uses `Y_i = Q_i^r` and `σ_i = σ̄_i = σ_a[Q_i^r]` directly
+    > when its deepest official confirmation `Q_i^r` is nonempty, with the same
+    > `k_i, ν_i, T_i` assignments as below, and emits no current-height pair when
+    > `Q_i^r` is empty. When local winners differ, a winner is untimely, or a winner
+    > equivocated, recognition may differ between honest validators, so this branch is
+    > per-validator; the common-context results below therefore always require universal
+    > recognition, stated as a premise by Definition 44 and discharged at
+    > honest-round-proposer rounds by Lemma 36.
+    >
+    > Each proposal therefore supplies the context of exactly one SG/FG vote. Suppose
+    > the previous-round proposal is `B`. The SG/FG vote signs the authenticated state
+    > of its deepest official confirmation `Q_i^r`; no separate symbol is needed for
+    > this block. When `Q_i^r` is empty, the validator emits no current-height pair by
+    > Definition 48 below, no context block is signed, and none of the quantities
+    > defined below is read. Let `σ̄_i = σ_a[Q_i^r]` be the finality action state of
+    > `Q_i^r` for this vote's slot (Definition 20): the authenticated state with every
+    > earlier slot closed. The closure changes no height or participation field
+    > (Lemma 3); it can only materialize a pending target name, which the fallback below
+    > would otherwise supply, and reading it keeps one state name for every signed field
+    > of the SG/FG vote. If `B ⪯ Q_i^r` and `σ_a[B].h = σ̄_i.h`, validator `i` uses
+    > `Y_i = B` and `σ_i = σ_a[B]`, the finality action state of `B` for the same slot.
+    > Otherwise it uses `Y_i = Q_i^r` and `σ_i = σ̄_i`. Define the vote's current-height
+    > context by `k_i = σ_i.h`, `ν_i = σ_i.nj`, and normally set `T_i = σ_i.T_{k_i}`.
+    > If that target field is empty and `Y_i.slot ≥ σ_i.s_{k_i}`, set `T_i = Y_i`;
+    > otherwise set `T_i = ⊥`.
+    >
+    > Thus, when the previous-round proposal is officially confirmed and its height is
+    > still current, its authenticated post-state fixes the complete triple
+    > `ctx(B) = (k_B, T_B, ν_B)` for that SG/FG vote. A proposal is carried for this
+    > purpose through exactly the SG/FG vote that grades its SG batch, and no farther.
     In plain words: a validator that confirms the graded round's proposal signs that
     proposal's height, target and nonjustifiable flag even when its own tip has moved,
     and one that does not falls back to its confirmed block's own state. The branch
     condition keeps `σ_a[C_i].h = k` in both cases, which is why the wiring passes
     `hC = k` to `heightVote`. -/
 def recoveryContext (S : Store Node Root) (t : Time)
-    (officialConfirmation sourceProposal : Option (Blk Node Root)) :
+    (officialConfirmation prevRoundProposal : Option (Blk Node Root)) :
     Option (VoteContext Node Root) :=
   if let some Q := officialConfirmation then
     if let some σQ := S.σ Q then
       let σbar := processSlots σQ t
       let (Y, σi) :=
-        match sourceProposal with
+        match prevRoundProposal with
         | some B =>
             match S.σ B with
             | some σB =>
@@ -1251,7 +1330,7 @@ def castSGFGVote [Omega Node Root]
     -- the round's accepted distinguished proposal, `none` on every failure path
     (acceptedProposal : Option (RecoveryProposal Node Root))
     -- Definition 47's source proposal, from round `r − 1`
-    (sourceProposal : Option (Blk Node Root))
+    (prevRoundProposal : Option (Blk Node Root))
     -- the evaluated first slot's committee, and that slot's vote phase `d_r + Δ`,
     -- which the TSQ views and the head walk both key on
     (committee : Finset Node) (firstSlotVoteTime : Time)
@@ -1272,7 +1351,7 @@ def castSGFGVote [Omega Node Root]
     admittedWalkStart committee
     firstSlotVoteTime votesAtSupportFreeze votesAtSGFGVote attsAtRoundStartPlus2Δ r
     processedFinalizedAtFreeze processedFinalizedAtSGFGVote
-  match recoveryContext filteredStoreAtSGFGVote t outs.C sourceProposal with
+  match recoveryContext filteredStoreAtSGFGVote t outs.C prevRoundProposal with
   | some ctx =>
       fgVote
         (i := i) (r := r)

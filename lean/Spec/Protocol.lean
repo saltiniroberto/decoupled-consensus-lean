@@ -158,7 +158,7 @@ structure ValidatorState (Node Root : Type) where
   proposals : Finset (RecoveryProposal Node Root)
   /-- The previous round's accepted proposal block — Definition 47's source proposal for
       the current action. -/
-  prevProposal : Option (Blk Node Root)
+  prevRoundProposal : Option (Blk Node Root)
   /-- `X_u^-` for the round about to open, staged at `d_{r+1} − Δ`; it lands in
       `attsAtRoundStartMinusΔ` when the round's records are built. -/
   nextAttsAtRoundStartMinusΔ : Finset (Attestation Node Root)
@@ -288,7 +288,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
               (latestGoldfishWalkStart := st.round.goldfishWalkStart)
               (acceptedProposal := st.round.acceptedProposal)
-              (sourceProposal := st.prevProposal)
+              (prevRoundProposal := st.prevRoundProposal)
               (committee := Committees.committee (roundStart + Δ))
               (firstSlotVoteTime := roundStart + Δ)
               (votesAtSupportFreeze := st.round.votesAtSupportFreeze)
@@ -302,7 +302,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 hist := H',
                 atts := insert a st.atts,  -- its own head is in its own later views
                 storeAtPrevSGFGVote := st.store,          -- the next round's activation cutoff
-                prevProposal := st.round.acceptedProposal.map fun p => p.block },
+                prevRoundProposal := st.round.acceptedProposal.map fun p => p.block
+              },
               send := {.attestation a} }
           else if (t - roundStart) % (4 * Δ) = 3 * Δ then
             -- a slot-view freeze (Definition 28, `def:recovery-timing`, lines 171–177)
@@ -340,7 +341,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
 def protocol : Protocol Node (StoreMsg Node Root) (ValidatorState Node Root) Empty where
   init _ :=
     { store := Store.gen, hist := .gen, storeAtPrevSGFGVote := Store.gen,
-      atts := ∅, gvotes := ∅, proposals := ∅, prevProposal := none, nextAttsAtRoundStartMinusΔ := ∅,
+      atts := ∅, gvotes := ∅, proposals := ∅, prevRoundProposal := none,
+      nextAttsAtRoundStartMinusΔ := ∅,
       round := { r := 0, attsAtRoundStartMinusΔ := ∅, attsAtRoundStart := ∅,
                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
                  selSnap := Store.gen, voteSnap := Store.gen, votesAtSupportFreeze := ∅,
