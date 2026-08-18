@@ -278,9 +278,29 @@ def ordinaryVote [Omega Node Root] (S : Store Node Root) (t : Time)
     (h_F : Nat) (hasJC : Bool) (H : SigningHistory Node Root) :
     Attestation Node Root × SigningHistory Node Root :=
   if let some ctx := ordinaryContext S t then
-    fgVote i r head S.J S.h_j S.F h_F hasJC (some ctx.C) ctx.k ctx.T ctx.ν ctx.k H
+    fgVote
+      (i := i)           -- the signing validator; passed through from the caller
+      (r := r)           -- the attestation's round; passed through from the caller
+      (head := head)     -- the SG head the attestation carries; passed through
+      (J := S.J)         -- the latest justified block; here the store's
+      (h_j := S.h_j)     -- the latest justified height; here the store's
+      (F := S.F)         -- the latest finalized block; here the store's
+      (h_F := h_F)       -- the latest finalized height; explicit input, open decision
+      (hasJC := hasJC)   -- knowledge of `JC(h_j, J)`; explicit input, open decision
+      (C := some ctx.C)  -- the confirmed block `C_i`; here `getConfirmed`'s pick
+      (k := ctx.k)       -- the current height `k_i`; here the context state's height
+      (T := ctx.T)       -- the current-height target `T_i`; read off the context
+      (ν := ctx.ν)       -- the nonjustifiable flag `ν_i`; the context state's `nj`
+      (hC := ctx.k)      -- the context state's height `σ_a[C_i].h`; equal to `k` here
+      (H := H)           -- the durable history, threaded through both pair rules
   else
-    fgVote i r head S.J S.h_j S.F h_F hasJC ⊥ 0 ⊥ false 0 H
+    fgVote
+      (i := i) (r := r) (head := head)          -- as in the branch above
+      (J := S.J) (h_j := S.h_j) (F := S.F)      -- the store's fork-choice fields
+      (h_F := h_F) (hasJC := hasJC)             -- the two explicit inputs
+      (C := ⊥)           -- no recorded state at the confirmed block: the pair is empty
+      (k := 0) (T := ⊥) (ν := false) (hC := 0)  -- unread once `C = ⊥`
+      (H := H)           -- the finality rule still runs, and may write the lock
 
 end
 
