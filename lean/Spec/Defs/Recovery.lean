@@ -384,7 +384,7 @@ structure RecoveryProposal (Node Root : Type) where
       the input of the proposal-view merge. -/
   votes : Finset (GoldfishVote Node Root)
   /-- `A_p^r`, the proposed root. -/
-  A : Blk Node Root
+  proposedRoot : Blk Node Root
   /-- `tag_p^r ∈ {graded, ungraded}`, which branch of Definition 41's item 2 the
       proposer claims. "The tag binds the branch." -/
   graded : Bool
@@ -408,7 +408,7 @@ variable [DecidableEq Node] [DecidableEq Root]
     proposer's own obligation and unobservable here; the rest is checked. Everything
     else Definition 41's items re-check per receiver. -/
 def RecoveryProposal.wellFormed (p : RecoveryProposal Node Root) (r : Nat) : Prop :=
-  p.round = r ∧ p.A ⪯ p.Z ∧ p.B.parent = some p.Z
+  p.round = r ∧ p.proposedRoot ⪯ p.Z ∧ p.B.parent = some p.Z
 
 instance (p : RecoveryProposal Node Root) (r : Nat) : Decidable (p.wellFormed r) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _))
@@ -532,13 +532,13 @@ def stableRoot (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
       { root := Svote.R, graded := false, accepted := none }
   if let some p := prop then
     let item1 :=
-      (L ⪯ p.A ∧ p.A ⪯ p.Z ∧ Svote.R ⪯ p.Z) ∨
-      (p.A ⪯ Svote.R ∧ p.A ≠ Svote.R ∧ Svote.R ⪯ p.Z ∧ Svote.R = Svote.F ∧ L ⪯ p.Z)
+      (L ⪯ p.proposedRoot ∧ p.proposedRoot ⪯ p.Z ∧ Svote.R ⪯ p.Z) ∨
+      (p.proposedRoot ⪯ Svote.R ∧ p.proposedRoot ≠ Svote.R ∧ Svote.R ⪯ p.Z ∧ Svote.R = Svote.F ∧ L ⪯ p.Z)
     let item2 :=
-      (p.graded = true ∧ G1 X1 r p.A ∧ ConflictFree processedF p.A ∧
-        ValidG2Witness p.witness r p.A) ∨
-      (p.graded = false ∧ p.A = Svote.R)
-    let Rv := chainMax (chainMax p.A L) Svote.R
+      (p.graded = true ∧ G1 X1 r p.proposedRoot ∧ ConflictFree processedF p.proposedRoot ∧
+        ValidG2Witness p.witness r p.proposedRoot) ∨
+      (p.graded = false ∧ p.proposedRoot = Svote.R)
+    let Rv := chainMax (chainMax p.proposedRoot L) Svote.R
     let item3 :=
       Rv ∈ agedTreeWithExemption Svote witnesses (some p.B) ∧
       p.B ∈ agedTreeWithExemption Svote witnesses (some p.B)
