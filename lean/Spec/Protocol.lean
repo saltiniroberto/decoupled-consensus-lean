@@ -148,7 +148,7 @@ structure ValidatorState (Node Root : Type) where
   /-- Every raw Goldfish vote received (or cast) so far — the TSQ views read this. -/
   gvotes : Finset (GoldfishVote Node Root)
   /-- Every round proposal received so far. -/
-  props : Finset (RecoveryProposal Node Root)
+  proposals : Finset (RecoveryProposal Node Root)
   /-- The previous round's accepted proposal block — Definition 47's source proposal for
       the current action. -/
   prevProposal : Option (Blk Node Root)
@@ -178,7 +178,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
       | .block _ => { state := st, send := ∅ }
       | .attestation a => { state := { st with atts := insert a st.atts }, send := ∅ }
       | .gVote v => { state := { st with gvotes := insert v st.gvotes }, send := ∅ }
-      | .proposal p => { state := { st with props := insert p st.props }, send := ∅ }
+      | .proposal p => { state := { st with proposals := insert p st.proposals }, send := ∅ }
   | .tick =>
       match Rounds.roundAt t with
       | some r =>
@@ -211,7 +211,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- Definition 43's wrapper: the locally winning well-formed proposal,
             -- discarded when its signer has two distinct round proposals in this view;
             -- timeliness is pool membership at this reading (module header)
-            let cands := st.props.filter fun p => p.wellFormed r
+            let cands := st.proposals.filter fun p => p.wellFormed r
             let prop :=
               match ProposerSelection.winner cands with
               | some p =>
@@ -318,7 +318,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
 def protocol : Protocol Node (StoreMsg Node Root) (ValidatorState Node Root) Empty where
   init _ :=
     { store := Store.gen, hist := .gen, storeAtPrevSGFGVote := Store.gen,
-      atts := ∅, gvotes := ∅, props := ∅, prevProposal := none, nextAttsAtRoundStartMinusΔ := ∅,
+      atts := ∅, gvotes := ∅, proposals := ∅, prevProposal := none, nextAttsAtRoundStartMinusΔ := ∅,
       round := { r := 0, attsAtRoundStartMinusΔ := ∅, attsAtRoundStart := ∅,
                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
                  selSnap := Store.gen, voteSnap := Store.gen, Vm := ∅, frozen := ∅,
