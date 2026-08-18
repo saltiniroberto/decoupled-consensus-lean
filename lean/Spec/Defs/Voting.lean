@@ -543,7 +543,7 @@ variable [Rounds]
 /-- `a_r = d_r + 4Δ + 2Δ` (Definition 28, `def:recovery-timing`, lines 146–150): "two
     network-delivery bounds into the round's
     second slot", when the validator "performs the round's SG and FG action". -/
-def actionTime (r : Nat) : Time :=
+def SGFGVotingTime (r : Nat) : Time :=
   start r + 6 * Δ
 
 /-- Which round a clock reading falls in: the `r` with `d_r ≤ t < d_{r+1}`, none before

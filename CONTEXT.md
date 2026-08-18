@@ -2499,7 +2499,7 @@ The spec:
 
 * `Rounds` (in `Spec/Defs/Voting.lean`) — Definition 28 as a class: `start r` (= `d_r`),
   `Δ`, positivity, and the round spacing in added form (`d_r + 8Δ ≤ d_{r+1}`, which is
-  `a_r + Δ ≤ d_{r+1} − Δ` plus "at least two slots"). Derived: `actionTime r = d_r + 6Δ`,
+  `a_r + Δ ≤ d_{r+1} − Δ` plus "at least two slots"). Derived: `SGFGVotingTime r = d_r + 6Δ`,
   `roundAt` (bounded search, sound because `start` grows by ≥ 8 per round), `isGoldfishVoteTime`
   (the `+Δ` phase of a `4Δ` slot).
 * `StoreMsg` gained `attestation` and `gVote`; `receive` leaves the store unchanged on
@@ -2508,7 +2508,7 @@ The spec:
   which is the healing store's `objects` component played by the framework.
 * `Spec/Protocol.lean`: node state is now `ValidatorState` (store + Definition 12's
   signing history). The reaction reads the validator's identity and clock; on `tick` at
-  reading `t`: at `actionTime r`, sign the combined attestation via `ordinaryVote`
+  reading `t`: at `SGFGVotingTime r`, sign the combined attestation via `ordinaryVote`
   (history updated before the send) and broadcast it; at a slot's `+Δ`, broadcast the raw
   Goldfish vote. Three placeholder inputs, flagged in the header and at the call sites:
   head `⊥` (honest, never live), empty Goldfish vote view and candidate tree (the vote

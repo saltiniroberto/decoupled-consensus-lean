@@ -236,7 +236,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 X2 := st.atts, Vm := st.gvotes,
                 pfFreeze := processedFinalized st.store } },
               send := ∅ }
-          else if t = Rounds.actionTime r then
+          else if t = Rounds.SGFGVotingTime r then
             -- the round's SG/FG action (Figure 5, `alg:recovery-action`, steps 15–21)
             let (a, H') := recoveryAction
               (i := i) (r := r) (t := t)
