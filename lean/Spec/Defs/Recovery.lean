@@ -18,11 +18,11 @@ the no-source-proposal branch. Everything here is a pure function over explicit 
 
 ## The identifications this file rests on (each decided earlier, reused here)
 
-* A fork-choice state is a `Store`, and `simplexRoot(Σ)` is `Store.R` — the reading
+* A fork-choice state is a `Store`, and `simplexRoot(Σ)` is `Store.walkStart` — the reading
   `sgHeadOk`'s docstring establishes. The three per-round states
   `Σ_sel`, `Σ_vote`, `Σ_act` of Definition 28 (`def:recovery-timing`) are store values
   derived at the round's cutoffs.
-* The candidate tree `C(Σ)` of Definition 31 is the viable subtree at or above `Store.R`.
+* The candidate tree `C(Σ)` of Definition 31 is the viable subtree at or above `Store.walkStart`.
 
 ## Rendering decisions made in this file (Roberto asked for them, 2026-08-18)
 
@@ -186,7 +186,7 @@ def processedFinalized (S : Store Node Root) : Finset (Blk Node Root) :=
     `C(Σ) = {B ∈ viableTree(Σ) : simplexRoot(Σ) ⪯ B}`, "a prefix-closed tree rooted at
     `simplexRoot(Σ)`. Its viability test always uses the store-global value `Σ.hmax`". -/
 def candidateTree (S : Store Node Root) : Finset (Blk Node Root) :=
-  (viableTree S).filter fun B => S.R ⪯ B
+  (viableTree S).filter fun B => S.walkStart ⪯ B
 
 /-- Definition 31's aged variant `C⁻_u(Σ)`: "A block `B ∈ C(Σ)` is in `C⁻_u(Σ)` exactly
     when some block `W` with `B ⪯ W` was received and accepted by that validator's
@@ -254,9 +254,9 @@ instance (holds : Prop) [Decidable holds] (S : Store Node Root)
     In plain words: a root backed by a live grade stays put; a root that was only the
     validator's own selection follows that selection when it moves. -/
 def rederive (cur : Store Node Root) (processedF : Finset (Blk Node Root))
-    (root : Blk Node Root) (graded : Bool) : Blk Node Root × Bool :=
-  let live := graded ∧ ConflictFree processedF root
-  if ¬ live ∧ cur.R ≠ root then (cur.R, false) else (root, decide live)
+    (walkStart : Blk Node Root) (graded : Bool) : Blk Node Root × Bool :=
+  let live := graded ∧ ConflictFree processedF walkStart
+  if ¬ live ∧ cur.walkStart ≠ walkStart then (cur.walkStart, false) else (walkStart, decide live)
 
 end
 
@@ -360,8 +360,8 @@ def ghostWalk [Omega Node Root] (votes : Finset (GoldfishVote Node Root))
     walk's tree; the walk-standing rule of Definition 32 is inherited from `ghostWalk`. -/
 def recoveryGoldfishVote [Omega Node Root] (i : Node) (s : Time)
     (votes : Finset (GoldfishVote Node Root)) (tree : Finset (Blk Node Root))
-    (root : Blk Node Root) : GoldfishVote Node Root :=
-  { validator := i, slot := s, target := ghostWalk votes tree tree.card root }
+    (walkStart : Blk Node Root) : GoldfishVote Node Root :=
+  { validator := i, slot := s, target := ghostWalk votes tree tree.card walkStart }
 
 end
 
@@ -384,7 +384,7 @@ structure RecoveryProposal (Node Root : Type) where
       the input of the proposal-view merge. -/
   carriedGoldfishVotes : Finset (GoldfishVote Node Root)
   /-- `A_p^r`, the proposed root. -/
-  proposedRoot : Blk Node Root
+  proposedWalkStart : Blk Node Root
   /-- `tag_p^r ∈ {graded, ungraded}`, which branch of Definition 41's item 2 the
       proposer claims. "The tag binds the branch." -/
   graded : Bool
@@ -408,7 +408,7 @@ variable [DecidableEq Node] [DecidableEq Root]
     proposer's own obligation and unobservable here; the rest is checked. Everything
     else Definition 41's items re-check per receiver. -/
 def RecoveryProposal.wellFormed (p : RecoveryProposal Node Root) (r : Nat) : Prop :=
-  p.r = r ∧ p.proposedRoot ⪯ p.parent ∧ p.block.parent = some p.parent
+  p.r = r ∧ p.proposedWalkStart ⪯ p.parent ∧ p.block.parent = some p.parent
 
 instance (p : RecoveryProposal Node Root) (r : Nat) : Decidable (p.wellFormed r) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _))
@@ -442,7 +442,7 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [BlockHash Node
 def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) : Blk Node Root :=
   (deepest ((candidateTree Ssel).filter fun B =>
-    G2 X0 r B ∧ ConflictFree processedF B)).getD Ssel.R
+    G2 X0 r B ∧ ConflictFree processedF B)).getD Ssel.walkStart
 
 /-- Definition 40, the receiver's lower root `L_u^r`: "the deepest *strict* grade-3 block
     in the aged tree `C⁻_u(Σ_{u,sel}^r)` that remains in the aged tree
@@ -451,12 +451,12 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     Simplex root". The definition's "a grade made irrelevant by a newly learned finalized
     root is not retained as a live lower bound" is the `ConflictFree` conjunct — the
     processed-finality filter every grade use obeys (Definition 37). -/
-def lowerRoot (Ssel Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
+def lowerWalkStart (Ssel Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
     (Xm X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) : Blk Node Root :=
   (deepest ((agedCandidateTree Ssel witnesses).filter fun B =>
-    Svote.R ⪯ B ∧ B ≠ Svote.R ∧ G3 Xm X1 r B ∧ ConflictFree processedF B ∧
-    B ∈ agedCandidateTree Svote witnesses)).getD Svote.R
+    Svote.walkStart ⪯ B ∧ B ≠ Svote.walkStart ∧ G3 Xm X1 r B ∧ ConflictFree processedF B ∧
+    B ∈ agedCandidateTree Svote witnesses)).getD Svote.walkStart
 
 end
 
@@ -486,8 +486,8 @@ instance (Wit : Finset (Attestation Node Root)) (r : Nat) (A : Blk Node Root) :
     sentence states — and the accepted distinguished proposal, which Definition 42's
     action cases and Definition 47's next-round source read. -/
 structure VoteRoundOutcome (Node Root : Type) where
-  /-- `R_{u,vote}^r`, the vote-time stable root. -/
-  root : Blk Node Root
+  /-- `R_{u,vote}^r`, the vote-time stable walk-start — the paper's "stable root". -/
+  walkStart : Blk Node Root
   /-- Whether the root is graded — `false` exactly when it equals the vote-state
       Simplex selection. -/
   graded : Bool
@@ -518,33 +518,34 @@ structure VoteRoundOutcome (Node Root : Type) where
     In plain words: G3 fixed the receiver's lower bound, G2 is the proposer's witness,
     G1 is the receiver's upper check, and a receiver never moves behind its lower root
     and never takes an ungraded root it did not already select. -/
-def stableRoot (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
+def stableWalkStart (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
     (L : Blk Node Root) (X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) (prop : Option (RecoveryProposal Node Root)) :
     VoteRoundOutcome Node Root :=
   let fallback : VoteRoundOutcome Node Root :=
-    if L = Svote.R then
-      { root := L, graded := false, accepted := none }
+    if L = Svote.walkStart then
+      { walkStart := L, graded := false, accepted := none }
     else if G1 X1 r L ∧ ConflictFree processedF L ∧ L ∈ agedCandidateTree Svote witnesses
     then
-      { root := L, graded := true, accepted := none }
+      { walkStart := L, graded := true, accepted := none }
     else
-      { root := Svote.R, graded := false, accepted := none }
+      { walkStart := Svote.walkStart, graded := false, accepted := none }
   if let some p := prop then
     let item1 :=
-      (L ⪯ p.proposedRoot ∧ p.proposedRoot ⪯ p.parent ∧ Svote.R ⪯ p.parent) ∨
-      (p.proposedRoot ⪯ Svote.R ∧ p.proposedRoot ≠ Svote.R ∧ Svote.R ⪯ p.parent ∧
-        Svote.R = Svote.F ∧ L ⪯ p.parent)
+      (L ⪯ p.proposedWalkStart ∧ p.proposedWalkStart ⪯ p.parent ∧ Svote.walkStart ⪯ p.parent) ∨
+      (p.proposedWalkStart ⪯ Svote.walkStart ∧ p.proposedWalkStart ≠ Svote.walkStart ∧
+        Svote.walkStart ⪯ p.parent ∧
+        Svote.walkStart = Svote.F ∧ L ⪯ p.parent)
     let item2 :=
-      (p.graded = true ∧ G1 X1 r p.proposedRoot ∧ ConflictFree processedF p.proposedRoot ∧
-        ValidG2Witness p.grade2Witness r p.proposedRoot) ∨
-      (p.graded = false ∧ p.proposedRoot = Svote.R)
-    let Rv := chainMax (chainMax p.proposedRoot L) Svote.R
+      (p.graded = true ∧ G1 X1 r p.proposedWalkStart ∧ ConflictFree processedF p.proposedWalkStart ∧
+        ValidG2Witness p.grade2Witness r p.proposedWalkStart) ∨
+      (p.graded = false ∧ p.proposedWalkStart = Svote.walkStart)
+    let Rv := chainMax (chainMax p.proposedWalkStart L) Svote.walkStart
     let item3 :=
       Rv ∈ agedTreeWithExemption Svote witnesses (some p.block) ∧
       p.block ∈ agedTreeWithExemption Svote witnesses (some p.block)
     if item1 ∧ item2 ∧ item3 then
-      { root := Rv, graded := Rv ≠ Svote.R, accepted := some p }
+      { walkStart := Rv, graded := Rv ≠ Svote.walkStart, accepted := some p }
     else fallback
   else fallback
 
@@ -555,7 +556,7 @@ end
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
-/-- Definition 42 (`def:action-root`, lines 1256–1308). `stableRoot` is the round's
+/-- Definition 42 (`def:action-root`, lines 1256–1308). `stableWalkStart` is the round's
     vote-time stable root — after a mid-round re-derivation, the re-derived root. The cases, in the
     definition's order: proposal-free (no accepted proposal, or the accepted proposal
     block evicted from the action candidate tree while the root ancestry holds) reads no
@@ -568,31 +569,31 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
     In plain words: the action first decides whether a proposal is in play, then whether
     the roots are on its chain, then whether the root is admissible. -/
-def sgfgVoteRoot
+def sgfgVoteWalkStart
     -- `Σ_{u,act}^r`: the activation-filtered store at the SG/FG vote
     (filteredStoreAtSGFGVote : Store Node Root)
     -- the round's vote-time stable root — after a mid-round re-derivation, the re-derived root
-    (stableRoot : Blk Node Root)
+    (stableWalkStart : Blk Node Root)
     -- the round's accepted distinguished proposal, `none` on every failure path
     (acceptedProposal : Option (RecoveryProposal Node Root))
     -- `X_u^1`, the grade view raw grade 1 is tested in
     (attsAtRoundStartPlusΔ : Finset (Attestation Node Root)) (r : Nat)
     -- finalized roots whose evidence was processed by this reading
     (processedFinalizedAtSGFGVote : Finset (Blk Node Root)) : Option (Blk Node Root) :=
-  let admittedRoot : Option (Blk Node Root) :=
-    if stableRoot ∈ candidateTree filteredStoreAtSGFGVote ∧
-        (stableRoot = filteredStoreAtSGFGVote.R ∨
-          (G1 attsAtRoundStartPlusΔ r stableRoot ∧
-            ConflictFree processedFinalizedAtSGFGVote stableRoot)) then
-      some stableRoot
+  let admittedWalkStart : Option (Blk Node Root) :=
+    if stableWalkStart ∈ candidateTree filteredStoreAtSGFGVote ∧
+        (stableWalkStart = filteredStoreAtSGFGVote.walkStart ∨
+          (G1 attsAtRoundStartPlusΔ r stableWalkStart ∧
+            ConflictFree processedFinalizedAtSGFGVote stableWalkStart)) then
+      some stableWalkStart
     else none
   if let some p := acceptedProposal then
-    if stableRoot ⪯ p.block ∧ filteredStoreAtSGFGVote.R ⪯ p.block then
+    if stableWalkStart ⪯ p.block ∧ filteredStoreAtSGFGVote.walkStart ⪯ p.block then
       if p.block ∈ candidateTree filteredStoreAtSGFGVote then
-        admittedRoot                           -- case 3, with the proposal in play
-      else admittedRoot                        -- case 1: evicted proposal, root ancestry holds
+        admittedWalkStart                           -- case 3, with the proposal in play
+      else admittedWalkStart                        -- case 1: evicted proposal, root ancestry holds
     else none                                  -- case 2: off-path root
-  else admittedRoot                            -- case 1: no accepted proposal
+  else admittedWalkStart                            -- case 1: no accepted proposal
 
 end
 
@@ -631,7 +632,7 @@ structure ActionOutputs (Node Root : Type) where
   C : Option (Blk Node Root)
 
 /-- Definition 46 (`def:official-confirmation`, lines 1635–1706). Two abstentions come
-    first: a failed action-state admission (`admittedRoot = none`, Definition 42) or the fixed
+    first: a failed action-state admission (`admittedWalkStart = none`, Definition 42) or the fixed
     stable root absent from the action candidate tree — the walk's own precondition —
     "takes the empty SG-head and current-height branches directly". Otherwise:
     `C` is the deepest available-confirmed block of the first slot's evaluation
@@ -649,30 +650,31 @@ structure ActionOutputs (Node Root : Type) where
     grade-0 majority vetoes; without one, the validator may still publish a veto-free
     prefix of its fixed root, but it cannot sign a current-height choice. -/
 def officialConfirmation [Omega Node Root] (Sact : Store Node Root)
-    (Rstable : Blk Node Root) (admittedRoot : Option (Blk Node Root)) (committee : Finset Node)
+    (stableWalkStart : Blk Node Root) (admittedWalkStart : Option (Blk Node Root))
+    (committee : Finset Node)
     (s : Time) (Vm Vp : Finset (GoldfishVote Node Root))
     (X2 : Finset (Attestation Node Root)) (r : Nat)
     (pfFreeze processedF : Finset (Blk Node Root)) : ActionOutputs Node Root :=
-  if admittedRoot = none ∨ Rstable ∉ candidateTree Sact then { head := ⊥, C := ⊥ }
+  if admittedWalkStart = none ∨ stableWalkStart ∉ candidateTree Sact then { head := ⊥, C := ⊥ }
   else
     let Cav := deepest (Sact.T.filter fun B => AvailableConfirmed Vm Vp s committee B)
     let G := ghostWalk (Vp.filter fun v => v.slot = s) (candidateTree Sact)
-      (candidateTree Sact).card Rstable
+      (candidateTree Sact).card stableWalkStart
     let officials :=
       match Cav with
       | some c =>
           Sact.T.filter fun Q =>
             VetoFree Sact X2 r pfFreeze Q ∧ ConflictFree processedF Q ∧
-            Sact.R ⪯ Q ∧ Q ⪯ c ∧ Q ⪯ G
+            Sact.walkStart ⪯ Q ∧ Q ⪯ c ∧ Q ⪯ G
       | none => ∅
     match deepest officials with
     | some Q => { head := some Q, C := some Q }
     | none =>
         let fb :=
-          match admittedRoot with
+          match admittedWalkStart with
           | some Ra =>
               deepest (Sact.T.filter fun B =>
-                Sact.R ⪯ B ∧ B ⪯ Ra ∧ VetoFree Sact X2 r pfFreeze B ∧
+                Sact.walkStart ⪯ B ∧ B ⪯ Ra ∧ VetoFree Sact X2 r pfFreeze B ∧
                 ConflictFree processedF B)
           | none => ⊥   -- unreachable under the outer test; kept for totality
         { head := fb, C := ⊥ }
@@ -764,7 +766,7 @@ def castSGFGVote [Omega Node Root]
     -- `Σ_{u,act}^r`, the action state: the store under the activation filter at this reading
     (filteredStoreAtSGFGVote : Store Node Root)
     -- the round's stable root (Definition 41), as the records hold it
-    (stableRoot : Blk Node Root)
+    (stableWalkStart : Blk Node Root)
     -- the round's accepted distinguished proposal, `none` on every failure path
     (acceptedProposal : Option (RecoveryProposal Node Root))
     -- Definition 47's source proposal, from round `r − 1`
@@ -782,9 +784,11 @@ def castSGFGVote [Omega Node Root]
     -- `H_i`, Definition 12's durable signing history
     (history : SigningHistory Node Root) :
     Attestation Node Root × SigningHistory Node Root :=
-  let admittedRoot := sgfgVoteRoot filteredStoreAtSGFGVote stableRoot acceptedProposal
+  let admittedWalkStart := sgfgVoteWalkStart filteredStoreAtSGFGVote stableWalkStart
+    acceptedProposal
     attsAtRoundStartPlusΔ r processedFinalizedAtSGFGVote
-  let outs := officialConfirmation filteredStoreAtSGFGVote stableRoot admittedRoot committee
+  let outs := officialConfirmation filteredStoreAtSGFGVote stableWalkStart
+    admittedWalkStart committee
     firstSlotVoteTime votesAtSupportFreeze votesAtSGFGVote attsAtRoundStartPlus2Δ r
     processedFinalizedAtFreeze processedFinalizedAtSGFGVote
   match recoveryContext filteredStoreAtSGFGVote t outs.C sourceProposal with

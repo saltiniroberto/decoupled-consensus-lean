@@ -158,10 +158,10 @@ theorem getConfirmed_sub {S S' : Store Node Root} (hinv : StoreInv S) (hinv' : S
     (hsub : ∀ C, S.F ⪯ C → C ∈ S.T → C ∈ S'.T)
     (hsub' : ∀ C, S.F ⪯ C → C ∈ S'.T → C ∈ S.T)
     {C : Blk Node Root}
-    (hC : (C ∈ viableTree S ∧ S.R ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1))) :
-    (C ∈ viableTree S' ∧ S'.R ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1)) := by
-  have hR : S.R = S'.R := by unfold Store.R; rw [hFeq, hJeq, hhj, hhmax]
-  have hFC : S.F ⪯ C := Preceq.trans (F_preceq_R hFJ) hC.2.1
+    (hC : (C ∈ viableTree S ∧ S.walkStart ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1))) :
+    (C ∈ viableTree S' ∧ S'.walkStart ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1)) := by
+  have hR : S.walkStart = S'.walkStart := by unfold Store.walkStart; rw [hFeq, hJeq, hhj, hhmax]
+  have hFC : S.F ⪯ C := Preceq.trans (F_preceq_walkStart hFJ) hC.2.1
   obtain ⟨hCT, L, σL, hLT, hleaf, hCL, hσL, hh⟩ := viableTree_witness hC.1
   have hCT' : C ∈ S'.T := hsub C hFC hCT
   have hFL : S.F ⪯ L := Preceq.trans hFC hCL
@@ -287,10 +287,10 @@ theorem foldOrderIndependence [PositiveWeight Node] [HashInjective Node Root]
      (onBlocks Store.gen Bs).hmax = (onBlocks Store.gen Bs').hmax ∧
      (∀ C, (onBlocks Store.gen Bs).F ⪯ C →
         (C ∈ (onBlocks Store.gen Bs).T ↔ C ∈ (onBlocks Store.gen Bs').T)) ∧
-     (∀ C, (C ∈ viableTree (onBlocks Store.gen Bs) ∧ (onBlocks Store.gen Bs).R ⪯ C ∧
+     (∀ C, (C ∈ viableTree (onBlocks Store.gen Bs) ∧ (onBlocks Store.gen Bs).walkStart ⪯ C ∧
          (get st from (onBlocks Store.gen Bs).σ C;
            st.h ≥ (onBlocks Store.gen Bs).hmax - 1)) ↔
-       (C ∈ viableTree (onBlocks Store.gen Bs') ∧ (onBlocks Store.gen Bs').R ⪯ C ∧
+       (C ∈ viableTree (onBlocks Store.gen Bs') ∧ (onBlocks Store.gen Bs').walkStart ⪯ C ∧
          (get st from (onBlocks Store.gen Bs').σ C;
            st.h ≥ (onBlocks Store.gen Bs').hmax - 1)))) ∨
       SlashableThirdAcross (onBlocks Store.gen Bs).T (onBlocks Store.gen Bs').T := by
@@ -385,9 +385,9 @@ theorem orderIndependence [PositiveWeight Node] [HashInjective Node Root]
   rw [storeAt_eq_fold x p i, storeAt_eq_fold x p' j]
   refine (foldOrderIndependence hperm hp hp').imp (fun hc => ?_) id
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hc
-  have hR : (onBlocks Store.gen (deliveredBlocks x p i)).R
-      = (onBlocks Store.gen (deliveredBlocks x p' j)).R := by
-    unfold Store.R
+  have hR : (onBlocks Store.gen (deliveredBlocks x p i)).walkStart
+      = (onBlocks Store.gen (deliveredBlocks x p' j)).walkStart := by
+    unfold Store.walkStart
     rw [h1, h2, h3, h4]
   exact ⟨h1, h2, h3, h4, h5, getConfirmed_congr hR h6⟩
 

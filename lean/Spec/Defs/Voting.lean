@@ -345,7 +345,7 @@ def equivocatesIn (i : Node) (X : Finset (Attestation Node Root)) (r : Nat) : Bo
     `S_{i,act}^r` is `simplex_root` of the fork-choice action state — healing
     Definition 26 (`def:finality-root`) and Figure 4 (`alg:fork-choice-state`), whose
     cascade "`J` if `hmax = h_j + 1` else `F`" is word for word the companion store's
-    walk-from block `Store.R` (Figure 2, `hft:alg:store`, line 560). So over the hybrid
+    walk-from block `Store.walkStart` (Figure 2, `hft:alg:store`, line 560). So over the hybrid
     the condition reads: the head sits at or above the store's walk-from block, and is
     viable there.
 
@@ -355,7 +355,7 @@ def equivocatesIn (i : Node) (X : Finset (Attestation Node Root)) (r : Nat) : Bo
     (Definition 46, `def:official-confirmation`) needs the stable-root machinery
     (Definitions 38–42) and is not rendered — `head` stays an input to `fgVote`. -/
 def sgHeadOk (S : Store Node Root) (B : Blk Node Root) : Bool :=
-  decide (S.R ⪯ B ∧ B ∈ viableTree S)
+  decide (S.walkStart ⪯ B ∧ B ∈ viableTree S)
 
 end
 
@@ -474,9 +474,9 @@ variable [DecidableEq Node] [DecidableEq Root] [BlockHash Node Root]
     only to break exact `(weight, hash)` ties. -/
 def ghostFrom (votes : Finset (GoldfishVote Node Root)) (tree : List (Blk Node Root)) :
     Nat → Blk Node Root → Blk Node Root
-  | 0, root => root
-  | fuel + 1, root =>
-      let step := (tree.filter fun C => C.parent = some root).foldl
+  | 0, walkStart => walkStart
+  | fuel + 1, walkStart =>
+      let step := (tree.filter fun C => C.parent = some walkStart).foldl
         (fun best C =>
           match best with
           | none => some C
@@ -489,12 +489,12 @@ def ghostFrom (votes : Finset (GoldfishVote Node Root)) (tree : List (Blk Node R
         none
       match step with
       | some next => ghostFrom votes tree fuel next
-      | none => root
+      | none => walkStart
 
 /-- The walk, with the fuel it needs. -/
 def ghost (votes : Finset (GoldfishVote Node Root)) (tree : List (Blk Node Root))
-    (root : Blk Node Root) : Blk Node Root :=
-  ghostFrom votes tree tree.length root
+    (walkStart : Blk Node Root) : Blk Node Root :=
+  ghostFrom votes tree tree.length walkStart
 
 /-- Definition 45 (`def:recovery-goldfish-vote`, lines 1587–1603): the committee member
     "runs vote-time GHOST from its accepted stable root within the aged tree …, with the
@@ -506,8 +506,8 @@ def ghost (votes : Finset (GoldfishVote Node Root)) (tree : List (Blk Node Root)
     explicit-inputs pattern as the FG rules above. The rule itself is: walk, and vote the
     output. -/
 def goldfishVote (i : Node) (s : Time) (votes : Finset (GoldfishVote Node Root))
-    (tree : List (Blk Node Root)) (root : Blk Node Root) : GoldfishVote Node Root :=
-  { validator := i, slot := s, target := ghost votes tree root }
+    (tree : List (Blk Node Root)) (walkStart : Blk Node Root) : GoldfishVote Node Root :=
+  { validator := i, slot := s, target := ghost votes tree walkStart }
 
 end
 

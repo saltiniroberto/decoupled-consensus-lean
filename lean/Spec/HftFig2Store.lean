@@ -41,7 +41,7 @@ uses.
 **`get_confirmed` is one total function, `Ω`-ambient.** The figure's `Ω` is "whatever
 extra information the validator uses to disambiguate among viable descendants" —
 deliberately unspecified — so `getConfirmed` computes the candidates the return line
-admits, adds the walk-from block `Store.R` so the choice is never over an empty set, and
+admits, adds the walk-from block `Store.walkStart` so the choice is never over an empty set, and
 lets the ambient `Ω` (the `Omega` class of `Spec/Defs/Store.lean`, where the design and
 its two accepted costs are recorded) pick.
 A `Prop`-valued relation `GetConfirmed`, then a named candidate set `getConfirmedSet`
@@ -111,14 +111,14 @@ def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.ru
     and the store-finalized block once a timeout has moved some chain one height further.
     The figure binds `R` inside `get_confirmed`; it is its own function here so the
     cascade rule is nameable outside the figure. -/
-def Store.R (S : Store Node Root) : Blk Node Root :=
+def Store.walkStart (S : Store Node Root) : Blk Node Root :=
   if S.hmax = S.h_j + 1 then S.J else S.F                                -- line 560
 
 /-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562) as a total
     deterministic function of the store, `Ω` ambient — see `Omega`'s docstring in
     `Spec/Defs/Store.lean` for the design and its two accepted costs. The candidates are
     the blocks the return line admits — in the viable subtree, at or above the walk-from
-    block `Store.R`, at state-height at least `hmax − 1`, the height read through the
+    block `Store.walkStart`, at state-height at least `hmax − 1`, the height read through the
     map's `Option` (line 561) — **plus the walk-from block itself**, which is what makes
     the set nonempty and the function total (Roberto, 2026-08-17). The figure has no such
     addition: for a held store, Corollary 1 (`hft:cor:getConfirmed-total`) says the return
@@ -126,8 +126,8 @@ def Store.R (S : Store Node Root) : Blk Node Root :=
     than a behaviour the paper describes — and `Ω` may pick it, which every statement
     about the output must allow for. -/
 def getConfirmed [Omega Node Root] (S : Store Node Root) : Blk Node Root :=
-  let candidates := insert S.R ((viableTree S).filter fun B =>
-    S.R ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1)                   -- line 561
+  let candidates := insert S.walkStart ((viableTree S).filter fun B =>
+    S.walkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1)                   -- line 561
   (Omega.choose candidates (Finset.insert_nonempty _ _)).val
 
 end
