@@ -20,10 +20,13 @@ other repository, you are in the wrong project.
 
 ## The paper is the contract
 
-The source is the `latex-specs` **submodule** at the repository root, pinned at `e4375c5`, so
-`git submodule status` says which revision this Lean tracks. That is the same repository and
-the same revision the frozen first attempt tracks, so its `MAPPING.md` line numbers and
-printed numbers still apply. `height_filter_healing.tex` is Sections 1–5 and `\input`s
+The source is the `latex-specs` **submodule** at the repository root, pinned at `9dd0bd9`
+(branch `labels-for-lean-citations`: `e4375c5` plus three same-line remark labels in the
+companion paper, added 2026-08-18), so `git submodule status` says which revision this Lean
+tracks. No line number differs from `e4375c5`, which is the revision the frozen first
+attempt tracks, so its `MAPPING.md` line numbers and printed numbers still apply. The
+branch exists only in this machine's checkout until it is pushed; push it to the paper
+repository before pushing any commit of this repository that carries the new pointer. `height_filter_healing.tex` is Sections 1–5 and `\input`s
 `recovery_core.tex` for 6–13.
 
 **Most of the paper's prose is AI-generated.** The numbered definitions, the algorithm figures
