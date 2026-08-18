@@ -201,12 +201,18 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- (Definition 28's boundary exception) is the pool at this reading.
             let sel := activationFiltered st.store st.storeAtPrevSGFGVote
             { state := { st with round :=
-                { r := r, attsAtRoundStartMinusΔ := st.nextAttsAtRoundStartMinusΔ,
-                  attsAtRoundStart := st.atts, selSnap := sel, voteSnap := sel,
-                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
+                { r := r,
+                  attsAtRoundStartMinusΔ := st.nextAttsAtRoundStartMinusΔ,
+                  attsAtRoundStart := st.atts,
+                  selSnap := sel,
+                  voteSnap := sel,
+                  attsAtRoundStartPlusΔ := ∅,
+                  attsAtRoundStartPlus2Δ := ∅,
                   votesAtSupportFreeze := ∅,
                   frozen := st.round.frozen,
-                  stableWalkStart := sel.walkStart, graded := false, accepted := none,
+                  stableWalkStart := sel.walkStart,
+                  graded := false,
+                  accepted := none,
                   processedFinalizedAtFreeze := ∅ } },
               send := ∅ }
           else if t = roundStart + Δ then
