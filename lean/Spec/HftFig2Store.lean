@@ -110,6 +110,18 @@ def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.ru
     store root while it sits at the frontier — `hmax = h_j + 1`, the figure's comment —
     and the store-finalized block once a timeout has moved some chain one height further.
     The figure binds `R` inside `get_confirmed`; it is its own function here so the
+
+    **The figure's text, verbatim (lines 559–562):**
+
+    > R ← Σ.J if Σ.hmax = Σ.h_j + 1 else Σ.F        -- Σ.J is at the frontier
+    > return B ∈ viableTree(Σ) with B ⪰ R and σ[B].h ≥ Σ.hmax − 1, depending on Ω
+
+    **The same text, in this file's terminology** — the walk-from block `R` →
+    `walkStart`:
+
+    > walkStart ← Σ.J if Σ.hmax = Σ.h_j + 1 else Σ.F        -- Σ.J is at the frontier
+    > return B ∈ viableTree(Σ) with B ⪰ walkStart and σ[B].h ≥ Σ.hmax − 1,
+    > depending on Ω
     cascade rule is nameable outside the figure. -/
 def Store.walkStart (S : Store Node Root) : Blk Node Root :=
   if S.hmax = S.h_j + 1 then S.J else S.F                                -- line 560

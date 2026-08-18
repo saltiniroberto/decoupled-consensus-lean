@@ -104,6 +104,12 @@ be renamed to a word when it makes the Lean hard to read, under three conditions
 `Rounds.start` for `d_r` and `Rounds.isGoldfishVoteTime` for the `+Δ` phases are the
 precedents.
 
+When renamed vocabulary appears inside a definition's own text — including a deliberate
+break like the `SGFGVote` family — the definition's docstring carries the paper's text
+verbatim and then the same text in the new terminology, sentence for sentence, so the
+audit is a line-by-line comparison. Definitions 29 and 40–42 in
+`lean/Spec/Defs/Recovery.lean` are the worked examples.
+
 ## A spec change stops at the spec
 
 Roberto, 2026-08-17. When a `Spec/` definition changes, change `Spec/` and **stop** — do not

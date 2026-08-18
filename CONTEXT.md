@@ -2636,6 +2636,23 @@ A side effect worth naming: `sgfgVoteRoot`'s local `admit` is `admittedRoot` now
 highlighter no longer paints it as an unfinished proof and `make sorries` is back to zero — the
 four false positives are gone.
 
+### The walk-sense "root" is `walkStart`, and renamed vocabulary carries dual texts
+
+Roberto, later on 2026-08-18: "root makes so little sense" — every identifier naming a
+fork-choice walk's starting block now says `walkStart` (`Store.R`, `RoundState.root`, the
+Definition 40–42 functions, `proposedRoot`, the walk parameters of `ghost`/`ghostWalk`), while
+the type parameter `Root` (state roots) stays. The paper's own cover is Figure 2's name for
+`R`, "the walk-from block". Four red `Analysis` files' uses were edited textually and compile
+when that layer's fix round runs; `F_preceq_R` became `F_preceq_walkStart`.
+
+**The dual-text convention, now in `CLAUDE.md`**: where renamed vocabulary appears inside a
+definition's own text, the docstring carries the paper's text verbatim and then the same text
+in the new terminology, sentence for sentence. Applied to Definitions 29, 40, 41, 42, 45 and
+`hft` Figure 2's `R` paragraph. The citation checker earned its keep immediately: it caught
+three invented printed numbers in the rendered `\ref`s of the verbatim blocks
+(`lem:aged-walk-total` is Lemma 20, `cor:g3-chain` Corollary 2, `lem:no-forward-move`
+Lemma 35).
+
 ## Next
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule

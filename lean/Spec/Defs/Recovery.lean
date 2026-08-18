@@ -251,6 +251,62 @@ instance (holds : Prop) [Decidable holds] (S : Store Node Root)
     boundary state's own walk-from block, classified ungraded. A graded root whose grade
     stays active is never abandoned mid-round.
 
+    **The paper's text, verbatim (Definition 29):**
+
+    > The vote-time stable root is subject to one exception for ungraded roots: if the
+    > fixed root is ungraded — the vote state's Simplex root, whether as fallback or as
+    > an accepted ungraded proposed root, which equals that selection by the stable-root
+    > rule of the proposal section; the graded alternative is specified with the same
+    > rule — and, at a later slot boundary of the round, the validator's current state
+    > selects a Simplex root different from the fixed root, it re-derives its stable
+    > root at that boundary and uses the re-derived root for the round's remaining
+    > slots. The test is deterministic: it compares the fixed root with the current
+    > state's Simplex root, both locally derived. After re-derivation, every later
+    > reference to the round's vote-time stable root — later-slot walks, the action-root
+    > rule, and the action head — names the re-derived root. The re-derived root is
+    > finality-backed by Definition 26 (`def:finality-root`); it follows the state's own
+    > Simplex selection, which may sit below the abandoned justification when the
+    > selection rule switches from a justification to the finalized root. A graded
+    > stable root is never abandoned mid-round while its grade stays active, with one
+    > exit: if the root's grade becomes inactive under Definition 37
+    > (`def:active-grade`) — the root conflicts with a finalized root whose evidence the
+    > validator has since processed — the root counts as ungraded from the next slot
+    > boundary on and is subject to the same exception. Every ungraded root — fallback
+    > or accepted ungraded proposed root — is subject to the exception.
+    >
+    > In plain words, an ungraded stable root follows the validator's own selection when
+    > that selection moves mid-round, and a graded root is dropped only when finality
+    > evidence kills its grade.
+
+    **The same text, in this file's terminology** — root → walk-start, action → SG/FG
+    vote:
+
+    > The vote-time stable walk-start is subject to one exception for ungraded
+    > walk-starts: if the fixed walk-start is ungraded — the vote state's Simplex
+    > walk-start, whether as fallback or as an accepted ungraded proposed walk-start,
+    > which equals that selection by the stable-walk-start rule of the proposal section;
+    > the graded alternative is specified with the same rule — and, at a later slot
+    > boundary of the round, the validator's current state selects a Simplex walk-start
+    > different from the fixed walk-start, it re-derives its stable walk-start at that
+    > boundary and uses the re-derived walk-start for the round's remaining slots. The
+    > test is deterministic: it compares the fixed walk-start with the current state's
+    > Simplex walk-start, both locally derived. After re-derivation, every later
+    > reference to the round's vote-time stable walk-start — later-slot walks, the
+    > SG/FG-vote walk-start rule, and the SG/FG-vote head — names the re-derived
+    > walk-start. The re-derived walk-start is finality-backed by Definition 26; it
+    > follows the state's own Simplex selection, which may sit below the abandoned
+    > justification when the selection rule switches from a justification to the
+    > finalized root. A graded stable walk-start is never abandoned mid-round while its
+    > grade stays active, with one exit: if the walk-start's grade becomes inactive
+    > under Definition 37 — the walk-start conflicts with a finalized root whose
+    > evidence the validator has since processed — the walk-start counts as ungraded
+    > from the next slot boundary on and is subject to the same exception. Every
+    > ungraded walk-start — fallback or accepted ungraded proposed walk-start — is
+    > subject to the exception.
+    >
+    > In plain words, an ungraded stable walk-start follows the validator's own
+    > selection when that selection moves mid-round, and a graded walk-start is dropped
+    > only when finality evidence kills its grade.
     In plain words: a root backed by a live grade stays put; a root that was only the
     validator's own selection follows that selection when it moves. -/
 def rederive (cur : Store Node Root) (processedF : Finset (Blk Node Root))
@@ -357,6 +413,34 @@ def ghostWalk [Omega Node Root] (votes : Finset (GoldfishVote Node Root))
 /-- Definition 45 (`def:recovery-goldfish-vote`, lines 1587–1602) over the wiring's
     `Finset` tree — the same rule as `goldfishVote`, walking `ghostWalk` instead of the
     explicit-list `ghost`. The caller passes the merged view's counted votes and the
+
+    **The paper's text, verbatim (Definition 45, lines 1587–1602):**
+
+    > At `d_r + Δ`, an honest committee member merges the recognized proposal's carried
+    > ordinary view into its own frozen slot view — the receipt buffer is not merged
+    > before the slot-view freeze — runs vote-time GHOST from its accepted stable root
+    > within the aged tree `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path exemption of
+    > Definition 33 (`def:counting-rule`), and votes for that output; the walk is total
+    > by Lemma 20 (`lem:aged-walk-total`). Without a recognized proposal it runs the
+    > same rule on its frozen slot view and vote-state candidate tree. No SG head enters
+    > either merge, and no walk recomputes `hmax` below the walk's root.
+    >
+    > In plain words, an accepted proposal supplies ordinary Goldfish data, not a forced
+    > vote target.
+
+    **The same text, in this file's terminology** — root → walk-start:
+
+    > At `d_r + Δ`, an honest committee member merges the recognized proposal's carried
+    > ordinary view into its own frozen slot view — the receipt buffer is not merged
+    > before the slot-view freeze — runs vote-time GHOST from its accepted stable
+    > walk-start within the aged tree `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path
+    > exemption of Definition 33, and votes for that output; the walk is total by
+    > Lemma 20. Without a recognized proposal it runs the same rule on its frozen slot
+    > view and vote-state candidate tree. No SG head enters either merge, and no walk
+    > recomputes `hmax` below the walk's walk-start.
+    >
+    > In plain words, an accepted proposal supplies ordinary Goldfish data, not a forced
+    > vote target.
     walk's tree; the walk-standing rule of Definition 32 is inherited from `ghostWalk`. -/
 def recoveryGoldfishVote [Omega Node Root] (i : Node) (s : Time)
     (votes : Finset (GoldfishVote Node Root)) (tree : Finset (Blk Node Root))
@@ -450,6 +534,73 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     trees", where strict means "strictly descends from that validator's own vote-state
     Simplex root". The definition's "a grade made irrelevant by a newly learned finalized
     root is not retained as a live lower bound" is the `ConflictFree` conjunct — the
+
+    **The paper's text, verbatim (Definition 40, `def:grade-root-choice`,
+    lines 1075–1121):**
+
+    > Write `S_{u,sel}^r = simplexRoot(Σ_{u,sel}^r)`,
+    > `S_{u,vote}^r = simplexRoot(Σ_{u,vote}^r)`,
+    > `S_{u,act}^r = simplexRoot(Σ_{u,act}^r)`.
+    >
+    > *Proposer choice.* At `d_r`, proposer `p` chooses the deepest block
+    > `A_p^r ∈ C(Σ_{p,sel}^r)` for which it has grade 2 and which conflicts with no
+    > finalized root whose evidence the proposer has processed — the same
+    > processed-finality guard every grade use obeys — and supplies a *grade-2 witness*:
+    > a set of signed preceding-round SG heads of weight at least `m`, each supporting
+    > `A_p^r`. Witness validity is positive-only — signatures and the eligible round —
+    > and never asserts the absence of other messages from the proposer's view; the
+    > receiver's own raw `G1_u` predicate, whose favorable counting tolerates
+    > equivocation copies the proposer may have omitted, supplies the semantic
+    > acceptance guard. If there is no graded block, the proposer proposes the
+    > selection-state Simplex root `S_{p,sel}^r` as an ungraded base root.
+    >
+    > *Receiver lower root.* Throughout, call a graded block *strict* at a validator
+    > when it strictly descends from that validator's own vote-state Simplex root
+    > `S_{u,vote}^r`. At `d_r + Δ`, validator `u` chooses the deepest *strict* grade-3
+    > block in the aged tree `C⁻_u(Σ_{u,sel}^r)` that remains in the aged tree
+    > `C⁻_u(Σ_{u,vote}^r)` — unique by Corollary 2 (`cor:g3-chain`) — or `S_{u,vote}^r`
+    > if no strict grade-3 block survives both trees. A grade-3 block equal to the
+    > selection itself is subsumed by the fallback: the root is then the selection,
+    > classified as ungraded for retention and re-derivation, so the two clauses name
+    > one rule. Call this lower root `L_u^r`. Thus a grade made irrelevant by a newly
+    > learned finalized root is not retained as a live lower bound. These fallback
+    > clauses make both selections total.
+    >
+    > In plain words, the proposer offers its deepest grade-2 root or its own
+    > selection, and each receiver fixes its own grade-3 lower bound.
+
+    **The same text, in this file's terminology** — root → walk-start (`simplexRoot` is
+    `Store.walkStart`):
+
+    > Write `S_{u,sel}^r = Σ_{u,sel}^r.walkStart`, `S_{u,vote}^r = Σ_{u,vote}^r.walkStart`,
+    > `S_{u,act}^r = Σ_{u,act}^r.walkStart`.
+    >
+    > *Proposer choice.* At `d_r`, proposer `p` chooses the deepest block
+    > `A_p^r ∈ C(Σ_{p,sel}^r)` for which it has grade 2 and which conflicts with no
+    > finalized root whose evidence the proposer has processed — the same
+    > processed-finality guard every grade use obeys — and supplies a *grade-2 witness*:
+    > a set of signed preceding-round SG heads of weight at least `m`, each supporting
+    > `A_p^r`. Witness validity is positive-only — signatures and the eligible round —
+    > and never asserts the absence of other messages from the proposer's view; the
+    > receiver's own raw `G1_u` predicate, whose favorable counting tolerates
+    > equivocation copies the proposer may have omitted, supplies the semantic
+    > acceptance guard. If there is no graded block, the proposer proposes the
+    > selection-state Simplex walk-start `S_{p,sel}^r` as an ungraded base walk-start.
+    >
+    > *Receiver lower walk-start.* Throughout, call a graded block *strict* at a
+    > validator when it strictly descends from that validator's own vote-state Simplex
+    > walk-start `S_{u,vote}^r`. At `d_r + Δ`, validator `u` chooses the deepest
+    > *strict* grade-3 block in the aged tree `C⁻_u(Σ_{u,sel}^r)` that remains in the
+    > aged tree `C⁻_u(Σ_{u,vote}^r)` — unique by Corollary 2 — or `S_{u,vote}^r` if no
+    > strict grade-3 block survives both trees. A grade-3 block equal to the selection
+    > itself is subsumed by the fallback: the walk-start is then the selection,
+    > classified as ungraded for retention and re-derivation, so the two clauses name
+    > one rule. Call this lower walk-start `L_u^r`. Thus a grade made irrelevant by a
+    > newly learned finalized root is not retained as a live lower bound. These fallback
+    > clauses make both selections total.
+    >
+    > In plain words, the proposer offers its deepest grade-2 walk-start or its own
+    > selection, and each receiver fixes its own grade-3 lower bound.
     processed-finality filter every grade use obeys (Definition 37). -/
 def lowerWalkStart (Ssel Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
     (Xm X1 : Finset (Attestation Node Root)) (r : Nat)
@@ -499,6 +650,117 @@ structure VoteRoundOutcome (Node Root : Type) where
     `none`; `witnesses` ages both membership tests (rendering decision 2). The three
     acceptance items, in the definition's own order:
 
+    **The paper's text, verbatim (Definition 41, `def:stable-root`, lines 1123–1191):**
+
+    > The vote-time stable root is derived from the proposal and the grade roots of
+    > Definition 40 (`def:grade-root-choice`) by the acceptance guards and fallback
+    > below.
+    >
+    > *Acceptance guards.* A proposal is *timely* at receiver `u` when `u` receives it
+    > strictly before its vote time `d_r + Δ`; timeliness and proposer equivocation are
+    > decided in `u`'s vote-time view, locally and finally. For a proposal from `u`'s
+    > round proposer that is timely at `u`, with no second distinct signed round
+    > proposal by the same proposer in `u`'s vote-time view, let `Z_p^r` be its parent
+    > and `B_p^r` its block. The receiver accepts the proposal exactly when:
+    >
+    > 1. either `L_u^r ⪯ A_p^r ⪯ Z_p^r` and `S_{u,vote}^r ⪯ Z_p^r` — and then
+    >    `S_{u,vote}^r ⪯ A_p^r` holds automatically, by the first fact of Remark 11
+    >    (`rem:stable-root-coherence`) below; or `A_p^r ≺ S_{u,vote}^r ⪯ Z_p^r` with
+    >    `S_{u,vote}^r = Σ_{u,vote}^r.F` — the receiver's own newer finalized root
+    >    already lies on the proposal path — and `L_u^r ⪯ Z_p^r`;
+    > 2. either the raw predicate `G1_u(A_p^r)` holds, `A_p^r` conflicts with no
+    >    finalized root whose evidence the receiver has processed — raw counting stays
+    >    favorable to equivocation copies, but every grade use respects processed
+    >    finality, as Definition 37 (`def:active-grade`) requires — and the proposal has
+    >    a valid grade-2 witness, or `A_p^r` is ungraded and equals the receiver's own
+    >    vote-time Simplex selection `S_{u,vote}^r` — in particular the genesis block,
+    >    justified and finalized by stipulation, exactly when that is the selection. The
+    >    proposal may carry justification or finality certificates; the receiver
+    >    processes them as ordinary deliveries, and under the activation filter of
+    >    Definition 30 (`def:activation-filter`) they enter root selection only at the
+    >    next round boundary;
+    > 3. the deepest block among `{A_p^r, L_u^r, S_{u,vote}^r}`, denoted
+    >    `R_{u,vote}^r`, and the proposal block `B_p^r` are both in the aged tree
+    >    `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path exemption of Definition 33
+    >    (`def:counting-rule`).
+    >
+    > The deepest root is used for ordinary Goldfish for the rest of the round;
+    > Remark 11 below records why that deepest root is unique.
+    >
+    > *Failed-proposal fallback.* If the proposal fails these checks — or no proposal is
+    > recognized, including the discard-both case — the vote-time stable root is `L_u^r`
+    > when `L_u^r = S_{u,vote}^r`, or when the raw predicate `G1_u(L_u^r)` holds,
+    > `L_u^r` conflicts with no finalized root whose evidence the receiver has
+    > processed, and `L_u^r` is in the aged tree `C⁻_u(Σ_{u,vote}^r)`. In every such
+    > case, write `R_{u,vote}^r` for the vote-time stable root so derived; the
+    > action-root rule and the fallback SG-head rule consume this notation. Otherwise it
+    > is `S_{u,vote}^r`.
+    >
+    > In plain words, G3 is the receiver's lower bound, G2 is the proposer's witness,
+    > and G1 is the receiver's upper acceptance check. A receiver never moves behind its
+    > lower root. If its own Simplex selection is a newer root on the honest proposal's
+    > path, it starts farther forward on that same path rather than rejecting the
+    > proposal. The raw G1 predicate authenticates a proposed root that may now be an
+    > ancestor of the receiver's finalized root; that old root is not itself used for
+    > fork choice or G0. An ungraded proposer root never moves a receiver at all: it is
+    > accepted only when it already equals the receiver's own selection, so every strict
+    > forward proposed root needs the graded branch. A root on another branch makes the
+    > validator use its ordinary fallback.
+
+    **The same text, in this file's terminology** — root → walk-start, action → SG/FG
+    vote:
+
+    > The vote-time stable walk-start is derived from the proposal and the grade
+    > walk-starts of Definition 40 by the acceptance guards and fallback below.
+    >
+    > *Acceptance guards.* A proposal is *timely* at receiver `u` when `u` receives it
+    > strictly before its vote time `d_r + Δ`; timeliness and proposer equivocation are
+    > decided in `u`'s vote-time view, locally and finally. For a proposal from `u`'s
+    > round proposer that is timely at `u`, with no second distinct signed round
+    > proposal by the same proposer in `u`'s vote-time view, let `Z_p^r` be its parent
+    > and `B_p^r` its block. The receiver accepts the proposal exactly when:
+    >
+    > 1. either `L_u^r ⪯ A_p^r ⪯ Z_p^r` and `S_{u,vote}^r ⪯ Z_p^r` — and then
+    >    `S_{u,vote}^r ⪯ A_p^r` holds automatically, by the first fact of Remark 11
+    >    below; or `A_p^r ≺ S_{u,vote}^r ⪯ Z_p^r` with `S_{u,vote}^r = Σ_{u,vote}^r.F`
+    >    — the receiver's own newer finalized root already lies on the proposal path —
+    >    and `L_u^r ⪯ Z_p^r`;
+    > 2. either the raw predicate `G1_u(A_p^r)` holds, `A_p^r` conflicts with no
+    >    finalized root whose evidence the receiver has processed — raw counting stays
+    >    favorable to equivocation copies, but every grade use respects processed
+    >    finality, as Definition 37 requires — and the proposal has a valid grade-2
+    >    witness, or `A_p^r` is ungraded and equals the receiver's own vote-time Simplex
+    >    selection `S_{u,vote}^r` — in particular the genesis block, justified and
+    >    finalized by stipulation, exactly when that is the selection. The proposal may
+    >    carry justification or finality certificates; the receiver processes them as
+    >    ordinary deliveries, and under the activation filter of Definition 30 they
+    >    enter walk-start selection only at the next round boundary;
+    > 3. the deepest block among `{A_p^r, L_u^r, S_{u,vote}^r}`, denoted
+    >    `R_{u,vote}^r`, and the proposal block `B_p^r` are both in the aged tree
+    >    `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path exemption of Definition 33.
+    >
+    > The deepest walk-start is used for ordinary Goldfish for the rest of the round;
+    > Remark 11 below records why that deepest walk-start is unique.
+    >
+    > *Failed-proposal fallback.* If the proposal fails these checks — or no proposal is
+    > recognized, including the discard-both case — the vote-time stable walk-start is
+    > `L_u^r` when `L_u^r = S_{u,vote}^r`, or when the raw predicate `G1_u(L_u^r)`
+    > holds, `L_u^r` conflicts with no finalized root whose evidence the receiver has
+    > processed, and `L_u^r` is in the aged tree `C⁻_u(Σ_{u,vote}^r)`. In every such
+    > case, write `R_{u,vote}^r` for the vote-time stable walk-start so derived; the
+    > SG/FG-vote walk-start rule and the fallback SG-head rule consume this notation.
+    > Otherwise it is `S_{u,vote}^r`.
+    >
+    > In plain words, G3 is the receiver's lower bound, G2 is the proposer's witness,
+    > and G1 is the receiver's upper acceptance check. A receiver never moves behind its
+    > lower walk-start. If its own Simplex selection is a newer walk-start on the honest
+    > proposal's path, it starts farther forward on that same path rather than rejecting
+    > the proposal. The raw G1 predicate authenticates a proposed walk-start that may
+    > now be an ancestor of the receiver's finalized root; that old walk-start is not
+    > itself used for fork choice or G0. An ungraded proposer walk-start never moves a
+    > receiver at all: it is accepted only when it already equals the receiver's own
+    > selection, so every strict forward proposed walk-start needs the graded branch. A
+    > walk-start on another branch makes the validator use its ordinary fallback.
     1. "either `L_u^r ⪯ A_p^r ⪯ Z_p^r` and `S_{u,vote}^r ⪯ Z_p^r` … or
        `A_p^r ≺ S_{u,vote}^r ⪯ Z_p^r` with `S_{u,vote}^r = Σ_{u,vote}^r.F` … and
        `L_u^r ⪯ Z_p^r`";
@@ -567,6 +829,97 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
     root whose evidence the validator has processed by the action". `none` is the
     definition's abstention: "empty head, empty pair", total either way.
 
+    **The paper's text, verbatim (Definition 42, `def:action-root`, lines 1256–1308):**
+
+    > At `a_r`, the action root is the round's vote-time stable root — the re-derived
+    > root, after a mid-round re-derivation. No forward move is ever required: the
+    > action-state selection precedes the round's vote-time root and any re-derived
+    > root, by Lemma 35 (`lem:no-forward-move`). The action evaluates the following
+    > cases in order; the first that applies governs.
+    >
+    > 1. *Proposal-free.* If no unique proposal was accepted — a failed proposal, no
+    >    timely proposal, or the discard-both case — or an accepted proposal block has
+    >    left the action candidate tree while the root ancestry holds — a mid-round rise
+    >    evicted the proposal — the action reads no proposal block at all: the ancestry
+    >    condition of case 2 is vacuous, the validator sets
+    >    `R_{u,act}^r = R_{u,vote}^r`, and only case 3's membership and admission tests
+    >    apply. A superseded proposal costs its proposer the round's context, never the
+    >    validator its outputs.
+    > 2. *Off-path root.* If the vote-time root or `S_{u,act}^r` is not an ancestor of
+    >    `B_p^r` — in particular when a re-derivation moved the vote-time root off the
+    >    proposal's chain — no action root is defined and the validator emits no SG head
+    >    or current-height pair.
+    > 3. *Admission.* Otherwise the receiver uses the action root for SG and FG exactly
+    >    when `B_p^r` — in the proposal case — and `R_{u,act}^r` remain in
+    >    `C(Σ_{u,act}^r)`, and the action root either equals the action-state Simplex
+    >    root or has raw grade 1 while conflicting with no finalized root whose evidence
+    >    the validator has processed by the action — finality evidence processed after
+    >    the vote thus withdraws a root from SG/FG use even when no slot boundary
+    >    remains to re-derive it — and the validator abstains otherwise. When the
+    >    vote-time root is an ungraded fallback equal to the round's justification
+    >    selection and the action state has switched to the finalized root, this same
+    >    admission decides: retention exactly when the root stays in the action
+    >    candidate tree with raw grade 1 free of processed-finality conflict. Either
+    >    outcome is a deterministic function of the deadline view, and the switch
+    >    requires a mid-round maximum move, one of the separately handled cases.
+    >
+    > On failure of any case, every output of the action is fixed — empty head, empty
+    > pair — so the action is total with or without a proposal. The vote-time stable
+    > root remains fixed for ordinary Goldfish, subject only to the ungraded-fallback
+    > re-derivation of Definition 29 (`def:rederivation`); the SG/FG action root is that
+    > same root when the admission accepts it.
+    >
+    > In plain words, the action first decides whether a proposal is in play, then
+    > whether the roots are on its chain, then whether the root is admissible; a
+    > validator abstains only on a real conflict, never merely because a proposal was
+    > superseded.
+
+    **The same text, in this file's terminology** — root → walk-start, action → SG/FG
+    vote, action state → filtered store at the SG/FG vote:
+
+    > At `a_r`, the SG/FG-vote walk-start is the round's vote-time stable walk-start —
+    > the re-derived walk-start, after a mid-round re-derivation. No forward move is
+    > ever required: the filtered store's selection at the SG/FG vote precedes the
+    > round's vote-time walk-start and any re-derived walk-start, by Lemma 35. The
+    > SG/FG vote evaluates the following cases in order; the first that applies governs.
+    >
+    > 1. *Proposal-free.* If no unique proposal was accepted — a failed proposal, no
+    >    timely proposal, or the discard-both case — or an accepted proposal block has
+    >    left the candidate tree at the SG/FG vote while the walk-start ancestry holds —
+    >    a mid-round rise evicted the proposal — the SG/FG vote reads no proposal block
+    >    at all: the ancestry condition of case 2 is vacuous, the validator sets
+    >    `R_{u,act}^r = R_{u,vote}^r`, and only case 3's membership and admission tests
+    >    apply. A superseded proposal costs its proposer the round's context, never the
+    >    validator its outputs.
+    > 2. *Off-path walk-start.* If the vote-time walk-start or `S_{u,act}^r` is not an
+    >    ancestor of `B_p^r` — in particular when a re-derivation moved the vote-time
+    >    walk-start off the proposal's chain — no SG/FG-vote walk-start is defined and
+    >    the validator emits no SG head or current-height pair.
+    > 3. *Admission.* Otherwise the receiver uses the SG/FG-vote walk-start for SG and
+    >    FG exactly when `B_p^r` — in the proposal case — and `R_{u,act}^r` remain in
+    >    `C(Σ_{u,act}^r)`, and the SG/FG-vote walk-start either equals the filtered
+    >    store's Simplex walk-start or has raw grade 1 while conflicting with no
+    >    finalized root whose evidence the validator has processed by the SG/FG vote —
+    >    finality evidence processed after the vote thus withdraws a walk-start from
+    >    SG/FG use even when no slot boundary remains to re-derive it — and the
+    >    validator abstains otherwise. When the vote-time walk-start is an ungraded
+    >    fallback equal to the round's justification selection and the filtered store
+    >    has switched to the finalized root, this same admission decides: retention
+    >    exactly when the walk-start stays in the candidate tree at the SG/FG vote with
+    >    raw grade 1 free of processed-finality conflict. Either outcome is a
+    >    deterministic function of the deadline view, and the switch requires a
+    >    mid-round maximum move, one of the separately handled cases.
+    >
+    > On failure of any case, every output of the SG/FG vote is fixed — empty head,
+    > empty pair — so the SG/FG vote is total with or without a proposal. The vote-time
+    > stable walk-start remains fixed for ordinary Goldfish, subject only to the
+    > ungraded-fallback re-derivation of Definition 29; the SG/FG-vote walk-start is
+    > that same walk-start when the admission accepts it.
+    >
+    > In plain words, the SG/FG vote first decides whether a proposal is in play, then
+    > whether the walk-starts are on its chain, then whether the walk-start is
+    > admissible; a validator abstains only on a real conflict, never merely because a
+    > proposal was superseded.
     In plain words: the action first decides whether a proposal is in play, then whether
     the roots are on its chain, then whether the root is admissible. -/
 def sgfgVoteWalkStart
