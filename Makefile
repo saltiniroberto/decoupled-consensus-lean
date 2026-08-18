@@ -1,4 +1,4 @@
-.PHONY: help check dev sorry sorries nodecide orphans proved build cache cites mapping index paper submodules
+.PHONY: help check dev sorry sorries nodecide orphans proved build cache cites mapping index paper submodules citation-links
 
 # `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
 # which no amount of later work discharges. Every target refuses it.
@@ -27,6 +27,8 @@ help:
 	@echo 'make build      - build this project'
 	@echo 'make cites      - check every citation of the paper against its .aux'
 	@echo 'make mapping    - regenerate mapping.html from MAPPING.md'
+	@echo 'make citation-links - regenerate .citation-links.json, which arms the VS Code'
+	@echo '                  extension in tools/vscode-citations'
 	@echo 'make index      - regenerate INDEX.tsv, one row per declaration'
 	@echo 'make paper      - build latex-specs/height_filter_healing.pdf and its .aux'
 	@echo 'make submodules - report the pinned revision of each submodule'
@@ -104,6 +106,11 @@ proved:
 # Neither of these is part of `check` or `dev`: each rewrites a committed file.
 mapping:
 	@python3 tools/mapping_html.py
+
+# Not in `check` or `dev` either, for the opposite reason: it writes an untracked artefact,
+# and nothing in the build reads it. It arms the editor extension, and only that.
+citation-links:
+	@python3 tools/citation_links.py
 
 # Builds first because the types come from the compiled environment, not the sources.
 index: build
