@@ -82,6 +82,7 @@ validator has received by a tick is in its pools at that tick; nothing else is.
 | `Σ_{u,act}^r` | `filteredStoreAtSGFGVote` | the action state, derived at the `castSGFGVote` call |
 | `R` (Fig. 2) | `Store.walkStartFromFGVotes` | the walk-from block; the paper's Simplex root |
 | `R_{u,vote}^r` | `goldfishWalkStart` | the vote-time stable walk-start — Definition 41 |
+| `C⁻_u(Σ)` | `candidateTreeBackedByPrevSGFGVote` | the aged candidate tree — Definition 31 |
 | `H_i` | `hist` | the durable signing history |
 
 The convention is `CLAUDE.md`'s: a symbol may become a word; the docstring opens with the
@@ -245,9 +246,11 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               | none => st.gvotes
             let Svote := store'.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
             let pf := processedFinalized store'
-            let L := lowerWalkStart st.round.selSnap Svote treeAtPrevSGFGVote
+            -- `L_u^r`, Definition 40
+            let lowerWalkStart := lowerWalkStart st.round.selSnap Svote treeAtPrevSGFGVote
               st.round.attsAtRoundStartMinusΔ attsAtRoundStartPlusΔ r pf
-            let vr := goldfishWalkStart Svote treeAtPrevSGFGVote L attsAtRoundStartPlusΔ r pf prop
+            let vr := goldfishWalkStart Svote treeAtPrevSGFGVote lowerWalkStart
+              attsAtRoundStartPlusΔ r pf prop
             -- Definition 45: the frozen slot view merged with the carried view, the
             -- preceding vote phase's votes counted, the walk in the aged tree with the
             -- proposal-path exemption
@@ -255,7 +258,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               | some p => st.round.frozen ∪ p.carriedGoldfishVotes
               | none => st.round.frozen
             let counted := view.filter fun v => v.slot + 4 * Δ = t
-            let tree := agedTreeWithExemption Svote treeAtPrevSGFGVote
+            let tree := candidateTreeBackedByPrevSGFGVoteOrOnProposalPath Svote treeAtPrevSGFGVote
               (vr.accepted.map fun p => p.block)
             let st' := { st with
               store := store', gvotes := gv',

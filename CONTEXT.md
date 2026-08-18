@@ -2655,6 +2655,20 @@ deliberate break against a paper-defined word ("activation filter", Definition 3
 now stating the mechanism: material from the current store, verdicts from the store at the
 previous SG/FG vote.
 
+More of the same campaign, still 2026-08-18: the aged trees are provenance-named —
+`agedCandidateTree` is `candidateTreeBackedByPrevSGFGVote` and `agedTreeWithExemption` is
+`candidateTreeBackedByPrevSGFGVoteOrOnProposalPath` — Roberto does not like "witness" or "aged",
+so the aging-witness parameter is `blocksAcceptedByPrevSGFGVote` and Definition 31 gained its own
+dual text (aged tree → the candidate tree backed by the previous SG/FG vote; aging witnesses →
+backing blocks). Definition 41's function and `RoundState`'s field are both `goldfishWalkStart`
+(the stable root, named for its primary consumer), `activationFiltered` is
+`Store.withJustificationAndFinalityFrom`, `Store.walkStart` is `walkStartFromFGVotes` (provenance
+in the suffix — a prefix reads as purpose), and `reaction`'s local `L` is `lowerWalkStart`. One
+process bug worth remembering: a marker-anchored edit of the *translated* dual-text blocks leaked
+into the *verbatim* blocks of the definitions downstream, because each marker's region ran to the
+next marker; verbatim blocks must be located by their own delimiters, never as "the rest of the
+segment".
+
 **The dual-text convention, now in `CLAUDE.md`**: where renamed vocabulary appears inside a
 definition's own text, the docstring carries the paper's text verbatim and then the same text
 in the new terminology, sentence for sentence. Applied to Definitions 29, 40, 41, 42, 45 and

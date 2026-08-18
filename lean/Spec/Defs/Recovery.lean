@@ -252,32 +252,76 @@ def processedFinalized (S : Store Node Root) : Finset (Blk Node Root) :=
 def candidateTree (S : Store Node Root) : Finset (Blk Node Root) :=
   (viableTree S).filter fun B => S.walkStartFromFGVotes ⪯ B
 
-/-- Definition 31's aged variant `C⁻_u(Σ)`: "A block `B ∈ C(Σ)` is in `C⁻_u(Σ)` exactly
-    when some block `W` with `B ⪯ W` was received and accepted by that validator's
-    preceding-round action cutoff `a_{r−1}` and has derived state-height
-    `σ[W].h ≥ Σ.hmax − 1`. Here `W = B` is allowed". The definition's aging witnesses are
-    the parameter `blocksAcceptedByPrevSGFGVote` — rendering decision 2 — and the
-    state-height reads through
-    the deriving store's own map and maximum, per the definition's "`Σ.hmax` is the
-    deriving state's own current maximum". -/
-def agedCandidateTree (S : Store Node Root)
+/-- Definition 31 (`def:recovery-context`, lines 322–358)'s aged variant `C⁻_u(Σ)` of the
+    candidate tree — the paper's *backed candidate tree*, named here by what backs a member: a block
+    stays in exactly when a block at-or-above it was accepted by the previous SG/FG-vote
+    cutoff and still sits within one height of the current maximum.
+
+    **The paper's text, verbatim (the aged-variant half of Definition 31):**
+
+    > Write `C⁻_u(Σ)` for the *aged* variant of the candidate tree, used exactly where
+    > this definition says so. For a *receiver's grade-root selection only*, the
+    > viability test uses aged witnesses. A block `B ∈ C(Σ)` is in `C⁻_u(Σ)` exactly
+    > when some block `W` with `B ⪯ W` was received *and accepted* by that validator's
+    > preceding-round action cutoff `a_{r−1}` and has derived state-height
+    > `σ[W].h ≥ Σ.hmax − 1`. Here `W = B` is allowed, whether `W` is a leaf of any tree
+    > is irrelevant, and `Σ.hmax` is the deriving state's own current maximum. The
+    > receipt-and-acceptance bound is the same condition as the activation filter, so a
+    > witness queued behind missing ancestry at the cutoff does not count even if its
+    > ancestry arrives later. A witness received or accepted later takes effect one
+    > round later — in particular, a young branch that just raised `Σ.hmax` can leave
+    > older branches, and even the walk root, without aged membership for one round; the
+    > walk-standing rule of Definition 32 (`def:walk-standing`) below keeps every walk
+    > defined regardless.
+    >
+    > In plain words, receivers age their witnesses by one round while the proposer does
+    > not, and every recovery choice uses the main store's ordinary `hmax − 1` filter.
+
+    **The same text, in this file's terminology** — backed candidate tree → the candidate tree
+    backed by the previous SG/FG vote; aging witnesses → the backing blocks, those
+    accepted by the previous SG/FG-vote cutoff; root → walk-start:
+
+    > Write `C⁻_u(Σ)` for the candidate tree backed by the previous SG/FG vote, used
+    > exactly where this definition says so. For a *receiver's grade-walk-start selection
+    > only*, the viability test uses backing blocks accepted by the previous SG/FG-vote
+    > cutoff. A block `B ∈ C(Σ)` is in `C⁻_u(Σ)` exactly when some block `W` with
+    > `B ⪯ W` was received *and accepted* by that validator's preceding-round
+    > SG/FG-vote cutoff `a_{r−1}` and has derived state-height `σ[W].h ≥ Σ.hmax − 1`.
+    > Here `W = B` is allowed, whether `W` is a leaf of any tree is irrelevant, and
+    > `Σ.hmax` is the deriving state's own current maximum. The receipt-and-acceptance
+    > bound is the same condition as the justification-and-finality substitution, so a
+    > backing block queued behind missing ancestry at the cutoff does not count even if
+    > its ancestry arrives later. A backing block received or accepted later takes
+    > effect one round later — in particular, a young branch that just raised `Σ.hmax`
+    > can leave older branches, and even the walk's walk-start, without backed
+    > membership for one round; the walk-standing rule of Definition 32 below keeps
+    > every walk defined regardless.
+    >
+    > In plain words, receivers require their backing blocks to be a round old while the
+    > proposer does not, and every recovery choice uses the main store's ordinary
+    > `hmax − 1` filter.
+
+    The backing blocks are the parameter `blocksAcceptedByPrevSGFGVote` — rendering
+    decision 2 — and the state-height reads through the deriving store's own map and
+    maximum. -/
+def candidateTreeBackedByPrevSGFGVote (S : Store Node Root)
     (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root)) : Finset (Blk Node Root) :=
   (candidateTree S).filter fun B =>
     ∃ Wb ∈ blocksAcceptedByPrevSGFGVote,
       B ⪯ Wb ∧ (S.σ Wb).any fun st => st.h ≥ S.hmax - 1
 
-/-- The aged tree with Definition 33 (`def:counting-rule`, lines 382–403)'s
+/-- The backed candidate tree with Definition 33 (`def:counting-rule`, lines 382–403)'s
     proposal-path exemption: "Blocks on the accepted proposal's path — the proposed root
     `A_p^r` through the parent `Z_p^r` to the proposal block `B_p^r`, and their
     ancestors — are exempt from aging in the acceptance checks and the first-slot walk."
     A block at or below the proposal block is exactly a path block or one of its
     ancestors, so the exemption is the `⪯ B_p` disjunct; membership in the (unaged)
     candidate tree is still required. -/
-def agedTreeWithExemption (S : Store Node Root)
+def candidateTreeBackedByPrevSGFGVoteOrOnProposalPath (S : Store Node Root)
     (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root))
     (path : Option (Blk Node Root)) : Finset (Blk Node Root) :=
   (candidateTree S).filter fun B =>
-    decide (B ∈ agedCandidateTree S blocksAcceptedByPrevSGFGVote) ||
+    decide (B ∈ candidateTreeBackedByPrevSGFGVote S blocksAcceptedByPrevSGFGVote) ||
       path.any fun Bp => decide (B ⪯ Bp)
 
 end
@@ -502,7 +546,7 @@ def ghostWalk [Omega Node Root] (votes : Finset (GoldfishVote Node Root))
     > At `d_r + Δ`, an honest committee member merges the recognized proposal's carried
     > ordinary view into its own frozen slot view — the receipt buffer is not merged
     > before the slot-view freeze — runs vote-time GHOST from its accepted stable
-    > walk-start within the aged tree `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path
+    > walk-start within the backed candidate tree `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path
     > exemption of Definition 33, and votes for that output; the walk is total by
     > Lemma 20. Without a recognized proposal it runs the same rule on its frozen slot
     > view and vote-state candidate tree. No SG head enters either merge, and no walk
@@ -598,7 +642,7 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     G2 X0 r B ∧ ConflictFree processedF B)).getD Ssel.walkStartFromFGVotes
 
 /-- Definition 40, the receiver's lower root `L_u^r`: "the deepest *strict* grade-3 block
-    in the aged tree `C⁻_u(Σ_{u,sel}^r)` that remains in the aged tree
+    in the backed candidate tree `C⁻_u(Σ_{u,sel}^r)` that remains in the backed candidate tree
     `C⁻_u(Σ_{u,vote}^r)` … or `S_{u,vote}^r` if no strict grade-3 block survives both
     trees", where strict means "strictly descends from that validator's own vote-state
     Simplex root". The definition's "a grade made irrelevant by a newly learned finalized
@@ -660,8 +704,8 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     > *Receiver lower walk-start.* Throughout, call a graded block *strict* at a
     > validator when it strictly descends from that validator's own vote-state Simplex
     > walk-start `S_{u,vote}^r`. At `d_r + Δ`, validator `u` chooses the deepest
-    > *strict* grade-3 block in the aged tree `C⁻_u(Σ_{u,sel}^r)` that remains in the
-    > aged tree `C⁻_u(Σ_{u,vote}^r)` — unique by Corollary 2 — or `S_{u,vote}^r` if no
+    > *strict* grade-3 block in the backed candidate tree `C⁻_u(Σ_{u,sel}^r)` that remains in the
+    > backed candidate tree `C⁻_u(Σ_{u,vote}^r)` — unique by Corollary 2 — or `S_{u,vote}^r` if no
     > strict grade-3 block survives both trees. A grade-3 block equal to the selection
     > itself is subsumed by the fallback: the walk-start is then the selection,
     > classified as ungraded for retention and re-derivation, so the two clauses name
@@ -676,10 +720,11 @@ def lowerWalkStart (Ssel Svote : Store Node Root)
     (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root))
     (Xm X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) : Blk Node Root :=
-  (deepest ((agedCandidateTree Ssel blocksAcceptedByPrevSGFGVote).filter fun B =>
+  (deepest ((candidateTreeBackedByPrevSGFGVote Ssel blocksAcceptedByPrevSGFGVote).filter fun B =>
     Svote.walkStartFromFGVotes ⪯ B ∧ B ≠ Svote.walkStartFromFGVotes ∧ G3 Xm X1 r B ∧
     ConflictFree processedF B ∧
-    B ∈ agedCandidateTree Svote blocksAcceptedByPrevSGFGVote)).getD Svote.walkStartFromFGVotes
+    B ∈ candidateTreeBackedByPrevSGFGVote Svote blocksAcceptedByPrevSGFGVote)).getD
+    Svote.walkStartFromFGVotes
 
 end
 
@@ -810,7 +855,7 @@ structure VoteRoundOutcome (Node Root : Type) where
     >    ordinary deliveries, and under the activation filter of Definition 30 they
     >    enter walk-start selection only at the next round boundary;
     > 3. the deepest block among `{A_p^r, L_u^r, S_{u,vote}^r}`, denoted
-    >    `R_{u,vote}^r`, and the proposal block `B_p^r` are both in the aged tree
+    >    `R_{u,vote}^r`, and the proposal block `B_p^r` are both in the backed candidate tree
     >    `C⁻_u(Σ_{u,vote}^r)`, with the proposal-path exemption of Definition 33.
     >
     > The deepest walk-start is used for ordinary Goldfish for the rest of the round;
@@ -820,7 +865,7 @@ structure VoteRoundOutcome (Node Root : Type) where
     > recognized, including the discard-both case — the vote-time stable walk-start is
     > `L_u^r` when `L_u^r = S_{u,vote}^r`, or when the raw predicate `G1_u(L_u^r)`
     > holds, `L_u^r` conflicts with no finalized root whose evidence the receiver has
-    > processed, and `L_u^r` is in the aged tree `C⁻_u(Σ_{u,vote}^r)`. In every such
+    > processed, and `L_u^r` is in the backed candidate tree `C⁻_u(Σ_{u,vote}^r)`. In every such
     > case, write `R_{u,vote}^r` for the vote-time stable walk-start so derived; the
     > SG/FG-vote walk-start rule and the fallback SG-head rule consume this notation.
     > Otherwise it is `S_{u,vote}^r`.
@@ -844,12 +889,12 @@ structure VoteRoundOutcome (Node Root : Type) where
        Simplex selection" — the tag binds the branch (Definition 43);
     3. the deepest of `{A_p^r, L_u^r, S_{u,vote}^r}` — one chain by Remark 11
        (`rem:stable-root-coherence`), so
-       `chainMax` — and `B_p^r` are both in the aged tree, with the proposal-path
+       `chainMax` — and `B_p^r` are both in the backed candidate tree, with the proposal-path
        exemption.
 
     On acceptance the deepest root is the round's; on any failure, the failed-proposal
     fallback: `L_u^r` when it equals the selection, or when raw `G1_u(L_u^r)` holds,
-    `L_u^r` is conflict-free and in the aged tree; otherwise `S_{u,vote}^r`.
+    `L_u^r` is conflict-free and in the backed candidate tree; otherwise `S_{u,vote}^r`.
 
     In plain words: G3 fixed the receiver's lower bound, G2 is the proposer's witness,
     G1 is the receiver's upper check, and a receiver never moves behind its lower root
@@ -863,7 +908,7 @@ def goldfishWalkStart (Svote : Store Node Root)
     if L = Svote.walkStartFromFGVotes then
       { walkStart := L, graded := false, accepted := none }
     else if G1 X1 r L ∧ ConflictFree processedF L ∧
-        L ∈ agedCandidateTree Svote blocksAcceptedByPrevSGFGVote then
+        L ∈ candidateTreeBackedByPrevSGFGVote Svote blocksAcceptedByPrevSGFGVote then
       { walkStart := L, graded := true, accepted := none }
     else
       { walkStart := Svote.walkStartFromFGVotes, graded := false, accepted := none }
@@ -881,8 +926,10 @@ def goldfishWalkStart (Svote : Store Node Root)
       (p.graded = false ∧ p.proposedWalkStart = Svote.walkStartFromFGVotes)
     let Rv := chainMax (chainMax p.proposedWalkStart L) Svote.walkStartFromFGVotes
     let item3 :=
-      Rv ∈ agedTreeWithExemption Svote blocksAcceptedByPrevSGFGVote (some p.block) ∧
-      p.block ∈ agedTreeWithExemption Svote blocksAcceptedByPrevSGFGVote (some p.block)
+      Rv ∈ candidateTreeBackedByPrevSGFGVoteOrOnProposalPath Svote
+        blocksAcceptedByPrevSGFGVote (some p.block) ∧
+      p.block ∈ candidateTreeBackedByPrevSGFGVoteOrOnProposalPath Svote
+        blocksAcceptedByPrevSGFGVote (some p.block)
     if item1 ∧ item2 ∧ item3 then
       { walkStart := Rv, graded := Rv ≠ Svote.walkStartFromFGVotes, accepted := some p }
     else fallback
