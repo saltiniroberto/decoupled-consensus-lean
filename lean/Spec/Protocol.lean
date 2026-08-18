@@ -81,15 +81,28 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
       | some r =>
           if t = Rounds.actionTime r then
             -- the round's SG/FG action (Definition 28, `def:recovery-timing`,
-            -- lines 186–191): sign the one
-            -- combined attestation, history updated before the send
-            let (a, H') := ordinaryVote st.store t i r ⊥ 0 false st.hist
+            -- lines 186–191): sign the one combined attestation, history updated
+            -- before the send
+            let (a, H') := ordinaryVote
+              (S := st.store)   -- the validator's store, source of the vote context
+              (t := t)          -- the clock reading the context state is advanced to
+              (i := i)          -- the signing validator
+              (r := r)          -- the attestation's round
+              (head := ⊥)       -- the SG head; placeholder, head production unrendered
+              (h_F := 0)        -- the latest finalized height; placeholder, open decision
+              (hasJC := false)  -- certificate knowledge; placeholder, open decision
+              (H := st.hist)    -- the durable signing history
             { state := { st with hist := H' }, send := {.attestation a} }
           else if Rounds.isVoteTime r t then
-            -- a slot's +Δ phase: the raw Goldfish vote (Definition 45); empty vote view
-            -- and candidate tree pending the stable-root machinery, so the walk returns
-            -- the store's walk-from block
-            { state := st, send := {.gVote (goldfishVote i t ∅ [] st.store.R)} }
+            -- a slot's +Δ phase: the raw Goldfish vote (Definition 45)
+            let v := goldfishVote
+              (i := i)              -- the committee member casting the vote
+              (s := t)              -- the vote's slot
+              (votes := ∅)          -- the counted votes; placeholder, no vote view
+              (tree := [])          -- the candidate tree; placeholder, pending the
+                                    --   stable-root machinery, so the walk stays put
+              (root := st.store.R)  -- the walk's start: the store's walk-from block
+            { state := st, send := {.gVote v} }
           else { state := st, send := ∅ }
       | none => { state := st, send := ∅ }
   | .wake => { state := st, send := ∅ }
