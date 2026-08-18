@@ -88,6 +88,22 @@ closed safely, keep the routine's shape as close as the types allow and say in a
 docstring which line deviates. `CONTEXT.md` records the measured limits of this — overloading
 `∈` is the known one.
 
+**The paper's bare symbols are exempt from "the paper's own spelling".** Roberto, 2026-08-18.
+The rule above is about the paper's words. A *symbol* — `d_r`, `a_r`, `X⁻`, `V⁻`, `Σ_sel` — may
+be renamed to a word when it makes the Lean hard to read, under three conditions:
+
+- The renamed declaration's docstring opens with the paper's symbol, then the meaning, then the
+  citation — the way `RoundState.Xm` does. Both directions stay greppable, and the citation
+  stays clickable.
+- A module that renames keeps a glossary table in its header: paper symbol, Lean name, one line
+  of meaning, in the paper's order.
+- A word the paper *defines* — "stable root", "frozen slot view", "aging witnesses" — keeps its
+  name. Statements and code that drop the paper's own words stop being auditable against it;
+  the `paper-statement-audit` skill records how that failed once.
+
+`Rounds.start` for `d_r` and `Rounds.isGoldfishVoteTime` for the `+Δ` phases are the
+precedents.
+
 ## A spec change stops at the spec
 
 Roberto, 2026-08-17. When a `Spec/` definition changes, change `Spec/` and **stop** — do not
