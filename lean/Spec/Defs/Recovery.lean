@@ -36,7 +36,7 @@ the no-source-proposal branch. Everything here is a pure function over explicit 
    `hmax` and takes `(J, h_j, F)` from the snapshot — the store held at `a_{r−1}`, whose
    own selection fields are exactly the greatest pairs recorded by blocks accepted by
    then.
-2. **Aging witnesses are the snapshot's accepted set.** Definition 31's aged membership
+2. **Definition 31's aging witnesses are `blocksAcceptedByPrevSGFGVote`.** Its aged membership
    needs a witness "received *and accepted*" by `a_{r−1}`; the store does not record
    receipt times, and for honestly relayed blocks the definition itself says receipt and
    acceptance coincide. The witness set passed in is `snap.T`, the blocks accepted by the
@@ -255,14 +255,16 @@ def candidateTree (S : Store Node Root) : Finset (Blk Node Root) :=
 /-- Definition 31's aged variant `C⁻_u(Σ)`: "A block `B ∈ C(Σ)` is in `C⁻_u(Σ)` exactly
     when some block `W` with `B ⪯ W` was received and accepted by that validator's
     preceding-round action cutoff `a_{r−1}` and has derived state-height
-    `σ[W].h ≥ Σ.hmax − 1`. Here `W = B` is allowed". `witnesses` is the set of blocks
-    accepted by the cutoff — rendering decision 2 — and the state-height reads through
+    `σ[W].h ≥ Σ.hmax − 1`. Here `W = B` is allowed". The definition's aging witnesses are
+    the parameter `blocksAcceptedByPrevSGFGVote` — rendering decision 2 — and the
+    state-height reads through
     the deriving store's own map and maximum, per the definition's "`Σ.hmax` is the
     deriving state's own current maximum". -/
-def agedCandidateTree (S : Store Node Root) (witnesses : Finset (Blk Node Root)) :
-    Finset (Blk Node Root) :=
+def agedCandidateTree (S : Store Node Root)
+    (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root)) : Finset (Blk Node Root) :=
   (candidateTree S).filter fun B =>
-    ∃ Wb ∈ witnesses, B ⪯ Wb ∧ (S.σ Wb).any fun st => st.h ≥ S.hmax - 1
+    ∃ Wb ∈ blocksAcceptedByPrevSGFGVote,
+      B ⪯ Wb ∧ (S.σ Wb).any fun st => st.h ≥ S.hmax - 1
 
 /-- The aged tree with Definition 33 (`def:counting-rule`, lines 382–403)'s
     proposal-path exemption: "Blocks on the accepted proposal's path — the proposed root
@@ -271,10 +273,12 @@ def agedCandidateTree (S : Store Node Root) (witnesses : Finset (Blk Node Root))
     A block at or below the proposal block is exactly a path block or one of its
     ancestors, so the exemption is the `⪯ B_p` disjunct; membership in the (unaged)
     candidate tree is still required. -/
-def agedTreeWithExemption (S : Store Node Root) (witnesses : Finset (Blk Node Root))
+def agedTreeWithExemption (S : Store Node Root)
+    (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root))
     (path : Option (Blk Node Root)) : Finset (Blk Node Root) :=
   (candidateTree S).filter fun B =>
-    decide (B ∈ agedCandidateTree S witnesses) || path.any fun Bp => decide (B ⪯ Bp)
+    decide (B ∈ agedCandidateTree S blocksAcceptedByPrevSGFGVote) ||
+      path.any fun Bp => decide (B ⪯ Bp)
 
 end
 
@@ -668,13 +672,14 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     > In plain words, the proposer offers its deepest grade-2 walk-start or its own
     > selection, and each receiver fixes its own grade-3 lower bound.
     processed-finality filter every grade use obeys (Definition 37). -/
-def lowerWalkStart (Ssel Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
+def lowerWalkStart (Ssel Svote : Store Node Root)
+    (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root))
     (Xm X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) : Blk Node Root :=
-  (deepest ((agedCandidateTree Ssel witnesses).filter fun B =>
+  (deepest ((agedCandidateTree Ssel blocksAcceptedByPrevSGFGVote).filter fun B =>
     Svote.walkStartFromFGVotes ⪯ B ∧ B ≠ Svote.walkStartFromFGVotes ∧ G3 Xm X1 r B ∧
     ConflictFree processedF B ∧
-    B ∈ agedCandidateTree Svote witnesses)).getD Svote.walkStartFromFGVotes
+    B ∈ agedCandidateTree Svote blocksAcceptedByPrevSGFGVote)).getD Svote.walkStartFromFGVotes
 
 end
 
@@ -716,8 +721,8 @@ structure VoteRoundOutcome (Node Root : Type) where
     here for its primary consumer: the round's Goldfish walks start from its output, and
     the SG/FG vote reuses it through Definition 42's admission. `prop` is the recognized
     distinguished proposal after Definition 43's wrapper (timely, unique winner), or
-    `none`; `witnesses` ages both membership tests (rendering decision 2). The three
-    acceptance items, in the definition's own order:
+    `none`; `blocksAcceptedByPrevSGFGVote` ages both membership tests (rendering
+    decision 2). The three acceptance items, in the definition's own order:
 
     **The paper's text, verbatim (Definition 41, `def:stable-root`, lines 1123–1191):**
 
@@ -849,15 +854,16 @@ structure VoteRoundOutcome (Node Root : Type) where
     In plain words: G3 fixed the receiver's lower bound, G2 is the proposer's witness,
     G1 is the receiver's upper check, and a receiver never moves behind its lower root
     and never takes an ungraded root it did not already select. -/
-def goldfishWalkStart (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
+def goldfishWalkStart (Svote : Store Node Root)
+    (blocksAcceptedByPrevSGFGVote : Finset (Blk Node Root))
     (L : Blk Node Root) (X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) (prop : Option (RecoveryProposal Node Root)) :
     VoteRoundOutcome Node Root :=
   let fallback : VoteRoundOutcome Node Root :=
     if L = Svote.walkStartFromFGVotes then
       { walkStart := L, graded := false, accepted := none }
-    else if G1 X1 r L ∧ ConflictFree processedF L ∧ L ∈ agedCandidateTree Svote witnesses
-    then
+    else if G1 X1 r L ∧ ConflictFree processedF L ∧
+        L ∈ agedCandidateTree Svote blocksAcceptedByPrevSGFGVote then
       { walkStart := L, graded := true, accepted := none }
     else
       { walkStart := Svote.walkStartFromFGVotes, graded := false, accepted := none }
@@ -875,8 +881,8 @@ def goldfishWalkStart (Svote : Store Node Root) (witnesses : Finset (Blk Node Ro
       (p.graded = false ∧ p.proposedWalkStart = Svote.walkStartFromFGVotes)
     let Rv := chainMax (chainMax p.proposedWalkStart L) Svote.walkStartFromFGVotes
     let item3 :=
-      Rv ∈ agedTreeWithExemption Svote witnesses (some p.block) ∧
-      p.block ∈ agedTreeWithExemption Svote witnesses (some p.block)
+      Rv ∈ agedTreeWithExemption Svote blocksAcceptedByPrevSGFGVote (some p.block) ∧
+      p.block ∈ agedTreeWithExemption Svote blocksAcceptedByPrevSGFGVote (some p.block)
     if item1 ∧ item2 ∧ item3 then
       { walkStart := Rv, graded := Rv ≠ Svote.walkStartFromFGVotes, accepted := some p }
     else fallback
