@@ -41,7 +41,8 @@ uses.
 **`get_confirmed` is one total function, `Ω`-ambient.** The figure's `Ω` is "whatever
 extra information the validator uses to disambiguate among viable descendants" —
 deliberately unspecified — so `getConfirmed` computes the candidates the return line
-admits, adds the walk-from block `Store.FGWalkStart` so the choice is never over an empty set, and
+admits, adds the walk-from block `Store.walkStartFromFGVotes` so the choice is never over an
+empty set, and
 lets the ambient `Ω` (the `Omega` class of `Spec/Defs/Store.lean`, where the design and
 its two accepted costs are recorded) pick.
 A `Prop`-valued relation `GetConfirmed`, then a named candidate set `getConfirmedSet`
@@ -117,20 +118,21 @@ def onBlock (S : Store Node Root) (B : Blk Node Root) : Store Node Root := Id.ru
     > return B ∈ viableTree(Σ) with B ⪰ R and σ[B].h ≥ Σ.hmax − 1, depending on Ω
 
     **The same text, in this file's terminology** — the walk-from block `R` →
-    `FGWalkStart`:
+    `walkStartFromFGVotes`:
 
-    > FGWalkStart ← Σ.J if Σ.hmax = Σ.h_j + 1 else Σ.F        -- Σ.J is at the frontier
-    > return B ∈ viableTree(Σ) with B ⪰ FGWalkStart and σ[B].h ≥ Σ.hmax − 1,
+    > walkStartFromFGVotes ← Σ.J if Σ.hmax = Σ.h_j + 1 else Σ.F        -- Σ.J is at the frontier
+    > return B ∈ viableTree(Σ) with B ⪰ walkStartFromFGVotes and σ[B].h ≥ Σ.hmax − 1,
     > depending on Ω
     cascade rule is nameable outside the figure. -/
-def Store.FGWalkStart (S : Store Node Root) : Blk Node Root :=
+def Store.walkStartFromFGVotes (S : Store Node Root) : Blk Node Root :=
   if S.hmax = S.h_j + 1 then S.J else S.F                                -- line 560
 
 /-- `get_confirmed(Σ, Ω)` (Figure 2, `hft:alg:store`, lines 559–562) as a total
     deterministic function of the store, `Ω` ambient — see `Omega`'s docstring in
     `Spec/Defs/Store.lean` for the design and its two accepted costs. The candidates are
     the blocks the return line admits — in the viable subtree, at or above the walk-from
-    block `Store.FGWalkStart`, at state-height at least `hmax − 1`, the height read through the
+    block `Store.walkStartFromFGVotes`, at state-height at least `hmax − 1`, the height read
+    through the
     map's `Option` (line 561) — **plus the walk-from block itself**, which is what makes
     the set nonempty and the function total (Roberto, 2026-08-17). The figure has no such
     addition: for a held store, Corollary 1 (`hft:cor:getConfirmed-total`) says the return
@@ -138,8 +140,8 @@ def Store.FGWalkStart (S : Store Node Root) : Blk Node Root :=
     than a behaviour the paper describes — and `Ω` may pick it, which every statement
     about the output must allow for. -/
 def getConfirmed [Omega Node Root] (S : Store Node Root) : Blk Node Root :=
-  let candidates := insert S.FGWalkStart ((viableTree S).filter fun B =>
-    S.FGWalkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1)                   -- line 561
+  let candidates := insert S.walkStartFromFGVotes ((viableTree S).filter fun B =>
+    S.walkStartFromFGVotes ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1)     -- line 561
   (Omega.choose candidates (Finset.insert_nonempty _ _)).val
 
 end

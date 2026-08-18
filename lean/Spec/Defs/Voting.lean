@@ -345,7 +345,8 @@ def equivocatesIn (i : Node) (X : Finset (Attestation Node Root)) (r : Nat) : Bo
     `S_{i,act}^r` is `simplex_root` of the fork-choice action state — healing
     Definition 26 (`def:finality-root`) and Figure 4 (`alg:fork-choice-state`), whose
     cascade "`J` if `hmax = h_j + 1` else `F`" is word for word the companion store's
-    walk-from block `Store.FGWalkStart` (Figure 2, `hft:alg:store`, line 560). So over the hybrid
+    walk-from block `Store.walkStartFromFGVotes` (Figure 2, `hft:alg:store`, line 560). So over
+    the hybrid
     the condition reads: the head sits at or above the store's walk-from block, and is
     viable there.
 
@@ -355,7 +356,7 @@ def equivocatesIn (i : Node) (X : Finset (Attestation Node Root)) (r : Nat) : Bo
     (Definition 46, `def:official-confirmation`) needs the stable-root machinery
     (Definitions 38–42) and is not rendered — `head` stays an input to `fgVote`. -/
 def sgHeadOk (S : Store Node Root) (B : Blk Node Root) : Bool :=
-  decide (S.FGWalkStart ⪯ B ∧ B ∈ viableTree S)
+  decide (S.walkStartFromFGVotes ⪯ B ∧ B ∈ viableTree S)
 
 end
 

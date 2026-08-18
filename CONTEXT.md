@@ -2645,7 +2645,9 @@ the type parameter `Root` (state roots) stays. The paper's own cover is Figure 2
 `R`, "the walk-from block". Four red `Analysis` files' uses were edited textually and compile
 when that layer's fix round runs; `F_preceq_R` became `F_preceq_walkStart`.
 
-Two follow-ups the same evening: `Store.walkStart` is `Store.FGWalkStart` — Roberto: the store's
+Two follow-ups the same evening: `Store.walkStart` is `Store.walkStartFromFGVotes` (briefly
+`FGWalkStart`, re-spelled the same hour: a provenance prefix parses as purpose, and this
+codebase's names carry provenance in suffixes) — Roberto: the store's
 walk-start reads only the FG verdicts (`J`, `h_j`, `F`, `hmax`), no Goldfish or SG vote touches
 it, and the name should say so; `VoteRoundOutcome.walkStart` and the walk parameters keep the
 plain name. And `activationFiltered` is `Store.withJustificationAndFinalityFrom` — the third

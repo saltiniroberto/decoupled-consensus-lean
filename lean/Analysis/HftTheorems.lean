@@ -246,7 +246,7 @@ theorem thmLockIn {Node Root : Type} [DecidableEq Node] [DecidableEq Root]
     (hBF : postState B_F ≠ invalid) (hB : B ∈ S.σ)
     (hF : (postState' B_F).F = S.σ[B].J) (hhf : (postState' B_F).h_F = S.σ[B].h_j) :
     (S.σ[B].J ⪯ S'.J ∧ S.σ[B].J ∈ viableTree S' ∧
-      ∀ C, (C ∈ viableTree S' ∧ S'.FGWalkStart ⪯ C ∧
+      ∀ C, (C ∈ viableTree S' ∧ S'.walkStartFromFGVotes ⪯ C ∧
         (get st from S'.σ C; st.h ≥ S'.hmax - 1)) → S.σ[B].J ⪯ C) ∨
       SlashableThird (fun a => IncludedOn a B_F ∨ IncludedOnSome a S'.T) :=
   Proofs.lockIn h hBF hF hhf ⟨S.σ[B], (Option.some_get hB).symm, rfl, rfl⟩
