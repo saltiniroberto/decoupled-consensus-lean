@@ -51,7 +51,7 @@ snapshot; and the current round's records, `RoundState`.
   grade-deactivated) stable root.
 * later vote phases — ordinary Goldfish with the round's fixed root on the current
   candidate tree (Definition 32's walk-standing; Remark 10, `rem:aged-scope`).
-* `t = a_r` — the round's SG/FG action: `recoveryAction` (Definitions 42, 46, 47 and 50
+* `t = a_r` — the round's SG/FG action: `castSGFGVote` (Definitions 42, 46, 47 and 50
   assembled), the history updated before the send; then this store becomes the next
   round's activation cutoff `storeAtPrevSGFGVote`, and the round's accepted proposal
   becomes the next action's source.
@@ -79,6 +79,7 @@ validator has received by a tick is in its pools at that tick; nothing else is.
 | `V_u^-` | `votesAtSupportFreeze` | the first slot's support-freeze view |
 | `Σ_{u,sel}^r` | `selSnap` | the selection state |
 | `Σ_{u,vote}^r` | `voteSnap` | the vote state |
+| `Σ_{u,act}^r` | `filteredStoreAtSGFGVote` | the action state, derived at the `castSGFGVote` call |
 | `H_i` | `hist` | the durable signing history |
 
 The convention is `CLAUDE.md`'s: a symbol may become a word; the docstring opens with the
@@ -266,20 +267,20 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               send := ∅ }
           else if t = Rounds.SGFGVotingTime r then
             -- the round's SG/FG action (Figure 5, `alg:recovery-action`, steps 15–21)
-            let (a, H') := recoveryAction
+            let (a, H') := castSGFGVote
               (i := i) (r := r) (t := t)
-              (actionState := activationFiltered st.store st.storeAtPrevSGFGVote)
+              (filteredStoreAtSGFGVote := activationFiltered st.store st.storeAtPrevSGFGVote)
               (stableRoot := st.round.root)
               (acceptedProposal := st.round.accepted)
               (sourceProposal := st.prevProposal)
               (committee := Committees.committee (roundStart + Δ))
               (firstSlotVoteTime := roundStart + Δ)
               (votesAtSupportFreeze := st.round.votesAtSupportFreeze)
-              (votesAtAction := st.gvotes) -- V⁺: every delivery due by a_r is processed
+              (votesAtSGFGVote := st.gvotes) -- V⁺: every delivery due by a_r is processed
               (attsAtRoundStartPlusΔ := st.round.attsAtRoundStartPlusΔ)
               (attsAtRoundStartPlus2Δ := st.round.attsAtRoundStartPlus2Δ)
               (processedFinalizedAtFreeze := st.round.processedFinalizedAtFreeze)
-              (processedFinalizedAtAction := processedFinalized st.store)
+              (processedFinalizedAtSGFGVote := processedFinalized st.store)
               (history := st.hist)
             { state := { st with
                 hist := H',

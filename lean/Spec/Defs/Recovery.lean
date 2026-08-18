@@ -555,8 +555,8 @@ end
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
-/-- Definition 42 (`def:action-root`, lines 1256–1308). `Rvote` is the round's vote-time
-    stable root — after a mid-round re-derivation, the re-derived root. The cases, in the
+/-- Definition 42 (`def:action-root`, lines 1256–1308). `stableRoot` is the round's
+    vote-time stable root — after a mid-round re-derivation, the re-derived root. The cases, in the
     definition's order: proposal-free (no accepted proposal, or the accepted proposal
     block evicted from the action candidate tree while the root ancestry holds) reads no
     proposal block; off-path (the vote-time root or the action-state Simplex root not an
@@ -568,21 +568,31 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
     In plain words: the action first decides whether a proposal is in play, then whether
     the roots are on its chain, then whether the root is admissible. -/
-def actionRoot (Sact : Store Node Root) (Rvote : Blk Node Root)
-    (accepted : Option (RecoveryProposal Node Root))
-    (X1 : Finset (Attestation Node Root)) (r : Nat)
-    (processedF : Finset (Blk Node Root)) : Option (Blk Node Root) :=
-  let admit : Option (Blk Node Root) :=
-    if Rvote ∈ candidateTree Sact ∧
-        (Rvote = Sact.R ∨ (G1 X1 r Rvote ∧ ConflictFree processedF Rvote)) then
-      some Rvote
+def sgfgVoteRoot
+    -- `Σ_{u,act}^r`: the activation-filtered store at the SG/FG vote
+    (filteredStoreAtSGFGVote : Store Node Root)
+    -- the round's vote-time stable root — after a mid-round re-derivation, the re-derived root
+    (stableRoot : Blk Node Root)
+    -- the round's accepted distinguished proposal, `none` on every failure path
+    (acceptedProposal : Option (RecoveryProposal Node Root))
+    -- `X_u^1`, the grade view raw grade 1 is tested in
+    (attsAtRoundStartPlusΔ : Finset (Attestation Node Root)) (r : Nat)
+    -- finalized roots whose evidence was processed by this reading
+    (processedFinalizedAtSGFGVote : Finset (Blk Node Root)) : Option (Blk Node Root) :=
+  let admittedRoot : Option (Blk Node Root) :=
+    if stableRoot ∈ candidateTree filteredStoreAtSGFGVote ∧
+        (stableRoot = filteredStoreAtSGFGVote.R ∨
+          (G1 attsAtRoundStartPlusΔ r stableRoot ∧
+            ConflictFree processedFinalizedAtSGFGVote stableRoot)) then
+      some stableRoot
     else none
-  if let some p := accepted then
-    if Rvote ⪯ p.block ∧ Sact.R ⪯ p.block then
-      if p.block ∈ candidateTree Sact then admit   -- case 3, with the proposal in play
-      else admit                               -- case 1: evicted proposal, root ancestry holds
+  if let some p := acceptedProposal then
+    if stableRoot ⪯ p.block ∧ filteredStoreAtSGFGVote.R ⪯ p.block then
+      if p.block ∈ candidateTree filteredStoreAtSGFGVote then
+        admittedRoot                           -- case 3, with the proposal in play
+      else admittedRoot                        -- case 1: evicted proposal, root ancestry holds
     else none                                  -- case 2: off-path root
-  else admit                                   -- case 1: no accepted proposal
+  else admittedRoot                            -- case 1: no accepted proposal
 
 end
 
@@ -621,7 +631,7 @@ structure ActionOutputs (Node Root : Type) where
   C : Option (Blk Node Root)
 
 /-- Definition 46 (`def:official-confirmation`, lines 1635–1706). Two abstentions come
-    first: a failed action-state admission (`Ract = none`, Definition 42) or the fixed
+    first: a failed action-state admission (`admittedRoot = none`, Definition 42) or the fixed
     stable root absent from the action candidate tree — the walk's own precondition —
     "takes the empty SG-head and current-height branches directly". Otherwise:
     `C` is the deepest available-confirmed block of the first slot's evaluation
@@ -639,11 +649,11 @@ structure ActionOutputs (Node Root : Type) where
     grade-0 majority vetoes; without one, the validator may still publish a veto-free
     prefix of its fixed root, but it cannot sign a current-height choice. -/
 def officialConfirmation [Omega Node Root] (Sact : Store Node Root)
-    (Rstable : Blk Node Root) (Ract : Option (Blk Node Root)) (committee : Finset Node)
+    (Rstable : Blk Node Root) (admittedRoot : Option (Blk Node Root)) (committee : Finset Node)
     (s : Time) (Vm Vp : Finset (GoldfishVote Node Root))
     (X2 : Finset (Attestation Node Root)) (r : Nat)
     (pfFreeze processedF : Finset (Blk Node Root)) : ActionOutputs Node Root :=
-  if Ract = none ∨ Rstable ∉ candidateTree Sact then { head := ⊥, C := ⊥ }
+  if admittedRoot = none ∨ Rstable ∉ candidateTree Sact then { head := ⊥, C := ⊥ }
   else
     let Cav := deepest (Sact.T.filter fun B => AvailableConfirmed Vm Vp s committee B)
     let G := ghostWalk (Vp.filter fun v => v.slot = s) (candidateTree Sact)
@@ -659,7 +669,7 @@ def officialConfirmation [Omega Node Root] (Sact : Store Node Root)
     | some Q => { head := some Q, C := some Q }
     | none =>
         let fb :=
-          match Ract with
+          match admittedRoot with
           | some Ra =>
               deepest (Sact.T.filter fun B =>
                 Sact.R ⪯ B ∧ B ⪯ Ra ∧ VetoFree Sact X2 r pfFreeze B ∧
@@ -746,13 +756,13 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
     (Definition 46), and the current-height context (Definition 47), then sign the one
     combined attestation of Definition 50 — `fgVote`, finality first, over the action
     state's `(J, h_j)`, `(F, h_F)` and certificate knowledge, all read off
-    `actionState` (rendering decision 6). The inputs are the round's records, in the
+    `filteredStoreAtSGFGVote` (rendering decision 6). The inputs are the round's records, in the
     order the wiring holds them, each said above its binder. -/
-def recoveryAction [Omega Node Root]
+def castSGFGVote [Omega Node Root]
     -- the acting validator, the round, and the reading — the wiring calls this at `a_r`
     (i : Node) (r : Nat) (t : Time)
     -- `Σ_{u,act}^r`, the action state: the store under the activation filter at this reading
-    (actionState : Store Node Root)
+    (filteredStoreAtSGFGVote : Store Node Root)
     -- the round's stable root (Definition 41), as the records hold it
     (stableRoot : Blk Node Root)
     -- the round's accepted distinguished proposal, `none` on every failure path
@@ -763,28 +773,29 @@ def recoveryAction [Omega Node Root]
     -- which the TSQ views and the head walk both key on
     (committee : Finset Node) (firstSlotVoteTime : Time)
     -- `V⁻` and `V⁺` (Definition 38): the support-freeze view and the action-time view
-    (votesAtSupportFreeze votesAtAction : Finset (GoldfishVote Node Root))
+    (votesAtSupportFreeze votesAtSGFGVote : Finset (GoldfishVote Node Root))
     -- the two late grade views, as `RoundState` holds them
     (attsAtRoundStartPlusΔ attsAtRoundStartPlus2Δ : Finset (Attestation Node Root))
     -- finalized roots whose evidence was processed by the grade-0 freeze (Definition 46's
     -- veto counts these) and by this reading
-    (processedFinalizedAtFreeze processedFinalizedAtAction : Finset (Blk Node Root))
+    (processedFinalizedAtFreeze processedFinalizedAtSGFGVote : Finset (Blk Node Root))
     -- `H_i`, Definition 12's durable signing history
     (history : SigningHistory Node Root) :
     Attestation Node Root × SigningHistory Node Root :=
-  let Ract := actionRoot actionState stableRoot acceptedProposal
-    attsAtRoundStartPlusΔ r processedFinalizedAtAction
-  let outs := officialConfirmation actionState stableRoot Ract committee
-    firstSlotVoteTime votesAtSupportFreeze votesAtAction attsAtRoundStartPlus2Δ r
-    processedFinalizedAtFreeze processedFinalizedAtAction
-  match recoveryContext actionState t outs.C sourceProposal with
+  let admittedRoot := sgfgVoteRoot filteredStoreAtSGFGVote stableRoot acceptedProposal
+    attsAtRoundStartPlusΔ r processedFinalizedAtSGFGVote
+  let outs := officialConfirmation filteredStoreAtSGFGVote stableRoot admittedRoot committee
+    firstSlotVoteTime votesAtSupportFreeze votesAtSGFGVote attsAtRoundStartPlus2Δ r
+    processedFinalizedAtFreeze processedFinalizedAtSGFGVote
+  match recoveryContext filteredStoreAtSGFGVote t outs.C sourceProposal with
   | some ctx =>
       fgVote
         (i := i) (r := r)
         (head := outs.head)      -- Definition 46's head: `Q_u^r`, or the fallback
-        (J := actionState.J) (h_j := actionState.h_j) (F := actionState.F)
-        (h_F := actionState.h_F) -- read off the action state — rendering decision 6
-        (hasJC := actionState.hasJC)    -- likewise
+        (J := filteredStoreAtSGFGVote.J) (h_j := filteredStoreAtSGFGVote.h_j)
+        (F := filteredStoreAtSGFGVote.F)
+        (h_F := filteredStoreAtSGFGVote.h_F) -- read off the action state — rendering decision 6
+        (hasJC := filteredStoreAtSGFGVote.hasJC)    -- likewise
         (C := some ctx.C)        -- the confirmation `Q_i^r`, Definition 48's ceiling
         (k := ctx.k) (T := ctx.T) (ν := ctx.ν)
         (hC := ctx.k)            -- `σ_a[C_i].h = k` in both Definition 47 branches
@@ -793,8 +804,9 @@ def recoveryAction [Omega Node Root]
       fgVote
         (i := i) (r := r)
         (head := outs.head)      -- a fallback head may accompany the empty pair
-        (J := actionState.J) (h_j := actionState.h_j) (F := actionState.F)
-        (h_F := actionState.h_F) (hasJC := actionState.hasJC)
+        (J := filteredStoreAtSGFGVote.J) (h_j := filteredStoreAtSGFGVote.h_j)
+        (F := filteredStoreAtSGFGVote.F)
+        (h_F := filteredStoreAtSGFGVote.h_F) (hasJC := filteredStoreAtSGFGVote.hasJC)
         (C := ⊥)                 -- no official confirmation: the pair stays empty
         (k := 0) (T := ⊥) (ν := false) (hC := 0)   -- unread once `C = ⊥`
         (H := history)           -- the finality rule still runs (Definition 46's last line)

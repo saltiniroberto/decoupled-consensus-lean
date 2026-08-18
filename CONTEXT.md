@@ -2609,6 +2609,33 @@ sketch still applies, and two items are added to it: `deliveredBlocks`' match ne
 still never the store on non-action ticks — on action ticks `snap` changes too, which the
 store invariants do not read.
 
+## 2026-08-18 — the recovery layer renamed to be thinkable
+
+Roberto: the paper's terminology is too hard to process to check the protocol against, so names
+are being redefined with the way back kept. The convention is in `CLAUDE.md` (a symbol may become
+a word; the docstring opens with the symbol; a word the paper defines keeps its name; a renaming
+module carries a glossary). `Protocol.lean`'s header holds the glossary.
+
+Renamed so far: the `X` snapshots to `attsAtRoundStart{MinusΔ,,PlusΔ,Plus2Δ}` (staged one as
+`nextAttsAtRoundStartMinusΔ`); `Vm` to `votesAtSupportFreeze`; `pfFreeze` to
+`processedFinalizedAtFreeze`; `snap` to `storeAtPrevSGFGVote` and the local `wit` to
+`treeAtPrevSGFGVote`; `props` to `proposals`; `d` to `roundStart`; `RecoveryProposal`'s fields to
+words (`proposedRoot`, `parent`, `block`, `carriedBlocks`, `carriedGoldfishVotes`,
+`grade2Witness`, and `round` back to `r`); `Cq`/`src` to `deepestConfirmation`/`sourceProposal`;
+and `recoveryAction`'s parameters to words, each with a comment above its binder.
+
+**Deliberate breaks against paper-defined words**, each chosen with the flag on the table —
+Roberto does not want "action": `Rounds.SGFGVotingTime` for the "action time" `a_r`,
+`castSGFGVote` for `recoveryAction`, `sgfgVoteRoot` for Definition 42's "action root",
+`filteredStoreAtSGFGVote` for the "action state" `Σ_{u,act}^r`, and the `AtSGFGVote` suffixes.
+The paper's terms stay first in every docstring, which is what keeps the sites auditable.
+`Analysis`'s `actionState` — Definition 20's `σ_a`, the *other* paper's finality action state,
+inside proved statements — is deliberately untouched.
+
+A side effect worth naming: `sgfgVoteRoot`'s local `admit` is `admittedRoot` now, so the VS Code
+highlighter no longer paints it as an unfinished proof and `make sorries` is back to zero — the
+four false positives are gone.
+
 ## Next
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
