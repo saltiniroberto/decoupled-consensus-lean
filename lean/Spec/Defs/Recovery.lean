@@ -692,8 +692,8 @@ def Store.hasJC (S : Store Node Root) : Bool :=
   decide (∃ B ∈ S.T, (S.σ B).any fun st => st.J = S.J ∧ st.h_j = S.h_j)
 
 /-- Definition 47 (`def:ordinary-current-target`, lines 1814–1869), both branches, over
-    an explicit confirmation and source. `Cq` is the action's deepest official
-    confirmation `Q_i^r` (Definition 46); `src` is "the unique distinguished proposal
+    an explicit confirmation and source. `officialConfirmation` is the action's deepest official
+    confirmation `Q_i^r` (Definition 46); `sourceProposal` is "the unique distinguished proposal
     from round `r − 1`, whose SG batch this action grades", or `none` when that round
     recognized none. With `Q_i^r` empty, no current-height pair (`none` — Definition 48
     then emits empty). Otherwise `σ̄_i = σ_a[Q_i^r]`, the confirmation's finality action
@@ -711,13 +711,14 @@ def Store.hasJC (S : Store Node Root) : Bool :=
     and one that does not falls back to its confirmed block's own state. The branch
     condition keeps `σ_a[C_i].h = k` in both cases, which is why the wiring passes
     `hC = k` to `heightVote`. -/
-def recoveryContext (S : Store Node Root) (t : Time) (Cq : Option (Blk Node Root))
-    (src : Option (Blk Node Root)) : Option (VoteContext Node Root) :=
-  if let some Q := Cq then
+def recoveryContext (S : Store Node Root) (t : Time)
+    (officialConfirmation sourceProposal : Option (Blk Node Root)) :
+    Option (VoteContext Node Root) :=
+  if let some Q := officialConfirmation then
     if let some σQ := S.σ Q then
       let σbar := processSlots σQ t
       let (Y, σi) :=
-        match src with
+        match sourceProposal with
         | some B =>
             match S.σ B with
             | some σB =>
@@ -749,7 +750,7 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
     views and the head walk both key on. -/
 def recoveryAction [Omega Node Root] (i : Node) (r : Nat) (t : Time)
     (Sact : Store Node Root) (Rstable : Blk Node Root)
-    (accepted : Option (RecoveryProposal Node Root)) (src : Option (Blk Node Root))
+    (accepted : Option (RecoveryProposal Node Root)) (sourceProposal : Option (Blk Node Root))
     (committee : Finset Node) (s : Time) (Vm Vp : Finset (GoldfishVote Node Root))
     (X1 X2 : Finset (Attestation Node Root))
     (pfFreeze processedF : Finset (Blk Node Root)) (H : SigningHistory Node Root) :
@@ -757,7 +758,7 @@ def recoveryAction [Omega Node Root] (i : Node) (r : Nat) (t : Time)
   let Ract := actionRoot Sact Rstable accepted X1 r processedF
   let outs := officialConfirmation Sact Rstable Ract committee s Vm Vp X2 r
     pfFreeze processedF
-  match recoveryContext Sact t outs.C src with
+  match recoveryContext Sact t outs.C sourceProposal with
   | some ctx =>
       fgVote
         (i := i) (r := r)

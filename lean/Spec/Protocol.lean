@@ -269,7 +269,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               (Sact := activationFiltered st.store st.storeAtPrevSGFGVote)
               (Rstable := st.round.root)
               (accepted := st.round.accepted)
-              (src := st.prevProposal)
+              (sourceProposal := st.prevProposal)
               (committee := Committees.committee (roundStart + Δ))
               (s := roundStart + Δ)                 -- the evaluated first slot's vote phase
               (Vm := st.round.Vm)
