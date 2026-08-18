@@ -17,7 +17,7 @@ walker application carries all of it. The fields, and which paper fact each rend
   root is never invented. With `recorded`, this is what hands the healing certificate
   machinery the store's justification.
 * `fProv` — `S.F` is genesis or some recorded state's `F`: the first sentence of the
-  companion paper's Remark `hft:rem:fs-invariant`.
+  companion paper's Remark 5 (`hft:rem:fs-invariant`).
 * `keyDom` — the remark's second half, made a state invariant instead of a history fact:
   every recorded justified pair **on the current `F`'s chain** has key at most the
   store's. The paper phrases this as "was offered to `update_justified` once

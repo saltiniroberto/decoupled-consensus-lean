@@ -7,11 +7,11 @@ import Spec.HftFig2Store
 Assumption 3 (`ass:goldfish-committees`, lines 250–258); `recovery_core.tex`
 Definitions 33 (`def:counting-rule`, lines 383–404), 34 (`def:sg-head`, lines 491–514),
 35 (`def:grade-support`, lines 515–536), 36 (`def:grades`, lines 537–559),
-45 (`def:recovery-goldfish-vote`, lines 1587–1603) and 47–50:
-`def:ordinary-current-target` (lines 1814–1869), `def:height-vote-rule`
-(lines 1952–1981), `def:finality-vote-rule` (lines 1982–2012), `def:fg-rule`
-(lines 2014–2033). Definitions only; the safety result the FG rules are built for —
-`lem:signer-safety`, honest attestations are never E1- or E2-slashable — is `Analysis/`
+45 (`def:recovery-goldfish-vote`, lines 1587–1603), 47 (`def:ordinary-current-target`,
+lines 1814–1869), 48 (`def:height-vote-rule`, lines 1952–1981), 49
+(`def:finality-vote-rule`, lines 1982–2012) and 50 (`def:fg-rule`, lines 2014–2033).
+Definitions only; the safety result the FG rules are built for — Lemma 44
+(`lem:signer-safety`), honest attestations are never E1- or E2-slashable — is `Analysis/`
 work and is not here.
 
 The paper's vote types, and where each lands in this file: the **current-height vote**
@@ -205,8 +205,8 @@ def finalityVote (J : Blk Node Root) (h_j : Nat) (F : Blk Node Root) (h_F : Nat)
     lock write completes before the next step, then the current-height pair …, whose
     history read sees that write" (lines 2017–2021) — which is why `H₁` feeds
     `heightVote`. The paper says this ordering is what keeps the two fields of one
-    attestation from ever forming E1 evidence (lines 2021–2023); that claim is
-    `lem:signer-safety`, to be proved in `Analysis/`. "It signs the one attestation of
+    attestation from ever forming E1 evidence (lines 2021–2023); that claim is Lemma 44
+    (`lem:signer-safety`), to be proved in `Analysis/`. "It signs the one attestation of
     Definition 8 (`def:fg-message`)" (line 2024); the SG head is carried, not derived
     (the attestation "contains no state-block root or confirmed-block root",
     lines 2024–2025). -/
@@ -225,9 +225,9 @@ section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
   [BlockHash Node Root]
 
-/-- Definition 47's context triple, carried with the confirmed block it was read from.
-    Named after the definition's own symbols: `C_i` and `(k_i, T_i, ν_i)`
-    (lines 1856–1860). -/
+/-- Definition 47 (`def:ordinary-current-target`)'s context triple, carried with the
+    confirmed block it was read from. Named after the definition's own symbols: `C_i`
+    and `(k_i, T_i, ν_i)` (lines 1856–1860). -/
 structure VoteContext (Node Root : Type) where
   /-- `C_i`: the block the validator currently takes as confirmed. Every target the
       current-height rule signs must lie on this block's chain. -/
@@ -467,7 +467,8 @@ variable [DecidableEq Node] [DecidableEq Root] [BlockHash Node Root]
 
     The fuel only serves termination: every step moves to a member of `tree` strictly
     deeper in the block tree, so `tree.length` steps suffice — the paper's totality
-    statement is `lem:aged-walk-total` — and exhausted fuel returns the current block,
+    statement is Lemma 20 (`lem:aged-walk-total`) — and exhausted fuel returns the
+    current block,
     which no run started with `tree.length` reaches. The candidate tree is a list rather
     than a `Finset` so the walk stays computable and deterministic; its order matters
     only to break exact `(weight, hash)` ties. -/
@@ -531,14 +532,16 @@ class Rounds where
   Δ : Time
   /-- The bound is positive — the phase offsets below are distinct. -/
   Δ_pos : 0 < Δ
-  /-- The public round spacing (lines 196–199), in added form: `a_r + Δ ≤ d_{r+1} − Δ`
+  /-- The public round spacing (Definition 28, `def:recovery-timing`, lines 196–199),
+      in added form: `a_r + Δ ≤ d_{r+1} − Δ`
       with `a_r = d_r + 6Δ` is `d_r + 8Δ ≤ d_{r+1}`. -/
   spaced : ∀ r, start r + 8 * Δ ≤ start (r + 1)
 
 namespace Rounds
 variable [Rounds]
 
-/-- `a_r = d_r + 4Δ + 2Δ` (lines 146–150): "two network-delivery bounds into the round's
+/-- `a_r = d_r + 4Δ + 2Δ` (Definition 28, `def:recovery-timing`, lines 146–150): "two
+    network-delivery bounds into the round's
     second slot", when the validator "performs the round's SG and FG action". -/
 def actionTime (r : Nat) : Time :=
   start r + 6 * Δ
@@ -550,7 +553,8 @@ def roundAt (t : Time) : Option Nat :=
   (List.range (t + 1)).find? fun r => start r ≤ t ∧ t < start (r + 1)
 
 /-- `t` is a Goldfish vote time of round `r`: the `+Δ` phase of one of the round's `4Δ`
-    slots (lines 172–178) — "Goldfish votes at `+Δ`" (line 200), and "every slot of the
+    slots (Definition 28, `def:recovery-timing`, lines 172–178) — "Goldfish votes at
+    `+Δ`" (line 200), and "every slot of the
     round runs ordinary Goldfish" (lines 191–193). The caller has established
     `start r ≤ t` via `roundAt`. -/
 def isVoteTime (r : Nat) (t : Time) : Bool :=

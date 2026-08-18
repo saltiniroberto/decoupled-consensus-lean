@@ -41,7 +41,8 @@ is on that chain" is the disjunct that says so.
 
 **The paper's proof cites Lemma 8; this one does not need it.** The paper reaches "every vote
 counted toward justification names `T_h`" through Lemma 8's transfer argument. In this rendering
-the target test (Figure 2, line 778) compares the vote's target with `T_h` directly, so the
+the target test (Figure 2, `alg:attestation-processing`, line 778) compares the vote's
+target with `T_h` directly, so the
 naming is `Witnessed.target` with no chain comparison anywhere.
 -/
 

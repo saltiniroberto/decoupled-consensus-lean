@@ -43,8 +43,9 @@ already made, as with `lemEmptySlotNoopFields`.
 
 ## The lemmas, and what each waits on
 
-Section 2 "Model and quorum weights" (lines 196–534), Section 3 "Deterministic finality state
-machine" (535–980) and Section 4 "Accountable safety" (981–1197). Theorem 5
+Section 2 "Model and quorum weights" (`sec:model`, lines 196–534), Section 3
+"Deterministic finality state machine" (`sec:state-machine`, lines 535–980) and Section 4
+"Accountable safety" (`sec:safety`, lines 981–1197). Theorem 5
 (`thm:accountable-safety`) is in Section 4 too but is not a lemma, so it is not one of these.
 
 | № | `\label` | Lines | Statable today? |
@@ -424,7 +425,7 @@ theorem lemHeightTargetFreshness {Node Root : Type} [DecidableEq Node] [Decidabl
 
 /-! ## Lemma 8, in five statements
 
-`lem:chain-target-uniqueness` (lines 1029–1041) is three sentences and a gloss. The first two
+Lemma 8 (`lem:chain-target-uniqueness`, lines 1029–1041) is three sentences and a gloss. The first two
 sentences are each two claims, and the third is a claim and a scope note, so the
 sentence-per-theorem rule gives five declarations and one docstring note:
 
@@ -455,7 +456,8 @@ is on both, so a `s_h` equality proved along one chain reaches the other through
 `lemChainTargetBothBits`, needs none of that: it is a fact about `process_attestation` alone.
 
 **"Branch" is not rendered, because the paper does not define it.** Thirty-eight uses, no
-definition; the nearest is line 408, glossing conflict as lying on "different branches". These
+definition; the nearest is Definition 5 (`def:block-chain`)'s line 408, glossing
+conflict as lying on "different branches". These
 statements say `⪯`, `≺` and `Conflicts` instead. -/
 
 /-- **Lemma 8, first sentence, first clause** (`lem:chain-target-uniqueness`, lines 1030–1031):
@@ -548,14 +550,16 @@ set_option linter.unusedVariables false in
 
     The antecedent, noun by noun. "A target vote for `T`" is `hvote`; "sets the target bit" is
     `hbit`, the bit standing in `B`'s post-state; "on one height-`h` branch" is `B`, and `hT`
-    ties the vote's `T` to that branch's stored target — Figure 2's line 778 sets the bit only
+    ties the vote's `T` to that branch's stored target — Figure 2
+    (`alg:attestation-processing`)'s line 778 sets the bit only
     when the vote's pair equals `(h, T_h)`, so these three are the state the paper's event
     leaves behind. Only `hT` does work in the proof. `hbit` and `hvote` are kept because they
     are the paper's antecedent: an earlier shape kept only `hT` and claimed the two readings
     were equivalent, and they are not — see below.
 
     "Every height-`h` branch" is `hheight`. "Has processed beyond `T` and contains `T`" is
-    `T ≺ B'` alone: `state_transition` rejects `B.slot ≤ σ.s` (line 719), so slots strictly
+    `T ≺ B'` alone: `state_transition` rejects `B.slot ≤ σ.s` (Figure 1,
+    `alg:state-replay`, line 719), so slots strictly
     increase along a chain, and any strict descendant's replay has closed `T`'s slot — which is
     where Definition 7's recording happens.
 
@@ -597,7 +601,8 @@ theorem lemChainTargetTransfer {Node Root : Type} [DecidableEq Node] [DecidableE
     height and `T` sets its signer's target bit and progress bit.
 
     "Gives the vote both bits" is the conclusion: both of Figure 2's height tests count the
-    vote. The two tests are independent — lines 778 and 781–782 — and the second needs `T ⪯ A`,
+    vote. The two tests are independent — Figure 2 (`alg:attestation-processing`)'s
+    lines 778 and 781–782 — and the second needs `T ⪯ A`,
     where `A` is the including block's parent (line 765); Definition 10 (`def:vote-contribution`)
     is where that bound comes from. On this chain any including block extends `B'`, so its
     parent satisfies `T ⪯ B' ⪯ A`; `A` stays a variable because the including block is not part
@@ -640,7 +645,8 @@ theorem lemChainTargetBothBits {Node Root : Type} [DecidableEq Node] [DecidableE
 
     No `B ⪯ B'`, which is the point: this is what the first sentence rules out on one chain,
     said about two blocks that need not be related. "Lie on conflicting branches" is
-    `Conflicts T T'` — the paper's own gloss of conflict, at line 408, is lying on different
+    `Conflicts T T'` — the paper's own gloss of conflict, at line 408 of Definition 5
+    (`def:block-chain`), is lying on different
     branches, and `Conflicts` is Definition 5's rendering of it. The paper's reason is that two
     distinct first blocks at one height cannot be comparable, which is
     `lemChainTargetFirstBlock` applied on each side.
@@ -691,7 +697,8 @@ theorem lemChainTargetConflict {Node Root : Type} [DecidableEq Node] [DecidableE
 
     **The paper's proof cites Lemma 8; this proof does not need it.** The paper reaches "every
     vote counted toward justification names `T_h`" through Lemma 8's transfer between branches.
-    In this rendering, Figure 2's line 778 compares the vote's target with `T_h` directly, so
+    In this rendering, Figure 2 (`alg:attestation-processing`)'s line 778 compares the
+    vote's target with `T_h` directly, so
     the naming is `Witnessed.target` — the third invariant — with no chain comparison anywhere.
 
     Proved in `Analysis/Proofs/Compression.lean`, a re-export of `Witnessed` over `postState`. -/
@@ -815,7 +822,8 @@ theorem lemTargetBitCompressionEvidenceE1 {Node Root : Type} [DecidableEq Node] 
     statement the stronger — recovering the commit quorum from it is a provenance obligation the
     proof will carry, a `P`-analogue of `Witnessed`. A pair recorded lower on a longer chain is
     this statement at that block. At `h = 0` the hypothesis admits genesis, which the paper
-    finalizes by stipulation (line 365) rather than by certificate.
+    finalizes by stipulation (Definition 4, `def:height`, line 365) rather than by
+    certificate.
 
     "Either a block post-state … or a finality action state derived from that chain" is the
     two conjuncts, the way Lemma 4 covers its two subjects; `t` is the action slot, with

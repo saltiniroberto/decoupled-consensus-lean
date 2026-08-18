@@ -26,7 +26,8 @@ block was the current-height target when it was justified.
 
 * Slot closure moves `s` and `T_h` only (Lemma 3), which no field reads.
 * The block phase moves `L` one step down the chain — inclusions follow by `IncludedOn.mono` —
-  and grows `P`; the writer's own condition (Figure 2, lines 774–776) pins each new bit to an
+  and grows `P`; the writer's own condition (Figure 2, `alg:attestation-processing`,
+  lines 774–776) pins each new bit to an
   included commit to the current `(h_j, J)`, and `process_block`'s `ValidInclusion` check keeps
   the tally inside `V`.
 * The height-event check either fires nothing, or copies `(J, h_j)` into `(F, h_F)` — `fin`

@@ -7,8 +7,9 @@ Lemma 4 (`lem:finalized-before-justified`, `height_filter_healing.tex:920-931`):
 block precedes the justified block, which precedes the latest block, and the finalized height is
 at most the justified height, which is below the state height.
 
-The paper's own proof (lines 933–943) calls these "ancestry and height inequalities", which is
-what names this file. It holds three parts:
+The paper's own proof of Lemma 4 (`lem:finalized-before-justified`, lines 920–931), at
+lines 933–943, calls these "ancestry and height inequalities", which is what names this
+file. It holds three parts:
 
 * the basic facts about `⪯`, which Definition 5 (`def:block-chain`) defines but nothing had yet
   proved anything about: reflexivity, transitivity, and that a block's parent precedes it;
@@ -174,8 +175,9 @@ namespace Proofs
     **`targetOnChain` is the conjunct the paper does not state.** It is needed because the target
     branch of the height-event check sets `J ← T_h`, so keeping `F ⪯ J ⪯ L` across that branch
     needs the named target to sit between `J` and `L`. The paper asserts exactly this inside its
-    own proof — "the justification branch sets `J = T_h`, which lies on the current chain and
-    already contains the previous `J`" (lines 939–940) — without recording it as a hypothesis of
+    own proof (Lemma 4, `lem:finalized-before-justified`) — "the justification branch sets
+    `J = T_h`, which lies on the current chain and already contains the previous `J`"
+    (lines 939–940) — without recording it as a hypothesis of
     anything. It is true because `process_slot` is the only routine that names a target and it
     writes `some σ.L`, `advance_height` writing `⊥`. -/
 structure Chained (σ : ChainState Node Root) : Prop where

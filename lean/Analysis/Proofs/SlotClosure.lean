@@ -279,7 +279,8 @@ theorem closeSlots_of_settled (n : Nat) {σ : ChainState Node Root} (hs : Settle
 
 `process_block` cannot preserve `Settled`: it is where the target and progress tallies are built,
 which is the routine doing its job. What it does preserve is `emptyTarget`, and the reason is
-visible only in Figure 2 — line 778 is the only writer of a target bit, and it needs `T_h ≠ ⊥`.
+visible only in Figure 2 (`alg:attestation-processing`) — line 778 is the only writer
+of a target bit, and it needs `T_h ≠ ⊥`.
 -/
 
 /-- `process_attestation` never touches `T_h`. -/
@@ -288,7 +289,8 @@ theorem processAttestation_T_h (σ : ChainState Node Root) (a : Attestation Node
   simp only [processAttestation]; repeat' split
   all_goals rfl
 
-/-- …and it sets no target bit while no target is named. Figure 2, line 778.
+/-- …and it sets no target bit while no target is named. Figure 2
+    (`alg:attestation-processing`), line 778.
 
     `hT` has to be restated as `σ.T_h = none` before it can be used: `⊥` is a `Bot (Option _)`
     instance rather than a constructor, so `simp only` with it leaves a `match …, ⊥ with` that

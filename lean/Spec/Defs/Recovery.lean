@@ -46,7 +46,7 @@ the no-source-proposal branch. Everything here is a pure function over explicit 
    processed finalized roots are the `F` fields of the recorded chain states:
    `processedFinalized`.
 4. **`deepest` picks by depth, then `Ω`.** The paper's "deepest" selections are over sets
-   its lemmas make chains (Corollary 2, `cor:g3-chain`; Lemma 15, `lem:tsq-uniqueness`),
+   its lemmas make chains (Corollary 2, `cor:g3-chain`; Lemma 27, `lem:tsq-uniqueness`),
    where the depth-maximal element is unique. Over an arbitrary `Finset` this function
    keeps the depth-maximal elements and lets `Omega.choose` pick — the same totalization
    device as `getConfirmed`, and on a chain `Ω` has no freedom.
@@ -74,8 +74,8 @@ the no-source-proposal branch. Everything here is a pure function over explicit 
 ## What stays unrendered
 
 The proposer's own branch — choosing a stable root, running the merged-view GHOST and
-building the proposal block (Definition 43's honest-proposer paragraph, and lines 5–7 of
-`alg:recovery-action`) — because block *content* production (which attestations to
+building the proposal block (Definition 43's honest-proposer paragraph, and Figure 5,
+`alg:recovery-action`, steps 5–7) — because block *content* production (which attestations to
 include) is a layer this project has not modelled anywhere. Proposals arrive as messages.
 Definition 43's carried-view consistency check is subsumed: the store's own `on_block`
 admission re-checks ancestry, so an unconnectable proposal block simply fails acceptance
@@ -148,7 +148,7 @@ def deepest [Omega Node Root] (s : Finset (Blk Node Root)) : Option (Blk Node Ro
   let top := s.filter fun B => ∀ C ∈ s, depth C ≤ depth B
   if h : top.Nonempty then some (Omega.choose top h).val else ⊥
 
-/-- The deeper of two blocks on one chain: the descendant. Remark 4
+/-- The deeper of two blocks on one chain: the descendant. Remark 11
     (`rem:stable-root-coherence`, lines 1193–1217) is what puts Definition 41's three
     roots on one chain, so their maximum needs no `Ω`. Off a chain (unreachable there)
     the second argument wins, deterministically. -/
@@ -341,7 +341,7 @@ def ghostStep [Omega Node Root] (votes : Finset (GoldfishVote Node Root))
   if h : winners.Nonempty then some (Omega.choose winners h).val else none
 
 /-- The recovery walk, fuel-indexed like `ghostFrom` and total the same way
-    (Lemma 20, `lem:aged-walk-total`, lines 1467–1485 — the walk "starts at the round's
+    (Lemma 20, `lem:aged-walk-total`, lines 468–480 — the walk "starts at the round's
     fixed root, each step moves to a viable … candidate child, and a block with no such
     child returns itself"). Per Definition 32 the root is walked from "whether or not
     that root is in the walk's candidate tree". Callers pass the tree's card as fuel:
@@ -506,7 +506,8 @@ structure VoteRoundOutcome (Node Root : Type) where
        root whose evidence the receiver has processed … and the proposal has a valid
        grade-2 witness, or `A_p^r` is ungraded and equals the receiver's own vote-time
        Simplex selection" — the tag binds the branch (Definition 43);
-    3. the deepest of `{A_p^r, L_u^r, S_{u,vote}^r}` — one chain by Remark 4, so
+    3. the deepest of `{A_p^r, L_u^r, S_{u,vote}^r}` — one chain by Remark 11
+       (`rem:stable-root-coherence`), so
        `chainMax` — and `B_p^r` are both in the aged tree, with the proposal-path
        exemption.
 
@@ -736,7 +737,8 @@ section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
   [BlockHash Node Root]
 
-/-- One recovery action, `alg:recovery-action` (lines 2081–2125) steps 15–21: derive the
+/-- One recovery action, Figure 5 (`alg:recovery-action`, lines 2081–2125),
+    steps 15–21: derive the
     action root's admission (Definition 42), the official confirmation and SG head
     (Definition 46), and the current-height context (Definition 47), then sign the one
     combined attestation of Definition 50 — `fgVote`, finality first, over the action

@@ -3,7 +3,8 @@ import Analysis.Proofs.Freshness
 /-!
 # Proofs: where a chain's target sits (Lemma 8)
 
-The machinery behind `lem:chain-target-uniqueness`, and all five of its statements.
+The machinery behind Lemma 8 (`lem:chain-target-uniqueness`), and all five of its
+statements.
 `Analysis/Lemmas.lean` holds the statements of record and calls into here.
 
 ## The route: slots, not "first"
@@ -19,7 +20,8 @@ Definition 7 (`def:current-height-target`) makes `s_h` the slot of the block who
 entered the height, so the equation is the paper's "first block" said about one field.
 
 What makes the scalar version sufficient is that **slots are strict along a chain**:
-`state_transition` rejects `B.slot ≤ σ.s` (Figure 1, line 719), so one chain has at most one
+`state_transition` rejects `B.slot ≤ σ.s` (Figure 1, `alg:state-replay`, line 719), so
+one chain has at most one
 block per slot, and two comparable blocks at one slot are equal. Uniqueness is then three
 equalities: `T.slot = σ.s_h`, `s_h` agrees along one chain at one height, and `T'.slot = σ'.s_h`.
 
@@ -30,7 +32,8 @@ start slot,
 
     σ.T_h = ⊥  →  σ.L.slot = σ.s_h
 
-This is what turns Figure 1's write condition `L.slot ≥ s_h` (line 739) into an equality at
+This is what turns Figure 1 (`alg:state-replay`)'s write condition `L.slot ≥ s_h`
+(line 739) into an equality at
 the moment of recording, so the recorded target is at the start slot — and it also says the
 condition *holds* whenever `T_h = ⊥`, so the first closed slot after a height transition
 always records. That is Definition 7's "the following slot processing records `B` as `T_h`"
@@ -122,7 +125,8 @@ theorem processHeightEvents_of_bot (σ : ChainState Node Root) (st : Time)
 /-! ## Figure 1's slot check, extracted -/
 
 /-- On the successful path the block's slot is beyond the cursor: `state_transition`'s own
-    first check (Figure 1, line 719). With `postState_s` below this is what makes slots
+    first check (Figure 1, `alg:state-replay`, line 719). With `postState_s` below this
+    is what makes slots
     strictly increase along a chain. -/
 theorem stateTransition_slot_lt {σ σ' : ChainState Node Root} {B : Blk Node Root}
     (h : stateTransition σ B = .state σ') : σ.s < B.slot := by
@@ -582,7 +586,8 @@ nothing else. -/
     height pair is the state's own height and stored target, whose target precedes the ancestor
     argument, leaves both that validator's participation bits set.
 
-    The two tests are independent — Figure 2, line 778 for the target bit and lines 781–782 for
+    The two tests are independent — Figure 2 (`alg:attestation-processing`), line 778
+    for the target bit and lines 781–782 for
     the progress bit — and the second is the one that needs `T ⪯ A`, Definition 10
     (`def:vote-contribution`)'s bound. -/
 theorem processAttestation_both_bits {σ : ChainState Node Root} {T : Blk Node Root}

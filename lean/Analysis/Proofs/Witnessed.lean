@@ -64,7 +64,8 @@ theorem processAttestation_target_bit (σ : ChainState Node Root) (a : Attestati
   repeat' split at hb
   all_goals (simp_all [Function.update_apply]; try tauto)
 
-/-- Lines 783 and 784 are the only writers of a progress bit: either the bit was already set, or
+/-- Figure 2 (`alg:attestation-processing`)'s lines 783 and 784 are the only writers of
+    a progress bit: either the bit was already set, or
     `a` is the attestation that set it — a timeout at the current height (line 783), or an exact
     target at the current height whose target is on the including block's parent chain (line 784,
     where `A` is that parent). The `T ⪯ A` half is the piece Lemma 10's progress case needs: a
@@ -86,8 +87,8 @@ structure Witnessed (σ : ChainState Node Root) : Prop where
   target : ∀ i ∈ σ.Qtarget, ∃ T a, σ.T_h = some T ∧ a.validator = i ∧
     a.heightPair = .target σ.h T ∧ IncludedOn a σ.L
   /-- A set progress bit is backed by an included attestation at the current height — a timeout,
-      or an exact target whose target is itself on this chain. The ancestry half is Figure 2's
-      line 784 condition remembered; `progress_height` below recovers the weaker
+      or an exact target whose target is itself on this chain. The ancestry half is
+      Figure 2 (`alg:attestation-processing`)'s line 784 condition remembered; `progress_height` below recovers the weaker
       `a.height = some σ.h` reading. -/
   progress : ∀ i ∈ σ.Qprog, ∃ a : Attestation Node Root, a.validator = i ∧ IncludedOn a σ.L ∧
     (a.heightPair = .timeout σ.h ∨ ∃ T, a.heightPair = .target σ.h T ∧ T ⪯ σ.L)

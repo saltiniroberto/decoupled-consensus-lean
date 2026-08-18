@@ -4,7 +4,8 @@ import Spec.Receive
 /-!
 # The node protocol, in the framework
 
-This file renders no figure — it renders `alg:recovery-action` (lines 2081–2125), the
+This file renders no figure — it renders Figure 5 (`alg:recovery-action`,
+lines 2081–2125), the
 paper's own one-round summary, as the `Framework.StsMultisetLog.Protocol` instance for
 one node: the execution layer's entry point, where the framework's events meet the store
 and the recovery machinery of `Spec/Defs/Recovery.lean`.
@@ -31,7 +32,8 @@ snapshot; and the current round's records, `RoundState`.
 * `recv` — a block folds into the store through `receive`; an attestation, raw vote or
   proposal is filed in its pool and the store is untouched.
 * `t = d_r` — derive the selection state `Σ_sel` under the activation filter, snapshot
-  `X⁰`, open the round's records. The proposer branch (`alg:recovery-action` lines 5–7)
+  `X⁰`, open the round's records. The proposer branch (Figure 5, `alg:recovery-action`,
+  steps 5–7)
   is not rendered — block production is outside what this project has modelled — so
   proposals only arrive as messages.
 * `t = d_r + Δ` — snapshot `X¹`; run Definition 43's recognition wrapper over the received
@@ -48,7 +50,7 @@ snapshot; and the current round's records, `RoundState`.
 * later slot boundaries — Definition 29's re-derivation of an ungraded (or
   grade-deactivated) stable root.
 * later vote phases — ordinary Goldfish with the round's fixed root on the current
-  candidate tree (Definition 32's walk-standing; Remark 5, `rem:aged-scope`).
+  candidate tree (Definition 32's walk-standing; Remark 10, `rem:aged-scope`).
 * `t = a_r` — the round's SG/FG action: `recoveryAction` (Definitions 42, 46, 47 and 50
   assembled), the history updated before the send; then this store becomes the next
   round's activation cutoff `snap`, and the round's accepted proposal becomes the next
@@ -77,11 +79,12 @@ variable {Node Root : Type}
 /-- One round's records, fixed by the schedule's snapshots and read by the later phases.
     All fields start empty at the round's opening except the frozen slot view, which
     persists across the boundary — the receipt buffer is not merged before a freeze
-    (Definition 28, lines 208–220). -/
+    (Definition 28, `def:recovery-timing`, lines 208–220). -/
 structure RoundState (Node Root : Type) where
   /-- The round number these records belong to. -/
   r : Nat
-  /-- `X_u^-`, the `d_r − Δ` grade snapshot (Definition 28, lines 180–186). -/
+  /-- `X_u^-`, the `d_r − Δ` grade snapshot (Definition 28, `def:recovery-timing`,
+      lines 180–186). -/
   Xm : Finset (Attestation Node Root)
   /-- `X_u^0`, the proposal-time snapshot. -/
   X0 : Finset (Attestation Node Root)
@@ -160,7 +163,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
           let d := Rounds.start r
           let Δ := Rounds.Δ
           -- the X⁻ snapshot for round r + 1, one bound before its proposal time
-          -- (Definition 28, lines 180–186); a pre-update, because its reading may also
+          -- (Definition 28, `def:recovery-timing`, lines 180–186); a pre-update,
+          -- because its reading may also
           -- be a freeze, boundary or vote phase of the current round
           let st := if t + Δ = Rounds.start (r + 1) then { st with nextXm := st.atts }
             else st
@@ -177,7 +181,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                   root := sel.R, graded := false, accepted := none, pfFreeze := ∅ } },
               send := ∅ }
           else if t = d + Δ then
-            -- the first slot's vote time (`alg:recovery-action` lines 8–12)
+            -- the first slot's vote time (Figure 5, `alg:recovery-action`, steps 8–12)
             let X1 := st.atts
             let wit := st.snap.T             -- Definition 31's aging witnesses
             -- Definition 43's wrapper: the locally winning well-formed proposal,
@@ -224,15 +228,16 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 send := {.gVote v} }
             else { state := st', send := ∅ }
           else if t = d + 2 * Δ then
-            -- the grade-0 freeze and the support freeze (Definition 28 line 187,
-            -- Definition 38): X², V⁻, and the finalized evidence processed by the
-            -- freeze, which Definition 46's veto counts
+            -- the grade-0 freeze and the support freeze (Definition 28,
+            -- `def:recovery-timing`, line 187; Definition 38, `def:tsq-views`): X², V⁻,
+            -- and the finalized evidence processed by the freeze, which Definition 46's
+            -- veto counts
             { state := { st with round := { st.round with
                 X2 := st.atts, Vm := st.gvotes,
                 pfFreeze := processedFinalized st.store } },
               send := ∅ }
           else if t = Rounds.actionTime r then
-            -- the round's SG/FG action (`alg:recovery-action` lines 15–21)
+            -- the round's SG/FG action (Figure 5, `alg:recovery-action`, steps 15–21)
             let (a, H') := recoveryAction
               (i := i) (r := r) (t := t)
               (Sact := activationFiltered st.store st.snap)
@@ -254,7 +259,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 prevProposal := st.round.accepted.map fun p => p.B },
               send := {.attestation a} }
           else if (t - d) % (4 * Δ) = 3 * Δ then
-            -- a slot-view freeze (Definition 28, lines 171–177)
+            -- a slot-view freeze (Definition 28, `def:recovery-timing`, lines 171–177)
             { state := { st with round := { st.round with frozen := st.gvotes } },
               send := ∅ }
           else if (t - d) % (4 * Δ) = 0 then
@@ -266,9 +271,10 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             { state := { st with round := { st.round with root := root', graded := g' } },
               send := ∅ }
           else if Rounds.isVoteTime r t then
-            -- a later slot's vote (Definition 28 lines 190–192): ordinary Goldfish with
-            -- the round's fixed root on the current candidate tree (Definition 32,
-            -- Remark 5 `rem:aged-scope`)
+            -- a later slot's vote (Definition 28, `def:recovery-timing`,
+            -- lines 190–192): ordinary Goldfish with the round's fixed root on the
+            -- current candidate tree (Definition 32, `def:walk-standing`; Remark 10,
+            -- `rem:aged-scope`)
             if i ∈ Committees.committee t then
               let cur := activationFiltered st.store st.snap
               let counted := st.round.frozen.filter fun v => v.slot + 4 * Δ = t
