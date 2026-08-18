@@ -51,6 +51,17 @@ repository, and then move the submodule pointer here.
 Changing which revision this project builds against needs no push: check out the commit in
 `deps/lean-sts`, then commit the submodule pointer here.
 
+## A citation carries the number and the label together
+
+Roberto, 2026-08-18. Every citation of a paper item in a `.lean` file writes the printed
+number, the backticked label, and the lines when it states any of them: `Definition 28
+(`def:recovery-timing`, lines 180–186)` — never the number alone, never the label alone.
+The label is what `make cites` and the link tooling parse, so a form without it is
+unclickable and unchecked. Unchecked forms rot: a sweep on 2026-08-18 found three wrong
+printed numbers and one wrong span, all in citations the checker could not parse. Two things stay plain by the same policy:
+per-line figure comments (`-- line 531`) and sub-ranges inside a docstring that opens
+with the full citation, which anchors them.
+
 ## One step at a time, and no decision that depends on unwritten code
 
 Roberto, 2026-08-13. Decide what the step in front of you needs, and nothing further. A choice
