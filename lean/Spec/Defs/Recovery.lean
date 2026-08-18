@@ -944,7 +944,8 @@ section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
 /-- Definition 42 (`def:action-root`, lines 1256–1308). `latestGoldfishWalkStart` is
-    the round's vote-time stable root — after a mid-round re-derivation, the re-derived root. The cases, in the
+    the round's vote-time stable root — after a mid-round re-derivation, the re-derived
+    root. The cases, in the
     definition's order: proposal-free (no accepted proposal, or the accepted proposal
     block evicted from the action candidate tree while the root ancestry holds) reads no
     proposal block; off-path (the vote-time root or the action-state Simplex root not an
