@@ -557,7 +557,7 @@ def roundAt (t : Time) : Option Nat :=
     `+Δ`" (line 200), and "every slot of the
     round runs ordinary Goldfish" (lines 191–193). The caller has established
     `start r ≤ t` via `roundAt`. -/
-def isVoteTime (r : Nat) (t : Time) : Bool :=
+def isGoldfishVoteTime (r : Nat) (t : Time) : Bool :=
   decide ((t - start r) % (4 * Δ) = Δ)
 
 end Rounds

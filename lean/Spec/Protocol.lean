@@ -270,7 +270,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               st.round.root st.round.graded
             { state := { st with round := { st.round with root := root', graded := g' } },
               send := ∅ }
-          else if Rounds.isVoteTime r t then
+          else if Rounds.isGoldfishVoteTime r t then
             -- a later slot's vote (Definition 28, `def:recovery-timing`,
             -- lines 190–192): ordinary Goldfish with the round's fixed root on the
             -- current candidate tree (Definition 32, `def:walk-standing`; Remark 10,

@@ -2500,7 +2500,7 @@ The spec:
 * `Rounds` (in `Spec/Defs/Voting.lean`) — Definition 28 as a class: `start r` (= `d_r`),
   `Δ`, positivity, and the round spacing in added form (`d_r + 8Δ ≤ d_{r+1}`, which is
   `a_r + Δ ≤ d_{r+1} − Δ` plus "at least two slots"). Derived: `actionTime r = d_r + 6Δ`,
-  `roundAt` (bounded search, sound because `start` grows by ≥ 8 per round), `isVoteTime`
+  `roundAt` (bounded search, sound because `start` grows by ≥ 8 per round), `isGoldfishVoteTime`
   (the `+Δ` phase of a `4Δ` slot).
 * `StoreMsg` gained `attestation` and `gVote`; `receive` leaves the store unchanged on
   both — deliberate retention discipline: raw attestations and Goldfish votes reach chain
