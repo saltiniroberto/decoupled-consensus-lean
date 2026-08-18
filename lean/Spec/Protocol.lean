@@ -65,6 +65,25 @@ pool membership at the reading: Definition 28's strict selection cutoff (the bou
 exception), Definition 41's timeliness test, and Definition 51's retransmission policy
 are not separately representable. Each is noted where it would bite. Everything a
 validator has received by a tick is in its pools at that tick; nothing else is.
+## Glossary: the paper's symbols in this module
+
+| Paper | Here | Meaning |
+| --- | --- | --- |
+| `d_r` | `Rounds.start r` | round `r`'s first proposal time |
+| `Δ` | `Rounds.Δ` | the network-delivery bound |
+| `a_r` | `Rounds.SGFGVotingTime r` | the round's SG/FG action time, `d_r + 6Δ` |
+| `X_u^-` | `attsAtStartMinusΔ` | SG-grade snapshot at `d_r − Δ` |
+| `X_u^0` | `attsAtStart` | SG-grade snapshot at `d_r` |
+| `X_u^1` | `attsAtStartPlusΔ` | SG-grade snapshot at `d_r + Δ` |
+| `X_u^2` | `attsAtStartPlus2Δ` | SG-grade snapshot at `d_r + 2Δ`, the grade-0 view |
+| `V_u^-` | `Vm` | the first slot's support-freeze view |
+| `Σ_{u,sel}^r` | `selSnap` | the selection state |
+| `Σ_{u,vote}^r` | `voteSnap` | the vote state |
+| `H_i` | `hist` | the durable signing history |
+
+The convention is `CLAUDE.md`'s: a symbol may become a word; the docstring opens with the
+symbol; a word the paper defines keeps its name. Rows still showing a symbolic name are
+renames not yet made.
 -/
 
 set_option autoImplicit false
@@ -83,15 +102,17 @@ variable {Node Root : Type}
 structure RoundState (Node Root : Type) where
   /-- The round number these records belong to. -/
   r : Nat
-  /-- `X_u^-`, the `d_r − Δ` grade snapshot (Definition 28, `def:recovery-timing`,
-      lines 180–186). -/
-  Xm : Finset (Attestation Node Root)
-  /-- `X_u^0`, the proposal-time snapshot. -/
-  X0 : Finset (Attestation Node Root)
-  /-- `X_u^1`, the vote-time snapshot. -/
-  X1 : Finset (Attestation Node Root)
-  /-- `X_u^2`, the grade-0 view, fixed at `d_r + 2Δ`. -/
-  X2 : Finset (Attestation Node Root)
+  /-- `X_u^-`, the SG-grade snapshot at `d_r − Δ` (Definition 28, `def:recovery-timing`,
+      lines 180–186): the whole received pool, cut to the preceding round's SG-head batch
+      by its readers (`eligibleBatch`). Feeds `G3`, with `X_u^1`. -/
+  attsAtStartMinusΔ : Finset (Attestation Node Root)
+  /-- `X_u^0`, the SG-grade snapshot at `d_r`, the round's start. Feeds `G2`. -/
+  attsAtStart : Finset (Attestation Node Root)
+  /-- `X_u^1`, the SG-grade snapshot at `d_r + Δ`, the first slot's vote time. Feeds `G1`,
+      and `G3`'s equivocation cross-check. -/
+  attsAtStartPlusΔ : Finset (Attestation Node Root)
+  /-- `X_u^2`, the SG-grade snapshot at `d_r + 2Δ` — the grade-0 view. Feeds `G0`. -/
+  attsAtStartPlus2Δ : Finset (Attestation Node Root)
   /-- `Σ_{u,sel}^r`, the selection state (activation-filtered). -/
   selSnap : Store Node Root
   /-- `Σ_{u,vote}^r`, the vote state (activation-filtered, after the proposal merge). -/
@@ -131,8 +152,9 @@ structure ValidatorState (Node Root : Type) where
   /-- The previous round's accepted proposal block — Definition 47's source proposal for
       the current action. -/
   prevProposal : Option (Blk Node Root)
-  /-- The `X⁻` snapshot for the round about to open, taken at `d_{r+1} − Δ`. -/
-  nextXm : Finset (Attestation Node Root)
+  /-- `X_u^-` for the round about to open, staged at `d_{r+1} − Δ`; it lands in
+      `attsAtStartMinusΔ` when the round's records are built. -/
+  nextAttsAtStartMinusΔ : Finset (Attestation Node Root)
   /-- The current round's records. -/
   round : RoundState Node Root
 
@@ -166,7 +188,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
           -- (Definition 28, `def:recovery-timing`, lines 180–186); a pre-update,
           -- because its reading may also
           -- be a freeze, boundary or vote phase of the current round
-          let st := if t + Δ = Rounds.start (r + 1) then { st with nextXm := st.atts }
+          let st := if t + Δ = Rounds.start (r + 1) then { st with nextAttsAtStartMinusΔ := st.atts }
             else st
           if t = d then
             -- the round opens: Σ_sel under the activation filter (Definition 30), the
@@ -175,14 +197,14 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- (Definition 28's boundary exception) is the pool at this reading.
             let sel := activationFiltered st.store st.snap
             { state := { st with round :=
-                { r := r, Xm := st.nextXm, X0 := st.atts,
+                { r := r, attsAtStartMinusΔ := st.nextAttsAtStartMinusΔ, attsAtStart := st.atts,
                   selSnap := sel, voteSnap := sel,
-                  X1 := ∅, X2 := ∅, Vm := ∅, frozen := st.round.frozen,
+                  attsAtStartPlusΔ := ∅, attsAtStartPlus2Δ := ∅, Vm := ∅, frozen := st.round.frozen,
                   root := sel.R, graded := false, accepted := none, pfFreeze := ∅ } },
               send := ∅ }
           else if t = d + Δ then
             -- the first slot's vote time (Figure 5, `alg:recovery-action`, steps 8–12)
-            let X1 := st.atts
+            let attsAtStartPlusΔ := st.atts
             let wit := st.snap.T             -- Definition 31's aging witnesses
             -- Definition 43's wrapper: the locally winning well-formed proposal,
             -- discarded when its signer has two distinct round proposals in this view;
@@ -207,8 +229,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               | none => st.gvotes
             let Svote := activationFiltered store' st.snap
             let pf := processedFinalized store'
-            let L := lowerRoot st.round.selSnap Svote wit st.round.Xm X1 r pf
-            let vr := stableRoot Svote wit L X1 r pf prop
+            let L := lowerRoot st.round.selSnap Svote wit st.round.attsAtStartMinusΔ attsAtStartPlusΔ r pf
+            let vr := stableRoot Svote wit L attsAtStartPlusΔ r pf prop
             -- Definition 45: the frozen slot view merged with the carried view, the
             -- preceding vote phase's votes counted, the walk in the aged tree with the
             -- proposal-path exemption
@@ -220,7 +242,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             let st' := { st with
               store := store', gvotes := gv',
               round := { st.round with
-                X1 := X1, voteSnap := Svote, root := vr.root,
+                attsAtStartPlusΔ := attsAtStartPlusΔ, voteSnap := Svote, root := vr.root,
                 graded := vr.graded, accepted := vr.accepted } }
             if i ∈ Committees.committee t then
               let v := recoveryGoldfishVote i t counted tree vr.root
@@ -233,7 +255,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- and the finalized evidence processed by the freeze, which Definition 46's
             -- veto counts
             { state := { st with round := { st.round with
-                X2 := st.atts, Vm := st.gvotes,
+                attsAtStartPlus2Δ := st.atts, Vm := st.gvotes,
                 pfFreeze := processedFinalized st.store } },
               send := ∅ }
           else if t = Rounds.SGFGVotingTime r then
@@ -248,7 +270,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               (s := d + Δ)                 -- the evaluated first slot's vote phase
               (Vm := st.round.Vm)
               (Vp := st.gvotes)            -- V⁺: every delivery due by a_r is processed
-              (X1 := st.round.X1) (X2 := st.round.X2)
+              (X1 := st.round.attsAtStartPlusΔ) (X2 := st.round.attsAtStartPlus2Δ)
               (pfFreeze := st.round.pfFreeze)
               (processedF := processedFinalized st.store)
               (H := st.hist)
@@ -292,8 +314,9 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
 def protocol : Protocol Node (StoreMsg Node Root) (ValidatorState Node Root) Empty where
   init _ :=
     { store := Store.gen, hist := .gen, snap := Store.gen,
-      atts := ∅, gvotes := ∅, props := ∅, prevProposal := none, nextXm := ∅,
-      round := { r := 0, Xm := ∅, X0 := ∅, X1 := ∅, X2 := ∅,
+      atts := ∅, gvotes := ∅, props := ∅, prevProposal := none, nextAttsAtStartMinusΔ := ∅,
+      round := { r := 0, attsAtStartMinusΔ := ∅, attsAtStart := ∅,
+                 attsAtStartPlusΔ := ∅, attsAtStartPlus2Δ := ∅,
                  selSnap := Store.gen, voteSnap := Store.gen, Vm := ∅, frozen := ∅,
                  root := .genesis, graded := false, accepted := none, pfFreeze := ∅ } }
   step i t _ st e res := res = reaction i t st e
