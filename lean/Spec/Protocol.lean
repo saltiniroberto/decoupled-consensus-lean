@@ -135,7 +135,7 @@ structure RoundState (Node Root : Type) where
       state's own Simplex selection. -/
   graded : Bool
   /-- The accepted distinguished proposal, `none` on every failure path. -/
-  accepted : Option (RecoveryProposal Node Root)
+  acceptedProposal : Option (RecoveryProposal Node Root)
   /-- The finalized roots whose evidence was processed by the grade-0 freeze — what
       Definition 46's veto counts. -/
   processedFinalizedAtFreeze : Finset (Blk Node Root)
@@ -215,7 +215,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                   frozen := st.round.frozen,
                   goldfishWalkStart := sel.walkStartFromFGVotes,
                   graded := false,
-                  accepted := none,
+                  acceptedProposal := none,
                   processedFinalizedAtFreeze := ∅ } },
               send := ∅ }
           else if t = roundStart + Δ then
@@ -259,13 +259,13 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               | none => st.round.frozen
             let counted := view.filter fun v => v.slot + 4 * Δ = t
             let tree := candidateTreeBackedByPrevSGFGVoteOrOnProposalPath Svote treeAtPrevSGFGVote
-              (vr.accepted.map fun p => p.block)
+              (vr.acceptedProposal.map fun p => p.block)
             let st' := { st with
               store := store', gvotes := gv',
               round := { st.round with
                 attsAtRoundStartPlusΔ := attsAtRoundStartPlusΔ, voteSnap := Svote,
                 goldfishWalkStart := vr.walkStart,
-                graded := vr.graded, accepted := vr.accepted } }
+                graded := vr.graded, acceptedProposal := vr.acceptedProposal } }
             if i ∈ Committees.committee t then
               let v := recoveryGoldfishVote i t counted tree vr.walkStart
               { state := { st' with gvotes := insert v st'.gvotes },
@@ -287,7 +287,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               (filteredStoreAtSGFGVote :=
                 st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
               (latestGoldfishWalkStart := st.round.goldfishWalkStart)
-              (acceptedProposal := st.round.accepted)
+              (acceptedProposal := st.round.acceptedProposal)
               (sourceProposal := st.prevProposal)
               (committee := Committees.committee (roundStart + Δ))
               (firstSlotVoteTime := roundStart + Δ)
@@ -302,7 +302,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 hist := H',
                 atts := insert a st.atts,  -- its own head is in its own later views
                 storeAtPrevSGFGVote := st.store,          -- the next round's activation cutoff
-                prevProposal := st.round.accepted.map fun p => p.block },
+                prevProposal := st.round.acceptedProposal.map fun p => p.block },
               send := {.attestation a} }
           else if (t - roundStart) % (4 * Δ) = 3 * Δ then
             -- a slot-view freeze (Definition 28, `def:recovery-timing`, lines 171–177)
@@ -345,7 +345,7 @@ def protocol : Protocol Node (StoreMsg Node Root) (ValidatorState Node Root) Emp
                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
                  selSnap := Store.gen, voteSnap := Store.gen, votesAtSupportFreeze := ∅,
                  frozen := ∅,
-                 goldfishWalkStart := .genesis, graded := false, accepted := none,
+                 goldfishWalkStart := .genesis, graded := false, acceptedProposal := none,
                  processedFinalizedAtFreeze := ∅ } }
   step i t _ st e res := res = reaction i t st e
   total i t _ st e := ⟨reaction i t st e, rfl⟩

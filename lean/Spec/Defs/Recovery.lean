@@ -760,7 +760,7 @@ structure VoteRoundOutcome (Node Root : Type) where
       Simplex selection. -/
   graded : Bool
   /-- The accepted distinguished proposal, `none` on every failure path. -/
-  accepted : Option (RecoveryProposal Node Root)
+  acceptedProposal : Option (RecoveryProposal Node Root)
 
 /-- Definition 41 (`def:stable-root`, lines 1123–1191) — the paper's *stable root*, named
     here for its primary consumer: the round's Goldfish walks start from its output, and
@@ -906,12 +906,12 @@ def goldfishWalkStart (Svote : Store Node Root)
     VoteRoundOutcome Node Root :=
   let fallback : VoteRoundOutcome Node Root :=
     if L = Svote.walkStartFromFGVotes then
-      { walkStart := L, graded := false, accepted := none }
+      { walkStart := L, graded := false, acceptedProposal := none }
     else if G1 X1 r L ∧ ConflictFree processedF L ∧
         L ∈ candidateTreeBackedByPrevSGFGVote Svote blocksAcceptedByPrevSGFGVote then
-      { walkStart := L, graded := true, accepted := none }
+      { walkStart := L, graded := true, acceptedProposal := none }
     else
-      { walkStart := Svote.walkStartFromFGVotes, graded := false, accepted := none }
+      { walkStart := Svote.walkStartFromFGVotes, graded := false, acceptedProposal := none }
   if let some p := prop then
     let item1 :=
       (L ⪯ p.proposedWalkStart ∧ p.proposedWalkStart ⪯ p.parent ∧
@@ -931,7 +931,8 @@ def goldfishWalkStart (Svote : Store Node Root)
       p.block ∈ candidateTreeBackedByPrevSGFGVoteOrOnProposalPath Svote
         blocksAcceptedByPrevSGFGVote (some p.block)
     if item1 ∧ item2 ∧ item3 then
-      { walkStart := Rv, graded := Rv ≠ Svote.walkStartFromFGVotes, accepted := some p }
+      { walkStart := Rv, graded := Rv ≠ Svote.walkStartFromFGVotes,
+        acceptedProposal := some p }
     else fallback
   else fallback
 
