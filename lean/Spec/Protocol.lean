@@ -227,7 +227,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               | some p => ((ancestors p.block).reverse).foldl onBlock st.store
               | none => st.store
             let gv' := match prop with
-              | some p => st.gvotes ∪ p.carriedVotes
+              | some p => st.gvotes ∪ p.carriedGoldfishVotes
               | none => st.gvotes
             let Svote := activationFiltered store' st.storeAtPrevSGFGVote
             let pf := processedFinalized store'
@@ -238,7 +238,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- preceding vote phase's votes counted, the walk in the aged tree with the
             -- proposal-path exemption
             let view := match prop with
-              | some p => st.round.frozen ∪ p.carriedVotes
+              | some p => st.round.frozen ∪ p.carriedGoldfishVotes
               | none => st.round.frozen
             let counted := view.filter fun v => v.slot + 4 * Δ = t
             let tree := agedTreeWithExemption Svote treeAtPrevSGFGVote

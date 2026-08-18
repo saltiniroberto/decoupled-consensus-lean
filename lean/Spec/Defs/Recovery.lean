@@ -382,7 +382,7 @@ structure RecoveryProposal (Node Root : Type) where
   carriedBlocks : Finset (Blk Node Root)
   /-- `V_{p,GF}^r`, "the proposer's set of raw Goldfish votes for the preceding slot" —
       the input of the proposal-view merge. -/
-  carriedVotes : Finset (GoldfishVote Node Root)
+  carriedGoldfishVotes : Finset (GoldfishVote Node Root)
   /-- `A_p^r`, the proposed root. -/
   proposedRoot : Blk Node Root
   /-- `tag_p^r ∈ {graded, ungraded}`, which branch of Definition 41's item 2 the
