@@ -18,11 +18,11 @@ the no-source-proposal branch. Everything here is a pure function over explicit 
 
 ## The identifications this file rests on (each decided earlier, reused here)
 
-* A fork-choice state is a `Store`, and `simplexRoot(Σ)` is `Store.walkStart` — the reading
+* A fork-choice state is a `Store`, and `simplexRoot(Σ)` is `Store.FGWalkStart` — the reading
   `sgHeadOk`'s docstring establishes. The three per-round states
   `Σ_sel`, `Σ_vote`, `Σ_act` of Definition 28 (`def:recovery-timing`) are store values
   derived at the round's cutoffs.
-* The candidate tree `C(Σ)` of Definition 31 is the viable subtree at or above `Store.walkStart`.
+* The candidate tree `C(Σ)` of Definition 31 is the viable subtree at or above `Store.FGWalkStart`.
 
 ## Rendering decisions made in this file (Roberto asked for them, 2026-08-18)
 
@@ -248,7 +248,7 @@ def processedFinalized (S : Store Node Root) : Finset (Blk Node Root) :=
     `C(Σ) = {B ∈ viableTree(Σ) : simplexRoot(Σ) ⪯ B}`, "a prefix-closed tree rooted at
     `simplexRoot(Σ)`. Its viability test always uses the store-global value `Σ.hmax`". -/
 def candidateTree (S : Store Node Root) : Finset (Blk Node Root) :=
-  (viableTree S).filter fun B => S.walkStart ⪯ B
+  (viableTree S).filter fun B => S.FGWalkStart ⪯ B
 
 /-- Definition 31's aged variant `C⁻_u(Σ)`: "A block `B ∈ C(Σ)` is in `C⁻_u(Σ)` exactly
     when some block `W` with `B ⪯ W` was received and accepted by that validator's
@@ -348,11 +348,11 @@ instance (holds : Prop) [Decidable holds] (S : Store Node Root)
     > walk-start, whether as fallback or as an accepted ungraded proposed walk-start,
     > which equals that selection by the stable-walk-start rule of the proposal section;
     > the graded alternative is specified with the same rule — and, at a later slot
-    > boundary of the round, the validator's current state selects a Simplex walk-start
+    > boundary of the round, the validator's current state selects a Simplex FG walk-start
     > different from the fixed walk-start, it re-derives its stable walk-start at that
     > boundary and uses the re-derived walk-start for the round's remaining slots. The
     > test is deterministic: it compares the fixed walk-start with the current state's
-    > Simplex walk-start, both locally derived. After re-derivation, every later
+    > Simplex FG walk-start, both locally derived. After re-derivation, every later
     > reference to the round's vote-time stable walk-start — later-slot walks, the
     > SG/FG-vote walk-start rule, and the SG/FG-vote head — names the re-derived
     > walk-start. The re-derived walk-start is finality-backed by Definition 26; it
@@ -374,7 +374,8 @@ instance (holds : Prop) [Decidable holds] (S : Store Node Root)
 def rederive (cur : Store Node Root) (processedF : Finset (Blk Node Root))
     (walkStart : Blk Node Root) (graded : Bool) : Blk Node Root × Bool :=
   let live := graded ∧ ConflictFree processedF walkStart
-  if ¬ live ∧ cur.walkStart ≠ walkStart then (cur.walkStart, false) else (walkStart, decide live)
+  if ¬ live ∧ cur.FGWalkStart ≠ walkStart then (cur.FGWalkStart, false)
+  else (walkStart, decide live)
 
 end
 
@@ -588,7 +589,7 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [BlockHash Node
 def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) : Blk Node Root :=
   (deepest ((candidateTree Ssel).filter fun B =>
-    G2 X0 r B ∧ ConflictFree processedF B)).getD Ssel.walkStart
+    G2 X0 r B ∧ ConflictFree processedF B)).getD Ssel.FGWalkStart
 
 /-- Definition 40, the receiver's lower root `L_u^r`: "the deepest *strict* grade-3 block
     in the aged tree `C⁻_u(Σ_{u,sel}^r)` that remains in the aged tree
@@ -632,10 +633,10 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     > selection, and each receiver fixes its own grade-3 lower bound.
 
     **The same text, in this file's terminology** — root → walk-start (`simplexRoot` is
-    `Store.walkStart`):
+    `Store.FGWalkStart`):
 
-    > Write `S_{u,sel}^r = Σ_{u,sel}^r.walkStart`, `S_{u,vote}^r = Σ_{u,vote}^r.walkStart`,
-    > `S_{u,act}^r = Σ_{u,act}^r.walkStart`.
+    > Write `S_{u,sel}^r = Σ_{u,sel}^r.FGWalkStart`, `S_{u,vote}^r = Σ_{u,vote}^r.FGWalkStart`,
+    > `S_{u,act}^r = Σ_{u,act}^r.FGWalkStart`.
     >
     > *Proposer choice.* At `d_r`, proposer `p` chooses the deepest block
     > `A_p^r ∈ C(Σ_{p,sel}^r)` for which it has grade 2 and which conflicts with no
@@ -647,7 +648,7 @@ def proposerRoot (Ssel : Store Node Root) (X0 : Finset (Attestation Node Root)) 
     > receiver's own raw `G1_u` predicate, whose favorable counting tolerates
     > equivocation copies the proposer may have omitted, supplies the semantic
     > acceptance guard. If there is no graded block, the proposer proposes the
-    > selection-state Simplex walk-start `S_{p,sel}^r` as an ungraded base walk-start.
+    > selection-state Simplex FG walk-start `S_{p,sel}^r` as an ungraded base walk-start.
     >
     > *Receiver lower walk-start.* Throughout, call a graded block *strict* at a
     > validator when it strictly descends from that validator's own vote-state Simplex
@@ -668,8 +669,8 @@ def lowerWalkStart (Ssel Svote : Store Node Root) (witnesses : Finset (Blk Node 
     (Xm X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) : Blk Node Root :=
   (deepest ((agedCandidateTree Ssel witnesses).filter fun B =>
-    Svote.walkStart ⪯ B ∧ B ≠ Svote.walkStart ∧ G3 Xm X1 r B ∧ ConflictFree processedF B ∧
-    B ∈ agedCandidateTree Svote witnesses)).getD Svote.walkStart
+    Svote.FGWalkStart ⪯ B ∧ B ≠ Svote.FGWalkStart ∧ G3 Xm X1 r B ∧ ConflictFree processedF B ∧
+    B ∈ agedCandidateTree Svote witnesses)).getD Svote.FGWalkStart
 
 end
 
@@ -847,29 +848,29 @@ def stableWalkStart (Svote : Store Node Root) (witnesses : Finset (Blk Node Root
     (processedF : Finset (Blk Node Root)) (prop : Option (RecoveryProposal Node Root)) :
     VoteRoundOutcome Node Root :=
   let fallback : VoteRoundOutcome Node Root :=
-    if L = Svote.walkStart then
+    if L = Svote.FGWalkStart then
       { walkStart := L, graded := false, accepted := none }
     else if G1 X1 r L ∧ ConflictFree processedF L ∧ L ∈ agedCandidateTree Svote witnesses
     then
       { walkStart := L, graded := true, accepted := none }
     else
-      { walkStart := Svote.walkStart, graded := false, accepted := none }
+      { walkStart := Svote.FGWalkStart, graded := false, accepted := none }
   if let some p := prop then
     let item1 :=
-      (L ⪯ p.proposedWalkStart ∧ p.proposedWalkStart ⪯ p.parent ∧ Svote.walkStart ⪯ p.parent) ∨
-      (p.proposedWalkStart ⪯ Svote.walkStart ∧ p.proposedWalkStart ≠ Svote.walkStart ∧
-        Svote.walkStart ⪯ p.parent ∧
-        Svote.walkStart = Svote.F ∧ L ⪯ p.parent)
+      (L ⪯ p.proposedWalkStart ∧ p.proposedWalkStart ⪯ p.parent ∧ Svote.FGWalkStart ⪯ p.parent) ∨
+      (p.proposedWalkStart ⪯ Svote.FGWalkStart ∧ p.proposedWalkStart ≠ Svote.FGWalkStart ∧
+        Svote.FGWalkStart ⪯ p.parent ∧
+        Svote.FGWalkStart = Svote.F ∧ L ⪯ p.parent)
     let item2 :=
       (p.graded = true ∧ G1 X1 r p.proposedWalkStart ∧ ConflictFree processedF p.proposedWalkStart ∧
         ValidG2Witness p.grade2Witness r p.proposedWalkStart) ∨
-      (p.graded = false ∧ p.proposedWalkStart = Svote.walkStart)
-    let Rv := chainMax (chainMax p.proposedWalkStart L) Svote.walkStart
+      (p.graded = false ∧ p.proposedWalkStart = Svote.FGWalkStart)
+    let Rv := chainMax (chainMax p.proposedWalkStart L) Svote.FGWalkStart
     let item3 :=
       Rv ∈ agedTreeWithExemption Svote witnesses (some p.block) ∧
       p.block ∈ agedTreeWithExemption Svote witnesses (some p.block)
     if item1 ∧ item2 ∧ item3 then
-      { walkStart := Rv, graded := Rv ≠ Svote.walkStart, accepted := some p }
+      { walkStart := Rv, graded := Rv ≠ Svote.FGWalkStart, accepted := some p }
     else fallback
   else fallback
 
@@ -960,7 +961,7 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
     > 3. *Admission.* Otherwise the receiver uses the SG/FG-vote walk-start for SG and
     >    FG exactly when `B_p^r` — in the proposal case — and `R_{u,act}^r` remain in
     >    `C(Σ_{u,act}^r)`, and the SG/FG-vote walk-start either equals the filtered
-    >    store's Simplex walk-start or has raw grade 1 while conflicting with no
+    >    store's Simplex FG walk-start or has raw grade 1 while conflicting with no
     >    finalized root whose evidence the validator has processed by the SG/FG vote —
     >    finality evidence processed after the vote thus withdraws a walk-start from
     >    SG/FG use even when no slot boundary remains to re-derive it — and the
@@ -997,13 +998,13 @@ def sgfgVoteWalkStart
     (processedFinalizedAtSGFGVote : Finset (Blk Node Root)) : Option (Blk Node Root) :=
   let admittedWalkStart : Option (Blk Node Root) :=
     if stableWalkStart ∈ candidateTree filteredStoreAtSGFGVote ∧
-        (stableWalkStart = filteredStoreAtSGFGVote.walkStart ∨
+        (stableWalkStart = filteredStoreAtSGFGVote.FGWalkStart ∨
           (G1 attsAtRoundStartPlusΔ r stableWalkStart ∧
             ConflictFree processedFinalizedAtSGFGVote stableWalkStart)) then
       some stableWalkStart
     else none
   if let some p := acceptedProposal then
-    if stableWalkStart ⪯ p.block ∧ filteredStoreAtSGFGVote.walkStart ⪯ p.block then
+    if stableWalkStart ⪯ p.block ∧ filteredStoreAtSGFGVote.FGWalkStart ⪯ p.block then
       if p.block ∈ candidateTree filteredStoreAtSGFGVote then
         admittedWalkStart                           -- case 3, with the proposal in play
       else admittedWalkStart                        -- case 1: evicted proposal, root ancestry holds
@@ -1080,7 +1081,7 @@ def officialConfirmation [Omega Node Root] (Sact : Store Node Root)
       | some c =>
           Sact.T.filter fun Q =>
             VetoFree Sact X2 r pfFreeze Q ∧ ConflictFree processedF Q ∧
-            Sact.walkStart ⪯ Q ∧ Q ⪯ c ∧ Q ⪯ G
+            Sact.FGWalkStart ⪯ Q ∧ Q ⪯ c ∧ Q ⪯ G
       | none => ∅
     match deepest officials with
     | some Q => { head := some Q, C := some Q }
@@ -1089,7 +1090,7 @@ def officialConfirmation [Omega Node Root] (Sact : Store Node Root)
           match admittedWalkStart with
           | some Ra =>
               deepest (Sact.T.filter fun B =>
-                Sact.walkStart ⪯ B ∧ B ⪯ Ra ∧ VetoFree Sact X2 r pfFreeze B ∧
+                Sact.FGWalkStart ⪯ B ∧ B ⪯ Ra ∧ VetoFree Sact X2 r pfFreeze B ∧
                 ConflictFree processedF B)
           | none => ⊥   -- unreachable under the outer test; kept for totality
         { head := fb, C := ⊥ }

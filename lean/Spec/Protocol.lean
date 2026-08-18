@@ -80,7 +80,7 @@ validator has received by a tick is in its pools at that tick; nothing else is.
 | `Σ_{u,sel}^r` | `selSnap` | the selection state |
 | `Σ_{u,vote}^r` | `voteSnap` | the vote state |
 | `Σ_{u,act}^r` | `filteredStoreAtSGFGVote` | the action state, derived at the `castSGFGVote` call |
-| `R` (Fig. 2) | `Store.walkStart` | `get_confirmed`'s walk-from block; the paper's Simplex root |
+| `R` (Fig. 2) | `Store.FGWalkStart` | `get_confirmed`'s walk-from block; the paper's Simplex root |
 | `R_{u,vote}^r` | `stableWalkStart` | the vote-time stable walk-start — Definition 41 |
 | `H_i` | `hist` | the durable signing history |
 
@@ -210,7 +210,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                   attsAtRoundStartPlus2Δ := ∅,
                   votesAtSupportFreeze := ∅,
                   frozen := st.round.frozen,
-                  stableWalkStart := sel.walkStart,
+                  stableWalkStart := sel.FGWalkStart,
                   graded := false,
                   accepted := none,
                   processedFinalizedAtFreeze := ∅ } },
@@ -279,7 +279,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- the round's SG/FG action (Figure 5, `alg:recovery-action`, steps 15–21)
             let (a, H') := castSGFGVote
               (i := i) (r := r) (t := t)
-              (filteredStoreAtSGFGVote := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
+              (filteredStoreAtSGFGVote :=
+                st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
               (stableWalkStart := st.round.stableWalkStart)
               (acceptedProposal := st.round.accepted)
               (sourceProposal := st.prevProposal)

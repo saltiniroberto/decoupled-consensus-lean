@@ -103,8 +103,8 @@ theorem reachable_FJ {S : Store Node Root} (hS : S.Reachable) : S.F ⪯ S.J := b
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- The walk-from block sits at or above the store-finalized block, given `F ⪯ J`. -/
-theorem F_preceq_walkStart {S : Store Node Root} (h : S.F ⪯ S.J) : S.F ⪯ S.walkStart := by
-  unfold Store.walkStart
+theorem F_preceq_FGWalkStart {S : Store Node Root} (h : S.F ⪯ S.J) : S.F ⪯ S.FGWalkStart := by
+  unfold Store.FGWalkStart
   split_ifs with hc
   · exact h
   · exact Preceq.refl _
@@ -115,8 +115,8 @@ omit [Electorate Node] [Params] [BlockHash Node Root] in
     height conjunct in `get … from` form, so it destructures the way statements read. -/
 theorem mem_candidates {S : Store Node Root} {B : Blk Node Root} :
     (B ∈ (viableTree S).filter fun B =>
-        S.walkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1) ↔
-      B ∈ viableTree S ∧ S.walkStart ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1) := by
+        S.FGWalkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1) ↔
+      B ∈ viableTree S ∧ S.FGWalkStart ⪯ B ∧ (get st from S.σ B; st.h ≥ S.hmax - 1) := by
   rw [Finset.mem_filter]
   constructor
   · rintro ⟨h1, h2, h3⟩
@@ -137,11 +137,11 @@ omit [Electorate Node] [Params] [BlockHash Node Root] in
 /-- What `getConfirmed` returns: the walk-from block, or a block the figure's return line
     admits — the two cases of the inserted candidate set. -/
 theorem getConfirmed_spec [Omega Node Root] (S : Store Node Root) :
-    getConfirmed S = S.walkStart ∨
-      (getConfirmed S ∈ viableTree S ∧ S.walkStart ⪯ getConfirmed S ∧
+    getConfirmed S = S.FGWalkStart ∨
+      (getConfirmed S ∈ viableTree S ∧ S.FGWalkStart ⪯ getConfirmed S ∧
         (get st from S.σ (getConfirmed S); st.h ≥ S.hmax - 1)) := by
-  have h := (Omega.choose (insert S.walkStart ((viableTree S).filter fun B =>
-      S.walkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1))
+  have h := (Omega.choose (insert S.FGWalkStart ((viableTree S).filter fun B =>
+      S.FGWalkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1))
     (Finset.insert_nonempty _ _)).property
   rcases Finset.mem_insert.mp h with h | h
   · exact Or.inl h
@@ -154,8 +154,8 @@ omit [Electorate Node] [Params] [BlockHash Node Root] in
 theorem getConfirmed_F [Omega Node Root] {S : Store Node Root} (hFJ : S.F ⪯ S.J) :
     S.F ⪯ getConfirmed S := by
   rcases getConfirmed_spec S with h | ⟨-, h2, -⟩
-  · rw [h]; exact F_preceq_walkStart hFJ
-  · exact Preceq.trans (F_preceq_walkStart hFJ) h2
+  · rw [h]; exact F_preceq_FGWalkStart hFJ
+  · exact Preceq.trans (F_preceq_FGWalkStart hFJ) h2
 
 omit [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Equal candidate sets, equal choice: the `Nonempty` witnesses are proofs, hence
@@ -169,14 +169,14 @@ theorem Omega.choose_congr [Omega Node Root] {s t : Finset (Blk Node Root)} (hst
 omit [Electorate Node] [Params] [BlockHash Node Root] in
 /-- Stores agreeing on the walk-from block, and on the candidates block by block, confirm
     identically, whatever the ambient `Ω`. -/
-theorem getConfirmed_congr [Omega Node Root] {S S' : Store Node Root} (hR : S.walkStart = S'.walkStart)
-    (h : ∀ C, (C ∈ viableTree S ∧ S.walkStart ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1)) ↔
-      (C ∈ viableTree S' ∧ S'.walkStart ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1))) :
+theorem getConfirmed_congr [Omega Node Root] {S S' : Store Node Root} (hR : S.FGWalkStart = S'.FGWalkStart)
+    (h : ∀ C, (C ∈ viableTree S ∧ S.FGWalkStart ⪯ C ∧ (get st from S.σ C; st.h ≥ S.hmax - 1)) ↔
+      (C ∈ viableTree S' ∧ S'.FGWalkStart ⪯ C ∧ (get st from S'.σ C; st.h ≥ S'.hmax - 1))) :
     getConfirmed S = getConfirmed S' := by
   have hset : ((viableTree S).filter fun B =>
-        S.walkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1) =
+        S.FGWalkStart ⪯ B ∧ (S.σ B).any fun st => st.h ≥ S.hmax - 1) =
       (viableTree S').filter fun B =>
-        S'.walkStart ⪯ B ∧ (S'.σ B).any fun st => st.h ≥ S'.hmax - 1 :=
+        S'.FGWalkStart ⪯ B ∧ (S'.σ B).any fun st => st.h ≥ S'.hmax - 1 :=
     Finset.ext fun C => (mem_candidates.trans (h C)).trans mem_candidates.symm
   exact Omega.choose_congr (by rw [hset, hR]) _ _
 

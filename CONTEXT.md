@@ -2645,6 +2645,14 @@ the type parameter `Root` (state roots) stays. The paper's own cover is Figure 2
 `R`, "the walk-from block". Four red `Analysis` files' uses were edited textually and compile
 when that layer's fix round runs; `F_preceq_R` became `F_preceq_walkStart`.
 
+Two follow-ups the same evening: `Store.walkStart` is `Store.FGWalkStart` — Roberto: the store's
+walk-start reads only the FG verdicts (`J`, `h_j`, `F`, `hmax`), no Goldfish or SG vote touches
+it, and the name should say so; `VoteRoundOutcome.walkStart` and the walk parameters keep the
+plain name. And `activationFiltered` is `Store.withJustificationAndFinalityFrom` — the third
+deliberate break against a paper-defined word ("activation filter", Definition 30), the name
+now stating the mechanism: material from the current store, verdicts from the store at the
+previous SG/FG vote.
+
 **The dual-text convention, now in `CLAUDE.md`**: where renamed vocabulary appears inside a
 definition's own text, the docstring carries the paper's text verbatim and then the same text
 in the new terminology, sentence for sentence. Applied to Definitions 29, 40, 41, 42, 45 and
