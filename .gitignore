@@ -10,3 +10,4 @@ REFERENCES_LOCAL.md
 .claude/hooks/confine-to-project.py
 .citation-links.json
 __pycache__/
+*.vsix
