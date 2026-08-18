@@ -76,7 +76,7 @@ validator has received by a tick is in its pools at that tick; nothing else is.
 | `X_u^0` | `attsAtRoundStart` | SG-grade snapshot at `d_r` |
 | `X_u^1` | `attsAtRoundStartPlusΔ` | SG-grade snapshot at `d_r + Δ` |
 | `X_u^2` | `attsAtRoundStartPlus2Δ` | SG-grade snapshot at `d_r + 2Δ`, the grade-0 view |
-| `V_u^-` | `Vm` | the first slot's support-freeze view |
+| `V_u^-` | `votesAtSupportFreeze` | the first slot's support-freeze view |
 | `Σ_{u,sel}^r` | `selSnap` | the selection state |
 | `Σ_{u,vote}^r` | `voteSnap` | the vote state |
 | `H_i` | `hist` | the durable signing history |
@@ -118,7 +118,7 @@ structure RoundState (Node Root : Type) where
   /-- `Σ_{u,vote}^r`, the vote state (activation-filtered, after the proposal merge). -/
   voteSnap : Store Node Root
   /-- `V_u^-`, the first slot's support-freeze view (Definition 38, `f_r = d_r + 2Δ`). -/
-  Vm : Finset (GoldfishVote Node Root)
+  votesAtSupportFreeze : Finset (GoldfishVote Node Root)
   /-- The current frozen slot view, snapshotted at each slot-view freeze (`+3Δ`). -/
   frozen : Finset (GoldfishVote Node Root)
   /-- The round's stable root — fixed at the vote time (Definition 41), re-derived at
@@ -131,7 +131,7 @@ structure RoundState (Node Root : Type) where
   accepted : Option (RecoveryProposal Node Root)
   /-- The finalized roots whose evidence was processed by the grade-0 freeze — what
       Definition 46's veto counts. -/
-  pfFreeze : Finset (Blk Node Root)
+  processedFinalizedAtFreeze : Finset (Blk Node Root)
 
 /-- What one validator keeps. See the module header for each field's role. -/
 structure ValidatorState (Node Root : Type) where
@@ -199,9 +199,11 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             { state := { st with round :=
                 { r := r, attsAtRoundStartMinusΔ := st.nextAttsAtRoundStartMinusΔ,
                   attsAtRoundStart := st.atts, selSnap := sel, voteSnap := sel,
-                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅, Vm := ∅,
+                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
+                  votesAtSupportFreeze := ∅,
                   frozen := st.round.frozen,
-                  root := sel.R, graded := false, accepted := none, pfFreeze := ∅ } },
+                  root := sel.R, graded := false, accepted := none,
+                  processedFinalizedAtFreeze := ∅ } },
               send := ∅ }
           else if t = roundStart + Δ then
             -- the first slot's vote time (Figure 5, `alg:recovery-action`, steps 8–12)
@@ -259,25 +261,26 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- and the finalized evidence processed by the freeze, which Definition 46's
             -- veto counts
             { state := { st with round := { st.round with
-                attsAtRoundStartPlus2Δ := st.atts, Vm := st.gvotes,
-                pfFreeze := processedFinalized st.store } },
+                attsAtRoundStartPlus2Δ := st.atts, votesAtSupportFreeze := st.gvotes,
+                processedFinalizedAtFreeze := processedFinalized st.store } },
               send := ∅ }
           else if t = Rounds.SGFGVotingTime r then
             -- the round's SG/FG action (Figure 5, `alg:recovery-action`, steps 15–21)
             let (a, H') := recoveryAction
               (i := i) (r := r) (t := t)
-              (Sact := activationFiltered st.store st.storeAtPrevSGFGVote)
-              (Rstable := st.round.root)
-              (accepted := st.round.accepted)
+              (actionState := activationFiltered st.store st.storeAtPrevSGFGVote)
+              (stableRoot := st.round.root)
+              (acceptedProposal := st.round.accepted)
               (sourceProposal := st.prevProposal)
               (committee := Committees.committee (roundStart + Δ))
-              (s := roundStart + Δ)                 -- the evaluated first slot's vote phase
-              (Vm := st.round.Vm)
-              (Vp := st.gvotes)            -- V⁺: every delivery due by a_r is processed
-              (X1 := st.round.attsAtRoundStartPlusΔ) (X2 := st.round.attsAtRoundStartPlus2Δ)
-              (pfFreeze := st.round.pfFreeze)
-              (processedF := processedFinalized st.store)
-              (H := st.hist)
+              (firstSlotVoteTime := roundStart + Δ)
+              (votesAtSupportFreeze := st.round.votesAtSupportFreeze)
+              (votesAtAction := st.gvotes) -- V⁺: every delivery due by a_r is processed
+              (attsAtRoundStartPlusΔ := st.round.attsAtRoundStartPlusΔ)
+              (attsAtRoundStartPlus2Δ := st.round.attsAtRoundStartPlus2Δ)
+              (processedFinalizedAtFreeze := st.round.processedFinalizedAtFreeze)
+              (processedFinalizedAtAction := processedFinalized st.store)
+              (history := st.hist)
             { state := { st with
                 hist := H',
                 atts := insert a st.atts,  -- its own head is in its own later views
@@ -321,8 +324,10 @@ def protocol : Protocol Node (StoreMsg Node Root) (ValidatorState Node Root) Emp
       atts := ∅, gvotes := ∅, proposals := ∅, prevProposal := none, nextAttsAtRoundStartMinusΔ := ∅,
       round := { r := 0, attsAtRoundStartMinusΔ := ∅, attsAtRoundStart := ∅,
                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
-                 selSnap := Store.gen, voteSnap := Store.gen, Vm := ∅, frozen := ∅,
-                 root := .genesis, graded := false, accepted := none, pfFreeze := ∅ } }
+                 selSnap := Store.gen, voteSnap := Store.gen, votesAtSupportFreeze := ∅,
+                 frozen := ∅,
+                 root := .genesis, graded := false, accepted := none,
+                 processedFinalizedAtFreeze := ∅ } }
   step i t _ st e res := res = reaction i t st e
   total i t _ st e := ⟨reaction i t st e, rfl⟩
   enabled _ _ ev := ev.elim

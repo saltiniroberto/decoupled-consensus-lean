@@ -692,8 +692,9 @@ def Store.hasJC (S : Store Node Root) : Bool :=
   decide (∃ B ∈ S.T, (S.σ B).any fun st => st.J = S.J ∧ st.h_j = S.h_j)
 
 /-- Definition 47 (`def:ordinary-current-target`, lines 1814–1869), both branches, over
-    an explicit confirmation and source. `officialConfirmation` is the action's deepest official
-    confirmation `Q_i^r` (Definition 46); `sourceProposal` is "the unique distinguished proposal
+    an explicit confirmation and source. `deepestConfirmation` is the action's deepest
+    official confirmation `Q_i^r` (Definition 46); `sourceProposal` is "the unique
+    distinguished proposal
     from round `r − 1`, whose SG batch this action grades", or `none` when that round
     recognized none. With `Q_i^r` empty, no current-height pair (`none` — Definition 48
     then emits empty). Otherwise `σ̄_i = σ_a[Q_i^r]`, the confirmation's finality action
@@ -744,41 +745,59 @@ variable [DecidableEq Node] [DecidableEq Root] [Electorate Node] [Params]
     action root's admission (Definition 42), the official confirmation and SG head
     (Definition 46), and the current-height context (Definition 47), then sign the one
     combined attestation of Definition 50 — `fgVote`, finality first, over the action
-    state's `(J, h_j)`, `(F, h_F)` and certificate knowledge, all read off `Sact`
-    (rendering decision 6). The inputs are the round's records, in the order the
-    wiring holds them; `s` is the evaluated first slot's vote phase, which the TSQ
-    views and the head walk both key on. -/
-def recoveryAction [Omega Node Root] (i : Node) (r : Nat) (t : Time)
-    (Sact : Store Node Root) (Rstable : Blk Node Root)
-    (accepted : Option (RecoveryProposal Node Root)) (sourceProposal : Option (Blk Node Root))
-    (committee : Finset Node) (s : Time) (Vm Vp : Finset (GoldfishVote Node Root))
-    (X1 X2 : Finset (Attestation Node Root))
-    (pfFreeze processedF : Finset (Blk Node Root)) (H : SigningHistory Node Root) :
+    state's `(J, h_j)`, `(F, h_F)` and certificate knowledge, all read off
+    `actionState` (rendering decision 6). The inputs are the round's records, in the
+    order the wiring holds them, each said above its binder. -/
+def recoveryAction [Omega Node Root]
+    -- the acting validator, the round, and the reading — the wiring calls this at `a_r`
+    (i : Node) (r : Nat) (t : Time)
+    -- `Σ_{u,act}^r`, the action state: the store under the activation filter at this reading
+    (actionState : Store Node Root)
+    -- the round's stable root (Definition 41), as the records hold it
+    (stableRoot : Blk Node Root)
+    -- the round's accepted distinguished proposal, `none` on every failure path
+    (acceptedProposal : Option (RecoveryProposal Node Root))
+    -- Definition 47's source proposal, from round `r − 1`
+    (sourceProposal : Option (Blk Node Root))
+    -- the evaluated first slot's committee, and that slot's vote phase `d_r + Δ`,
+    -- which the TSQ views and the head walk both key on
+    (committee : Finset Node) (firstSlotVoteTime : Time)
+    -- `V⁻` and `V⁺` (Definition 38): the support-freeze view and the action-time view
+    (votesAtSupportFreeze votesAtAction : Finset (GoldfishVote Node Root))
+    -- the two late grade views, as `RoundState` holds them
+    (attsAtRoundStartPlusΔ attsAtRoundStartPlus2Δ : Finset (Attestation Node Root))
+    -- finalized roots whose evidence was processed by the grade-0 freeze (Definition 46's
+    -- veto counts these) and by this reading
+    (processedFinalizedAtFreeze processedFinalizedAtAction : Finset (Blk Node Root))
+    -- `H_i`, Definition 12's durable signing history
+    (history : SigningHistory Node Root) :
     Attestation Node Root × SigningHistory Node Root :=
-  let Ract := actionRoot Sact Rstable accepted X1 r processedF
-  let outs := officialConfirmation Sact Rstable Ract committee s Vm Vp X2 r
-    pfFreeze processedF
-  match recoveryContext Sact t outs.C sourceProposal with
+  let Ract := actionRoot actionState stableRoot acceptedProposal
+    attsAtRoundStartPlusΔ r processedFinalizedAtAction
+  let outs := officialConfirmation actionState stableRoot Ract committee
+    firstSlotVoteTime votesAtSupportFreeze votesAtAction attsAtRoundStartPlus2Δ r
+    processedFinalizedAtFreeze processedFinalizedAtAction
+  match recoveryContext actionState t outs.C sourceProposal with
   | some ctx =>
       fgVote
         (i := i) (r := r)
         (head := outs.head)      -- Definition 46's head: `Q_u^r`, or the fallback
-        (J := Sact.J) (h_j := Sact.h_j) (F := Sact.F)
-        (h_F := Sact.h_F)        -- read off the action state — rendering decision 6
-        (hasJC := Sact.hasJC)    -- likewise
+        (J := actionState.J) (h_j := actionState.h_j) (F := actionState.F)
+        (h_F := actionState.h_F) -- read off the action state — rendering decision 6
+        (hasJC := actionState.hasJC)    -- likewise
         (C := some ctx.C)        -- the confirmation `Q_i^r`, Definition 48's ceiling
         (k := ctx.k) (T := ctx.T) (ν := ctx.ν)
         (hC := ctx.k)            -- `σ_a[C_i].h = k` in both Definition 47 branches
-        (H := H)
+        (H := history)
   | none =>
       fgVote
         (i := i) (r := r)
         (head := outs.head)      -- a fallback head may accompany the empty pair
-        (J := Sact.J) (h_j := Sact.h_j) (F := Sact.F)
-        (h_F := Sact.h_F) (hasJC := Sact.hasJC)
+        (J := actionState.J) (h_j := actionState.h_j) (F := actionState.F)
+        (h_F := actionState.h_F) (hasJC := actionState.hasJC)
         (C := ⊥)                 -- no official confirmation: the pair stays empty
         (k := 0) (T := ⊥) (ν := false) (hC := 0)   -- unread once `C = ⊥`
-        (H := H)                 -- the finality rule still runs (Definition 46's last line)
+        (H := history)           -- the finality rule still runs (Definition 46's last line)
 
 end
 
