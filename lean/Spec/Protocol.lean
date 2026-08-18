@@ -224,10 +224,10 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- relay, so nothing else is folded here
             let store' :=
               match prop with
-              | some p => ((ancestors p.B).reverse).foldl onBlock st.store
+              | some p => ((ancestors p.block).reverse).foldl onBlock st.store
               | none => st.store
             let gv' := match prop with
-              | some p => st.gvotes ∪ p.votes
+              | some p => st.gvotes ∪ p.carriedVotes
               | none => st.gvotes
             let Svote := activationFiltered store' st.storeAtPrevSGFGVote
             let pf := processedFinalized store'
@@ -238,11 +238,11 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- preceding vote phase's votes counted, the walk in the aged tree with the
             -- proposal-path exemption
             let view := match prop with
-              | some p => st.round.frozen ∪ p.votes
+              | some p => st.round.frozen ∪ p.carriedVotes
               | none => st.round.frozen
             let counted := view.filter fun v => v.slot + 4 * Δ = t
             let tree := agedTreeWithExemption Svote treeAtPrevSGFGVote
-              (vr.accepted.map fun p => p.B)
+              (vr.accepted.map fun p => p.block)
             let st' := { st with
               store := store', gvotes := gv',
               round := { st.round with
@@ -282,7 +282,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 hist := H',
                 atts := insert a st.atts,  -- its own head is in its own later views
                 storeAtPrevSGFGVote := st.store,          -- the next round's activation cutoff
-                prevProposal := st.round.accepted.map fun p => p.B },
+                prevProposal := st.round.accepted.map fun p => p.block },
               send := {.attestation a} }
           else if (t - roundStart) % (4 * Δ) = 3 * Δ then
             -- a slot-view freeze (Definition 28, `def:recovery-timing`, lines 171–177)

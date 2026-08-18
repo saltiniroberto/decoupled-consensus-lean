@@ -379,21 +379,21 @@ structure RecoveryProposal (Node Root : Type) where
   /-- The round `r` the proposal opens. -/
   round : Nat
   /-- `O_p^r`, the carried ordinary Goldfish blocks. -/
-  carried : Finset (Blk Node Root)
+  carriedBlocks : Finset (Blk Node Root)
   /-- `V_{p,GF}^r`, "the proposer's set of raw Goldfish votes for the preceding slot" —
       the input of the proposal-view merge. -/
-  votes : Finset (GoldfishVote Node Root)
+  carriedVotes : Finset (GoldfishVote Node Root)
   /-- `A_p^r`, the proposed root. -/
   proposedRoot : Blk Node Root
   /-- `tag_p^r ∈ {graded, ungraded}`, which branch of Definition 41's item 2 the
       proposer claims. "The tag binds the branch." -/
   graded : Bool
   /-- `W_p^r`, the grade-2 witness when the tag is graded; empty otherwise. -/
-  witness : Finset (Attestation Node Root)
+  grade2Witness : Finset (Attestation Node Root)
   /-- `Z_p^r`, the parent the proposal block extends. -/
-  Z : Blk Node Root
+  parent : Blk Node Root
   /-- `B_p^r`, the proposal block. -/
-  B : Blk Node Root
+  block : Blk Node Root
   /-- The proposal's signer — Definition 28's round proposer at this receiver. The
       discard-both rule compares signers. -/
   proposer : Node
@@ -408,7 +408,7 @@ variable [DecidableEq Node] [DecidableEq Root]
     proposer's own obligation and unobservable here; the rest is checked. Everything
     else Definition 41's items re-check per receiver. -/
 def RecoveryProposal.wellFormed (p : RecoveryProposal Node Root) (r : Nat) : Prop :=
-  p.round = r ∧ p.proposedRoot ⪯ p.Z ∧ p.B.parent = some p.Z
+  p.round = r ∧ p.proposedRoot ⪯ p.parent ∧ p.block.parent = some p.parent
 
 instance (p : RecoveryProposal Node Root) (r : Nat) : Decidable (p.wellFormed r) :=
   inferInstanceAs (Decidable (_ ∧ _ ∧ _))
@@ -532,16 +532,17 @@ def stableRoot (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
       { root := Svote.R, graded := false, accepted := none }
   if let some p := prop then
     let item1 :=
-      (L ⪯ p.proposedRoot ∧ p.proposedRoot ⪯ p.Z ∧ Svote.R ⪯ p.Z) ∨
-      (p.proposedRoot ⪯ Svote.R ∧ p.proposedRoot ≠ Svote.R ∧ Svote.R ⪯ p.Z ∧ Svote.R = Svote.F ∧ L ⪯ p.Z)
+      (L ⪯ p.proposedRoot ∧ p.proposedRoot ⪯ p.parent ∧ Svote.R ⪯ p.parent) ∨
+      (p.proposedRoot ⪯ Svote.R ∧ p.proposedRoot ≠ Svote.R ∧ Svote.R ⪯ p.parent ∧
+        Svote.R = Svote.F ∧ L ⪯ p.parent)
     let item2 :=
       (p.graded = true ∧ G1 X1 r p.proposedRoot ∧ ConflictFree processedF p.proposedRoot ∧
-        ValidG2Witness p.witness r p.proposedRoot) ∨
+        ValidG2Witness p.grade2Witness r p.proposedRoot) ∨
       (p.graded = false ∧ p.proposedRoot = Svote.R)
     let Rv := chainMax (chainMax p.proposedRoot L) Svote.R
     let item3 :=
-      Rv ∈ agedTreeWithExemption Svote witnesses (some p.B) ∧
-      p.B ∈ agedTreeWithExemption Svote witnesses (some p.B)
+      Rv ∈ agedTreeWithExemption Svote witnesses (some p.block) ∧
+      p.block ∈ agedTreeWithExemption Svote witnesses (some p.block)
     if item1 ∧ item2 ∧ item3 then
       { root := Rv, graded := Rv ≠ Svote.R, accepted := some p }
     else fallback
@@ -577,8 +578,8 @@ def actionRoot (Sact : Store Node Root) (Rvote : Blk Node Root)
       some Rvote
     else none
   if let some p := accepted then
-    if Rvote ⪯ p.B ∧ Sact.R ⪯ p.B then
-      if p.B ∈ candidateTree Sact then admit   -- case 3, with the proposal in play
+    if Rvote ⪯ p.block ∧ Sact.R ⪯ p.block then
+      if p.block ∈ candidateTree Sact then admit   -- case 3, with the proposal in play
       else admit                               -- case 1: evicted proposal, root ancestry holds
     else none                                  -- case 2: off-path root
   else admit                                   -- case 1: no accepted proposal
