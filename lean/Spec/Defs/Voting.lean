@@ -298,7 +298,8 @@ def SGEquivocation (a b : Attestation Node Root) : Bool :=
   decide (a.validator = b.validator ∧ a.round = b.round ∧ a.head ≠ b.head ∧
     (a.head ≠ ⊥ ∨ b.head ≠ ⊥))
 
-/-- Definition 34, second paragraph (lines 508–511): "Round `r > 0` grades exactly the
+/-- Definition 34 (`def:sg-head`), second paragraph (lines 508–511): "Round `r > 0`
+    grades exactly the
     heads signed in round `r − 1`. Older and newer heads are ineligible. The first
     recovery round has an empty eligible batch." `X` is a view: the signed attestations
     the validator can see, per Definition 28 (`def:recovery-timing`)'s four snapshots,
@@ -316,7 +317,8 @@ def equivocatesIn (i : Node) (X : Finset (Attestation Node Root)) (r : Nat) : Bo
   else decide (∃ a ∈ X, ∃ b ∈ X, a.validator = i ∧ a.round = r - 1 ∧
     SGEquivocation a b)
 
-/-- Definition 34's normative signing condition (lines 496–503): "An honest validator
+/-- Definition 34 (`def:sg-head`), the normative signing condition (lines 496–503):
+    "An honest validator
     puts a head in that field only when `S_{i,act}^r ⪯ B` and `B` is viable in
     `Σ_{i,act}^r`."
 

@@ -80,7 +80,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
       match Rounds.roundAt t with
       | some r =>
           if t = Rounds.actionTime r then
-            -- the round's SG/FG action (Definition 28, lines 186–191): sign the one
+            -- the round's SG/FG action (Definition 28, `def:recovery-timing`,
+            -- lines 186–191): sign the one
             -- combined attestation, history updated before the send
             let (a, H') := ordinaryVote st.store t i r ⊥ 0 false st.hist
             { state := { st with hist := H' }, send := {.attestation a} }

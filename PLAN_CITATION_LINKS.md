@@ -70,6 +70,17 @@ No marketplace publishing. Two supported installs, documented in a short
 The machine-local step actually performed on this machine goes in `CONTEXT_LOCAL.md`
 (gitignored), not in CONTEXT.md.
 
+## What gets linked, as policy
+
+The extension links **label-carrying citations only** — the label is what resolves the
+target file, and it is also what `make cites` keys on. Two consequences, adopted with
+this plan (2026-08-18): any citation that states line numbers must carry its label on the
+same line, so it is both checkable and clickable — the label-less ones were fixed when
+this was decided; and two things stay plain text by design: label-less re-mentions
+("Definition 12 makes the write part of the rule") next to a fully-cited occurrence, and
+the per-line figure comments (`-- line 531`) and per-case sub-ranges inside a definition
+whose own docstring carries the labelled span citation, which anchors them.
+
 ## Verification
 
 1. `make citation-links` produces the JSON; spot-check three labels against the `.tex`
