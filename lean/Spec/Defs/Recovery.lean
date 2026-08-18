@@ -30,7 +30,7 @@ the no-source-proposal branch. Everything here is a pure function over explicit 
    finality pair from root selection unless a block accepted by the preceding action
    cutoff `a_{r−1}` records it, and says the filter "is therefore a fixed function of the
    store at `a_{r−1}`" while "only the store maximum and block tree can change" within
-   the round. So `activationFiltered cur snap` keeps the current tree, state map and
+   the round. So `cur.withJustificationAndFinalityFrom snap` keeps the current tree, state map and
    `hmax` and takes `(J, h_j, F)` from the snapshot — the store held at `a_{r−1}`, whose
    own selection fields are exactly the greatest pairs recorded by blocks accepted by
    then.
@@ -162,17 +162,79 @@ end
 section
 variable [DecidableEq Node] [DecidableEq Root] [Electorate Node]
 
-/-- Definition 30 (`def:activation-filter`, lines 257–294): "a justification or finalized
-    pair is excluded from the greatest-justification and greatest-finalized selection of
-    every round-`r` state … unless some block that was received and accepted by `a_{r−1}`
-    has a derived state recording that pair", and "the filter is therefore a fixed
-    function of the store at `a_{r−1}`" while "only the store maximum and block tree can
-    change between" the round's states. Rendered as that fixed function — rendering
-    decision 1: the per-round state keeps the current tree, map and `hmax` and takes its
-    selection fields `(J, h_j, F)` from `snap`, the store held at `a_{r−1}`. `hmax`, the
-    viable subtree and the walk-from block `R` are then "computed from the filtered
-    selection", which is what the record update gives. -/
-def activationFiltered (cur snap : Store Node Root) : Store Node Root :=
+/-- Definition 30 (`def:activation-filter`, lines 257–294) — the paper's *activation
+    filter*: material from the current store, verdicts (`J`, `h_j`, `F`) from the store
+    at the previous SG/FG vote.
+
+    **The paper's text, verbatim:**
+
+    > A finality outcome takes effect in a validator's round-`r` selection, vote, and
+    > action states when its evidence was processed by that validator's preceding-round
+    > action cutoff `a_{r−1}`.
+    >
+    > For the first counted recovery round, the preceding action cutoff is the relay
+    > point of Definition 53 (`def:relay-frontier`): every pre-window object has crossed
+    > it, so the first round's activation filter and the aged viability test below are
+    > total there, and the one-round staggering bound has its base case at that cutoff.
+    >
+    > This is implemented in the derivation, not merely asserted: the three per-round
+    > states are derived by running the ordinary fork-choice derivation with the
+    > *activation filter*: a justification or finalized pair is excluded from the
+    > greatest-justification and greatest-finalized selection of every round-`r` state —
+    > and treated as evidence — unless some block that was received *and accepted* by
+    > `a_{r−1}` has a derived state recording that pair. Both conditions are fixed once
+    > `a_{r−1}` has passed: receipt times are the store's `r_S` values, and a block
+    > queued behind missing ancestry at the cutoff does not activate the pair this round
+    > even if its ancestry arrives mid-round — honest relay carries required ancestry
+    > with every block (Assumption 12, `ass:recovery-goldfish`), so for honestly relayed
+    > blocks receipt and acceptance coincide. The filter is therefore a fixed function
+    > of the store at `a_{r−1}`. The filtered derivation is the algorithm of
+    > Definition 26 (`def:finality-root`) with this one added selection guard; `hmax`,
+    > the viable subtree, and the Simplex root are all computed from the filtered
+    > selection. All other processing is unchanged.
+    >
+    > In plain words, newly learned finality steers selection only from the next round;
+    > Remark 9 (`rem:activation-stagger`) below records the two consequences used
+    > throughout.
+
+    **The same text, in this file's terminology** — activation filter → the
+    justification-and-finality substitution, action → SG/FG vote, root → walk-start:
+
+    > A finality outcome takes effect in a validator's round-`r` selection, vote, and
+    > SG/FG-vote states when its evidence was processed by that validator's
+    > preceding-round SG/FG-vote cutoff `a_{r−1}`.
+    >
+    > For the first counted recovery round, the preceding SG/FG-vote cutoff is the relay
+    > point of Definition 53: every pre-window object has crossed it, so the first
+    > round's substitution and the aged viability test below are total there, and the
+    > one-round staggering bound has its base case at that cutoff.
+    >
+    > This is implemented in the derivation, not merely asserted: the three per-round
+    > states are derived by running the ordinary fork-choice derivation with the
+    > *justification-and-finality substitution*: a justification or finalized pair is
+    > excluded from the greatest-justification and greatest-finalized selection of every
+    > round-`r` state — and treated as evidence — unless some block that was received
+    > *and accepted* by `a_{r−1}` has a derived state recording that pair. Both
+    > conditions are fixed once `a_{r−1}` has passed: receipt times are the store's
+    > `r_S` values, and a block queued behind missing ancestry at the cutoff does not
+    > activate the pair this round even if its ancestry arrives mid-round — honest relay
+    > carries required ancestry with every block, so for honestly relayed blocks receipt
+    > and acceptance coincide. The substitution is therefore a fixed function of the
+    > store at `a_{r−1}`. The substituted derivation is the algorithm of Definition 26
+    > with this one added selection guard; `hmax`, the viable subtree, and the Simplex
+    > walk-start are all computed from the substituted verdicts. All other processing is
+    > unchanged.
+    >
+    > In plain words, newly learned finality steers selection only from the next round.
+
+    Rendered as the fixed function the definition itself names — rendering decision 1:
+    the per-round state keeps the current tree, map and `hmax` and takes its verdict
+    fields `(J, h_j, F)` from `snap`, the store held at `a_{r−1}`, whose own fields are
+    exactly the greatest pairs recorded by blocks accepted by then. `hmax`, the viable
+    subtree and the walk-start are then "computed from the filtered selection", which is
+    what the record update gives. -/
+def Store.withJustificationAndFinalityFrom (cur snap : Store Node Root) :
+    Store Node Root :=
   { cur with J := snap.J, h_j := snap.h_j, F := snap.F }
 
 /-- Rendering decision 3: the finalized roots whose evidence this store has processed —

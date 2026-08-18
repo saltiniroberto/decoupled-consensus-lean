@@ -199,7 +199,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- X⁰ snapshot, fresh records. The proposer branch (`alg:recovery-action`
             -- lines 5–7) is not rendered — module header. The strict selection cutoff
             -- (Definition 28's boundary exception) is the pool at this reading.
-            let sel := activationFiltered st.store st.storeAtPrevSGFGVote
+            let sel := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
             { state := { st with round :=
                 { r := r,
                   attsAtRoundStartMinusΔ := st.nextAttsAtRoundStartMinusΔ,
@@ -241,7 +241,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             let gv' := match prop with
               | some p => st.gvotes ∪ p.carriedGoldfishVotes
               | none => st.gvotes
-            let Svote := activationFiltered store' st.storeAtPrevSGFGVote
+            let Svote := store'.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
             let pf := processedFinalized store'
             let L := lowerWalkStart st.round.selSnap Svote treeAtPrevSGFGVote
               st.round.attsAtRoundStartMinusΔ attsAtRoundStartPlusΔ r pf
@@ -279,7 +279,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- the round's SG/FG action (Figure 5, `alg:recovery-action`, steps 15–21)
             let (a, H') := castSGFGVote
               (i := i) (r := r) (t := t)
-              (filteredStoreAtSGFGVote := activationFiltered st.store st.storeAtPrevSGFGVote)
+              (filteredStoreAtSGFGVote := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
               (stableWalkStart := st.round.stableWalkStart)
               (acceptedProposal := st.round.accepted)
               (sourceProposal := st.prevProposal)
@@ -305,7 +305,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
           else if (t - roundStart) % (4 * Δ) = 0 then
             -- a later slot boundary (t = roundStart was caught above): Definition 29's
             -- re-derivation
-            let cur := activationFiltered st.store st.storeAtPrevSGFGVote
+            let cur := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
             let (walkStart', g') := rederive cur (processedFinalized st.store)
               st.round.stableWalkStart st.round.graded
             { state := { st with round :=
@@ -317,7 +317,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- current candidate tree (Definition 32, `def:walk-standing`; Remark 10,
             -- `rem:aged-scope`)
             if i ∈ Committees.committee t then
-              let cur := activationFiltered st.store st.storeAtPrevSGFGVote
+              let cur := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
               let counted := st.round.frozen.filter fun v => v.slot + 4 * Δ = t
               let v := recoveryGoldfishVote i t counted (candidateTree cur) st.round.stableWalkStart
               { state := { st with gvotes := insert v st.gvotes }, send := {.gVote v} }
