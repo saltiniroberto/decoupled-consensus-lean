@@ -182,7 +182,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
   | .tick =>
       match Rounds.roundAt t with
       | some r =>
-          let d := Rounds.start r
+          let roundStart := Rounds.start r
           let Δ := Rounds.Δ
           -- the X⁻ snapshot for round r + 1, one bound before its proposal time
           -- (Definition 28, `def:recovery-timing`, lines 180–186); a pre-update,
@@ -190,7 +190,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
           -- be a freeze, boundary or vote phase of the current round
           let st := if t + Δ = Rounds.start (r + 1) then { st with nextAttsAtRoundStartMinusΔ := st.atts }
             else st
-          if t = d then
+          if t = roundStart then
             -- the round opens: Σ_sel under the activation filter (Definition 30), the
             -- X⁰ snapshot, fresh records. The proposer branch (`alg:recovery-action`
             -- lines 5–7) is not rendered — module header. The strict selection cutoff
@@ -202,7 +202,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                   attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅, Vm := ∅, frozen := st.round.frozen,
                   root := sel.R, graded := false, accepted := none, pfFreeze := ∅ } },
               send := ∅ }
-          else if t = d + Δ then
+          else if t = roundStart + Δ then
             -- the first slot's vote time (Figure 5, `alg:recovery-action`, steps 8–12)
             let attsAtRoundStartPlusΔ := st.atts
             let wit := st.snap.T             -- Definition 31's aging witnesses
@@ -249,7 +249,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               { state := { st' with gvotes := insert v st'.gvotes },
                 send := {.gVote v} }
             else { state := st', send := ∅ }
-          else if t = d + 2 * Δ then
+          else if t = roundStart + 2 * Δ then
             -- the grade-0 freeze and the support freeze (Definition 28,
             -- `def:recovery-timing`, line 187; Definition 38, `def:tsq-views`): X², V⁻,
             -- and the finalized evidence processed by the freeze, which Definition 46's
@@ -266,8 +266,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               (Rstable := st.round.root)
               (accepted := st.round.accepted)
               (src := st.prevProposal)
-              (committee := Committees.committee (d + Δ))
-              (s := d + Δ)                 -- the evaluated first slot's vote phase
+              (committee := Committees.committee (roundStart + Δ))
+              (s := roundStart + Δ)                 -- the evaluated first slot's vote phase
               (Vm := st.round.Vm)
               (Vp := st.gvotes)            -- V⁺: every delivery due by a_r is processed
               (X1 := st.round.attsAtRoundStartPlusΔ) (X2 := st.round.attsAtRoundStartPlus2Δ)
@@ -280,12 +280,12 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                 snap := st.store,          -- the next round's activation cutoff
                 prevProposal := st.round.accepted.map fun p => p.B },
               send := {.attestation a} }
-          else if (t - d) % (4 * Δ) = 3 * Δ then
+          else if (t - roundStart) % (4 * Δ) = 3 * Δ then
             -- a slot-view freeze (Definition 28, `def:recovery-timing`, lines 171–177)
             { state := { st with round := { st.round with frozen := st.gvotes } },
               send := ∅ }
-          else if (t - d) % (4 * Δ) = 0 then
-            -- a later slot boundary (t = d was caught above): Definition 29's
+          else if (t - roundStart) % (4 * Δ) = 0 then
+            -- a later slot boundary (t = roundStart was caught above): Definition 29's
             -- re-derivation
             let cur := activationFiltered st.store st.snap
             let (root', g') := rederive cur (processedFinalized st.store)
