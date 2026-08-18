@@ -712,7 +712,9 @@ structure VoteRoundOutcome (Node Root : Type) where
   /-- The accepted distinguished proposal, `none` on every failure path. -/
   accepted : Option (RecoveryProposal Node Root)
 
-/-- Definition 41 (`def:stable-root`, lines 1123–1191). `prop` is the recognized
+/-- Definition 41 (`def:stable-root`, lines 1123–1191) — the paper's *stable root*, named
+    here for its primary consumer: the round's Goldfish walks start from its output, and
+    the SG/FG vote reuses it through Definition 42's admission. `prop` is the recognized
     distinguished proposal after Definition 43's wrapper (timely, unique winner), or
     `none`; `witnesses` ages both membership tests (rendering decision 2). The three
     acceptance items, in the definition's own order:
@@ -847,7 +849,7 @@ structure VoteRoundOutcome (Node Root : Type) where
     In plain words: G3 fixed the receiver's lower bound, G2 is the proposer's witness,
     G1 is the receiver's upper check, and a receiver never moves behind its lower root
     and never takes an ungraded root it did not already select. -/
-def stableWalkStart (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
+def goldfishWalkStart (Svote : Store Node Root) (witnesses : Finset (Blk Node Root))
     (L : Blk Node Root) (X1 : Finset (Attestation Node Root)) (r : Nat)
     (processedF : Finset (Blk Node Root)) (prop : Option (RecoveryProposal Node Root)) :
     VoteRoundOutcome Node Root :=

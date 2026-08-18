@@ -81,7 +81,7 @@ validator has received by a tick is in its pools at that tick; nothing else is.
 | `Σ_{u,vote}^r` | `voteSnap` | the vote state |
 | `Σ_{u,act}^r` | `filteredStoreAtSGFGVote` | the action state, derived at the `castSGFGVote` call |
 | `R` (Fig. 2) | `Store.walkStartFromFGVotes` | the walk-from block; the paper's Simplex root |
-| `R_{u,vote}^r` | `stableWalkStart` | the vote-time stable walk-start — Definition 41 |
+| `R_{u,vote}^r` | `goldfishWalkStart` | the vote-time stable walk-start — Definition 41 |
 | `H_i` | `hist` | the durable signing history |
 
 The convention is `CLAUDE.md`'s: a symbol may become a word; the docstring opens with the
@@ -124,10 +124,12 @@ structure RoundState (Node Root : Type) where
   votesAtSupportFreeze : Finset (GoldfishVote Node Root)
   /-- The current frozen slot view, snapshotted at each slot-view freeze (`+3Δ`). -/
   frozen : Finset (GoldfishVote Node Root)
-  /-- `R_{u,vote}^r`, the round's stable walk-start — the paper's "stable root", fixed at
-      the vote time (Definition 41), re-derived at slot boundaries when Definition 29 says
-      so. The dual text is at `stableWalkStart`'s definition in `Spec/Defs/Recovery.lean`. -/
-  stableWalkStart : Blk Node Root
+  /-- `R_{u,vote}^r`, the paper's "stable root", named here for its primary consumer: the
+      round's Goldfish walks start from it. Fixed at the vote time (Definition 41),
+      re-derived at slot boundaries when Definition 29 says so; the SG/FG vote reuses it
+      through Definition 42's admission rather than deriving its own. The dual text is at
+      `goldfishWalkStart`'s definition in `Spec/Defs/Recovery.lean`. -/
+  goldfishWalkStart : Blk Node Root
   /-- The root's classification for Definition 29: `false` exactly when it is the vote
       state's own Simplex selection. -/
   graded : Bool
@@ -210,7 +212,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
                   attsAtRoundStartPlus2Δ := ∅,
                   votesAtSupportFreeze := ∅,
                   frozen := st.round.frozen,
-                  stableWalkStart := sel.walkStartFromFGVotes,
+                  goldfishWalkStart := sel.walkStartFromFGVotes,
                   graded := false,
                   accepted := none,
                   processedFinalizedAtFreeze := ∅ } },
@@ -245,7 +247,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             let pf := processedFinalized store'
             let L := lowerWalkStart st.round.selSnap Svote treeAtPrevSGFGVote
               st.round.attsAtRoundStartMinusΔ attsAtRoundStartPlusΔ r pf
-            let vr := stableWalkStart Svote treeAtPrevSGFGVote L attsAtRoundStartPlusΔ r pf prop
+            let vr := goldfishWalkStart Svote treeAtPrevSGFGVote L attsAtRoundStartPlusΔ r pf prop
             -- Definition 45: the frozen slot view merged with the carried view, the
             -- preceding vote phase's votes counted, the walk in the aged tree with the
             -- proposal-path exemption
@@ -259,7 +261,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               store := store', gvotes := gv',
               round := { st.round with
                 attsAtRoundStartPlusΔ := attsAtRoundStartPlusΔ, voteSnap := Svote,
-                stableWalkStart := vr.walkStart,
+                goldfishWalkStart := vr.walkStart,
                 graded := vr.graded, accepted := vr.accepted } }
             if i ∈ Committees.committee t then
               let v := recoveryGoldfishVote i t counted tree vr.walkStart
@@ -281,7 +283,7 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
               (i := i) (r := r) (t := t)
               (filteredStoreAtSGFGVote :=
                 st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote)
-              (stableWalkStart := st.round.stableWalkStart)
+              (stableWalkStart := st.round.goldfishWalkStart)
               (acceptedProposal := st.round.accepted)
               (sourceProposal := st.prevProposal)
               (committee := Committees.committee (roundStart + Δ))
@@ -308,9 +310,9 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             -- re-derivation
             let cur := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
             let (walkStart', g') := rederive cur (processedFinalized st.store)
-              st.round.stableWalkStart st.round.graded
+              st.round.goldfishWalkStart st.round.graded
             { state := { st with round :=
-                { st.round with stableWalkStart := walkStart', graded := g' } },
+                { st.round with goldfishWalkStart := walkStart', graded := g' } },
               send := ∅ }
           else if Rounds.isGoldfishVoteTime r t then
             -- a later slot's vote (Definition 28, `def:recovery-timing`,
@@ -320,7 +322,8 @@ def reaction (i : Node) (t : Time) (st : ValidatorState Node Root)
             if i ∈ Committees.committee t then
               let cur := st.store.withJustificationAndFinalityFrom st.storeAtPrevSGFGVote
               let counted := st.round.frozen.filter fun v => v.slot + 4 * Δ = t
-              let v := recoveryGoldfishVote i t counted (candidateTree cur) st.round.stableWalkStart
+              let v := recoveryGoldfishVote i t counted (candidateTree cur)
+                st.round.goldfishWalkStart
               { state := { st with gvotes := insert v st.gvotes }, send := {.gVote v} }
             else { state := st, send := ∅ }
           else { state := st, send := ∅ }
@@ -339,7 +342,7 @@ def protocol : Protocol Node (StoreMsg Node Root) (ValidatorState Node Root) Emp
                  attsAtRoundStartPlusΔ := ∅, attsAtRoundStartPlus2Δ := ∅,
                  selSnap := Store.gen, voteSnap := Store.gen, votesAtSupportFreeze := ∅,
                  frozen := ∅,
-                 stableWalkStart := .genesis, graded := false, accepted := none,
+                 goldfishWalkStart := .genesis, graded := false, accepted := none,
                  processedFinalizedAtFreeze := ∅ } }
   step i t _ st e res := res = reaction i t st e
   total i t _ st e := ⟨reaction i t st e, rfl⟩
