@@ -2562,10 +2562,57 @@ every `.lean` file, no unresolved label, spans landing on the same line as their
 line into the environment, which is the more useful target. What stays unverified until
 the extension is installed is only that the links render and click through in the editor.
 
+## 2026-08-18 — the recovery machinery, rendered and wired; **build still red**
+
+Roberto: "add the recovery logic in", decisions mine, from the paper. Landed as
+`Spec/Defs/Recovery.lean` (Definitions 29–32, 37–44, 46, and Definition 47 in full) plus
+the wiring: `StoreMsg` gained `proposal`, and `Spec/Protocol.lean` now runs Definition
+28's whole schedule — the reaction is `alg:recovery-action` phase by phase (X⁻/X⁰/X¹/X²
+snapshots, proposal recognition and merge, stable root, support and slot-view freezes,
+slot-boundary re-derivation, later-slot walks, and `recoveryAction` at `a_r`). The
+placeholder call to `ordinaryVote` is gone from the protocol; `ordinaryContext`/
+`ordinaryVote` stay in `Spec/Defs/Voting.lean` as the hybrid's storewise rendering of
+Definition 47's fallback branch, no longer called by the protocol — whether they should
+stay is Roberto's call.
+
+The rendering decisions, each recorded in the module header of `Recovery.lean`:
+
+1. Activation filter (Def 30) = snapshot substitution: per-round states are
+   `{cur with J, h_j, F := snap}` where `snap` is the store held at `a_{r−1}`.
+2. Aging witnesses (Def 31) = `snap.T`, acceptance by the cutoff standing in for
+   receipt-and-acceptance (no receipt times in the store).
+3. "Processed finalized evidence" = `processedFinalized S`, the `F` fields of recorded
+   chain states.
+4. `deepest` = depth-maximal elements, then `Ω` — `getConfirmed`'s totalization device;
+   unique on the chains the paper's lemmas provide.
+5. `Finset` GHOST (`ghostWalk`) tie-break = weight, then `hash(·)`, then `Ω`
+   (`Finset.toList` is noncomputable, so Definition 46's walk could not reuse the
+   list-based `ghostFrom`).
+6. **The two open decisions are closed from the store**: `Store.h_F` (the `h_F` of
+   recorded states naming `S.F`, joined by `sup`) and `Store.hasJC` (some recorded state
+   carries the pair `(S.J, S.h_j)` — Definition 21's certificate is on that state's own
+   chain). `recoveryAction` passes both; `fgVote`'s explicit inputs are unchanged.
+7. `Committees` and `ProposerSelection` are classes (both outside the paper's scope, like
+   `Electorate` and `Omega`). `ProposerSelection.winner` carries `winner_mem` as a class
+   `Prop` field.
+
+Known deviations, all from the store recording no receipt times: Definition 28's strict
+selection cutoff, Definition 41's timeliness test, and Definition 51's retransmission
+policy collapse to pool membership at the reading. Also unrendered: the proposer branch
+(`alg:recovery-action` lines 5–7 — block production), and Definition 43's carried-block
+fold beyond the proposal block's own ancestry (honest relay re-delivers them as ordinary
+messages).
+
+The build stays red below `Analysis/Vocabulary.lean`, per stop-at-the-spec; the earlier
+sketch still applies, and two items are added to it: `deliveredBlocks`' match needs a
+`.proposal` no-op arm, and the walkers' tick arm now touches the pools and `round` but
+still never the store on non-action ticks — on action ticks `snap` changes too, which the
+store invariants do not read.
+
 ## Next
 
-1. **Fix the statement layer over `ValidatorState`** (sketch in the entry above), on the
-   word.
+1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
+   entry, plus the two additions in the recovery entry above), on the word.
 2. **Review the `HashInjective` change to Theorem 10's statement** (entry above). It is the
    one decision taken without agreement, and the alternative is recorded.
 2. Flip MAPPING.md's `hft:` rows and regenerate `mapping.html`, on instruction; refresh

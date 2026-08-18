@@ -1,4 +1,4 @@
-import Spec.Defs.Voting
+import Spec.Defs.Recovery
 
 /-!
 # Message receipt — the store's entry point
@@ -41,6 +41,11 @@ inductive StoreMsg (Node Root : Type) where
   | attestation (a : Attestation Node Root)
   /-- A raw Goldfish vote, broadcast at a slot's vote phase. -/
   | gVote (v : GoldfishVote Node Root)
+  /-- A recovery round proposal (Definition 43, `def:recovery-proposal`). Receipt files
+      it; its carried view merges into chain state only when the receiver accepts it at
+      its vote time — Definition 43's "merge only the accepted proposal's ordinary
+      Goldfish view" — which is `Spec/Protocol.lean`'s business. -/
+  | proposal (p : RecoveryProposal Node Root)
   deriving DecidableEq
 
 section
@@ -55,6 +60,7 @@ def receive (S : Store Node Root) (m : StoreMsg Node Root) : Store Node Root :=
   | .block B => onBlock S B
   | .attestation _ => S
   | .gVote _ => S
+  | .proposal _ => S
 
 end
 
