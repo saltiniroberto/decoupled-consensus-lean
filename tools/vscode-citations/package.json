@@ -1,0 +1,35 @@
+{
+  "name": "decoupled-consensus-citations",
+  "displayName": "Decoupled-consensus paper citations",
+  "description": "Ctrl+click a paper citation in a Lean docstring to open the cited .tex at the cited line.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "private": true,
+  "license": "SEE LICENSE IN README.md",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:lean4",
+    "onLanguage:lean",
+    "workspaceContains:.citation-links.json"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "decoupledCitations.open",
+        "title": "Open the cited paper line",
+        "category": "Paper citations"
+      },
+      {
+        "command": "decoupledCitations.reload",
+        "title": "Reload the citation label map",
+        "category": "Paper citations"
+      }
+    ]
+  }
+}
