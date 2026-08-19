@@ -127,7 +127,8 @@ end Thresholds
     prolonged nonfinality every `K`-th height becomes nonjustifiable, once finality lags
     more than `D` heights behind — the justify event tests `¬((K ∣ h) ∧ (h − h_F > D))`
     inline; there is no stored flag. `R` is the round length: a round is a group of `R`
-    consecutive slots. -/
+    consecutive slots. `Δ` strictly bounds delivery between honest validators: an object
+    sent at time `t` reaches every honest validator before `t + Δ`. -/
 class Params where
   /-- Every `K`-th height is eligible to be nonjustifiable. -/
   K : Nat
@@ -135,6 +136,8 @@ class Params where
   D : Nat
   /-- The number of slots in a round. -/
   R : Nat
+  /-- The delivery bound. All scheduled times are multiples of it. -/
+  Δ : Nat
   /-- `K ≥ 2`. -/
   K_ge : 2 ≤ K
   /-- `D ≥ 1`. -/
@@ -142,6 +145,8 @@ class Params where
   /-- `R ≥ 1`, the draft's model-level bound. Its schedule needs `R ≥ 2`, stated where the
       schedule is rendered rather than strengthened here. -/
   R_ge : 1 ≤ R
+  /-- `Δ > 0`. -/
+  Δ_pos : 0 < Δ
 
 /-- `round(s) = ⌊s/R⌋`, the round of slot `s`. Round `r` consists of slots
     `rR, …, rR + R − 1`, and its first slot is the round's *opening slot*. -/
