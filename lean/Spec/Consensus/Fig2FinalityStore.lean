@@ -68,8 +68,11 @@ class Omega (Validator : Type) where
   choose : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
 
 /-- The store (Definition 7 of the draft), in the draft's field order:
-    `Σ = (s, T, σ[·], F, J, h_j, h_max)` — written `S`, see the module header — plus the
-    one Definition 10 field Figure 2 already writes, `root_proposal[·]`. -/
+    `Σ = (s, T, σ[·], F, J, h_j, h_max)` — written `S`, see the module header — plus
+    Definition 10's timed extension `(t, head[·], equiv[·], root_proposal[·], sg_root[·],
+    action_root[·])`, the draft's `Σ += (…)`, landed field by field as Figures 2 and 4–6
+    consumed it. Initially the per-round maps are empty; the scheduled hooks fill each
+    round's entries, fixed after their scheduled writes. -/
 structure Store (Validator : Type) where
   /-- `s`, the current slot. -/
   s : Nat
@@ -102,6 +105,14 @@ structure Store (Validator : Type) where
       read by Figure 5's `get_walk_root`): per round, the SG root derived at `t_r + Δ`,
       `none` until that write. Fixed after it. -/
   sgRoot : Nat → Option (Block Validator)
+  /-- `action_root[·]` (Definition 10; written by Figure 6 at `a_r`): per round, the root
+      Figure 5's `get_action_root` derived there — the anchor of the round's SG and FG
+      outputs, which the draft's Section 6 will read. `none` until that write. -/
+  actionRoot : Nat → Option (Block Validator)
+  /-- `Σ.t` (Definition 10), the clock: the current time, set by every `on_tick`. Starts
+      below time 0 — the draft leaves the initial value unstated, and `on_tick`'s
+      precondition `Σ.t < t` must pass at `t = 0` — at `-1`, an arbitrary such value. -/
+  t : Int
 
 /-- `Σ.root_proposal[r]` as the draft reads it in Definitions 13–14 and Figure 5: the
     round's root proposal, `⊥` when no opening block has arrived *or* the first one carried
@@ -127,6 +138,8 @@ def Store.gen : Store Validator where
   head := fun _ _ => none
   equiv := fun _ _ => none
   sgRoot := fun _ => none
+  actionRoot := fun _ => none
+  t := -1
 
 /-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A *leaf* of `Σ.T` is an accepted
     block without accepted children — written `∀ C ∈ S.T, C.parent ≠ some L`. A block is

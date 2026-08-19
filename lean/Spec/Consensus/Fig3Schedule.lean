@@ -73,6 +73,22 @@ def actionTime (r : Nat) : Int := roundStart r + 6 * Δ
     but nothing here constrains `j`; Definitions 11 and 12 pass the four literals. -/
 def gradeInstant (r : Nat) (j : Int) : Int := roundStart r + j * Δ
 
+/-! ### The inversions Figure 6's dispatch reads
+
+`on_tick` tests "`t = 4Δs` for some slot `s`" and "`t = t_r` for some round `r`"; these
+recover the `s` and the `r`, `none` when the instant hits neither. The `t_r + Δ` and `a_r`
+tests go through `roundStartingAt` on a shifted instant. -/
+
+/-- The slot starting at instant `t` — the `s` with `t = 4Δs` — when there is one. -/
+def slotStartingAt (t : Int) : Option Nat :=
+  if 0 ≤ t ∧ t % (4 * (Δ : Int)) = 0 then some (t.toNat / (4 * Δ)) else none
+
+/-- The round starting at instant `t` — the `r` with `t = t_r = 4ΔRr` — when there is
+    one. -/
+def roundStartingAt (t : Int) : Option Nat :=
+  if 0 ≤ t ∧ t % (4 * (Δ : Int) * (R : Int)) = 0 then some (t.toNat / (4 * Δ * R))
+  else none
+
 end Schedule
 
 end Consensus

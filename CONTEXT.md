@@ -2788,6 +2788,44 @@ schedule's stronger `R ≥ 2` deferred to Figure 3's file), `round(·)`, `Block.
 - The root-proposal registration (lines 5–6) runs before the admission test, as the figure
   orders it: a rejected opening block still claims its round's entry.
 
+**Figures 3–6 are rendered** (same day), completing the draft's six figures. One commit
+each; every file header carries its rendering decisions. The subtree:
+
+    Model.lean                 §1 vocabulary + protocol constants (K, D, R, Δ), hash
+    Notation.lean              assignment macros, + a new two-level `Σ.head[r][i] ← e`
+    Fig1StateTransition.lean   Def 6 + the four transition routines
+    Fig2FinalityStore.lean     Defs 7–8 + the five store handlers; Store holds Def 10's
+                               timed fields too, landed field by field
+    Fig3Schedule.lean          Def 9 as vocabulary (Figure 3 is a diagram): openingSlot,
+                               slotStart, voteTime, roundStart t_r, actionTime a_r,
+                               gradeInstant Γ, and the dispatch inversions
+    Fig4SupportScores.lean     Defs 11–12: supporters H_j, equivocators E_j, the two
+                               score evaluators, grades G3–G0
+    Fig5RoundRoots.lean        Defs 13–15: proposal/lower/SG/walk/action roots, `deepest`
+    Fig6TimedStore.lean        on_tick and on_attestation
+
+The decisions worth re-finding:
+
+- **Instants are `Int`; slots, rounds, durations `Nat`.** Round 0's Γ⁻¹ is −Δ, and the
+  clock needs a pre-time-0 initial value (`Store.gen.t = −1`, arbitrary, documented) for
+  the `t = 0` tick to pass `assert Σ.t < t`. The round-`(r−1)` reads of Definition 11 go
+  through `prevHead`/`prevEquiv`, empty at `r = 0` by case rather than by truncation.
+- **`deepest`** = depth-maximal elements, ambient `Omega` picking — the old rendering's
+  totalization re-taken; unique on the one-chain sets Definition 12 argues for. Needs
+  `Mathlib.Data.Finset.Max` for `Finset.exists_max_image`.
+- **Figure 6's `propose_block` and the proposer test are parameters of `onTick`** — they
+  are §6's, which is `[To be drafted.]` in the pdf, as is §5 (Goldfish/confirmation, which
+  will instantiate `Omega` and consume `getHead`, `voteTime`'s siblings, and the
+  confirmation time).
+- The grades read `supportScores`' pair components directly (`.1`/`.2`), so each Def 11
+  expression has exactly one rendering.
+- A quotation gotcha for the notation layer: inside `{ v with f := … }` a newline ends the
+  field, so a multi-line RHS in a macro quotation needs wrapping parens.
+
+When §5 and §6 land in the draft: `Omega` gets its real definition, `getHead` its caller,
+`onTick`'s two parameters their owners, and the schedule's unrendered phase times
+(support freeze, slot-view freeze, confirmation) their consumers.
+
 ## Next
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
