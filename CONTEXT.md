@@ -2685,6 +2685,25 @@ three invented printed numbers in the rendered `\ref`s of the verbatim blocks
 (`lem:aged-walk-total` is Lemma 20, `cor:g3-chain` Corollary 2, `lem:no-forward-move`
 Lemma 35).
 
+## 2026-08-19 — strategy pivot: correctness over fidelity
+
+Roberto: fidelity to `latex-specs` no longer matters; what matters is that every definition is
+correct, and he is the judge of what correct means. The decisions, each his:
+
+- Strictly reactive for now: semantics change only on his explicit call, correctness work
+  happens where he points, no uninvited audits.
+- The fidelity apparatus — citations, dual texts, glossaries, `MAPPING.md`, `make cites` — is
+  frozen as the historical record. New and changed definitions cite nothing and carry
+  self-contained docstrings.
+- "A spec change stops at the spec" survives unchanged.
+- `consensus.pdf`, the human-controlled draft he will consult, is committed at the root
+  (`9e8ebd0`). No PDF tooling on this machine yet — the Read tool needs `pdftoppm`
+  (poppler-utils), and a scratchpad venv for `pypdf` fails on missing `python3-venv` — so
+  until that changes its content enters through Roberto's quotations.
+
+`CLAUDE.md` carries the new strategy section; the old "paper is the contract" section is
+retitled to what it now is, the frozen record's description.
+
 ## Next
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule

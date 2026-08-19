@@ -18,9 +18,33 @@ It is consulted on request. Where to read it, and what state it is in, are in th
 `REFERENCES_LOCAL.md` and `CONTEXT_LOCAL.md`. If you find yourself editing a file inside that
 other repository, you are in the wrong project.
 
-## The paper is the contract
+## Correctness is the contract now; the paper is the frozen record
 
-The source is the `latex-specs` **submodule** at the repository root, pinned at `9dd0bd9`
+Roberto, 2026-08-19. The strategy inverted: fidelity to `latex-specs` no longer matters.
+What matters is that every definition is correct, and Roberto is the judge of what correct
+means. Practically:
+
+- **Strictly reactive, for now.** Semantics change only on Roberto's explicit call, and
+  correctness work happens where he points. No uninvited correctness audits.
+- **The fidelity apparatus is frozen as the record.** Existing citations, dual texts,
+  glossaries and `MAPPING.md` stay as they are, and `make cites` stays green. **New and
+  changed definitions cite nothing** — no `latex-specs` citations, no dual texts — and carry
+  self-contained docstrings that say what the definition means. (One tooling edge: the
+  citation checker requires a `MAPPING.md` row for every `lem…` declaration in
+  `Analysis/Lemmas.lean`, so new statements of record should not take that prefix; fix the
+  tooling when this first bites.)
+- **`consensus.pdf`**, committed at the repository root, is the human-controlled draft
+  Roberto consults and quotes; it is a reference he invokes, not an authority to audit
+  against. It has no stable labels or line numbers, so nothing cites it. This machine
+  currently has no PDF tooling (`poppler-utils` would let the Read tool render it), so its
+  content enters through Roberto's quotations.
+- **"A spec change stops at the spec" survives unchanged** and matters more: correctness
+  fixes will change `Spec/` and redden statements of record, and what each statement should
+  become is exactly the judgment Roberto has reserved.
+
+## The old source, `latex-specs` — kept as the record
+
+The old source is the `latex-specs` **submodule** at the repository root, pinned at `9dd0bd9`
 (branch `labels-for-lean-citations`: `e4375c5` plus three same-line remark labels in the
 companion paper, added 2026-08-18), so `git submodule status` says which revision this Lean
 tracks. No line number differs from `e4375c5`, which is the revision the frozen first
