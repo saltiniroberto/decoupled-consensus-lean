@@ -7,6 +7,9 @@ import Spec.Fig1SlotReplay
 import Spec.HftFig2Store
 import Spec.Receive
 import Spec.Protocol
+import Spec.Consensus.Model
+import Spec.Consensus.Notation
+import Spec.Consensus.Fig1StateTransition
 
 /-!
 # The specification
@@ -32,7 +35,14 @@ Two files render no figure: `Receive.lean`, the message-receipt wiring — a blo
 is passed to `on_block` — and `Protocol.lean`, the node as a
 `Framework.StsMultisetLog.Protocol` instance.
 
-Present: healing's Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`),
+**`Spec/Consensus/` is a second, separate rendering**: the human-controlled draft
+`consensus.pdf` at the repository root, built figure by figure from 2026-08-19 under
+namespace `Consensus`. It shares nothing with the files above — not the base types, not
+the notation — so the rendering of record stays frozen while the draft's is written.
+`Model.lean` grows on demand as its figure files consume definitions;
+`Fig<n><Subject>.lean` names the draft's own figure numbering.
+
+Present from the old source: healing's Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`),
 the companion's Figure 2 (`hft:alg:store`), and the vocabulary those three need. Healing's
 Figure 3 (`alg:store`) is deliberately not rendered — the store above replaces it — and
 its Figures 4 (`alg:fork-choice-state`) and 5 (`alg:recovery-action`) are absent, as is

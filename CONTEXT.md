@@ -2725,6 +2725,48 @@ the strategy is strictly reactive.
 `CLAUDE.md` carries the new strategy section; the old "paper is the contract" section is
 retitled to what it now is, the frozen record's description.
 
+## 2026-08-19 — the draft's own rendering begins: `Spec/Consensus/`, Figure 1
+
+Roberto: code the new protocol too. The layout decisions, each agreed:
+
+- **A separate subtree, sharing nothing with the old rendering.** `lean/Spec/Consensus/`,
+  namespace `Consensus`, claimed by the existing `Spec.+` glob — no lakefile change. Nothing
+  is imported from the old `Spec/` files, not even the notation: the draft changed the base
+  types themselves (a block carries `proposal_root`), and anything shared would couple the
+  correctness work to the frozen record. The assignment macros are therefore *duplicated*
+  into `Spec/Consensus/Notation.lean`; they are protocol-free, so the copy carries no claim
+  that can drift.
+- **Figure-first, demand-driven model.** Start from Figure 1 and enrich `Model.lean` as
+  figures consume definitions, rather than modelling §1 up front. Every declaration in
+  `Model.lean` has a consumer in a figure file. Known cost: a later figure will occasionally
+  force a field onto an earlier structure.
+- **Scope is all six figures**, one at a time, one commit each: 1 State transition,
+  2 Finality store, 3 the round schedule (a timeline diagram — likely becomes timing
+  vocabulary, not a figure file), 4 Support scores, 5 Round-root functions on tick,
+  6 Timed store.
+- **Filenames carry the figure number**: `Fig<n><Subject>.lean`, subject from the caption.
+- **No citations.** The draft has no stable labels and is under revision; docstrings are
+  self-contained, and "Definition 6 of the draft" names the numbering as of 2026-08-19 only.
+  `-- line n` comments in a figure file use the figure's own printed line numbers, same
+  caveat, stated in each file header.
+
+**Figure 1 is rendered**: `Model.lean` (Electorate/`w(S)`/`W`/`q`/`m`, `Params` with `K`,`D`,
+the `Block`/`Attestation`/`HeightPair`/`FinalityPair` mutual family with hand-written
+`…Beq_iff` decidability as before, `ancestors`/`⪯`) and `Fig1StateTransition.lean`
+(`ChainState` per Definition 6, `gen`, the three quorum sets, and the four routines).
+Built green first try; `make cites` still green at 535.
+
+What the draft's Figure 1 changed against the old rendering, visible in the diff of shapes:
+no `s_h`; no stored `nj` (the nonjustifiability test is inline in the justify event, so it
+reads the *possibly-just-updated* `h_F`); `P : Finset` replaced by a `finalize` bit array
+with quorum set `Qfinality`; `T_h` always a block, never `⊥` (genesis for height 1, and
+every advance names the advancing block); the transition is total — no `invalid`, validity
+is the store's business; `σ.L ← B` moved after the attestation loop, so the progress bound
+`T ⪯ σ.L` is against the parent chain and the old explicit parent parameter `A` is gone;
+no `ValidInclusion` check in the transition.
+
+Next figure when Roberto says so: Figure 2 (Finality store), Definitions 7–8.
+
 ## Next
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
