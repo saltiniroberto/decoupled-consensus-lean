@@ -98,6 +98,10 @@ structure Store (Validator : Type) where
       validator, the time at which a head different from the stored one was first
       processed — the equivocation time — `none` while none was. -/
   equiv : Nat → Validator → Option Int
+  /-- `sg_root[·]` (Definition 10; written by Figure 6 at the opening slot's vote time,
+      read by Figure 5's `get_walk_root`): per round, the SG root derived at `t_r + Δ`,
+      `none` until that write. Fixed after it. -/
+  sgRoot : Nat → Option (Block Validator)
 
 /-- `Σ.root_proposal[r]` as the draft reads it in Definitions 13–14 and Figure 5: the
     round's root proposal, `⊥` when no opening block has arrived *or* the first one carried
@@ -122,6 +126,7 @@ def Store.gen : Store Validator where
   rootProposal := fun _ => none
   head := fun _ _ => none
   equiv := fun _ _ => none
+  sgRoot := fun _ => none
 
 /-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A *leaf* of `Σ.T` is an accepted
     block without accepted children — written `∀ C ∈ S.T, C.parent ≠ some L`. A block is
