@@ -2697,9 +2697,30 @@ correct, and he is the judge of what correct means. The decisions, each his:
   self-contained docstrings.
 - "A spec change stops at the spec" survives unchanged.
 - `consensus.pdf`, the human-controlled draft he will consult, is committed at the root
-  (`9e8ebd0`). No PDF tooling on this machine yet — the Read tool needs `pdftoppm`
-  (poppler-utils), and a scratchpad venv for `pypdf` fails on missing `python3-venv` — so
-  until that changes its content enters through Roberto's quotations.
+  (`9e8ebd0`). `pdftoppm` and `pdftotext` are installed at `/usr/local/bin` (2026-08-19), so
+  the Read tool renders its pages and `pdftotext` makes it greppable.
+
+### First orientation in the draft, 2026-08-19
+
+"Decoupled consensus", 9 pages: §1 Model (Defs 1–5: blocks with a `proposal_root` *field*,
+height, the combined attestation, committee-indexed unit-weight Goldfish votes, E1/E2), §2
+State transition (Def 6, Figure 1), §3 Finality store (Defs 7–8, Figure 2), §4 rounds and
+grading (Def 9 schedule, Def 10 *timed store* with per-round head/root bookkeeping and
+equivocation times, Defs 11–12 support scores and grades at instants `Γ₋₁ Γ₀ Γ₁ Γ₂`,
+Defs 13–15 root proposal / SG root / action root, Figures 3–5), §5 Goldfish and §6 outputs
+not yet read closely.
+
+**It is a redesign, not a re-editing.** The measured instance: the proposal is no longer a
+message. Every block carries `proposal_root` (read only in opening blocks); recognition is
+"the first round-`r` opening block `on_block` processes", later ones ignored (Def 13);
+acceptance is three conjuncts — `Rlow ⪯ Rprop`, `Rprop ∈ C(Σ)`, `G1(Rprop)` (Def 14) — with
+grades computed from each receiver's own timed-store bookkeeping, no carried witness, no
+tag, no aged tree in the acceptance. When the correctness pass reaches this area, the old
+message pipeline (`RecoveryProposal`, `StoreMsg.proposal`, the `proposals` pool,
+`ProposerSelection`, `wellFormed`, discard-both, `ValidG2Witness`, the carried merges,
+timeliness) is what the draft removed, and the replacement is a `Blk` field plus
+`Σ.root_proposal[r]` bookkeeping in `on_block`. Recovered per Roberto's pointing only —
+the strategy is strictly reactive.
 
 `CLAUDE.md` carries the new strategy section; the old "paper is the contract" section is
 retitled to what it now is, the frozen record's description.

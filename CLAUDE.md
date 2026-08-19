@@ -35,9 +35,8 @@ means. Practically:
   tooling when this first bites.)
 - **`consensus.pdf`**, committed at the repository root, is the human-controlled draft
   Roberto consults and quotes; it is a reference he invokes, not an authority to audit
-  against. It has no stable labels or line numbers, so nothing cites it. This machine
-  currently has no PDF tooling (`poppler-utils` would let the Read tool render it), so its
-  content enters through Roberto's quotations.
+  against. It has no stable labels or line numbers, so nothing cites it. `pdftoppm` and
+  `pdftotext` are installed (2026-08-19), so the Read tool renders its pages directly.
 - **"A spec change stops at the spec" survives unchanged** and matters more: correctness
   fixes will change `Spec/` and redden statements of record, and what each statement should
   become is exactly the judgment Roberto has reserved.
