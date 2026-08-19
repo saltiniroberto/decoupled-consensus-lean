@@ -90,6 +90,14 @@ structure Store (Validator : Type) where
       `none` while no opening block of that round has been processed, and `some ρ` once the
       first one carried proposal root `ρ` — itself a block or `⊥`. See the module header. -/
   rootProposal : Nat → Option (Option (Block Validator))
+  /-- `head[·]` (Definition 10; read by Figure 4's scores, written by Figure 6's
+      `on_attestation`): per round and validator, the first processed nonempty attestation
+      head with its processing time, `none` until one arrives. -/
+  head : Nat → Validator → Option (Block Validator × Int)
+  /-- `equiv[·]` (Definition 10; read by Figure 4, written by Figure 6): per round and
+      validator, the time at which a head different from the stored one was first
+      processed — the equivocation time — `none` while none was. -/
+  equiv : Nat → Validator → Option Int
 
 /-- `Σ.root_proposal[r]` as the draft reads it in Definitions 13–14 and Figure 5: the
     round's root proposal, `⊥` when no opening block has arrived *or* the first one carried
@@ -112,6 +120,8 @@ def Store.gen : Store Validator where
   h_j := 0
   h_max := 1
   rootProposal := fun _ => none
+  head := fun _ _ => none
+  equiv := fun _ _ => none
 
 /-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A *leaf* of `Σ.T` is an accepted
     block without accepted children — written `∀ C ∈ S.T, C.parent ≠ some L`. A block is

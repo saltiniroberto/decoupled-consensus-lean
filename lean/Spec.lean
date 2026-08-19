@@ -12,6 +12,7 @@ import Spec.Consensus.Notation
 import Spec.Consensus.Fig1StateTransition
 import Spec.Consensus.Fig2FinalityStore
 import Spec.Consensus.Fig3Schedule
+import Spec.Consensus.Fig4SupportScores
 
 /-!
 # The specification
