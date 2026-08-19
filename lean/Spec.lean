@@ -10,6 +10,7 @@ import Spec.Protocol
 import Spec.Consensus.Model
 import Spec.Consensus.Notation
 import Spec.Consensus.Fig1StateTransition
+import Spec.Consensus.Fig2FinalityStore
 
 /-!
 # The specification

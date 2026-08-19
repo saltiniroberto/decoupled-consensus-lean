@@ -19,16 +19,20 @@ here cites it in the checked sense. A docstring saying "Definition 6 of the draf
 draft's numbering as of 2026-08-19, and the docstring's own text is what the Lean is read
 against.
 
-What Figure 1 (State transition) consumes, and this file therefore holds:
+What the rendered figures consume, and this file therefore holds:
 
-* the validator set and weights — `Electorate`, `w(·)`, `W`, `q`, `m`, `Quorum`, `Majority`;
-* the protocol constants `K` and `D` of the height events — `Params`;
-* blocks and ancestry — `Block`, `ancestors`, `⪯`;
-* attestations and their two pairs — `Attestation`, `HeightPair`, `FinalityPair`.
+* the validator set and weights — `Electorate`, `w(·)`, `W`, `q`, `m`, `Quorum`, `Majority`
+  (Figure 1);
+* the protocol constants — `Params`: `K` and `D` from the height events (Figure 1), `R`
+  from slots and rounds (Figure 2), with `round(·)` and opening blocks;
+* blocks and ancestry — `Block`, `ancestors`, `⪯` (Figure 1); `≺` and `∼` (Figure 2);
+* attestations and their two pairs — `Attestation`, `HeightPair`, `FinalityPair`
+  (Figure 1);
+* the abstract block hash the store's justification key compares — `BlockHash` (Figure 2).
 
-Absent, because no rendered figure reads them yet: strict ancestry, compatibility and
-conflict; rounds, opening slots and the constant `R`; Goldfish votes and committees; the
-slashing conditions. Each arrives with its first consumer.
+Absent, because no rendered figure reads them yet: a named conflict relation (the draft's
+"conflict otherwise" is `¬ ∼`); Goldfish votes and committees; the slashing conditions;
+`Δ` and the schedule, which arrive with Figure 3. Each arrives with its first consumer.
 
 ## Block equality is decided by hand
 
@@ -117,21 +121,31 @@ instance (S : Finset Validator) : Decidable (Majority S) :=
 
 end Thresholds
 
-/-! ## The height-event constants -/
+/-! ## The protocol constants, and rounds -/
 
-/-- The two protocol constants of the draft's height events: during prolonged nonfinality
-    every `K`-th height becomes nonjustifiable, once finality lags more than `D` heights
-    behind. The justify event tests `¬((K ∣ h) ∧ (h − h_F > D))` inline; there is no stored
-    flag. -/
+/-- The draft's protocol constants. `K` and `D` are the height-event constants: during
+    prolonged nonfinality every `K`-th height becomes nonjustifiable, once finality lags
+    more than `D` heights behind — the justify event tests `¬((K ∣ h) ∧ (h − h_F > D))`
+    inline; there is no stored flag. `R` is the round length: a round is a group of `R`
+    consecutive slots. -/
 class Params where
   /-- Every `K`-th height is eligible to be nonjustifiable. -/
   K : Nat
   /-- Justification is disabled at such a height only once `h − h_F` exceeds this. -/
   D : Nat
+  /-- The number of slots in a round. -/
+  R : Nat
   /-- `K ≥ 2`. -/
   K_ge : 2 ≤ K
   /-- `D ≥ 1`. -/
   D_ge : 1 ≤ D
+  /-- `R ≥ 1`, the draft's model-level bound. Its schedule needs `R ≥ 2`, stated where the
+      schedule is rendered rather than strengthened here. -/
+  R_ge : 1 ≤ R
+
+/-- `round(s) = ⌊s/R⌋`, the round of slot `s`. Round `r` consists of slots
+    `rR, …, rR + R − 1`, and its first slot is the round's *opening slot*. -/
+def round [Params] (s : Nat) : Nat := s / Params.R
 
 /-! ## Blocks and attestations, as one mutual family
 
@@ -357,6 +371,13 @@ def proposalRoot : Block Validator → Option (Block Validator)
 
 end Block
 
+/-- `B` is an *opening block*: its slot is a round's opening slot, `R ∣ B.slot`. The
+    proposal root is read only in opening blocks. -/
+def Block.isOpening [Params] (B : Block Validator) : Prop := Params.R ∣ B.slot
+
+instance [Params] (B : Block Validator) : Decidable B.isOpening :=
+  inferInstanceAs (Decidable (_ ∣ _))
+
 /-! ## Ancestry -/
 
 /-- The block and all of its ancestors, nearest first. Structural recursion on the parent
@@ -373,5 +394,36 @@ def Preceq (a b : Block Validator) : Prop := a ∈ ancestors b
 
 instance [DecidableEq Validator] : DecidableRel (Preceq (Validator := Validator)) :=
   fun a b => inferInstanceAs (Decidable (a ∈ ancestors b))
+
+/-- `B ≺ C`: strict ancestry — `B ⪯ C` and `B ≠ C`. `C` is a *descendant* of `B` when
+    `B ⪯ C`, so descendant is reflexive and `≺` is the strict half. -/
+def Prec (a b : Block Validator) : Prop := a ⪯ b ∧ a ≠ b
+
+@[inherit_doc] scoped infix:50 " ≺ " => Prec
+
+instance [DecidableEq Validator] : DecidableRel (Prec (Validator := Validator)) :=
+  fun _ _ => inferInstanceAs (Decidable (_ ∧ _))
+
+/-- `B ∼ C`: *compatible* — `B ⪯ C` or `C ⪯ B`, the two lie on one chain. The draft's
+    blocks *conflict* otherwise; no named relation renders that, `¬ ∼` sufficing so far. -/
+def Compatible (a b : Block Validator) : Prop := a ⪯ b ∨ b ⪯ a
+
+@[inherit_doc] scoped infix:50 " ∼ " => Compatible
+
+instance [DecidableEq Validator] : DecidableRel (Compatible (Validator := Validator)) :=
+  fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
+
+/-! ## The block hash -/
+
+/-- The hash the store's justification key compares: `(σ.h_j, hash(σ.J))` against
+    `(Σ.h_j, hash(Σ.J))`, the hash as tiebreak. `Block` is content-identified, so the
+    tiebreak needs a function the model does not otherwise have; this class supplies it
+    abstractly, `Nat`-valued. Only the value is assumed — injectivity joins as an explicit
+    assumption where a proof needs it, and not before. -/
+class BlockHash (Validator : Type) where
+  /-- `hash(B)`. -/
+  hash : Block Validator → Nat
+
+@[inherit_doc] scoped notation:max "hash(" B ")" => BlockHash.hash B
 
 end Consensus

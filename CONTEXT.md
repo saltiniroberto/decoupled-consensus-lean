@@ -2765,7 +2765,28 @@ is the store's business; `σ.L ← B` moved after the attestation loop, so the p
 `T ⪯ σ.L` is against the parent chain and the old explicit parent parameter `A` is gone;
 no `ValidInclusion` check in the transition.
 
-Next figure when Roberto says so: Figure 2 (Finality store), Definitions 7–8.
+Scope confirmed by Roberto: all six figures, without stopping between them.
+
+**Figure 2 (Finality store) is rendered**: `Fig2FinalityStore.lean` — `Store` (Definition 7's
+tuple written over `S`, `Σ` being a reserved Lean token, plus the one Definition 10 field
+Figure 2 already writes, `rootProposal`), `Store.gen`, `viableSet`/`forkChoiceRoot`/
+`candidateTree` (Definition 8), the `Omega` selection class (abstract until §5 is drafted),
+and the five handlers. Model gained its Figure 2 demands: `R` in `Params` (with the
+schedule's stronger `R ≥ 2` deferred to Figure 3's file), `round(·)`, `Block.isOpening`,
+`≺`, `∼`, `BlockHash`. Rendering decisions, each documented in the file header:
+
+- `σ[·]` is `Option`-valued (map defined exactly on `T` is an invariant to prove, not a
+  type fact) — the old rendering's decision, re-taken.
+- `rootProposal : Nat → Option (Option Block)`: `none` = no opening block of the round
+  processed yet (Figure 2 line 5's "unset"), `some none` = first opening block carried `⊥`.
+  Definition 13 fixes the round's entry at the *first* opening block even when its root is
+  `⊥`, so the flat `Option` would lose that. `Store.rootProposalAt` (`Option.join`) is the
+  draft's flat reading for Definitions 13–14 and Figure 5.
+- Two `let some … | return S` reject exits in `onBlock`: genesis (the `B.parent ∉ Σ.T`
+  case) and a parent the state map misses (unreachable under the map-domain coherence
+  invariant, to be proved).
+- The root-proposal registration (lines 5–6) runs before the admission test, as the figure
+  orders it: a rejected opening block still claims its round's entry.
 
 ## Next
 
