@@ -123,7 +123,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     else .empty
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
   -- admits, the walk start among them, so there is always one
-  let C := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
+  let C := (S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)).val
   if _ : C ∈ S.σ then
     let σ := S.σ[C]
     -- skeleton: the current-height half, off the confirmation's state, no history

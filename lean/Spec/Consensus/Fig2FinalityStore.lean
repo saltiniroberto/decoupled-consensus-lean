@@ -134,12 +134,18 @@ structure Store (Validator Ω : Type) where
       round confirms. **Only its type is given here** — the draft's Section 5 will define
       the walk, and until then a store value supplies whatever function it likes.
 
-      A field rather than an `opaque` definition (Roberto, 2026-08-21), so that no
-      inhabitation witness is needed and the walk stays computable; and a field rather than
-      a `Selection` method, so that it can differ per store value. Beyond Definitions 7 and
-      10, like `ω` above: the draft does not make the walk a store component. -/
+      The result type is what the walk promises (Roberto, 2026-08-21): the block it returns
+      lies in `candidates ∪ {walkStart}`, so a walk that finds nowhere to go stays where it
+      started. Written as the disjunction that union unfolds to, because `Finset` union
+      needs `DecidableEq` and `Store` takes no instance parameters.
+
+      A field rather than an `opaque` definition, so that no inhabitation witness is needed
+      and the walk stays computable; and a field rather than a `Selection` method, so that
+      it can differ per store value. Beyond Definitions 7 and 10, like `ω` above: the draft
+      does not make the walk a store component. -/
   goldfishConfirmation : (walkStart : Block Validator) →
-    (candidates : Finset (Block Validator)) → Block Validator
+    (candidates : Finset (Block Validator)) →
+    {B // B ∈ candidates ∨ B = walkStart}
 
 /-! ### `B ∈ S.σ` and `S.σ[B]`, through `Membership` and `GetElem`
 
@@ -200,7 +206,8 @@ variable [DecidableEq Validator]
     The fields the draft's genesis prose does not fix are the two beyond Definitions 7
     and 10 — the validator's selection data and its walk — so they are the arguments. -/
 def Store.gen (ω : Ω)
-    (goldfishConfirmation : Block Validator → Finset (Block Validator) → Block Validator) :
+    (goldfishConfirmation : (walkStart : Block Validator) →
+      (candidates : Finset (Block Validator)) → {B // B ∈ candidates ∨ B = walkStart}) :
     Store Validator Ω where
   s := 0
   T := {.genesis}

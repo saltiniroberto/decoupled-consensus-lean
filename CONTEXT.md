@@ -2921,9 +2921,14 @@ with an `IsSubtreeFrom` hypothesis and a subtype result; `opaque` with the weake
 
 Why the field wins: no inhabitation witness is needed, so no hypothesis and no `Option`;
 it stays computable; and the walk can differ per store value, which is per validator. The
-cost is the same as the last `opaque` form — **nothing is provable about the result**, not
-even that it lands in the candidate set — and, beyond that, the store now carries a notion
-the draft does not make a store component, alongside `ω`.
+store does now carry a notion the draft does not make a store component, alongside `ω`.
+
+**The result type is the promise**: `{B // B ∈ candidates ∨ B = walkStart}` — the walk
+lands among the candidates, or stays where it started. Written as that disjunction rather
+than `B ∈ candidates ∪ {walkStart}` because `Finset` union needs `DecidableEq` and `Store`
+takes no instance parameters; the two say the same thing, `Finset.mem_union` and
+`Finset.mem_singleton` being the bridge. This is the property a field can carry for free
+that `opaque` could not: no witness is owed, since the store value supplies the function.
 
 Two things survive as statements with no consumer in `Spec/`: `IsSubtreeFrom`, and
 `confirmationCandidates`' never-empty property. Both are for the theorems about executions
