@@ -96,7 +96,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
       if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
     else .empty
   -- the filtered tree: the candidate-tree blocks from `A` the veto does not exclude
-  let filteredT := S.candidateTree.filter fun B => A ⪯ B ∧ ¬ vetoed S r B
+  let filteredT := (S.candidateTreeFrom A).filter fun B => ¬ vetoed S r B
   -- the confirmation: run Goldfish from `A` over exactly what survived
   let C? := goldfishConfirmation S A filteredT
   if hC : C?.isSome then
