@@ -101,7 +101,8 @@ structure ActionAssumptions (S : Store Validator Ω) : Prop where
 
     The bundle is what makes the body straight-line: both state reads are unconditional,
     each licensed by one projection from it — the walk start by `Or.inr rfl`, the
-    confirmation by the walk's own `.property`. Before it, each read sat inside
+    confirmation by `hC`, which the destructuring `let` takes from the walk's result type
+    alongside the block itself. Before it, each read sat inside
     `if _ : … ∈ S.σ` with a fallback attestation carrying no head and no height pair, and
     that fallback was unreachable-once-proved rather than impossible.
 
@@ -145,9 +146,8 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   have _ : walkStart ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ (Or.inr rfl))
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
   -- admits, the walk start among them, so there is always one
-  let confirmed := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
-  let C : Block Validator := confirmed
-  have _ : C ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ confirmed.property)
+  let ⟨C, hC⟩ := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
+  have _ : C ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ hC)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
   -- state
   let σStart := S.σ[walkStart]
