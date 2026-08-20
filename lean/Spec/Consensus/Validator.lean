@@ -68,110 +68,58 @@ def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block
 def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
   R ∈ s ∧ (∀ B ∈ s, R ⪯ B) ∧ ∀ B ∈ s, ∀ C, R ⪯ C → C ⪯ B → C ∈ s
 
-/-- What the SG/FG action assumes of the store it acts on. **Stated here and discharged
-    nowhere in `Spec/`** — these are facts about the stores the handlers build, so they
-    belong to the theorems about executions.
+/-- Everything the round's walk can return is accepted, given that its walk start is. The
+    candidates are a filter of `Σ.T` by way of `candidateTreeFrom` and `candidateTree`, so
+    set reasoning reaches `Σ.T`; the two walk-start cases — the singleton inside
+    `confirmationCandidates`, and the walk's own fallback — are what `hRoot` is for.
 
-    A structure rather than a list of hypotheses (Roberto, 2026-08-21): the next assumption
-    becomes a field, and no signature changes. The fields are shaped as exactly what the
-    action consumes, so `Spec/` only ever projects them — it never reasons from a general
-    invariant to a particular read.
-
-    One theorem will eventually establish the whole bundle for reachable stores; the
-    ingredients are recorded in `CONTEXT.md`, the substantial one being that `Σ.T` is closed
-    under taking ancestors. -/
-structure ActionAssumptions (S : Store Validator Ω) : Prop where
-  /-- The accepted blocks are exactly those with a recorded state — the map-domain
-      coherence the `Store` type does not enforce. -/
-  coherent : ∀ B, B ∈ S.T ↔ B ∈ S.σ
-  /-- The round's walk start is accepted. `get_action_root` returns either a block it has
-      just tested for membership in `C(Σ)` or the fork-choice root, so this needs only that
-      `Σ.J` and `Σ.F` are accepted — which Definition 7 states in prose and the type does
-      not enforce — but establishing it here would mean reasoning through that routine's
-      `Id.run do`. -/
-  walkStartAccepted : ∀ r, getActionRoot S r ∈ S.T
-
-/-- Everything the round's walk can return is accepted: `candidateAccepted`, derived rather
-    than assumed (Roberto, 2026-08-21). The candidates are a filter of `S.T` by way of
-    `candidateTreeFrom` and `candidateTree`, so set reasoning reaches `S.T`; the two
-    walk-start cases — the singleton inside `confirmationCandidates`, and the walk's own
-    fallback — are what `walkStartAccepted` is for.
-
-    **A theorem in `Spec/`**, under `CLAUDE.md`'s one exception: `stateAt`'s autoparam
-    cannot exist without it. It is the price of stating the assumptions as two general facts
-    instead of one tailored to the reads, and it needs maintaining whenever
+    **A theorem in `Spec/`**, under `CLAUDE.md`'s one exception: the definition below cannot
+    read the confirmation's state without it. It is the price of assuming two general facts
+    rather than one shaped to the reads, and it needs maintaining whenever
     `confirmationCandidates`, `candidateTreeFrom` or `candidateTree` changes. -/
-theorem mem_T_of_walkResult {S : Store Validator Ω} (hS : ActionAssumptions S) (r : Nat)
-    {B : Block Validator}
+theorem mem_T_of_walkResult {S : Store Validator Ω} {r : Nat}
+    (hRoot : getActionRoot S r ∈ S.T) {B : Block Validator}
     (h : B ∈ confirmationCandidates S r (getActionRoot S r) ∨ B = getActionRoot S r) :
     B ∈ S.T := by
   rcases h with h | rfl
   · simp only [confirmationCandidates, Store.candidateTreeFrom, Store.candidateTree,
       Finset.mem_union, Finset.mem_singleton, Finset.mem_filter] at h
     rcases h with rfl | ⟨h, _⟩
-    · exact hS.walkStartAccepted r
+    · exact hRoot
     · rcases h with ⟨⟨hT, _⟩, _⟩ | rfl
       · exact hT
-      · exact hS.walkStartAccepted r
-  · exact hS.walkStartAccepted r
+      · exact hRoot
+  · exact hRoot
 
-/-- The state a store's map records for `B`, with the proof that it records one taken as an
-    **autoparam**. Three alternatives, in order: a hypothesis in context; `B` is the round's
-    walk start, so `Or.inr rfl` carries it through `mem_T_of_walkResult`; or a witness that
-    `B` is one of the round's candidates is in context, which is what the walk's result type
-    supplies.
-
-    Anything the alternatives do not cover must pass its proof by hand, and a call that can
-    reach none of them fails where it stands.
-
-    It takes the *map*, not the store: the store is recovered by unifying the goal `B ∈ m`
-    with the bundle's conclusion, so it need not be an argument. And the body writes
-    `(m B).get h` rather than any bracket, so nothing here expands back into itself. -/
-def stateAt (m : Block Validator → Option (ChainState Validator)) (B : Block Validator)
-    (h : B ∈ m := by
-      solve
-        | assumption
-        | exact (ActionAssumptions.coherent (by assumption) _).mp
-            (mem_T_of_walkResult (by assumption) _ (Or.inr rfl))
-        | exact (ActionAssumptions.coherent (by assumption) _).mp
-            (mem_T_of_walkResult (by assumption) _ (by assumption))) :
-    ChainState Validator :=
-  (m B).get h
-
-/-- `S.σ⟦B⟧` — the state map read whose proof comes from `stateAt`'s autoparam, as against
-    `S.σ[B]`, which keeps core's meaning and its `get_elem_tactic` (Roberto, 2026-08-21).
-
-    Own brackets rather than core's. The earlier attempt claimed `S.σ[B]` itself, which
-    needed a `macro_rules` clause matching identifiers whose last component is `σ` —
-    name-directed, and unscopable, `macro_rules` having no scoped form. A `notation` cannot
-    claim that spelling at all: `S.σ` lexes as one dotted identifier, so an atom `.σ[` is
-    never reached, and core's bracket takes the parse. Measured, 2026-08-21, both of them.
-
-    This form has neither problem. The `syntax` is `scoped`, so the parse exists only where
-    this namespace is open; `noWs` keeps `f ⟦x⟧` — an application to a quotient class —
-    parsing as before; and the term before the bracket is checked against `stateAt`'s first
-    argument, so it is the type that decides, not a name. -/
-scoped syntax:max term noWs "⟦" term "⟧" : term
-
-macro_rules
-  | `($m⟦$B⟧) => `(stateAt $m $B)
+/-- The store records a state for the block round `r`'s walk confirms — the fact the action
+    needs, from the two it assumes. -/
+theorem confirmationHasState {S : Store Validator Ω} {r : Nat}
+    (hσ : ∀ B, B ∈ S.T → B ∈ S.σ) (hRoot : getActionRoot S r ∈ S.T) :
+    (S.goldfishConfirmation (getActionRoot S r)
+      (confirmationCandidates S r (getActionRoot S r))).val ∈ S.σ :=
+  hσ _ (mem_T_of_walkResult hRoot (S.goldfishConfirmation _ _).property)
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
-    Two hypotheses, both autoparams discharged by `assumption`: `S.t = actionTime r`, that
-    this is the round's action time, and `ActionAssumptions S`, the bundle above. A
-    statement supplying either must hold it as a *named* hypothesis, since `assumption` does
-    not see anonymous arrow binders during statement elaboration (measured on
-    `lemChainTargetFirstBlock`).
+    Three hypotheses, all autoparams discharged by `assumption`, so a call site holding them
+    writes nothing: `S.t = actionTime r`, that this is the round's action time; `hσ`, that
+    accepted blocks have recorded states — the map-domain coherence the `Store` type does not
+    enforce; and `hRoot`, that the round's walk start is accepted. A statement supplying any
+    of them must hold it as a *named* hypothesis, since `assumption` does not see anonymous
+    arrow binders during statement elaboration (measured on `lemChainTargetFirstBlock`).
 
-    The bundle is what makes the body straight-line: both state reads are unconditional and
-    written plainly, `S.σ⟦walkStart⟧` and `S.σ⟦C⟧`, their proofs supplied by `stateAt`'s
-    autoparam — the walk start through `Or.inr rfl`, the confirmation through `hC`, which
-    the destructuring `let` takes from the walk's result type alongside the block itself.
-    Before the bundle, each read sat inside `if _ : … ∈ S.σ` with a fallback attestation
-    carrying no head and no height pair, and that fallback was unreachable-once-proved
-    rather than impossible.
+    **Both are general facts about the store, not statements about these reads**
+    (Roberto, 2026-08-21). What bridges the gap is `confirmationHasState` above, so each read
+    carries a short named proof: `hσ _ hRoot` for the walk start, the theorem for the
+    confirmation. Two earlier shapes are in git history — a bundle whose fields were shaped
+    to the reads, so the body only projected; and hypotheses stating the reads' own side
+    conditions, so plain `S.σ[B]` worked with nothing after it.
+
+    `hRoot` stays assumed rather than derived because `get_action_root` returns either a
+    block it has just tested for membership in `C(Σ)` or the fork-choice root: reaching it
+    needs only that `Σ.J` and `Σ.F` are accepted, which Definition 7 states in prose and the
+    type does not enforce, but it means reasoning through that routine's `Id.run do`.
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -205,9 +153,8 @@ macro_rules
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     (_ : S.t = actionTime r := by assumption)
-    (_ : getActionRoot S r ∈ S.σ := by assumption)
-    (_ : (S.goldfishConfirmation (getActionRoot S r)
-            (confirmationCandidates S r (getActionRoot S r))).val ∈ S.σ := by assumption) :
+    (hσ : ∀ B, B ∈ S.T → B ∈ S.σ := by assumption)
+    (hRoot : getActionRoot S r ∈ S.T := by assumption) :
     Attestation Validator := Id.run do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
@@ -217,13 +164,13 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   let C : Block Validator :=
     S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state. Both reads are core's bracket: the hypotheses above *are* their side conditions,
-  -- so `get_elem_tactic` closes each with `assumption`
-  let σStart := S.σ[walkStart]
+  -- state. Each read names its proof: coherence at the walk start, the theorem above at
+  -- the confirmation
+  let σStart := S.σ[walkStart]'(hσ _ hRoot)
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC := S.σ[C]
+  let σC := S.σ[C]'(confirmationHasState hσ hRoot)
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h
