@@ -39,6 +39,15 @@ def vetoed (S : Store Validator) (r : Nat) (Q : Block Validator) : Prop :=
 instance (S : Store Validator) (r : Nat) (Q : Block Validator) : Decidable (vetoed S r Q) :=
   inferInstanceAs (Decidable (∃ B ∈ S.T, _))
 
+/-- The blocks the round's confirmation may choose among: the candidate tree from
+    `walkStart`, less the blocks the veto excludes. This is the already-filtered tree
+    `goldfishConfirmation` runs over.
+
+    Skeleton to the extent `vetoed` is. -/
+def confirmationCandidates (S : Store Validator) (r : Nat) (walkStart : Block Validator) :
+    Finset (Block Validator) :=
+  (S.candidateTreeFrom walkStart).filter fun B => ¬ vetoed S r B
+
 /-- The round's Goldfish confirmation (Roberto's rule, 2026-08-20): run the Goldfish fork
     choice from `walkStart` over exactly the blocks of `candidates` — a tree the caller
     has already filtered — and `none` when the set is empty.
@@ -95,10 +104,8 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
       let σ := S.σ[A]
       if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
     else .empty
-  -- the filtered tree: the candidate-tree blocks from `A` the veto does not exclude
-  let filteredT := (S.candidateTreeFrom A).filter fun B => ¬ vetoed S r B
-  -- the confirmation: run Goldfish from `A` over exactly what survived
-  let C? := goldfishConfirmation S A filteredT
+  -- the confirmation: run Goldfish from `A` over exactly the candidates the veto admits
+  let C? := goldfishConfirmation S A (confirmationCandidates S r A)
   if hC : C?.isSome then
     let C := C?.get hC
     if _ : C ∈ S.σ then
