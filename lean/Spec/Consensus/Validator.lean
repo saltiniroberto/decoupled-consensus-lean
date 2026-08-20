@@ -81,25 +81,26 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
 
-    * anchor at `A = get_action_root(Σ, r)`, **derived here rather than read from**
-      `Σ.action_root[r]` (Roberto, 2026-08-20). `on_tick` writes that entry at this same
-      instant, so on schedule the two agree; deriving it is what makes the anchor
-      well-formed against the *current* store — `get_action_root` returns either a block
-      of `C(Σ)` or the fork-choice root itself, so `Σ`'s fork-choice root always precedes
-      `A`, and `candidateTreeFrom A` is therefore a tree rather than `{A}` floating above a
-      gap. A stored root could not promise that, finality having moved on since the write;
-    * derive the round's confirmation `C` with `goldfishConfirmation` from `A`, under the
-      veto "some accepted block on the finalized chain, conflicting with the candidate,
-      might still hold majority support" — `G0`, playing the role the old paper's strong G0
-      check gave it. There is always a confirmation: the veto never removes `A` itself, so
-      the candidate set contains it;
+    * the walk starts at `get_action_root(Σ, r)`, Definition 15's action root, **derived
+      here rather than read from** `Σ.action_root[r]` (Roberto, 2026-08-20). `on_tick`
+      writes that entry at this same instant, so on schedule the two agree; deriving it is
+      what makes the walk start well-formed against the *current* store —
+      `get_action_root` returns either a block of `C(Σ)` or the fork-choice root itself, so
+      `Σ`'s fork-choice root always precedes it, and `candidateTreeFrom` of it is therefore
+      a tree rather than one block floating above a gap. A stored root could not promise
+      that, finality having moved on since the write;
+    * derive the round's confirmation `C` with the store's walk from that start, over the
+      candidates admitted by the veto "some accepted block on the finalized chain,
+      conflicting with the candidate, might still hold majority support" — `G0`, playing
+      the role the old paper's strong G0 check gave it. There is always a confirmation: the
+      veto never removes the walk start itself, so the candidate set contains it;
     * head is `C`, and the current-height pair is read off `C`'s post-state — the exact
       target vote at a justifiable height, the empty-target (progress-only) vote at a
       nonjustifiable one, the same test Figure 1's justify event applies on receipt. **So
       the validator never abstains from the current-height pair**, where the old paper's
       rule did whenever no veto-free confirmation existed;
     * the finality half is independent of the confirmation, as in the old paper: read off
-      the anchor's post-state, commit the latest justification `(h_j, J)` while it is
+      the walk start's post-state, commit the latest justification `(h_j, J)` while it is
       unfinalized — heights in the two pairs always differ (`h_j < h`), so one honest
       attestation cannot trip slashing condition E1 against itself.
 
@@ -110,18 +111,19 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     (_ : S.t = actionTime r := by assumption) :
     Attestation Validator := Id.run do
-  -- the anchor (Definition 15): the round's action root, derived here from the current
-  -- store rather than read from `Σ.action_root[r]`
-  let A := getActionRoot S r
-  -- skeleton: the finality half, independent of the confirmation, off the anchor's state
+  -- the walk start (Definition 15's action root): derived here from the current store
+  -- rather than read from `Σ.action_root[r]`
+  let walkStart := getActionRoot S r
+  -- skeleton: the finality half, independent of the confirmation, off the walk start's
+  -- state
   let finalityPair : FinalityPair Validator :=
-    if _ : A ∈ S.σ then
-      let σ := S.σ[A]
+    if _ : walkStart ∈ S.σ then
+      let σ := S.σ[walkStart]
       if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
     else .empty
-  -- the confirmation: run Goldfish from `A` over the candidates the veto admits, `A`
-  -- among them, so there is always one
-  let C := S.goldfishConfirmation A (confirmationCandidates S r A)
+  -- the confirmation: run Goldfish from the walk start over the candidates the veto
+  -- admits, the walk start among them, so there is always one
+  let C := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   if _ : C ∈ S.σ then
     let σ := S.σ[C]
     -- skeleton: the current-height half, off the confirmation's state, no history
