@@ -2900,14 +2900,30 @@ keeps its `∃ _ : L ∈ S.σ` binder.
 
 ### Owed: the confirmation candidates form a tree — 2026-08-20
 
-`goldfishConfirmation` takes `_hCandidates : IsSubtreeFrom walkStart candidates` and does
-not use it. Roberto's requirement: the assumption must be *stated in the definition*, and
-**the spec must not prove it** — an execution-level theorem must. So the hypothesis
-propagates: `onSGFGVotingAction` takes the same fact at its own anchor, as an autoparam, and
-passes it through. `onTick` will take it in turn when §6 is wired in.
+`goldfishConfirmation` takes `hCandidates : IsSubtreeFrom walkStart candidates`.
+Roberto's requirement: the assumption must be *stated in the definition*, and **the spec
+must not prove it** — an execution-level theorem must. So the hypothesis propagates:
+`onSGFGVotingAction` takes the same fact at its own anchor, as an autoparam, and passes it
+through. `onTick` will take it in turn when §6 is wired in.
 
-`IsSubtreeFrom R s` is "everything in `s` descends from `R`, and `s` has no gaps" — every
-block between `R` and a member is a member. The empty set and `{R}` both qualify.
+`IsSubtreeFrom R s` is `R ∈ s`, everything in `s` descends from `R`, and `s` has no gaps —
+every block between `R` and a member is a member. `{R}` qualifies; the empty set does not.
+
+**Why the hypothesis exists, in Roberto's words: if it holds, the confirmation never fails.**
+So `R ∈ s` is a conjunct — without it the predicate admits the empty set and buys
+traversability only — and `goldfishConfirmation` returns a `Block`, not an `Option`, using
+`hCandidates.1` for the nonemptiness `Ω` needs. Totality is therefore structural, not a
+theorem.
+
+That forced a semantic decision, his: **the veto never removes the walk start.**
+`confirmationCandidates` is `{walkStart} ∪ (candidateTreeFrom walkStart).filter (¬ vetoed)`,
+so a validator always confirms at least the root its own fork choice anchored on, and the
+veto means "do not move onto a vetoed block" rather than "do not vote". The old paper's rule
+was the opposite — no veto-free official confirmation meant emitting no current-height pair
+at all (Definition 46 there) — so this rendering has no abstention branch. Had the veto been
+allowed to remove the anchor, the tree hypothesis would have been *false* exactly when the
+anchor is vetoed, since the veto is inherited by descendants and the set would be empty
+rather than merely rootless; no execution theorem could have discharged it.
 
 **What a proof needs**, worked out but not written:
 
