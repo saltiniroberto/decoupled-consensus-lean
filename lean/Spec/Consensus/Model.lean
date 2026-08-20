@@ -376,12 +376,12 @@ def proposalRoot : Block Validator → Option (Block Validator)
 
 end Block
 
-/-- `B` is an *opening block*: its slot is a round's opening slot, `R ∣ B.slot`. The
-    proposal root is read only in opening blocks. -/
-def Block.isOpening [Params] (B : Block Validator) : Prop := Params.R ∣ B.slot
+/-- `B` is an *opening block*: its slot is a round's opening slot — the first of the
+    round's `R` slots. The proposal root is read only in opening blocks. -/
+def Block.isOpening [Params] (B : Block Validator) : Prop := B.slot % Params.R = 0
 
 instance [Params] (B : Block Validator) : Decidable B.isOpening :=
-  inferInstanceAs (Decidable (_ ∣ _))
+  inferInstanceAs (Decidable (_ = _))
 
 /-! ## Ancestry -/
 

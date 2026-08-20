@@ -161,7 +161,7 @@ def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id
   if σ.h_j > σ.h_F ∧ w(σ.Qfinality)≥q then                    -- line 17
     σ.F ← σ.J                                                 -- line 18: `(σ.F, σ.h_F) ← (σ.J, σ.h_j)`
     σ.h_F ← σ.h_j
-  if ¬ ((K ∣ σ.h) ∧ (σ.h - σ.h_F > D)) ∧ w(σ.Qtarget)≥q then  -- line 19
+  if ¬ (σ.h % K = 0 ∧ σ.h - σ.h_F > D) ∧ w(σ.Qtarget)≥q then  -- line 19: `(K ∣ σ.h)` is `σ.h % K = 0`
     σ.J ← σ.T_h                                               -- line 20: `(σ.J, σ.h_j) ← (σ.T_h, σ.h)`
     σ.h_j ← σ.h
     σ.finalize ← fun _ => false                               -- line 20: `σ.finalize ← false^V`

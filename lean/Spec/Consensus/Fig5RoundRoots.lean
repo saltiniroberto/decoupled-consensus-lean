@@ -24,12 +24,11 @@ totalization the old rendering used.
 
 ## Two `Option` seams, both documented at the line
 
-`Σ.root_proposal[r]` is read through `Store.rootProposalAt`, the flat block-or-`⊥` reading
-of the two-level entry — Figure 5's line 13 does not distinguish "no opening block arrived"
-from "the first one carried `⊥`", and `Option.join` is exactly that collapse. And
-`Σ.sg_root[r]` is `Option`-valued, unset before its scheduled write at `t_r + Δ`;
-`get_walk_root` is read at `a_r`, after it, so the unset case is unreachable on schedule
-and falls back to the fork-choice root here.
+`Σ.root_proposal[r]` is `none` until a round-`r` opening block carrying a nonempty
+proposal root is processed — line 13's `⊥` case (see `Fig2FinalityStore.lean` for the
+strengthened write this reading rests on). And `Σ.sg_root[r]` is `Option`-valued, unset
+before its scheduled write at `t_r + Δ`; `get_walk_root` is read at `a_r`, after it, so
+the unset case is unreachable on schedule and falls back to the fork-choice root here.
 -/
 
 set_option autoImplicit false
@@ -82,12 +81,13 @@ def getLowerRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     stores the result in `Σ.sg_root[r]`. -/
 def getSGRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
   let Rlow := getLowerRoot S r                                -- line 12
-  -- lines 13–15: `if Σ.root_proposal[r] = ⊥ then return R_low; R_prop ← Σ.root_proposal[r]`,
-  -- through the flat reading `rootProposalAt` — see the module header
-  let some Rprop := S.rootProposalAt r | return Rlow
-  if Rlow ⪯ Rprop ∧ Rprop ∈ candidateTree S ∧ G1 S r Rprop then  -- line 16
-    return Rprop                                              -- line 17
-  return Rlow                                                 -- line 18
+  -- lines 13–15: `if Σ.root_proposal[r] = ⊥ then return R_low; R_prop ← Σ.root_proposal[r]`.
+  -- The `⊥` case falls through to the closing `return R_low`.
+  if hp : (S.rootProposal r).isSome then
+    let Rprop := (S.rootProposal r).get hp
+    if Rlow ⪯ Rprop ∧ Rprop ∈ candidateTree S ∧ G1 S r Rprop then  -- line 16
+      return Rprop                                            -- line 17
+  return Rlow                                                 -- lines 14 and 18
 
 /-- `get_walk_root(Σ, r)` (Figure 5, lines 19–23; Definition 14's fork-choice step): each
     Goldfish fork choice starts from the current fork-choice root `C`, and first moves to
@@ -96,10 +96,11 @@ def getSGRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     returns `C`. -/
 def getWalkRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
   let C := forkChoiceRoot S                                   -- line 20
-  let some Rsg := S.sgRoot r | return C
-  if C ⪯ Rsg then                                             -- line 21
-    return Rsg                                                -- line 22
-  return C                                                    -- line 23
+  if hs : (S.sgRoot r).isSome then
+    let Rsg := (S.sgRoot r).get hs
+    if C ⪯ Rsg then                                           -- line 21
+      return Rsg                                              -- line 22
+  return C                                                    -- line 23, and the unset case
 
 /-- `get_action_root(Σ, r)` (Figure 5, lines 24–29; Definition 15): at `a_r`, the root
     anchoring the round's SG and FG outputs — the walk root when it is in `C(Σ)` and either
