@@ -194,11 +194,18 @@ def Store.gen (Ω : (s : Finset (Block Validator)) → s.Nonempty → {B // B �
   t := -1
   Ω := Ω
 
-/-- The *leaves* of `Σ.T` (Definition 8 of the draft): the accepted blocks without
-    accepted children. "Without accepted children" is written `∀ C ∈ S.T, C.parent ≠ some L`
-    — no accepted block names `L` as its parent. -/
+/-- `L` is a *leaf* of `Σ.T` (Definition 8 of the draft): an accepted block without
+    accepted children. "Without accepted children" is written
+    `∀ C ∈ S.T, C.parent ≠ some L` — no accepted block names `L` as its parent. -/
+def isLeaf (S : Store Validator) (L : Block Validator) : Prop :=
+  L ∈ S.T ∧ ∀ C ∈ S.T, C.parent ≠ some L
+
+instance (S : Store Validator) (L : Block Validator) : Decidable (isLeaf S L) :=
+  inferInstanceAs (Decidable (_ ∧ _))
+
+/-- The leaves of `Σ.T`, as a set. -/
 def leaves (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun L => ∀ C ∈ S.T, C.parent ≠ some L
+  S.T.filter fun L => isLeaf S L
 
 /-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A block is *viable* when some
     leaf descending from it has state-height at least `Σ.h_max − 1`: its branch reaches
