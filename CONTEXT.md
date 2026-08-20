@@ -2777,11 +2777,14 @@ schedule's stronger `R ≥ 2` deferred to Figure 3's file), `round(·)`, `Block.
 
 - `σ[·]` is `Option`-valued (map defined exactly on `T` is an invariant to prove, not a
   type fact) — the old rendering's decision, re-taken.
-- `rootProposal : Nat → Option (Option Block)`: `none` = no opening block of the round
-  processed yet (Figure 2 line 5's "unset"), `some none` = first opening block carried `⊥`.
-  Definition 13 fixes the round's entry at the *first* opening block even when its root is
-  `⊥`, so the flat `Option` would lose that. `Store.rootProposalAt` (`Option.join`) is the
-  draft's flat reading for Definitions 13–14 and Figure 5.
+- `rootProposal : Nat → Option Block`, with the write conditioned on the block carrying a
+  nonempty proposal root (Roberto, 2026-08-20). This deviates from Definition 13 as
+  drafted — there the round's *first* opening block claims the entry even with `⊥` — and
+  the two rules differ only under an equivocating opening proposer whose first-processed
+  block carries `⊥`. The paper sentence to match: "the proposal root of the first round-`r`
+  opening block carrying one". A two-level `Option` rendering Definition 13's literal rule
+  preceded this (`Store.rootProposalAt` = `Option.join` as the flat reading); git history
+  has it.
 - Two `let some … | return S` reject exits in `onBlock`: genesis (the `B.parent ∉ Σ.T`
   case) and a parent the state map misses (unreachable under the map-domain coherence
   invariant, to be proved).
@@ -2825,6 +2828,34 @@ The decisions worth re-finding:
 When §5 and §6 land in the draft: `Omega` gets its real definition, `getHead` its caller,
 `onTick`'s two parameters their owners, and the schedule's unrendered phase times
 (support freeze, slot-view freeze, confirmation) their consumers.
+
+## 2026-08-20 — the honest validator spec begins, Lean-first, under dictation
+
+Roberto: write §6 in Lean before the paper has it. Mode decided by him: **he dictates the
+semantics, rule by rule**; pure functions first (lean-sts wiring later); first piece the
+SG/FG action. `Spec/Consensus/Validator.lean` holds it — no figure, hence no figure number.
+
+`onSGFGVotingAction (i S r)` carries its precondition `S.t = actionTime r` as an
+**autoparam** (`:= by assumption`, anonymous binder — both his calls). A statement
+supplying it must hold it as a *named* hypothesis; `assumption` does not see anonymous
+arrow binders during statement elaboration. The body is a **skeleton he will reshape**,
+every invented line marked `skeleton:` — anchor = stored action root with fork-choice-root
+fallback, FG pairs read from the anchor's own post-state, unconditionally exact target
+vote and `(h_j, J)` commitment, head = the anchor standing in for §5's confirmed head, no
+signing history.
+
+### Readability rules for this subtree, from the same session
+
+Each given as a correction; standing until revoked:
+
+- **No `match` in spec definitions**, and **no `|`** — no `let some x := e | return`
+  alternatives either. The idiom instead: dependent `if h : o.isSome then let x := o.get h`.
+  `Fig5RoundRoots.lean` and `Validator.lean` are converted; `onBlock` (Fig2),
+  `onAttestation` (Fig6) and Fig1's `processAttestation` `match` still carry the old style,
+  to convert on his word.
+- **No `∣` (divides) in code** — Roberto read it as a pipe/or. Write `% … = 0`
+  (`Block.isOpening`, Figure 1's justify test). Docstrings quoting the draft's formula keep
+  the draft's spelling, backticked.
 
 ## Next
 

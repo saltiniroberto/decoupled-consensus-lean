@@ -15,6 +15,7 @@ import Spec.Consensus.Fig3Schedule
 import Spec.Consensus.Fig4SupportScores
 import Spec.Consensus.Fig5RoundRoots
 import Spec.Consensus.Fig6TimedStore
+import Spec.Consensus.Validator
 
 /-!
 # The specification
