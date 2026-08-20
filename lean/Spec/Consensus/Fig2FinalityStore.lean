@@ -26,16 +26,18 @@ Definition 7 has `σ[·]` assign each accepted block its post-state. A total fun
 map is defined exactly on `T` is then a fact to prove about reachable stores, not a fact of
 the type.
 
-## `root_proposal[r]` distinguishes "unset" from "set to `⊥`"
+## `root_proposal[r]` registers only a nonempty root
 
-The field is `Nat → Option (Option (Block Validator))`: `none` is "no round-`r` opening
-block processed yet" — Figure 2's line 5 "is unset" — while `some none` is "the first
-round-`r` opening block carried proposal root `⊥`". The distinction is Definition 13's:
-the round's root proposal is fixed by the *first* opening block processed, later ones
-ignored, even when that first root is `⊥`. Readers that want the draft's flat `⊥`-or-block
-reading — Figure 5's `Σ.root_proposal[r]` — take `Store.rootProposalAt`, which is the
-`Option.join` of the raw entry. The field is Definition 10's; it lands here because
-Figure 2's `on_block` is its first writer.
+The field is `Nat → Option (Block Validator)`: `none` until a round-`r` opening block
+carrying a nonempty proposal root is processed, then that first root, permanently.
+Definition 13 as drafted lets the round's *first* opening block claim the entry even with
+`⊥`; conditioning the write on a nonempty root instead (Roberto, 2026-08-20) is what keeps
+this a single `Option` — a two-level `Option` distinguishing "unset" from "set to `⊥`"
+preceded it, and git history has it. The two rules differ only under an equivocating
+opening proposer whose first-processed block carries `⊥`: the draft's rule then pins `⊥`,
+this one adopts the equivocator's later nonempty root. The paper sentence to match is "the
+proposal root of the first round-`r` opening block carrying one". The field is
+Definition 10's; it lands here because Figure 2's `on_block` is its first writer.
 
 ## Two `let some … | return S` lines in `on_block`, both the reject exit
 
@@ -90,9 +92,10 @@ structure Store (Validator : Type) where
   /-- `h_max`, the greatest state-height the store has ever accepted. -/
   h_max : Nat
   /-- `root_proposal[·]` (Definition 10; here because `on_block` writes it): per round,
-      `none` while no opening block of that round has been processed, and `some ρ` once the
-      first one carried proposal root `ρ` — itself a block or `⊥`. See the module header. -/
-  rootProposal : Nat → Option (Option (Block Validator))
+      `none` until an opening block of that round carrying a nonempty proposal root is
+      processed, then that first root. See the module header for the deviation from
+      Definition 13's first-block rule. -/
+  rootProposal : Nat → Option (Block Validator)
   /-- `head[·]` (Definition 10; read by Figure 4's scores, written by Figure 6's
       `on_attestation`): per round and validator, the first processed nonempty attestation
       head with its processing time, `none` until one arrives. -/
@@ -113,12 +116,6 @@ structure Store (Validator : Type) where
       below time 0 — the draft leaves the initial value unstated, and `on_tick`'s
       precondition `Σ.t < t` must pass at `t = 0` — at `-1`, an arbitrary such value. -/
   t : Int
-
-/-- `Σ.root_proposal[r]` as the draft reads it in Definitions 13–14 and Figure 5: the
-    round's root proposal, `⊥` when no opening block has arrived *or* the first one carried
-    `⊥`. The `Option.join` of the raw two-level entry. -/
-def Store.rootProposalAt (S : Store Validator) (r : Nat) : Option (Block Validator) :=
-  (S.rootProposal r).join
 
 section StoreDefs
 variable [DecidableEq Validator]
@@ -202,14 +199,16 @@ def processUpdates (S : Store Validator) (σ : ChainState Validator) :
   return S                                                    -- line 19
 
 /-- `on_block(Σ, B)` (Figure 2, lines 4–11). Lines 5–6 register the round's root proposal
-    from the first opening block processed — before the admission test, so a block rejected
-    below still claims its round's entry. Admission then wants the slot started, the parent
-    accepted, and `B` descending from `Σ.F`; an admitted block is replayed with Figure 1's
-    transition, stored, and its post-state offered to `process_updates`. -/
+    from the first opening block processed that carries one — before the admission test, so
+    a block rejected below still claims its round's entry. Admission then wants the slot
+    started, the parent accepted, and `B` descending from `Σ.F`; an admitted block is
+    replayed with Figure 1's transition, stored, and its post-state offered to
+    `process_updates`. -/
 def onBlock (S : Store Validator) (B : Block Validator) : Store Validator := Id.run do
   let mut S := S
-  if B.isOpening ∧ S.rootProposal (round B.slot) = none then  -- line 5
-    S.rootProposal[round B.slot] ← some B.proposalRoot        -- line 6
+  -- line 5, strengthened: only a nonempty proposal root registers — see the module header
+  if B.isOpening ∧ S.rootProposal (round B.slot) = none ∧ B.proposalRoot ≠ none then
+    S.rootProposal[round B.slot] ← B.proposalRoot             -- line 6
   -- line 7: `if B.slot > Σ.s or B.parent ∉ Σ.T or Σ.F ⪯̸ B then return Σ`. A parentless
   -- `B` — genesis — is the `B.parent ∉ Σ.T` case, taken first; see the module header.
   let some p := B.parent | return S
