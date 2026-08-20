@@ -28,19 +28,28 @@ variable {Validator : Type}
 section Actions
 variable [DecidableEq Validator] [Electorate Validator] [Params]
 
-/-- The round's Goldfish confirmation, from a walk start (Roberto's rule, 2026-08-20):
-    filter the tree from `walkStart` — keep the blocks of the candidate tree `C(Σ)` that
-    descend from it and that the veto does not exclude — then run the Goldfish fork choice
-    from `walkStart` over exactly the blocks that survive; `none` when nothing does.
+/-- The veto on confirmation candidates (skeleton, standing in for a rule of Roberto's):
+    `Q` is vetoed when some accepted block on the finalized chain, conflicting with `Q`,
+    might still hold majority support — `G0`, in the role the old paper's strong G0 check
+    gave it. Computed outside `goldfishConfirmation`, which sees only the already-filtered
+    tree. -/
+def vetoed (S : Store Validator) (r : Nat) (Q : Block Validator) : Prop :=
+  ∃ B ∈ S.T, S.F ⪯ B ∧ ¬ B ∼ Q ∧ G0 S r B
+
+instance (S : Store Validator) (r : Nat) (Q : Block Validator) : Decidable (vetoed S r Q) :=
+  inferInstanceAs (Decidable (∃ B ∈ S.T, _))
+
+/-- The round's Goldfish confirmation (Roberto's rule, 2026-08-20): run the Goldfish fork
+    choice from `walkStart` over exactly the blocks of `candidates` — a tree the caller
+    has already filtered — and `none` when the set is empty.
 
     The walk itself is the draft's Section 5, undrafted, so the store's `Ω` stands for
-    "run Goldfish from `walkStart` over this set": the membership proof it carries is what
-    gives the result the three filter properties — in `C(Σ)`, descending from `walkStart`,
-    unvetoed. When Section 5 lands, the `Ω` application becomes the vote-driven walk. -/
-def goldfishConfirmation (S : Store Validator) (walkStart : Block Validator)
-    (vetoed : Block Validator → Prop) [DecidablePred vetoed] :
-    Option (Block Validator) :=
-  let candidates := (candidateTree S).filter fun B => walkStart ⪯ B ∧ ¬ vetoed B
+    "run Goldfish from the walk start over this set", and the membership proof `Ω` carries
+    is what makes the result one of the caller's candidates. The walk start is therefore
+    unread today — written `_walkStart`, and the parameter is kept because a Goldfish fork
+    choice without a starting point is not the notion this stands for. -/
+def goldfishConfirmation (S : Store Validator) (_walkStart : Block Validator)
+    (candidates : Finset (Block Validator)) : Option (Block Validator) :=
   if h : candidates.Nonempty then some (S.Ω candidates h).val else none
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
@@ -86,8 +95,10 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
       let σ := S.σ[A]
       if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
     else .empty
-  -- the confirmation from `A`; skeleton: the veto is `G0` on a conflicting block over `Σ.F`
-  let C? := goldfishConfirmation S A fun Q => ∃ B ∈ S.T, S.F ⪯ B ∧ ¬ B ∼ Q ∧ G0 S r B
+  -- the filtered tree: the candidate-tree blocks from `A` the veto does not exclude
+  let filteredT := (candidateTree S).filter fun B => A ⪯ B ∧ ¬ vetoed S r B
+  -- the confirmation: run Goldfish from `A` over exactly what survived
+  let C? := goldfishConfirmation S A filteredT
   if hC : C?.isSome then
     let C := C?.get hC
     if _ : C ∈ S.σ then
