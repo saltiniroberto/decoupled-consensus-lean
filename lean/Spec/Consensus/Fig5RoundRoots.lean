@@ -19,7 +19,7 @@ The routines appear in the figure's own order, which is already callee-first.
 The draft's two deepest-selections are over sets its Definition 12 argues lie on one chain
 — two conflicting blocks cannot both hold direct support `m` — where the depth-maximal
 element is unique. Over an arbitrary `Finset`, `deepest` keeps the depth-maximal elements
-and lets the store's `Ω` pick, so the routine is total without a chain hypothesis: the
+and lets the store's `ω` pick, so the routine is total without a chain hypothesis: the
 old rendering's totalization, with the selection data read off the store instead of an
 ambient instance.
 
@@ -36,7 +36,7 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator : Type}
+variable {Validator Ω : Type}
 
 /-- How many blocks `B`'s chain has, up to and including `B`. The draft's "deepest"
     selections compare blocks by chain position; this is that measure, off the ancestor
@@ -44,14 +44,15 @@ variable {Validator : Type}
 def depth (B : Block Validator) : Nat := (ancestors B).length
 
 section Roots
-variable [DecidableEq Validator] [Electorate Validator] [Params]
+variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Validator Ω]
 
-/-- The deepest block of a nonempty set: the depth-maximal elements, the store's `Ω`
-    picking among them. See the module header — on the one-chain sets the draft applies
-    this to, the depth-maximal element is unique and `Ω` has no choice to make. -/
-def deepest (S : Store Validator) (s : Finset (Block Validator)) (h : s.Nonempty) :
+/-- The deepest block of a nonempty set: the depth-maximal elements, the store's `ω`
+    picking among them through `Selection.select`. See the module header — on the one-chain
+    sets the draft applies this to, the depth-maximal element is unique and the selection
+    has no choice to make. -/
+def deepest (S : Store Validator Ω) (s : Finset (Block Validator)) (h : s.Nonempty) :
     Block Validator :=
-  (S.Ω (s.filter fun B => ∀ C ∈ s, depth C ≤ depth B)
+  (Selection.select S.ω (s.filter fun B => ∀ C ∈ s, depth C ≤ depth B)
     (by
       obtain ⟨B, hB, hmax⟩ := s.exists_max_image depth h
       exact ⟨B, Finset.mem_filter.mpr ⟨hB, hmax⟩⟩)).val
@@ -60,7 +61,7 @@ def deepest (S : Store Validator) (s : Finset (Block Validator)) (h : s.Nonempty
     the round's opening proposer, at `t_r`, sets its opening block's proposal-root field
     to — the deepest block in `C(Σ)` with grade 2, or the current fork-choice root when no
     such block exists. -/
-def getProposalRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
+def getProposalRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
   let G := S.candidateTree.filter fun B => G2 S r B           -- line 2
   if hG : G.Nonempty then                                     -- line 3
     return deepest S G hG                                     -- line 4
@@ -69,7 +70,7 @@ def getProposalRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run 
 /-- `get_lower_root(Σ, r)` (Figure 5, lines 6–10; Definition 14's `R_low`): the deepest
     block in `C(Σ)` with grade 3 strictly descending from the fork-choice root, or the
     fork-choice root itself when there is none. -/
-def getLowerRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
+def getLowerRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
   let G := S.candidateTree.filter fun B =>
     G3 S r B ∧ S.forkChoiceRoot ≺ B                           -- line 7
   if hG : G.Nonempty then                                     -- line 8
@@ -81,7 +82,7 @@ def getLowerRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     `R_prop` exactly when `R_low ⪯ R_prop`, `R_prop ∈ C(Σ)` and `G1(R_prop)`; on acceptance
     the SG root is `R_prop`, otherwise `R_low` — the lower root is not retained. `on_tick`
     stores the result in `Σ.sg_root[r]`. -/
-def getSGRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
+def getSGRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
   let Rlow := getLowerRoot S r                                -- line 12
   -- lines 13–15: `if Σ.root_proposal[r] = ⊥ then return R_low; R_prop ← Σ.root_proposal[r]`.
   -- The `⊥` case falls through to the closing `return R_low`.
@@ -96,7 +97,7 @@ def getSGRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     `R_SG = Σ.sg_root[r]` when `C ⪯ R_SG` — otherwise the step does not occur. An unset
     `Σ.sg_root[r]` — unreachable at the `a_r` read, which follows the `t_r + Δ` write —
     returns `C`. -/
-def getWalkRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
+def getWalkRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
   let C := S.forkChoiceRoot                                   -- line 20
   if hs : (S.sgRoot r).isSome then
     let Rsg := (S.sgRoot r).get hs
@@ -110,7 +111,7 @@ def getWalkRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     A validator's own selection needs no external backing, while a round root adopted from
     others must still be viable and majority-backed at signing time. `on_tick` stores the
     result in `Σ.action_root[r]`. -/
-def getActionRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
+def getActionRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
   let C := S.forkChoiceRoot                                   -- line 25
   let R := getWalkRoot S r                                    -- line 26
   if R ∈ S.candidateTree ∧ (R = C ∨ G1 S r R) then            -- line 27

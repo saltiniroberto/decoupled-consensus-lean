@@ -23,7 +23,7 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator : Type}
+variable {Validator Ω : Type}
 
 section Actions
 variable [DecidableEq Validator] [Electorate Validator] [Params]
@@ -33,10 +33,10 @@ variable [DecidableEq Validator] [Electorate Validator] [Params]
     might still hold majority support — `G0`, in the role the old paper's strong G0 check
     gave it. Computed outside `goldfishConfirmation`, which sees only the already-filtered
     tree. -/
-def vetoed (S : Store Validator) (r : Nat) (Q : Block Validator) : Prop :=
+def vetoed (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Prop :=
   ∃ B ∈ S.T, S.F ⪯ B ∧ ¬ B ∼ Q ∧ G0 S r B
 
-instance (S : Store Validator) (r : Nat) (Q : Block Validator) : Decidable (vetoed S r Q) :=
+instance (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Decidable (vetoed S r Q) :=
   inferInstanceAs (Decidable (∃ B ∈ S.T, _))
 
 /-- The blocks the round's confirmation may choose among: the walk start, together with the
@@ -48,7 +48,7 @@ instance (S : Store Validator) (r : Nat) (Q : Block Validator) : Decidable (veto
     empty, which is what makes the confirmation total.
 
     Skeleton to the extent `vetoed` is. -/
-def confirmationCandidates (S : Store Validator) (r : Nat) (walkStart : Block Validator) :
+def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block Validator) :
     Finset (Block Validator) :=
   {walkStart} ∪ (S.candidateTreeFrom walkStart).filter fun B => ¬ vetoed S r B
 
@@ -76,15 +76,20 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     It is an autoparam, so a caller holding the fact in context writes nothing at the call
     and one that does not gets an error there — the requirement is enforced either way.
 
-    The walk itself is the draft's Section 5, undrafted, so the store's `Ω` stands for
-    "run Goldfish from the walk start over this set", and the membership proof `Ω` carries
-    is what makes the result one of the caller's candidates. `walkStart` is therefore read
-    only through the hypothesis today, and the parameter is kept because a Goldfish fork
-    choice without a starting point is not the notion this stands for. -/
-def goldfishConfirmation (S : Store Validator) (walkStart : Block Validator)
+    **The walk itself is unspecified**: only the input and output types are given, since
+    the draft's Section 5 is what will define it. `opaque` is what says so — the term after
+    `:=` is not the meaning, only a witness that the result type is inhabited, and no proof
+    can unfold it. The witness is the walk start, which the hypothesis puts in the
+    candidate set, and it being computable is what keeps callers computable.
+
+    The output type is a subtype, so the one property that survives being unspecified is
+    the one the rest of the layer needs: **the confirmation is one of the candidates**.
+    Read it with `.val`, and `.property` in proofs. -/
+opaque goldfishConfirmation (S : Store Validator Ω) (walkStart : Block Validator)
     (candidates : Finset (Block Validator))
-    (hCandidates : IsSubtreeFrom walkStart candidates := by assumption) : Block Validator :=
-  (S.Ω candidates ⟨walkStart, hCandidates.1⟩).val
+    (hCandidates : IsSubtreeFrom walkStart candidates := by assumption) :
+    {B // B ∈ candidates} :=
+  ⟨walkStart, hCandidates.1⟩
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
@@ -131,7 +136,7 @@ def goldfishConfirmation (S : Store Validator) (walkStart : Block Validator)
     source-proposal branch — the old rule prefers the graded proposal's state over the
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
-def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
+def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     (_ : S.t = actionTime r := by assumption)
     (hCandidates : IsSubtreeFrom (getActionRoot S r)
         (confirmationCandidates S r (getActionRoot S r)) := by assumption) :
@@ -147,7 +152,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
     else .empty
   -- the confirmation: run Goldfish from `A` over the candidates the veto admits, `A`
   -- among them, so there is always one
-  let C := goldfishConfirmation S A (confirmationCandidates S r A)
+  let C := (goldfishConfirmation S A (confirmationCandidates S r A)).val
   if _ : C ∈ S.σ then
     let σ := S.σ[C]
     -- skeleton: the current-height half, off the confirmation's state, no history
