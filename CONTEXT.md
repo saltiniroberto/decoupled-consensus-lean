@@ -2912,12 +2912,18 @@ inhabited result type. So the hypothesis is gone from every signature (2026-08-2
 `IsSubtreeFrom` survives with **no consumer in `Spec/`** — deliberately, as the statement
 the execution-level theorems about the walk will use.
 
-What the definition does need is `hMem : walkStart ∈ candidates`, the witness that
-`{B // B ∈ candidates}` is inhabited. Unlike tree-ness that one is provable where it is
-used: `confirmationCandidates` is `{walkStart} ∪ …`, so the autoparam
-`by simp [confirmationCandidates]` discharges it at the call and nothing propagates. The
-confirmation's totality is therefore structural — it returns a `Block`, not an `Option` —
-and rests on the trivial fact rather than the owed one.
+**`goldfishConfirmation` ended the day with no hypotheses at all** and the signature
+`Store → Block → Finset Block → Block`. A weaker `hMem : walkStart ∈ candidates` survived
+the tree property for one commit, as the witness for a subtype result; Roberto dropped that
+too. So nothing is provable about the confirmation today — not even that it lands in the
+candidate set — and everything the walk should satisfy becomes a hypothesis or a conclusion
+of the theorems about executions, not a constraint on the signature. Its totality is still
+structural, the return type being a `Block`.
+
+The subtype form is worth remembering as the middle option if that turns out to be too
+little: `{B // B ∈ insert walkStart candidates}` needs no hypothesis either, since
+`Finset.mem_insert_self` witnesses it, and it keeps a membership property — at the cost of a
+result type that names a set the caller did not pass.
 
 That forced a semantic decision, his: **the veto never removes the walk start.**
 `confirmationCandidates` is `{walkStart} ∪ (candidateTreeFrom walkStart).filter (¬ vetoed)`,

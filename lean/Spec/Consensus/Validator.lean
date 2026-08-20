@@ -66,28 +66,23 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     choice from `walkStart` over exactly the blocks of `candidates`. **It always returns a
     block** — no `Option`.
 
-    **The walk itself is unspecified**: only the input and output types are given, since
-    the draft's Section 5 is what will define it. `opaque` is what says so — the term after
-    `:=` is not the meaning, only a witness that the result type is inhabited, and no proof
-    can unfold it. The witness is the walk start, and it being computable is what keeps
-    callers computable.
+    **Unspecified: input and output types, and nothing else** (Roberto, 2026-08-21). The
+    draft's Section 5 is what will define the walk. `opaque` is what says so — the term
+    after `:=` is not the meaning but a witness that the result type is inhabited, and no
+    proof can unfold it. The witness is the walk start, and its being computable is what
+    keeps callers computable.
 
-    The output type is a subtype, so the one property that survives being unspecified is
-    the one the rest of the layer needs: **the confirmation is one of the candidates**.
-    Read it with `.val`, and `.property` in proofs.
-
-    `hMem` is all the witness needs — that the walk start is among the candidates. It is an
-    autoparam that unfolds `confirmationCandidates`, whose first branch is exactly
-    `{walkStart}`, so the real call site writes nothing and nothing propagates upward.
-    **Tree-ness is no longer required here**: `IsSubtreeFrom` says what the argument is
-    *meant* to be, and an unspecified function needs no such promise to exist. The property
-    belongs to the theorems about executions that reason on the walk, not to this
-    signature — `CONTEXT.md` records it as owed. -/
+    No hypothesis, and therefore **nothing is provable about the result** — not even that
+    it is one of the candidates. Both the tree property and the weaker "the walk start is
+    among the candidates" were hypotheses here earlier today, the first to promise the walk
+    could traverse its set and the second to witness a subtype result; git history has both.
+    What replaces them is that everything the walk should satisfy — that it lands in the
+    candidate set, that it moves through a gap-free tree, `IsSubtreeFrom` and the rest —
+    becomes a hypothesis or a conclusion of the theorems about executions that reason on the
+    walk, and none of it constrains this signature. `CONTEXT.md` records what is owed. -/
 opaque goldfishConfirmation (S : Store Validator Ω) (walkStart : Block Validator)
-    (candidates : Finset (Block Validator))
-    (hMem : walkStart ∈ candidates := by simp [confirmationCandidates]) :
-    {B // B ∈ candidates} :=
-  ⟨walkStart, hMem⟩
+    (candidates : Finset (Block Validator)) : Block Validator :=
+  walkStart
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
@@ -142,7 +137,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     else .empty
   -- the confirmation: run Goldfish from `A` over the candidates the veto admits, `A`
   -- among them, so there is always one
-  let C := (goldfishConfirmation S A (confirmationCandidates S r A)).val
+  let C := goldfishConfirmation S A (confirmationCandidates S r A)
   if _ : C ∈ S.σ then
     let σ := S.σ[C]
     -- skeleton: the current-height half, off the confirmation's state, no history
