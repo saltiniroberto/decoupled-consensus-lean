@@ -11,3 +11,4 @@ REFERENCES_LOCAL.md
 .citation-links.json
 __pycache__/
 *.vsix
+scratch/
