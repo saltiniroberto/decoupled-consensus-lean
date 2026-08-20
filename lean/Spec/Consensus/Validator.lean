@@ -90,7 +90,7 @@ structure ActionAssumptions (S : Store Validator Ω) : Prop where
   candidateAccepted : ∀ r B,
     B ∈ confirmationCandidates S r (getActionRoot S r) ∨ B = getActionRoot S r → B ∈ S.T
 
-/-- The state the store records for `B`, with the proof that it records one taken as an
+/-- The state a store's map records for `B`, with the proof that it records one taken as an
     **autoparam**. Three alternatives, in order: a hypothesis in context; `B` is the round's
     walk start, so `Or.inr rfl` reaches `candidateAccepted`; or a witness that `B` is one of
     the round's candidates is in context, which is what the walk's result type supplies.
@@ -98,10 +98,11 @@ structure ActionAssumptions (S : Store Validator Ω) : Prop where
     Anything the alternatives do not cover must pass its proof by hand, and a call that can
     reach none of them fails where it stands.
 
-    The body writes `(S.σ B).get h`, not `S.σ[B]`, which the macro below would expand back
-    into this definition. -/
-def Store.stateAt (S : Store Validator Ω) (B : Block Validator)
-    (h : B ∈ S.σ := by
+    It takes the *map*, not the store: the store is recovered by unifying the goal `B ∈ m`
+    with the bundle's conclusion, so it need not be an argument. And the body writes
+    `(m B).get h` rather than any bracket, so nothing here expands back into itself. -/
+def stateAt (m : Block Validator → Option (ChainState Validator)) (B : Block Validator)
+    (h : B ∈ m := by
       solve
         | assumption
         | exact ActionAssumptions.stateOfAccepted (by assumption) _
@@ -109,28 +110,25 @@ def Store.stateAt (S : Store Validator Ω) (B : Block Validator)
         | exact ActionAssumptions.stateOfAccepted (by assumption) _
             (ActionAssumptions.candidateAccepted (by assumption) _ _ (by assumption))) :
     ChainState Validator :=
-  (S.σ B).get h
+  (m B).get h
 
-/-- **`S.σ[B]` from here on means `Store.stateAt S B`**, so the read's proof comes from that
-    autoparam rather than from core's `get_elem_tactic` (Roberto, 2026-08-21).
+/-- `S.σ⟦B⟧` — the state map read whose proof comes from `stateAt`'s autoparam, as against
+    `S.σ[B]`, which keeps core's meaning and its `get_elem_tactic` (Roberto, 2026-08-21).
 
-    The rule claims only brackets whose collection is a dotted identifier ending in `σ`:
-    `S.σ` lexes as one identifier, not a projection, so the name is taken apart the way
-    `Spec/Consensus/Notation.lean`'s assignment macros do it, and everything else calls
-    `Lean.Macro.throwUnsupported` and falls through to core's expansion. `S.σ[B]?` and
-    `S.σ[B]!` are separate syntax and unaffected, as is the `σ[B] ← …` assignment, which is
-    a `doElem`.
+    Own brackets rather than core's. The earlier attempt claimed `S.σ[B]` itself, which
+    needed a `macro_rules` clause matching identifiers whose last component is `σ` —
+    name-directed, and unscopable, `macro_rules` having no scoped form. A `notation` cannot
+    claim that spelling at all: `S.σ` lexes as one dotted identifier, so an atom `.σ[` is
+    never reached, and core's bracket takes the parse. Measured, 2026-08-21, both of them.
 
-    Reads *earlier in the build* than this declaration — `Store.viableLeaves` in
-    `Fig2FinalityStore.lean` — keep core's expansion, and still work, since they carry the
-    membership in context and the first alternative is `assumption`. -/
+    This form has neither problem. The `syntax` is `scoped`, so the parse exists only where
+    this namespace is open; `noWs` keeps `f ⟦x⟧` — an application to a quotient class —
+    parsing as before; and the term before the bracket is checked against `stateAt`'s first
+    argument, so it is the type that decides, not a name. -/
+scoped syntax:max term noWs "⟦" term "⟧" : term
+
 macro_rules
-  | `($x:ident[$i]) => do
-      let n := x.getId
-      if n.getString! == "σ" && !n.getPrefix.isAnonymous then
-        `(Store.stateAt $(Lean.mkIdent n.getPrefix) $i)
-      else
-        Lean.Macro.throwUnsupported
+  | `($m⟦$B⟧) => `(stateAt $m $B)
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
@@ -142,12 +140,12 @@ macro_rules
     `lemChainTargetFirstBlock`).
 
     The bundle is what makes the body straight-line: both state reads are unconditional and
-    written plainly, `S.σ[walkStart]` and `S.σ[C]`, their proofs supplied by
-    `Store.stateAt`'s autoparam — the walk start through `Or.inr rfl`, the confirmation
-    through `hC`, which the destructuring `let` takes from the walk's result type alongside
-    the block itself. Before the bundle, each read sat inside `if _ : … ∈ S.σ` with a
-    fallback attestation carrying no head and no height pair, and that fallback was
-    unreachable-once-proved rather than impossible.
+    written plainly, `S.σ⟦walkStart⟧` and `S.σ⟦C⟧`, their proofs supplied by `stateAt`'s
+    autoparam — the walk start through `Or.inr rfl`, the confirmation through `hC`, which
+    the destructuring `let` takes from the walk's result type alongside the block itself.
+    Before the bundle, each read sat inside `if _ : … ∈ S.σ` with a fallback attestation
+    carrying no head and no height pair, and that fallback was unreachable-once-proved
+    rather than impossible.
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -191,12 +189,12 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   -- walk returns a subtype, not a pair
   let ⟨C, hC⟩ := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state. Both reads take their proof from `Store.stateAt`'s autoparam
-  let σStart := S.σ[walkStart]
+  -- state. Both reads take their proof from `stateAt`'s autoparam, `⟦…⟧` being that read
+  let σStart := S.σ⟦walkStart⟧
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC := S.σ[C]
+  let σC := S.σ⟦C⟧
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h
