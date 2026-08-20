@@ -205,11 +205,12 @@ def leaves (S : Store Validator) : Finset (Block Validator) :=
     within one height of the store's frontier. Viability is inherited by ancestors, so the
     set is prefix-closed — the draft's observation, not an extra clause.
 
-    `σ[L].h` is read through the map's `Option` by `Option.any`, false on an unmapped leaf;
-    a member of `T` the map misses is a coherence invariant's business, not this
-    definition's. -/
+    `∃ _ : L ∈ S.σ` is what lets the height be read as `S.σ[L].h`: the binder puts the
+    membership in context, where the bracket's side condition finds it. A leaf the map
+    misses therefore witnesses nothing — a member of `T` the map misses is a coherence
+    invariant's business, not this definition's. -/
 def viableSet (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun B => ∃ L ∈ leaves S, B ⪯ L ∧ (S.σ L).any fun st => st.h ≥ S.h_max - 1
+  S.T.filter fun B => ∃ L ∈ leaves S, B ⪯ L ∧ ∃ _ : L ∈ S.σ, S.σ[L].h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
