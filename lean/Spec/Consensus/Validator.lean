@@ -146,7 +146,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
   -- admits, the walk start among them, so there is always one
   let confirmed := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
-  let C := confirmed.val
+  let C : Block Validator := confirmed
   have _ : C ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ confirmed.property)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
   -- state
