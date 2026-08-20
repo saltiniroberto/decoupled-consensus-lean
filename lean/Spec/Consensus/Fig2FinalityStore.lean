@@ -194,18 +194,22 @@ def Store.gen (Ω : (s : Finset (Block Validator)) → s.Nonempty → {B // B �
   t := -1
   Ω := Ω
 
-/-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A *leaf* of `Σ.T` is an accepted
-    block without accepted children — written `∀ C ∈ S.T, C.parent ≠ some L`. A block is
-    *viable* when some leaf descending from it has state-height at least `Σ.h_max − 1`: its
-    branch reaches within one height of the store's frontier. Viability is inherited by
-    ancestors, so the set is prefix-closed — the draft's observation, not an extra clause.
+/-- The *leaves* of `Σ.T` (Definition 8 of the draft): the accepted blocks without
+    accepted children. "Without accepted children" is written `∀ C ∈ S.T, C.parent ≠ some L`
+    — no accepted block names `L` as its parent. -/
+def leaves (S : Store Validator) : Finset (Block Validator) :=
+  S.T.filter fun L => ∀ C ∈ S.T, C.parent ≠ some L
+
+/-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A block is *viable* when some
+    leaf descending from it has state-height at least `Σ.h_max − 1`: its branch reaches
+    within one height of the store's frontier. Viability is inherited by ancestors, so the
+    set is prefix-closed — the draft's observation, not an extra clause.
 
     `σ[L].h` is read through the map's `Option` by `Option.any`, false on an unmapped leaf;
     a member of `T` the map misses is a coherence invariant's business, not this
     definition's. -/
 def viableSet (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun B => ∃ L ∈ S.T, (∀ C ∈ S.T, C.parent ≠ some L) ∧ B ⪯ L ∧
-    (S.σ L).any fun st => st.h ≥ S.h_max - 1
+  S.T.filter fun B => ∃ L ∈ leaves S, B ⪯ L ∧ (S.σ L).any fun st => st.h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
