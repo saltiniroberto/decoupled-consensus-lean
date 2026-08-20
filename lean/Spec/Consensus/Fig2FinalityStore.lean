@@ -207,6 +207,19 @@ instance (S : Store Validator) (L : Block Validator) : Decidable (S.isLeaf L) :=
 def Store.leaves (S : Store Validator) : Finset (Block Validator) :=
   S.T.filter fun L => S.isLeaf L
 
+/-- The leaves whose recorded state-height is at least `Σ.h_max − 1`: the leaves that
+    witness a branch reaching within one height of the store's frontier. Definition 8's
+    viability is "some viable leaf descends from this block", and both of its readers —
+    `candidateTree` and `process_updates`' finalize test — say it that way.
+
+    `∃ _ : L ∈ S.σ` is what lets the height be read as `S.σ[L].h`: the binder puts the
+    membership in context, where the bracket's side condition finds it. A leaf the map
+    misses is therefore not viable — a member of `T` the map misses is a coherence
+    invariant's business, not this definition's. This is the only place in the file that
+    reads the state map for a height. -/
+def Store.viableLeaves (S : Store Validator) : Finset (Block Validator) :=
+  S.leaves.filter fun L => ∃ _ : L ∈ S.σ, S.σ[L].h ≥ S.h_max - 1
+
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
     `Σ.h_max = Σ.h_j + 1` — and `Σ.F` otherwise. -/
@@ -217,23 +230,15 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
 
 /-- `C(Σ)` (Definition 8 of the draft): the candidate tree, within which fork choice
     selects a head. A block is in it when it descends from the fork-choice root and some
-    leaf descending from it has state-height at least `Σ.h_max − 1` — that is, when its
-    branch reaches within one height of the store's frontier. The second condition is
-    inherited by ancestors, so it makes the set prefix-closed above the root: the draft's
-    observation, not an extra clause.
+    viable leaf descends from it. The second condition is inherited by ancestors, so it
+    makes the set prefix-closed above the root: the draft's observation, not an extra
+    clause.
 
     **The draft's `V(Σ)` is not a definition here.** Its viable-blocks set has exactly two
-    readers, this one and `process_updates`' finalize test, and each writes the condition
-    out (Roberto, 2026-08-20). The two copies say the same thing about different blocks, so
-    an audit compares them by eye.
-
-    `∃ _ : L ∈ S.σ` is what lets the height be read as `S.σ[L].h`: the binder puts the
-    membership in context, where the bracket's side condition finds it. A leaf the map
-    misses therefore witnesses nothing — a member of `T` the map misses is a coherence
-    invariant's business, not this definition's. -/
+    readers, this one and `process_updates`' finalize test, and each writes its condition
+    out over `viableLeaves` (Roberto, 2026-08-20). -/
 def Store.candidateTree (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧
-    ∃ L ∈ S.leaves, ∃ _ : L ∈ S.σ, B ⪯ L ∧ S.σ[L].h ≥ S.h_max - 1
+  S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ S.viableLeaves, B ⪯ L
 
 end StoreDefs
 
@@ -264,11 +269,11 @@ def processUpdates (S : Store Validator) (σ : ChainState Validator) :
   if S.F ⪯ σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ hash(S.J) < hash(σ.J))) then
     S.J ← σ.J                                                 -- line 15
     S.h_j ← σ.h_j
-  -- line 16. The draft's `σ.F ∈ V(Σ)` is written out — see `candidateTree` on why `V(Σ)`
-  -- is not a definition here. Note it is *not* `σ.F ∈ C(Σ)`: this block lies below `Σ.J`,
-  -- so it need not descend from the fork-choice root.
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧
-      ∃ L ∈ S.leaves, ∃ _ : L ∈ S.σ, σ.F ⪯ L ∧ S.σ[L].h ≥ S.h_max - 1 then
+  -- line 16. The draft's `σ.F ∈ V(Σ)` is written out over `viableLeaves` — see
+  -- `candidateTree` on why `V(Σ)` is not a definition here. Note it is *not*
+  -- `σ.F ∈ C(Σ)`: this block lies below `Σ.J`, so it need not descend from the
+  -- fork-choice root.
+  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ ∃ L ∈ S.viableLeaves, σ.F ⪯ L then
     S.F ← σ.F                                                 -- line 17
     S.T ← S.T.filter fun B => B ∼ S.F                         -- line 18: keep the compatible
   return S                                                    -- line 19
