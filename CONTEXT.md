@@ -2900,20 +2900,24 @@ keeps its `∃ _ : L ∈ S.σ` binder.
 
 ### Owed: the confirmation candidates form a tree — 2026-08-20
 
-`goldfishConfirmation` takes `hCandidates : IsSubtreeFrom walkStart candidates`.
-Roberto's requirement: the assumption must be *stated in the definition*, and **the spec
-must not prove it** — an execution-level theorem must. So the hypothesis propagates:
-`onSGFGVotingAction` takes the same fact at its own anchor, as an autoparam, and passes it
-through. `onTick` will take it in turn when §6 is wired in.
-
 `IsSubtreeFrom R s` is `R ∈ s`, everything in `s` descends from `R`, and `s` has no gaps —
 every block between `R` and a member is a member. `{R}` qualifies; the empty set does not.
 
-**Why the hypothesis exists, in Roberto's words: if it holds, the confirmation never fails.**
-So `R ∈ s` is a conjunct — without it the predicate admits the empty set and buys
-traversability only — and `goldfishConfirmation` returns a `Block`, not an `Option`, using
-`hCandidates.1` for the nonemptiness `Ω` needs. Totality is therefore structural, not a
-theorem.
+**It is a statement, not a hypothesis.** It was briefly a hypothesis on
+`goldfishConfirmation`, propagated up through `onSGFGVotingAction` as an autoparam — the
+design Roberto asked for when the requirement was "state the assumption in the definition,
+and let an execution-level theorem discharge it". Making the confirmation `opaque` removed
+the need: an unspecified function needs no promise about its argument to exist, only an
+inhabited result type. So the hypothesis is gone from every signature (2026-08-21), and
+`IsSubtreeFrom` survives with **no consumer in `Spec/`** — deliberately, as the statement
+the execution-level theorems about the walk will use.
+
+What the definition does need is `hMem : walkStart ∈ candidates`, the witness that
+`{B // B ∈ candidates}` is inhabited. Unlike tree-ness that one is provable where it is
+used: `confirmationCandidates` is `{walkStart} ∪ …`, so the autoparam
+`by simp [confirmationCandidates]` discharges it at the call and nothing propagates. The
+confirmation's totality is therefore structural — it returns a `Block`, not an `Option` —
+and rests on the trivial fact rather than the owed one.
 
 That forced a semantic decision, his: **the veto never removes the walk start.**
 `confirmationCandidates` is `{walkStart} ∪ (candidateTreeFrom walkStart).filter (¬ vetoed)`,

@@ -66,46 +66,38 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     choice from `walkStart` over exactly the blocks of `candidates`. **It always returns a
     block** — no `Option`.
 
-    That totality is what `hCandidates` is for. `IsSubtreeFrom walkStart candidates`
-    says the set contains `walkStart`, so it is nonempty and the selection has something to
-    pick; and it says the set is gap-free, so a walk can traverse it a block at a time.
-    Neither fact is proved here: nothing in `Spec/` discharges it, because tree-ness of the
-    real argument rests on invariants of the stores the handlers build. The obligation
-    belongs to a theorem about executions, and `CONTEXT.md` records what is owed.
-
-    It is an autoparam, so a caller holding the fact in context writes nothing at the call
-    and one that does not gets an error there — the requirement is enforced either way.
-
     **The walk itself is unspecified**: only the input and output types are given, since
     the draft's Section 5 is what will define it. `opaque` is what says so — the term after
     `:=` is not the meaning, only a witness that the result type is inhabited, and no proof
-    can unfold it. The witness is the walk start, which the hypothesis puts in the
-    candidate set, and it being computable is what keeps callers computable.
+    can unfold it. The witness is the walk start, and it being computable is what keeps
+    callers computable.
 
     The output type is a subtype, so the one property that survives being unspecified is
     the one the rest of the layer needs: **the confirmation is one of the candidates**.
-    Read it with `.val`, and `.property` in proofs. -/
+    Read it with `.val`, and `.property` in proofs.
+
+    `hMem` is all the witness needs — that the walk start is among the candidates. It is an
+    autoparam that unfolds `confirmationCandidates`, whose first branch is exactly
+    `{walkStart}`, so the real call site writes nothing and nothing propagates upward.
+    **Tree-ness is no longer required here**: `IsSubtreeFrom` says what the argument is
+    *meant* to be, and an unspecified function needs no such promise to exist. The property
+    belongs to the theorems about executions that reason on the walk, not to this
+    signature — `CONTEXT.md` records it as owed. -/
 opaque goldfishConfirmation (S : Store Validator Ω) (walkStart : Block Validator)
     (candidates : Finset (Block Validator))
-    (hCandidates : IsSubtreeFrom walkStart candidates := by assumption) :
+    (hMem : walkStart ∈ candidates := by simp [confirmationCandidates]) :
     {B // B ∈ candidates} :=
-  ⟨walkStart, hCandidates.1⟩
+  ⟨walkStart, hMem⟩
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
-    Two hypotheses, both autoparams discharged by `assumption`, so a call site that holds
-    them in context writes nothing and one that does not must prove them:
-
-    * `S.t = actionTime r` — this is the round's action time;
-    * `hCandidates` — the confirmation's candidate set is a subtree rooted at the anchor,
-      which `goldfishConfirmation` requires and nothing here proves. Its own autoparam
-      finds this one at the call below, so no proof is written there. See that definition
-      on why the obligation belongs to a theorem about executions.
-
-    A statement supplying either must hold it as a *named* hypothesis: `assumption` does
-    not see anonymous arrow binders during statement elaboration (measured on
-    `lemChainTargetFirstBlock`).
+    One hypothesis, an autoparam discharged by `assumption`: `S.t = actionTime r`, that
+    this is the round's action time. A statement supplying it must hold it as a *named*
+    hypothesis, since `assumption` does not see anonymous arrow binders during statement
+    elaboration (measured on `lemChainTargetFirstBlock`). Nothing about the candidate set
+    is assumed here — `goldfishConfirmation` needs only that its walk start is among its
+    candidates, which its own autoparam proves at the call below.
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -137,9 +129,7 @@ opaque goldfishConfirmation (S : Store Validator Ω) (walkStart : Block Validato
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
-    (_ : S.t = actionTime r := by assumption)
-    (hCandidates : IsSubtreeFrom (getActionRoot S r)
-        (confirmationCandidates S r (getActionRoot S r)) := by assumption) :
+    (_ : S.t = actionTime r := by assumption) :
     Attestation Validator := Id.run do
   -- the anchor (Definition 15): the round's action root, derived here from the current
   -- store rather than read from `Σ.action_root[r]`
