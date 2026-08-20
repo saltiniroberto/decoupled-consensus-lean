@@ -130,6 +130,16 @@ structure Store (Validator Ω : Type) where
       `get_head`, the deepest-picks, Section 5's confirmation when it lands — a function
       of the store alone. -/
   ω : Ω
+  /-- The round's Goldfish walk: from a walk start, over a candidate set, to the block the
+      round confirms. **Only its type is given here** — the draft's Section 5 will define
+      the walk, and until then a store value supplies whatever function it likes.
+
+      A field rather than an `opaque` definition (Roberto, 2026-08-21), so that no
+      inhabitation witness is needed and the walk stays computable; and a field rather than
+      a `Selection` method, so that it can differ per store value. Beyond Definitions 7 and
+      10, like `ω` above: the draft does not make the walk a store component. -/
+  goldfishConfirmation : (walkStart : Block Validator) →
+    (candidates : Finset (Block Validator)) → Block Validator
 
 /-! ### `B ∈ S.σ` and `S.σ[B]`, through `Membership` and `GetElem`
 
@@ -187,9 +197,11 @@ variable [DecidableEq Validator]
 
 /-- The genesis store: `s = 0`, `T = {B_gen}`, `σ[B_gen]` the genesis state,
     `F = B_gen`, `(J, h_j) = (B_gen, 0)`, `h_max = 1`. The per-round maps start empty.
-    The one field the draft's genesis prose does not fix is the validator's selection
-    data `ω`, so it is the argument. -/
-def Store.gen (ω : Ω) : Store Validator Ω where
+    The fields the draft's genesis prose does not fix are the two beyond Definitions 7
+    and 10 — the validator's selection data and its walk — so they are the arguments. -/
+def Store.gen (ω : Ω)
+    (goldfishConfirmation : Block Validator → Finset (Block Validator) → Block Validator) :
+    Store Validator Ω where
   s := 0
   T := {.genesis}
   σ := fun B => if B = .genesis then some .gen else none
@@ -204,6 +216,7 @@ def Store.gen (ω : Ω) : Store Validator Ω where
   actionRoot := fun _ => none
   t := -1
   ω := ω
+  goldfishConfirmation := goldfishConfirmation
 
 /-- `L` is a *leaf* of `Σ.T` (Definition 8 of the draft): an accepted block without
     accepted children. "Without accepted children" is written

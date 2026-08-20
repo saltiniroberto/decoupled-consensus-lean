@@ -58,31 +58,15 @@ def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block
     has somewhere to be.
 
     `{R}` qualifies: it is what a walk from `R` sees when nothing above `R` is available.
-    The empty set does not, which is the point — see `goldfishConfirmation`. -/
+    The empty set does not.
+
+    **Nothing in `Spec/` consumes this**, deliberately: the walk is `Store`'s
+    `goldfishConfirmation` field, whose type promises nothing about its argument, so
+    tree-ness is a hypothesis for the theorems about executions that reason on the walk.
+    It was briefly a hypothesis on the walk itself; git history has that, and `CONTEXT.md`
+    records why it went. -/
 def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
   R ∈ s ∧ (∀ B ∈ s, R ⪯ B) ∧ ∀ B ∈ s, ∀ C, R ⪯ C → C ⪯ B → C ∈ s
-
-/-- The round's Goldfish confirmation (Roberto's rule, 2026-08-20): run the Goldfish fork
-    choice from `walkStart` over exactly the blocks of `candidates`. **It always returns a
-    block** — no `Option`.
-
-    **Unspecified: input and output types, and nothing else** (Roberto, 2026-08-21). The
-    draft's Section 5 is what will define the walk. `opaque` is what says so — the term
-    after `:=` is not the meaning but a witness that the result type is inhabited, and no
-    proof can unfold it. The witness is the walk start, and its being computable is what
-    keeps callers computable.
-
-    No hypothesis, and therefore **nothing is provable about the result** — not even that
-    it is one of the candidates. Both the tree property and the weaker "the walk start is
-    among the candidates" were hypotheses here earlier today, the first to promise the walk
-    could traverse its set and the second to witness a subtype result; git history has both.
-    What replaces them is that everything the walk should satisfy — that it lands in the
-    candidate set, that it moves through a gap-free tree, `IsSubtreeFrom` and the rest —
-    becomes a hypothesis or a conclusion of the theorems about executions that reason on the
-    walk, and none of it constrains this signature. `CONTEXT.md` records what is owed. -/
-opaque goldfishConfirmation (S : Store Validator Ω) (walkStart : Block Validator)
-    (candidates : Finset (Block Validator)) : Block Validator :=
-  walkStart
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
@@ -91,8 +75,8 @@ opaque goldfishConfirmation (S : Store Validator Ω) (walkStart : Block Validato
     this is the round's action time. A statement supplying it must hold it as a *named*
     hypothesis, since `assumption` does not see anonymous arrow binders during statement
     elaboration (measured on `lemChainTargetFirstBlock`). Nothing about the candidate set
-    is assumed here — `goldfishConfirmation` needs only that its walk start is among its
-    candidates, which its own autoparam proves at the call below.
+    is assumed here: the walk is a store field whose type promises nothing about what it is
+    given, so there is no obligation to carry.
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -137,7 +121,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     else .empty
   -- the confirmation: run Goldfish from `A` over the candidates the veto admits, `A`
   -- among them, so there is always one
-  let C := goldfishConfirmation S A (confirmationCandidates S r A)
+  let C := S.goldfishConfirmation A (confirmationCandidates S r A)
   if _ : C ∈ S.σ then
     let σ := S.σ[C]
     -- skeleton: the current-height half, off the confirmation's state, no history

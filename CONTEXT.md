@@ -2912,18 +2912,28 @@ inhabited result type. So the hypothesis is gone from every signature (2026-08-2
 `IsSubtreeFrom` survives with **no consumer in `Spec/`** — deliberately, as the statement
 the execution-level theorems about the walk will use.
 
-**`goldfishConfirmation` ended the day with no hypotheses at all** and the signature
-`Store → Block → Finset Block → Block`. A weaker `hMem : walkStart ∈ candidates` survived
-the tree property for one commit, as the witness for a subtype result; Roberto dropped that
-too. So nothing is provable about the confirmation today — not even that it lands in the
-candidate set — and everything the walk should satisfy becomes a hypothesis or a conclusion
-of the theorems about executions, not a constraint on the signature. Its totality is still
-structural, the return type being a `Block`.
+**The walk ended up as a `Store` field**, `goldfishConfirmation : Block → Finset Block →
+Block`, with only its type given — a store value supplies the function, and `Store.gen`
+takes it as an argument alongside `ω`. Four shapes were tried in one sitting, in this order,
+each on Roberto's call: `Ω`-as-selection-function picking from the candidate set; `opaque`
+with an `IsSubtreeFrom` hypothesis and a subtype result; `opaque` with the weaker
+`walkStart ∈ candidates`; `opaque` with no hypothesis and a bare `Block`; then the field.
 
-The subtype form is worth remembering as the middle option if that turns out to be too
-little: `{B // B ∈ insert walkStart candidates}` needs no hypothesis either, since
-`Finset.mem_insert_self` witnesses it, and it keeps a membership property — at the cost of a
-result type that names a set the caller did not pass.
+Why the field wins: no inhabitation witness is needed, so no hypothesis and no `Option`;
+it stays computable; and the walk can differ per store value, which is per validator. The
+cost is the same as the last `opaque` form — **nothing is provable about the result**, not
+even that it lands in the candidate set — and, beyond that, the store now carries a notion
+the draft does not make a store component, alongside `ω`.
+
+Two things survive as statements with no consumer in `Spec/`: `IsSubtreeFrom`, and
+`confirmationCandidates`' never-empty property. Both are for the theorems about executions
+that will reason on the walk. If "nothing provable" turns out to be too little, the middle
+option is a subtype result `{B // B ∈ insert walkStart candidates}`, which needs no
+hypothesis either — `Finset.mem_insert_self` witnesses it — at the cost of naming a set the
+caller did not pass.
+
+`Selection` still holds `select`, which `deepest` and `getHead` use, so `Ω` is not
+vestigial; only the walk stopped reading it.
 
 That forced a semantic decision, his: **the veto never removes the walk start.**
 `confirmationCandidates` is `{walkStart} ∪ (candidateTreeFrom walkStart).filter (¬ vetoed)`,
