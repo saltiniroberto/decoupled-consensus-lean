@@ -217,7 +217,7 @@ def Store.leaves (S : Store Validator) : Finset (Block Validator) :=
     misses therefore witnesses nothing — a member of `T` the map misses is a coherence
     invariant's business, not this definition's. -/
 def Store.viableSet (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun B => ∃ L ∈ S.leaves, B ⪯ L ∧ ∃ _ : L ∈ S.σ, S.σ[L].h ≥ S.h_max - 1
+  S.T.filter fun B => ∃ L ∈ S.leaves, ∃ _ : L ∈ S.σ, B ⪯ L ∧ S.σ[L].h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
