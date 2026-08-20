@@ -2844,6 +2844,60 @@ fallback, FG pairs read from the anchor's own post-state, unconditionally exact 
 vote and `(h_j, J)` commitment, head = the anchor standing in for §5's confirmed head, no
 signing history.
 
+### The `Finmap` store, built and set aside — 2026-08-20
+
+The question was how to stop paying for the map-domain coherence — "every accepted block has
+a recorded state" — at each read. `main` keeps `T : Finset` and
+`σ : Block → Option ChainState` as independent fields, so coherence is a fact about
+*reachable* stores. A definition cannot use it: `viableSet` accepts any `Store` value, so
+inside it the fact must hold for every value of the type, which means it must be in the
+type.
+
+**It was built, on Roberto's word, then set aside for now.** The working version lives on
+the local branch `finmap-store` (commits `65d67ed` and `363dab3`, off `aca279f`); `main` was
+reset back. **The branch is an archive, not a line of development** — `CLAUDE.local.md`'s
+"do not branch, do not merge into `main`" still holds; this is a pointer so the work can be
+read, or cherry-picked deliberately, rather than redone.
+
+What it did: `Store.σ : Finmap fun _ : Block => ChainState`, with `Store.T` a *definition*
+reading `S.σ.keys`. Then `viableSet` reads `S.σ[L].h` with no membership condition, Figure 2's
+lines 9 and 10 become one `insert` (the tree write being what the map write implies), and
+`onBlock` loses its reject exit for "parent in `T` but missing from the map", that case no
+longer existing. `lake build Spec` was green and `make sorries` zero.
+
+What it cost: `Finmap` has no `filter`, so the pruning line needed a `StateMap.filterKeys`
+written at the `Multiset` level; and the silent read needed a global
+`get_elem_tactic_extensible` clause plus the `∃ x, ∃ _ : x ∈ s` binder form.
+
+Alternatives rejected on the way, with reasons:
+
+- **Coherence as a `Prop` field** (`dom : ∀ B ∈ T, B ∈ σ`). Its type mentions both `T` and
+  `σ`, so `{ S with σ := … }` cannot reuse the old proof — every write owes one, putting
+  proof obligations inside transcribed figure code.
+- **`AList`** (computable, no quotient). Its equality distinguishes permutations, so an
+  order-independence statement over stores would be false as stated. `Finmap`'s quotient is
+  what keeps such a statement sayable.
+- **`filterKeys` via `Finset.toList`**. That function is `noncomputable` in Mathlib and
+  would infect `processUpdates`, `onBlock` and everything downstream. `Finmap` is a
+  structure over `Multiset`, so the filter is `Multiset.filter` on `entries` plus a
+  three-line proof: `Multiset.nodup_of_le (Multiset.map_le_map (Multiset.filter_le _ _))`.
+  `Finmap.foldl` is not an alternative — its commutativity hypothesis is false for
+  `insert`-based folds.
+
+**Two Lean facts, reusable whichever shape wins:**
+
+- **The bracket's side-condition tactic extends at `get_elem_tactic_extensible`** in 4.32.2.
+  `get_elem_tactic_trivial` still parses but is deprecated and connected to nothing, so a
+  `macro_rules` clause added there is silently ignored — three failed attempts before
+  reading the toolchain source. `macro_rules` cannot be scoped, so such a clause is global.
+- **`∃ x ∈ s, p` does not put the membership in context**: it is `∃ x, x ∈ s ∧ p`, with `p`
+  outside the binder, so `assumption` finds nothing. Write `∃ x, ∃ _ : x ∈ s, p` when the
+  body needs it — for a bracket read, or for any tactic that must find it. The same shape as
+  the `∀ x ∈ s` trap the old rendering recorded for `Spec/Defs/Store.lean`.
+
+So on `main` the coherence stays a fact to prove about reachable stores, and `viableSet`
+keeps its `∃ _ : L ∈ S.σ` binder.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:
