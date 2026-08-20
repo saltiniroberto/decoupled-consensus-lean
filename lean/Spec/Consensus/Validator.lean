@@ -26,7 +26,7 @@ namespace Consensus
 variable {Validator : Type}
 
 section Actions
-variable [DecidableEq Validator] [Electorate Validator] [Params] [Omega Validator]
+variable [DecidableEq Validator] [Electorate Validator] [Params]
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.

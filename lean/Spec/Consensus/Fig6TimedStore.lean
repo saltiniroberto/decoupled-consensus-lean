@@ -41,7 +41,7 @@ namespace Consensus
 variable {Validator : Type}
 
 section Handlers
-variable [DecidableEq Validator] [Electorate Validator] [Params] [Omega Validator]
+variable [DecidableEq Validator] [Electorate Validator] [Params]
 
 /-- `on_tick(Σ, t)` (Figure 6, lines 1–11): set the clock and run the phase scheduled at
     this instant — the slot handler at a slot start, the opening proposer's

@@ -19,8 +19,9 @@ The routines appear in the figure's own order, which is already callee-first.
 The draft's two deepest-selections are over sets its Definition 12 argues lie on one chain
 — two conflicting blocks cannot both hold direct support `m` — where the depth-maximal
 element is unique. Over an arbitrary `Finset`, `deepest` keeps the depth-maximal elements
-and lets the ambient `Ω` pick, so the routine is total without a chain hypothesis: the same
-totalization the old rendering used.
+and lets the store's `Ω` pick, so the routine is total without a chain hypothesis: the
+old rendering's totalization, with the selection data read off the store instead of an
+ambient instance.
 
 ## Two `Option` seams, both documented at the line
 
@@ -43,13 +44,14 @@ variable {Validator : Type}
 def depth (B : Block Validator) : Nat := (ancestors B).length
 
 section Roots
-variable [DecidableEq Validator] [Electorate Validator] [Params] [Omega Validator]
+variable [DecidableEq Validator] [Electorate Validator] [Params]
 
-/-- The deepest block of a nonempty set: the depth-maximal elements, `Ω` picking among
-    them. See the module header — on the one-chain sets the draft applies this to, the
-    depth-maximal element is unique and `Ω` has no choice to make. -/
-def deepest (s : Finset (Block Validator)) (h : s.Nonempty) : Block Validator :=
-  (Omega.choose (s.filter fun B => ∀ C ∈ s, depth C ≤ depth B)
+/-- The deepest block of a nonempty set: the depth-maximal elements, the store's `Ω`
+    picking among them. See the module header — on the one-chain sets the draft applies
+    this to, the depth-maximal element is unique and `Ω` has no choice to make. -/
+def deepest (S : Store Validator) (s : Finset (Block Validator)) (h : s.Nonempty) :
+    Block Validator :=
+  (S.Ω (s.filter fun B => ∀ C ∈ s, depth C ≤ depth B)
     (by
       obtain ⟨B, hB, hmax⟩ := s.exists_max_image depth h
       exact ⟨B, Finset.mem_filter.mpr ⟨hB, hmax⟩⟩)).val
@@ -61,7 +63,7 @@ def deepest (s : Finset (Block Validator)) (h : s.Nonempty) : Block Validator :=
 def getProposalRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
   let G := (candidateTree S).filter fun B => G2 S r B         -- line 2
   if hG : G.Nonempty then                                     -- line 3
-    return deepest G hG                                       -- line 4
+    return deepest S G hG                                     -- line 4
   return forkChoiceRoot S                                     -- line 5
 
 /-- `get_lower_root(Σ, r)` (Figure 5, lines 6–10; Definition 14's `R_low`): the deepest
@@ -71,7 +73,7 @@ def getLowerRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
   let G := (candidateTree S).filter fun B =>
     G3 S r B ∧ forkChoiceRoot S ≺ B                           -- line 7
   if hG : G.Nonempty then                                     -- line 8
-    return deepest G hG                                       -- line 9
+    return deepest S G hG                                     -- line 9
   return forkChoiceRoot S                                     -- line 10
 
 /-- `get_sg_root(Σ, r)` (Figure 5, lines 11–18; Definition 14): at the opening slot's vote

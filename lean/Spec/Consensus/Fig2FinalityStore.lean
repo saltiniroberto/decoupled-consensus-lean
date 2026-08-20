@@ -60,15 +60,6 @@ namespace Consensus
 
 variable {Validator : Type}
 
-/-- The selection the draft writes as `Ω` — "the available-chain data that selects among
-    the candidates". Its Sections 4 and 5 define it, and Section 5 is not drafted yet, so
-    it stays abstract: an instance is one selection rule, ambient by typeclass so `get_head`
-    is a deterministic function. The subtype carries the membership proof, so anything
-    picked is one of the candidates, which is Definition 8's `get_head(Σ, Ω) ∈ C(Σ)`. -/
-class Omega (Validator : Type) where
-  /-- Pick a block from a nonempty candidate set. -/
-  choose : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
-
 /-- The store (Definition 7 of the draft), in the draft's field order:
     `Σ = (s, T, σ[·], F, J, h_j, h_max)` — written `S`, see the module header — plus
     Definition 10's timed extension `(t, head[·], equiv[·], root_proposal[·], sg_root[·],
@@ -116,6 +107,17 @@ structure Store (Validator : Type) where
       below time 0 — the draft leaves the initial value unstated, and `on_tick`'s
       precondition `Σ.t < t` must pass at `t = 0` — at `-1`, an arbitrary such value. -/
   t : Int
+  /-- `Ω`, the draft's "available-chain data that selects among the candidates": pick a
+      block from a nonempty set, the subtype carrying the membership proof so anything
+      picked is one of the candidates — Definition 8's `get_head(Σ, Ω) ∈ C(Σ)`. Abstract
+      until the draft's Section 5 defines it.
+
+      **A store field, beyond Definitions 7 and 10** (Roberto, 2026-08-20): the draft
+      passes `Ω` to `get_head` as call-time input, and the old rendering kept it ambient
+      by typeclass and out of the store; carrying it here instead makes every selection —
+      `get_head`, the deepest-picks, Section 5's confirmation when it lands — a function
+      of the store alone. -/
+  Ω : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
 
 /-! ### `B ∈ S.σ` and `S.σ[B]`, through `Membership` and `GetElem`
 
@@ -172,9 +174,11 @@ section StoreDefs
 variable [DecidableEq Validator]
 
 /-- The genesis store: `s = 0`, `T = {B_gen}`, `σ[B_gen]` the genesis state,
-    `F = B_gen`, `(J, h_j) = (B_gen, 0)`, `h_max = 1`. The per-round root-proposal map
-    starts empty. -/
-def Store.gen : Store Validator where
+    `F = B_gen`, `(J, h_j) = (B_gen, 0)`, `h_max = 1`. The per-round maps start empty.
+    The one field the draft's genesis prose does not fix is the validator's selection
+    data `Ω`, so it is the argument. -/
+def Store.gen (Ω : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}) :
+    Store Validator where
   s := 0
   T := {.genesis}
   σ := fun B => if B = .genesis then some .gen else none
@@ -188,6 +192,7 @@ def Store.gen : Store Validator where
   sgRoot := fun _ => none
   actionRoot := fun _ => none
   t := -1
+  Ω := Ω
 
 /-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A *leaf* of `Σ.T` is an accepted
     block without accepted children — written `∀ C ∈ S.T, C.parent ≠ some L`. A block is
@@ -276,12 +281,12 @@ def onBlock (S : Store Validator) (B : Block Validator) : Store Validator := Id.
 end Handlers
 
 /-- `get_head(Σ, Ω)` (Figure 2, lines 24–25): a block in `C(Σ)`, selected by `Ω` — the
-    ambient `Omega` instance, abstract until the draft's Section 5 is written. On an empty
-    candidate tree — not excluded by the types, though a store the handlers built keeps its
-    fork-choice root viable — the fork-choice root is returned, so the routine is total. -/
-def getHead [DecidableEq Validator] [Omega Validator] (S : Store Validator) :
-    Block Validator :=
-  if h : (candidateTree S).Nonempty then (Omega.choose (candidateTree S) h).val
+    store's own selection data, abstract until the draft's Section 5 is written. On an
+    empty candidate tree — not excluded by the types, though a store the handlers built
+    keeps its fork-choice root viable — the fork-choice root is returned, so the routine
+    is total. -/
+def getHead [DecidableEq Validator] (S : Store Validator) : Block Validator :=
+  if h : (candidateTree S).Nonempty then (S.Ω (candidateTree S) h).val
   else forkChoiceRoot S
 
 end Consensus
