@@ -73,6 +73,9 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     real argument rests on invariants of the stores the handlers build. The obligation
     belongs to a theorem about executions, and `CONTEXT.md` records what is owed.
 
+    It is an autoparam, so a caller holding the fact in context writes nothing at the call
+    and one that does not gets an error there — the requirement is enforced either way.
+
     The walk itself is the draft's Section 5, undrafted, so the store's `Ω` stands for
     "run Goldfish from the walk start over this set", and the membership proof `Ω` carries
     is what makes the result one of the caller's candidates. `walkStart` is therefore read
@@ -80,7 +83,7 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     choice without a starting point is not the notion this stands for. -/
 def goldfishConfirmation (S : Store Validator) (walkStart : Block Validator)
     (candidates : Finset (Block Validator))
-    (hCandidates : IsSubtreeFrom walkStart candidates) : Block Validator :=
+    (hCandidates : IsSubtreeFrom walkStart candidates := by assumption) : Block Validator :=
   (S.Ω candidates ⟨walkStart, hCandidates.1⟩).val
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
@@ -91,9 +94,9 @@ def goldfishConfirmation (S : Store Validator) (walkStart : Block Validator)
 
     * `S.t = actionTime r` — this is the round's action time;
     * `hCandidates` — the confirmation's candidate set is a subtree rooted at the anchor,
-      which `goldfishConfirmation` requires and nothing here proves. It is passed straight
-      through. See that definition on why the obligation belongs to a theorem about
-      executions.
+      which `goldfishConfirmation` requires and nothing here proves. Its own autoparam
+      finds this one at the call below, so no proof is written there. See that definition
+      on why the obligation belongs to a theorem about executions.
 
     A statement supplying either must hold it as a *named* hypothesis: `assumption` does
     not see anonymous arrow binders during statement elaboration (measured on
@@ -144,7 +147,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
     else .empty
   -- the confirmation: run Goldfish from `A` over the candidates the veto admits, `A`
   -- among them, so there is always one
-  let C := goldfishConfirmation S A (confirmationCandidates S r A) hCandidates
+  let C := goldfishConfirmation S A (confirmationCandidates S r A)
   if _ : C ∈ S.σ then
     let σ := S.σ[C]
     -- skeleton: the current-height half, off the confirmation's state, no history
