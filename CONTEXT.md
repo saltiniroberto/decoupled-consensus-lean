@@ -2898,6 +2898,35 @@ Alternatives rejected on the way, with reasons:
 So on `main` the coherence stays a fact to prove about reachable stores, and `viableSet`
 keeps its `∃ _ : L ∈ S.σ` binder.
 
+### Owed: the confirmation candidates form a tree — 2026-08-20
+
+`goldfishConfirmation` takes `_hCandidates : IsSubtreeFrom walkStart candidates` and does
+not use it. Roberto's requirement: the assumption must be *stated in the definition*, and
+**the spec must not prove it** — an execution-level theorem must. So the hypothesis
+propagates: `onSGFGVotingAction` takes the same fact at its own anchor, as an autoparam, and
+passes it through. `onTick` will take it in turn when §6 is wired in.
+
+`IsSubtreeFrom R s` is "everything in `s` descends from `R`, and `s` has no gaps" — every
+block between `R` and a member is a member. The empty set and `{R}` both qualify.
+
+**What a proof needs**, worked out but not written:
+
+1. `A ⪰ Σ.forkChoiceRoot`. Now free: the anchor is `getActionRoot S r`, computed from the
+   same store, and that returns either a block of `C(Σ)` or the fork-choice root itself.
+2. The veto is inherited by descendants, so filtering by `¬ vetoed` cannot punch holes.
+   Provable outright, no invariant needed: if `B` conflicts with `Q` and `Q ⪯ Q'`, then `B`
+   conflicts with `Q'`, since otherwise `B` and `Q` would both be ancestors of one block and
+   hence comparable. Needs the "ancestors of a block form a chain" lemma, which the new
+   subtree does not have yet.
+3. **`Σ.T` is closed under taking ancestors.** This is the execution-level part, and the
+   only genuinely missing piece: `on_block` accepts `B` only when its parent is accepted,
+   and the pruning in `process_updates` preserves it, because an ancestor of a block
+   compatible with `Σ.F` is itself compatible with `Σ.F`. That is an invariant of reachable
+   stores, so it is a theorem about executions and cannot live in `Spec/`.
+
+Ingredient 3 is also what a map-domain coherence proof would need, so the two obligations
+travel together.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:

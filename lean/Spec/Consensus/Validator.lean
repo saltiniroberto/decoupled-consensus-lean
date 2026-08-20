@@ -52,27 +52,51 @@ def confirmationCandidates (S : Store Validator) (r : Nat) (walkStart : Block Va
     Finset (Block Validator) :=
   (S.candidateTreeFrom walkStart).filter fun B => ¬ vetoed S r B
 
+/-- `s` is a *subtree rooted at* `R`: everything in it descends from `R`, and it has no
+    gaps — every block lying between `R` and a member is itself a member. A walk from `R`
+    can move within such a set one block at a time and never has to jump.
+
+    The empty set qualifies, as does `{R}`: both are what a walk from `R` sees when nothing
+    above `R` is available, and `goldfishConfirmation` answers `none` for the first. -/
+def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
+  (∀ B ∈ s, R ⪯ B) ∧ ∀ B ∈ s, ∀ C, R ⪯ C → C ⪯ B → C ∈ s
+
 /-- The round's Goldfish confirmation (Roberto's rule, 2026-08-20): run the Goldfish fork
-    choice from `walkStart` over exactly the blocks of `candidates` — a tree the caller
-    has already filtered — and `none` when the set is empty.
+    choice from `walkStart` over exactly the blocks of `candidates`, and answer `none` when
+    that set is empty.
+
+    **`candidates` must be a subtree rooted at `walkStart`, and this definition assumes
+    it.** That is what `_hCandidates` states, and the hypothesis is deliberately unused:
+    a walk is only meaningful over a set it can traverse without jumping, and requiring the
+    fact here is what forces every caller to have it. Nothing in `Spec/` proves it — the
+    obligation belongs to a theorem about executions, since tree-ness of the real argument
+    rests on invariants of the stores the handlers build. `CONTEXT.md` records what is owed.
 
     The walk itself is the draft's Section 5, undrafted, so the store's `Ω` stands for
     "run Goldfish from the walk start over this set", and the membership proof `Ω` carries
-    is what makes the result one of the caller's candidates. The walk start is therefore
-    unread today — written `_walkStart`, and the parameter is kept because a Goldfish fork
+    is what makes the result one of the caller's candidates. `walkStart` is therefore read
+    by nothing but the hypothesis today, and the parameter is kept because a Goldfish fork
     choice without a starting point is not the notion this stands for. -/
-def goldfishConfirmation (S : Store Validator) (_walkStart : Block Validator)
-    (candidates : Finset (Block Validator)) : Option (Block Validator) :=
+def goldfishConfirmation (S : Store Validator) (walkStart : Block Validator)
+    (candidates : Finset (Block Validator))
+    (_hCandidates : IsSubtreeFrom walkStart candidates) : Option (Block Validator) :=
   if h : candidates.Nonempty then some (S.Ω candidates h).val else none
 
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
-    The precondition is an autoparam: a call site where `S.t = actionTime r` is in
-    context — `onTick`'s `a_r` branch, or a statement's hypothesis — discharges it
-    silently, and anywhere else it must be proved. A statement supplying it must hold it
-    as a *named* hypothesis: `assumption` does not see anonymous arrow binders during
-    statement elaboration (measured on `lemChainTargetFirstBlock`).
+    Two hypotheses, both autoparams discharged by `assumption`, so a call site that holds
+    them in context writes nothing and one that does not must prove them:
+
+    * `S.t = actionTime r` — this is the round's action time;
+    * `hCandidates` — the confirmation's candidate set is a subtree rooted at the anchor,
+      which `goldfishConfirmation` requires and nothing here proves. It is passed straight
+      through. See that definition on why the obligation belongs to a theorem about
+      executions.
+
+    A statement supplying either must hold it as a *named* hypothesis: `assumption` does
+    not see anonymous arrow binders during statement elaboration (measured on
+    `lemChainTargetFirstBlock`).
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -103,7 +127,9 @@ def goldfishConfirmation (S : Store Validator) (_walkStart : Block Validator)
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
-    (_ : S.t = actionTime r := by assumption) :
+    (_ : S.t = actionTime r := by assumption)
+    (hCandidates : IsSubtreeFrom (getActionRoot S r)
+        (confirmationCandidates S r (getActionRoot S r)) := by assumption) :
     Attestation Validator := Id.run do
   -- the anchor (Definition 15): the round's action root, derived here from the current
   -- store rather than read from `Σ.action_root[r]`
@@ -115,7 +141,7 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
       if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
     else .empty
   -- the confirmation: run Goldfish from `A` over exactly the candidates the veto admits
-  let C? := goldfishConfirmation S A (confirmationCandidates S r A)
+  let C? := goldfishConfirmation S A (confirmationCandidates S r A) hCandidates
   if hC : C?.isSome then
     let C := C?.get hC
     if _ : C ∈ S.σ then
