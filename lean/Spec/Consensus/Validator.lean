@@ -99,6 +99,23 @@ theorem confirmationHasState {S : Store Validator Ω} {r : Nat}
       (confirmationCandidates S r (getActionRoot S r))).val ∈ S.σ :=
   hσ _ (mem_T_of_walkResult hRoot (S.goldfishConfirmation _ _).property)
 
+/-- Teach the bracket's own tactic to reach a state read from the two general facts, so
+    `S.σ[B]` needs nothing written after it (Roberto, 2026-08-21). Two alternatives: apply
+    coherence to the walk start, or apply `confirmationHasState`, both finding their
+    hypotheses with `assumption`.
+
+    The extension point in Lean 4.32.2 is `get_elem_tactic_extensible`;
+    `get_elem_tactic_trivial` still parses but is deprecated and wired to nothing, so a
+    clause added there is silently ignored (measured 2026-08-21). `macro_rules` has no
+    scoped form, so this clause is tried at every `xs[i]` from here on — after `assumption`,
+    and it fails fast where it does not apply, but a mistyped bracket downstream may report
+    this clause's failure rather than its own. -/
+macro_rules
+  | `(tactic| get_elem_tactic_extensible) =>
+      `(tactic| solve
+          | exact (by assumption : ∀ B, B ∈ _ → B ∈ _) _ (by assumption)
+          | exact confirmationHasState (by assumption) (by assumption))
+
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
@@ -110,11 +127,11 @@ theorem confirmationHasState {S : Store Validator Ω} {r : Nat}
     arrow binders during statement elaboration (measured on `lemChainTargetFirstBlock`).
 
     **Both are general facts about the store, not statements about these reads**
-    (Roberto, 2026-08-21). What bridges the gap is `confirmationHasState` above, so each read
-    carries a short named proof: `hσ _ hRoot` for the walk start, the theorem for the
-    confirmation. Two earlier shapes are in git history — a bundle whose fields were shaped
-    to the reads, so the body only projected; and hypotheses stating the reads' own side
-    conditions, so plain `S.σ[B]` worked with nothing after it.
+    (Roberto, 2026-08-21), and the body still writes its reads plainly: the
+    `get_elem_tactic_extensible` clause above builds each proof from them, through
+    `confirmationHasState` for the confirmation. Three earlier shapes are in git history — a
+    bundle whose fields were shaped to the reads; hypotheses stating the reads' own side
+    conditions; and these hypotheses with each read naming its proof in the `'…` form.
 
     `hRoot` stays assumed rather than derived because `get_action_root` returns either a
     block it has just tested for membership in `C(Σ)` or the fork-choice root: reaching it
@@ -164,13 +181,12 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   let C : Block Validator :=
     S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state. Each read names its proof: coherence at the walk start, the theorem above at
-  -- the confirmation
-  let σStart := S.σ[walkStart]'(hσ _ hRoot)
+  -- state. Both reads are plain: the clause above builds each proof from `hσ` and `hRoot`
+  let σStart := S.σ[walkStart]
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC := S.σ[C]'(confirmationHasState hσ hRoot)
+  let σC := S.σ[C]
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h
