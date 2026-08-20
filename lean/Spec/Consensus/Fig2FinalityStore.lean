@@ -197,15 +197,15 @@ def Store.gen (Ω : (s : Finset (Block Validator)) → s.Nonempty → {B // B �
 /-- `L` is a *leaf* of `Σ.T` (Definition 8 of the draft): an accepted block without
     accepted children. "Without accepted children" is written
     `∀ C ∈ S.T, C.parent ≠ some L` — no accepted block names `L` as its parent. -/
-def isLeaf (S : Store Validator) (L : Block Validator) : Prop :=
+def Store.isLeaf (S : Store Validator) (L : Block Validator) : Prop :=
   L ∈ S.T ∧ ∀ C ∈ S.T, C.parent ≠ some L
 
-instance (S : Store Validator) (L : Block Validator) : Decidable (isLeaf S L) :=
+instance (S : Store Validator) (L : Block Validator) : Decidable (S.isLeaf L) :=
   inferInstanceAs (Decidable (_ ∧ _))
 
 /-- The leaves of `Σ.T`, as a set. -/
-def leaves (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun L => isLeaf S L
+def Store.leaves (S : Store Validator) : Finset (Block Validator) :=
+  S.T.filter fun L => S.isLeaf L
 
 /-- `V(Σ)` (Definition 8 of the draft): the viable blocks. A block is *viable* when some
     leaf descending from it has state-height at least `Σ.h_max − 1`: its branch reaches
@@ -216,21 +216,21 @@ def leaves (S : Store Validator) : Finset (Block Validator) :=
     membership in context, where the bracket's side condition finds it. A leaf the map
     misses therefore witnesses nothing — a member of `T` the map misses is a coherence
     invariant's business, not this definition's. -/
-def viableSet (S : Store Validator) : Finset (Block Validator) :=
-  S.T.filter fun B => ∃ L ∈ leaves S, B ⪯ L ∧ ∃ _ : L ∈ S.σ, S.σ[L].h ≥ S.h_max - 1
+def Store.viableSet (S : Store Validator) : Finset (Block Validator) :=
+  S.T.filter fun B => ∃ L ∈ S.leaves, B ⪯ L ∧ ∃ _ : L ∈ S.σ, S.σ[L].h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
     `Σ.h_max = Σ.h_j + 1` — and `Σ.F` otherwise. -/
-def forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
+def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
   if S.h_max = S.h_j + 1 then                                 -- line 21
     return S.J                                                -- line 22
   return S.F                                                  -- line 23
 
 /-- `C(Σ)` (Definition 8 of the draft): the candidate tree — the viable blocks rooted at
     the fork-choice root. Fork choice selects a head within it. -/
-def candidateTree (S : Store Validator) : Finset (Block Validator) :=
-  (viableSet S).filter fun B => forkChoiceRoot S ⪯ B
+def Store.candidateTree (S : Store Validator) : Finset (Block Validator) :=
+  S.viableSet.filter fun B => S.forkChoiceRoot ⪯ B
 
 end StoreDefs
 
@@ -261,7 +261,7 @@ def processUpdates (S : Store Validator) (σ : ChainState Validator) :
   if S.F ⪯ σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ hash(S.J) < hash(σ.J))) then
     S.J ← σ.J                                                 -- line 15
     S.h_j ← σ.h_j
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ viableSet S then           -- line 16
+  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ S.viableSet then           -- line 16
     S.F ← σ.F                                                 -- line 17
     S.T ← S.T.filter fun B => B ∼ S.F                         -- line 18: keep the compatible
   return S                                                    -- line 19
@@ -298,7 +298,7 @@ end Handlers
     keeps its fork-choice root viable — the fork-choice root is returned, so the routine
     is total. -/
 def getHead [DecidableEq Validator] (S : Store Validator) : Block Validator :=
-  if h : (candidateTree S).Nonempty then (S.Ω (candidateTree S) h).val
-  else forkChoiceRoot S
+  if h : S.candidateTree.Nonempty then (S.Ω S.candidateTree h).val
+  else S.forkChoiceRoot
 
 end Consensus

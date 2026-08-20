@@ -61,20 +61,20 @@ def deepest (S : Store Validator) (s : Finset (Block Validator)) (h : s.Nonempty
     to — the deepest block in `C(Σ)` with grade 2, or the current fork-choice root when no
     such block exists. -/
 def getProposalRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
-  let G := (candidateTree S).filter fun B => G2 S r B         -- line 2
+  let G := S.candidateTree.filter fun B => G2 S r B           -- line 2
   if hG : G.Nonempty then                                     -- line 3
     return deepest S G hG                                     -- line 4
-  return forkChoiceRoot S                                     -- line 5
+  return S.forkChoiceRoot                                     -- line 5
 
 /-- `get_lower_root(Σ, r)` (Figure 5, lines 6–10; Definition 14's `R_low`): the deepest
     block in `C(Σ)` with grade 3 strictly descending from the fork-choice root, or the
     fork-choice root itself when there is none. -/
 def getLowerRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
-  let G := (candidateTree S).filter fun B =>
-    G3 S r B ∧ forkChoiceRoot S ≺ B                           -- line 7
+  let G := S.candidateTree.filter fun B =>
+    G3 S r B ∧ S.forkChoiceRoot ≺ B                           -- line 7
   if hG : G.Nonempty then                                     -- line 8
     return deepest S G hG                                     -- line 9
-  return forkChoiceRoot S                                     -- line 10
+  return S.forkChoiceRoot                                     -- line 10
 
 /-- `get_sg_root(Σ, r)` (Figure 5, lines 11–18; Definition 14): at the opening slot's vote
     time, derive the round's SG root. The validator accepts the round's root proposal
@@ -87,7 +87,7 @@ def getSGRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
   -- The `⊥` case falls through to the closing `return R_low`.
   if hp : (S.rootProposal r).isSome then
     let Rprop := (S.rootProposal r).get hp
-    if Rlow ⪯ Rprop ∧ Rprop ∈ candidateTree S ∧ G1 S r Rprop then  -- line 16
+    if Rlow ⪯ Rprop ∧ Rprop ∈ S.candidateTree ∧ G1 S r Rprop then  -- line 16
       return Rprop                                            -- line 17
   return Rlow                                                 -- lines 14 and 18
 
@@ -97,7 +97,7 @@ def getSGRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     `Σ.sg_root[r]` — unreachable at the `a_r` read, which follows the `t_r + Δ` write —
     returns `C`. -/
 def getWalkRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
-  let C := forkChoiceRoot S                                   -- line 20
+  let C := S.forkChoiceRoot                                   -- line 20
   if hs : (S.sgRoot r).isSome then
     let Rsg := (S.sgRoot r).get hs
     if C ⪯ Rsg then                                           -- line 21
@@ -111,9 +111,9 @@ def getWalkRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
     others must still be viable and majority-backed at signing time. `on_tick` stores the
     result in `Σ.action_root[r]`. -/
 def getActionRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
-  let C := forkChoiceRoot S                                   -- line 25
+  let C := S.forkChoiceRoot                                   -- line 25
   let R := getWalkRoot S r                                    -- line 26
-  if R ∈ candidateTree S ∧ (R = C ∨ G1 S r R) then            -- line 27
+  if R ∈ S.candidateTree ∧ (R = C ∨ G1 S r R) then            -- line 27
     return R                                                  -- line 28
   return C                                                    -- line 29
 
