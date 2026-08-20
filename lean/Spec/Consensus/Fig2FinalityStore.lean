@@ -240,12 +240,16 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
 def Store.candidateTree (S : Store Validator) : Finset (Block Validator) :=
   S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ S.viableLeaves, B ⪯ L
 
-/-- The candidate tree restricted to the descendants of `R` — the part of `C(Σ)` a walk
-    starting from `R` can reach. `R` itself is included when it is a candidate, `⪯` being
-    reflexive, and the result is empty when `R` is not on a candidate branch at all. -/
+/-- The blocks a walk from `R` may occupy: `R` itself, together with the candidates
+    descending from it.
+
+    **`R` is in the result unconditionally** (Roberto, 2026-08-20), even when `R` is not a
+    candidate — a walk from `R` must be able to stay where it starts. So this is not a
+    subset of `C(Σ)`, and it is never empty, which is what makes a selection over it
+    total. -/
 def Store.candidateTreeFrom (S : Store Validator) (R : Block Validator) :
     Finset (Block Validator) :=
-  S.candidateTree.filter fun B => R ⪯ B
+  insert R (S.candidateTree.filter fun B => R ⪯ B)
 
 end StoreDefs
 

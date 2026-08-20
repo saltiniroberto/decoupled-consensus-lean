@@ -43,6 +43,10 @@ instance (S : Store Validator) (r : Nat) (Q : Block Validator) : Decidable (veto
     `walkStart`, less the blocks the veto excludes. This is the already-filtered tree
     `goldfishConfirmation` runs over.
 
+    `candidateTreeFrom` always contains `walkStart`, so this set is empty exactly when the
+    veto excludes `walkStart` itself and every candidate above it — which is when the round
+    has no confirmation at all.
+
     Skeleton to the extent `vetoed` is. -/
 def confirmationCandidates (S : Store Validator) (r : Nat) (walkStart : Block Validator) :
     Finset (Block Validator) :=
