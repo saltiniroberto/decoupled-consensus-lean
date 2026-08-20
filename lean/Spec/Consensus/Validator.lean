@@ -77,8 +77,13 @@ def goldfishConfirmation (S : Store Validator) (_walkStart : Block Validator)
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
 
-    * anchor at the stored action root `A`, fork-choice root standing in when the entry is
-      unset — unreachable on schedule, where `on_tick` wrote it at this very instant;
+    * anchor at `A = get_action_root(Σ, r)`, **derived here rather than read from**
+      `Σ.action_root[r]` (Roberto, 2026-08-20). `on_tick` writes that entry at this same
+      instant, so on schedule the two agree; deriving it is what makes the anchor
+      well-formed against the *current* store — `get_action_root` returns either a block
+      of `C(Σ)` or the fork-choice root itself, so `Σ`'s fork-choice root always precedes
+      `A`, and `candidateTreeFrom A` is therefore a tree rather than `{A}` floating above a
+      gap. A stored root could not promise that, finality having moved on since the write;
     * derive the round's confirmation with `goldfishConfirmation` from `A`, under the veto
       "some accepted block on the finalized chain, conflicting with the candidate, might
       still hold majority support" — `G0`, playing the role the old paper's strong G0
@@ -100,8 +105,9 @@ def goldfishConfirmation (S : Store Validator) (_walkStart : Block Validator)
 def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
     (_ : S.t = actionTime r := by assumption) :
     Attestation Validator := Id.run do
-  -- the anchor (Definition 15): the root `on_tick` stored at `a_r`
-  let A := (S.actionRoot r).getD S.forkChoiceRoot  -- skeleton: fallback for the unset case
+  -- the anchor (Definition 15): the round's action root, derived here from the current
+  -- store rather than read from `Σ.action_root[r]`
+  let A := getActionRoot S r
   -- skeleton: the finality half, independent of the confirmation, off the anchor's state
   let finalityPair : FinalityPair Validator :=
     if _ : A ∈ S.σ then
