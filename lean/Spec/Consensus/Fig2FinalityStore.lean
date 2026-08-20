@@ -117,6 +117,57 @@ structure Store (Validator : Type) where
       precondition `Σ.t < t` must pass at `t = 0` — at `-1`, an arbitrary such value. -/
   t : Int
 
+/-! ### `B ∈ S.σ` and `S.σ[B]`, through `Membership` and `GetElem`
+
+The draft writes `Σ.σ[B]` unconditionally, its map being defined exactly on the accepted
+blocks; here the field is `Option`-valued, so a bare read owes a proof that `B` is
+recorded. These instances — ported from the old rendering, `Spec/Defs/Store.lean`, whose
+header carries the measurements — let that proof stay anonymous: `B ∈ S.σ` is "the map is
+defined at `B`" (definitionally `(S.σ B).isSome`), and `S.σ[B]` elaborates its side
+condition with `get_elem_tactic`, which finds any hypothesis of that type in context,
+named or not: `if _ : B ∈ S.σ then … S.σ[B] …` passes nothing by hand.
+
+Two hazards, measured on the old rendering: the `∀ x ∈ s` binder does not reach the
+bracket — write `∀ B (_ : B ∈ S.σ), …` — and `rw` on a store inside a bracket read fails
+with "motive is not type correct" where `simp only` succeeds. -/
+
+/-- `B ∈ σ`: the map is defined at `B`. -/
+scoped instance stateMapMembership :
+    Membership (Block Validator) (Block Validator → Option (ChainState Validator)) where
+  mem σ B := (σ B).isSome
+
+/-- The membership is a `Bool` in disguise, so an `if _ : B ∈ S.σ` can test it. The old
+    rendering never needed this: it read the map only in statements. -/
+scoped instance (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
+    Decidable (B ∈ σ) :=
+  inferInstanceAs (Decidable ((σ B).isSome = true))
+
+/-- `σ[B]`: the state recorded for `B`, given that `B` is recorded. -/
+scoped instance stateMapGetElem :
+    GetElem (Block Validator → Option (ChainState Validator)) (Block Validator)
+      (ChainState Validator) (fun σ B => B ∈ σ) where
+  getElem σ B h := (σ B).get h
+
+/-- `σ[B]?`: the same read with no side condition, which is the map itself. -/
+scoped instance stateMapGetElemOpt :
+    GetElem? (Block Validator → Option (ChainState Validator)) (Block Validator)
+      (ChainState Validator) (fun σ B => B ∈ σ) where
+  getElem? σ B := σ B
+
+/-- The two agree, which is what lets the core `getElem?_pos`/`getElem?_neg` lemmas
+    fire. -/
+scoped instance stateMapLawfulGetElem :
+    LawfulGetElem (Block Validator → Option (ChainState Validator)) (Block Validator)
+      (ChainState Validator) (fun σ B => B ∈ σ) where
+  getElem?_def σ B _ := by
+    by_cases hb : B ∈ σ
+    · rw [dif_pos hb]
+      exact (Option.some_get hb).symm
+    · rw [dif_neg hb]
+      have hb' : ¬ (σ B).isSome = true := hb
+      have h2 : σ B = none := by simpa using hb'
+      exact h2
+
 section StoreDefs
 variable [DecidableEq Validator]
 

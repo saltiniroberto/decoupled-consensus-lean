@@ -54,8 +54,8 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
     Attestation Validator := Id.run do
   -- the anchor (Definition 15): the root `on_tick` stored at `a_r`
   let A := (S.actionRoot r).getD (forkChoiceRoot S)  -- skeleton: fallback for the unset case
-  if h : (S.σ A).isSome then
-    let σ := (S.σ A).get h
+  if _ : A ∈ S.σ then
+    let σ := S.σ[A]
     return {
       validator := i
       round := r
