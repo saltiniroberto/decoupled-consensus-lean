@@ -100,9 +100,9 @@ structure ActionAssumptions (S : Store Validator Ω) : Prop where
     `lemChainTargetFirstBlock`).
 
     The bundle is what makes the body straight-line: both state reads are unconditional,
-    each licensed by one projection from it — the walk start by `Or.inr rfl`, the
-    confirmation by `hC`, which the destructuring `let` takes from the walk's result type
-    alongside the block itself. Before it, each read sat inside
+    each carrying its licence in the bracket's `'…` form — the walk start's case is
+    `Or.inr rfl`, the confirmation's is `hC`, which the destructuring `let` takes from the
+    walk's result type alongside the block itself. Before the bundle, each read sat inside
     `if _ : … ∈ S.σ` with a fallback attestation carrying no head and no height pair, and
     that fallback was unreachable-once-proved rather than impossible.
 
@@ -143,18 +143,17 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r
-  have _ : walkStart ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ (Or.inr rfl))
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
-  -- admits, the walk start among them, so there is always one
+  -- admits, the walk start among them, so there is always one. `⟨…⟩` and not `(…)`: the
+  -- walk returns a subtype, not a pair
   let ⟨C, hC⟩ := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
-  have _ : C ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ hC)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state
-  let σStart := S.σ[walkStart]
+  -- state. Each read carries its licence in the bracket's `'…` form
+  let σStart := S.σ[walkStart]'(hS.stateOfAccepted _ (hS.candidateAccepted r _ (Or.inr rfl)))
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC := S.σ[C]
+  let σC := S.σ[C]'(hS.stateOfAccepted _ (hS.candidateAccepted r _ hC))
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h
