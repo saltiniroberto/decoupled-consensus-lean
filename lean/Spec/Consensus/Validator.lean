@@ -37,18 +37,26 @@ variable [DecidableEq Validator] [Electorate Validator] [Params] [Omega Validato
     as a *named* hypothesis: `assumption` does not see anonymous arrow binders during
     statement elaboration (measured on `lemChainTargetFirstBlock`).
 
-    **The body is a skeleton, not a rule.** Every line marked `skeleton:` is a
-    placeholder decision awaiting Roberto's dictation, 2026-08-20:
+    **The body is a skeleton, not a rule.** The minimal coherent rule set over the new
+    chain state, awaiting Roberto's reshaping, 2026-08-20. What it does:
 
-    * the anchor is the stored action root, with the fork-choice root standing in when
-      the entry is unset — unreachable on schedule, where `on_tick` wrote it at this very
-      instant;
-    * the FG halves are read from the anchor's own post-state, and are unconditionally
-      the exact target vote and the latest-justification commitment — no empty-target
-      rule, no condition on committing;
-    * the head is the anchor itself, standing in for Section 5's confirmed head;
-    * an anchor the state map misses signs the all-empty attestation;
-    * no signing history is consulted. -/
+    * anchor at the stored action root, fork-choice root standing in when the entry is
+      unset — unreachable on schedule, where `on_tick` wrote it at this very instant;
+    * read the anchor's own post-state, and sign the exact target vote at a justifiable
+      height, the empty-target (progress-only) vote at a nonjustifiable one — the receiver
+      side of that split is Figure 1's justify test and its "we can still move past such
+      heights through the progress event";
+    * commit the latest justification `(h_j, J)` while it is unfinalized, the empty pair
+      once finalized — heights in the two pairs always differ (`h_j < h`), so one honest
+      attestation cannot trip slashing condition E1 against itself;
+    * head := the anchor, standing in for Section 5's confirmed head.
+
+    What it consciously drops from the old pipeline (Definitions 46–48 there), each a
+    decision to re-make: the confirmation permission — the old rule emits *no*
+    current-height pair without a veto-free official confirmation, this one always emits;
+    the source-proposal branch — the old rule prefers the graded proposal's state over the
+    confirmation's, this one reads only the anchor's; and the signing history — the old
+    rule filters every pair through it, this one consults nothing. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
     (_ : S.t = actionTime r := by assumption) :
     Attestation Validator := Id.run do
@@ -56,12 +64,20 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
   let A := (S.actionRoot r).getD (forkChoiceRoot S)  -- skeleton: fallback for the unset case
   if _ : A ∈ S.σ then
     let σ := S.σ[A]
+    -- skeleton: the current-height half — exact target vote at a justifiable height,
+    -- empty-target vote at a nonjustifiable one, no confirmation condition, no history
+    let heightPair : HeightPair Validator :=
+      if σ.h % Params.K = 0 ∧ σ.h - σ.h_F > Params.D then .emptyTarget σ.h
+      else .target σ.h σ.T_h
+    -- skeleton: the finality half — commit the latest justification while unfinalized
+    let finalityPair : FinalityPair Validator :=
+      if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
     return {
       validator := i
       round := r
       head := some A                       -- skeleton: stands in for §5's confirmed head
-      heightPair := .target σ.h σ.T_h      -- skeleton: always the exact target vote
-      finalityPair := .pair σ.h_j σ.J }    -- skeleton: always commit `(h_j, J)`
+      heightPair := heightPair
+      finalityPair := finalityPair }
   -- skeleton: an anchor the state map misses signs the all-empty attestation
   return { validator := i, round := r, head := ⊥, heightPair := .empty, finalityPair := .empty }
 
