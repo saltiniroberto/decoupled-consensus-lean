@@ -249,7 +249,7 @@ def Store.candidateTree (S : Store Validator) : Finset (Block Validator) :=
     total. -/
 def Store.candidateTreeFrom (S : Store Validator) (R : Block Validator) :
     Finset (Block Validator) :=
-  insert R (S.candidateTree.filter fun B => R ⪯ B)
+  (S.candidateTree.filter fun B => R ⪯ B) ∪ {R}
 
 end StoreDefs
 
