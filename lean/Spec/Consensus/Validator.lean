@@ -205,22 +205,24 @@ macro_rules
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     (_ : S.t = actionTime r := by assumption)
-    (hS : ActionAssumptions S := by assumption) :
+    (_ : getActionRoot S r ∈ S.σ := by assumption)
+    (_ : (S.goldfishConfirmation (getActionRoot S r)
+            (confirmationCandidates S r (getActionRoot S r))).val ∈ S.σ := by assumption) :
     Attestation Validator := Id.run do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
-  -- admits, the walk start among them, so there is always one. `⟨…⟩` and not `(…)`: the
-  -- walk returns a subtype, not a pair
-  let ⟨C, hC⟩ := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
+  -- admits, the walk start among them, so there is always one
+  let C := (S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)).val
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state. Both reads take their proof from `stateAt`'s autoparam, `⟦…⟧` being that read
-  let σStart := S.σ⟦walkStart⟧
+  -- state. Both reads are core's bracket: the hypotheses above *are* their side conditions,
+  -- so `get_elem_tactic` closes each with `assumption`
+  let σStart := S.σ[walkStart]
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC := S.σ⟦C⟧
+  let σC := S.σ[C]
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h
