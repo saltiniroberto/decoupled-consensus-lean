@@ -68,15 +68,42 @@ def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block
 def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
   R ∈ s ∧ (∀ B ∈ s, R ⪯ B) ∧ ∀ B ∈ s, ∀ C, R ⪯ C → C ⪯ B → C ∈ s
 
+/-- What the SG/FG action assumes of the store it acts on. **Stated here and discharged
+    nowhere in `Spec/`** — these are facts about the stores the handlers build, so they
+    belong to the theorems about executions.
+
+    A structure rather than a list of hypotheses (Roberto, 2026-08-21): the next assumption
+    becomes a field, and no signature changes. The fields are shaped as exactly what the
+    action consumes, so `Spec/` only ever projects them — it never reasons from a general
+    invariant to a particular read.
+
+    One theorem will eventually establish the whole bundle for reachable stores; the
+    ingredients are recorded in `CONTEXT.md`, the substantial one being that `Σ.T` is closed
+    under taking ancestors. -/
+structure ActionAssumptions (S : Store Validator Ω) : Prop where
+  /-- Every accepted block has a recorded state — the map-domain coherence the `Store` type
+      does not enforce. -/
+  stateOfAccepted : ∀ B ∈ S.T, B ∈ S.σ
+  /-- Every block the round's walk could return is accepted: its candidates are, and so is
+      the walk start it falls back to. Matches the walk's own result type, so the action
+      applies this to `.property` directly. -/
+  candidateAccepted : ∀ r B,
+    B ∈ confirmationCandidates S r (getActionRoot S r) ∨ B = getActionRoot S r → B ∈ S.T
+
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
-    One hypothesis, an autoparam discharged by `assumption`: `S.t = actionTime r`, that
-    this is the round's action time. A statement supplying it must hold it as a *named*
-    hypothesis, since `assumption` does not see anonymous arrow binders during statement
-    elaboration (measured on `lemChainTargetFirstBlock`). Nothing about the candidate set
-    is assumed here: the walk is a store field whose type promises nothing about what it is
-    given, so there is no obligation to carry.
+    Two hypotheses, both autoparams discharged by `assumption`: `S.t = actionTime r`, that
+    this is the round's action time, and `ActionAssumptions S`, the bundle above. A
+    statement supplying either must hold it as a *named* hypothesis, since `assumption` does
+    not see anonymous arrow binders during statement elaboration (measured on
+    `lemChainTargetFirstBlock`).
+
+    The bundle is what makes the body straight-line: both state reads are unconditional,
+    each licensed by one projection from it — the walk start by `Or.inr rfl`, the
+    confirmation by the walk's own `.property`. Before it, each read sat inside
+    `if _ : … ∈ S.σ` with a fallback attestation carrying no head and no height pair, and
+    that fallback was unreachable-once-proved rather than impossible.
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -109,37 +136,34 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
-    (_ : S.t = actionTime r := by assumption) :
+    (_ : S.t = actionTime r := by assumption)
+    (hS : ActionAssumptions S := by assumption) :
     Attestation Validator := Id.run do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r
-  -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state
-  let finalityPair : FinalityPair Validator :=
-    if _ : walkStart ∈ S.σ then
-      let σ := S.σ[walkStart]
-      if σ.h_j > σ.h_F then .pair σ.h_j σ.J else .empty
-    else .empty
+  have _ : walkStart ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ (Or.inr rfl))
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
   -- admits, the walk start among them, so there is always one
-  let C := (S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)).val
-  if _ : C ∈ S.σ then
-    let σ := S.σ[C]
-    -- skeleton: the current-height half, off the confirmation's state, no history
-    let heightPair : HeightPair Validator :=
-      if σ.h % Params.K = 0 ∧ σ.h - σ.h_F > Params.D then .emptyTarget σ.h
-      else .target σ.h σ.T_h
-    return {
-      validator := i
-      round := r
-      head := some C
-      heightPair := heightPair
-      finalityPair := finalityPair }
-  -- skeleton: a confirmation the state map misses — no head, no height pair, the finality
-  -- half still going out. Unreachable once the map's domain is known to cover `Σ.T`.
-  return { validator := i, round := r, head := ⊥, heightPair := .empty
-           finalityPair := finalityPair }
+  let confirmed := S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
+  let C := confirmed.val
+  have _ : C ∈ S.σ := hS.stateOfAccepted _ (hS.candidateAccepted r _ confirmed.property)
+  -- skeleton: the finality half, independent of the confirmation, off the walk start's
+  -- state
+  let σStart := S.σ[walkStart]
+  let finalityPair : FinalityPair Validator :=
+    if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
+  -- skeleton: the current-height half, off the confirmation's state, no history
+  let σC := S.σ[C]
+  let heightPair : HeightPair Validator :=
+    if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
+    else .target σC.h σC.T_h
+  return {
+    validator := i
+    round := r
+    head := some C
+    heightPair := heightPair
+    finalityPair := finalityPair }
 
 end Actions
 

@@ -2930,9 +2930,29 @@ takes no instance parameters; the two say the same thing, `Finset.mem_union` and
 `Finset.mem_singleton` being the bridge. This is the property a field can carry for free
 that `opaque` could not: no witness is owed, since the store value supplies the function.
 
-Two things survive as statements with no consumer in `Spec/`: `IsSubtreeFrom`, and
-`confirmationCandidates`' never-empty property. Both are for the theorems about executions
-that will reason on the walk. If "nothing provable" turns out to be too little, the middle
+### `ActionAssumptions`, the bundle — 2026-08-21
+
+The result type made the walk's landing place known, but not that the block has a recorded
+state, so the action still read it inside `if _ : … ∈ S.σ` with an unreachable-once-proved
+fallback. Roberto's resolution: assume it, in a **structure** rather than as loose
+hypotheses, so the next assumption is a field and no signature changes.
+
+`ActionAssumptions S` has `stateOfAccepted` (accepted blocks have recorded states) and
+`candidateAccepted` (anything the walk can return is accepted), the second shaped to match
+the walk's result type so the action applies it to `.property` directly.
+`onSGFGVotingAction` takes it as an autoparam and **projects only** — the walk start by
+`Or.inr rfl`, the confirmation by `.property` — so nothing is proved in `Spec/`. Both
+branches are gone and the body is straight-line.
+
+The fields are deliberately the facts the definitions consume rather than general
+invariants: reasoning from a general invariant to a particular read would mean proving in
+`Spec/`, and for the walk start it would mean reasoning through `getActionRoot`'s
+`Id.run do`, which the `lean-proof-idioms` skill warns about. That work belongs to the one
+execution-level theorem that establishes the bundle.
+
+Three things now survive as statements with no consumer in `Spec/`: `IsSubtreeFrom`,
+`confirmationCandidates`' never-empty property, and the bundle's own truth. All are for the
+theorems about executions that will reason on the walk. If "nothing provable" turns out to be too little, the middle
 option is a subtype result `{B // B ∈ insert walkStart candidates}`, which needs no
 hypothesis either — `Finset.mem_insert_self` witnesses it — at the cost of naming a set the
 caller did not pass.
