@@ -2988,6 +2988,105 @@ rather than merely rootless; no execution theorem could have discharged it.
 Ingredient 3 is also what a map-domain coherence proof would need, so the two obligations
 travel together.
 
+### `Ω` is a type, and its operation is a class — 2026-08-21
+
+`Store (Validator Ω : Type)` carries `ω : Ω`, the draft's available-chain data, with `Ω`
+abstract; what can be *done* with it is `class Selection (Validator Ω)`, whose one field
+chooses from a nonempty `Finset` and returns a subtype, so anything chosen is one of the
+candidates. `getHead` and Figure 5's `deepest` go through `Selection.select S.ω`.
+
+A class rather than an `opaque` function, measured: an `opaque` chooser must witness that
+`{B // B ∈ s}` is inhabited from `s.Nonempty` alone, whose only witness is `Exists.choose`,
+and Lean then reports "failed to compile definition … depends on `select`, which is
+`noncomputable`" at every caller. A class field stays computable relative to an instance.
+
+`opaque` *is* fine where the witness is computable — the walk had one for a while, its
+witness the walk start — which is the general rule: `opaque f … := v` is only as computable
+as `v`.
+
+### Where the SG/FG action's assumptions landed — 2026-08-21
+
+Seven shapes in one sitting, each on Roberto's call, ending here: `onSGFGVotingAction` takes
+four autoparam hypotheses — `S.t = actionTime r`; `hσ : ∀ B, B ∈ S.T → B ∈ S.σ`;
+`hRoot : getActionRoot S r ∈ S.T`; and `hConfirmed`, the *implication* that the first two
+give the confirmation a recorded state — and the body writes its two reads plainly,
+`S.σ[walkStart]` and `S.σ[C]`. A `macro_rules` clause on `get_elem_tactic_extensible`,
+whose body is bare `solve_by_elim`, closes each read by applying whatever hypotheses fit.
+
+**Nothing in the file is a theorem.** `hConfirmed` is assumed rather than proved precisely to
+keep it so; commit `9f036b9` holds the proof (`mem_T_of_walkResult`, by set reasoning over
+`confirmationCandidates`, `candidateTreeFrom`, `candidateTree`, plus `hRoot` for the two
+walk-start cases), and it becomes a lemma of `Analysis/` when that exists, discharged at the
+call instead of assumed.
+
+The discarded shapes, all in git history and each rejected for a stated reason: a bundle
+structure whose fields were shaped to the reads (`3439e1f`) and its class-plus-helpers
+variant (`8a3f3f2`); hypotheses stating the reads' own side conditions, so plain brackets
+needed no tactic at all (`c4c3075`) — rejected as expression-shaped and tied to the reads;
+general hypotheses with each read naming its proof in the `'…` form (`9f036b9`).
+
+**Findings about the notation machinery, all measured 2026-08-21:**
+
+- A `notation` cannot claim the spelling `S.σ[B]`: `S.σ` lexes as one dotted identifier, so
+  an atom `.σ[` is never reached and core's bracket takes the parse. My first test of this
+  looked green only because the example held the membership in context, where core's tactic
+  discharges the read without the notation firing — a test that could not distinguish the
+  two routes.
+- A `macro_rules` clause *can* claim it, by matching identifiers whose last component is
+  `σ` and taking the name apart with `getPrefix`, the way `Notation.lean`'s assignment
+  macros do (`af2b54b`). Name-directed, and `macro_rules` has no `scoped` form.
+- Own brackets avoid both problems: `scoped syntax:max term noWs "⟦" term "⟧"` plus a
+  `macro_rules` for that syntax alone (`31e4921`). Scoped, and type-directed, since the term
+  before the bracket is checked against the read's argument.
+- The extension point is `get_elem_tactic_extensible`. `get_elem_tactic_trivial` still
+  parses but is deprecated and wired to nothing, so a clause added there is silently
+  ignored — three failed attempts before reading the toolchain source.
+- `solve_by_elim [L]` elaborates `L` eagerly, so a class-projection lemma whose instance is
+  absent is a *hard* error at every bracket read in that context, and `first` does not
+  recover. That is what sank the "three small named classes, synthesized" variant: it works
+  where all instances are in scope and poisons `∈ S.σ` reads everywhere else. Bare
+  `solve_by_elim` mentions no lemmas and so stays inert.
+
+### What a caller's store update does to those assumptions — 2026-08-21
+
+Measured with a probe (`scratch/Probe.lean`, gitignored) that takes the action's parameters,
+edits the store, and calls it:
+
+- **A clock bump transports all of them for free.** `{S with t := S.t + 1}` is a constructor
+  application, so `.T` and `.σ` reduce by iota and `assumption`'s `isDefEq` closes the goals;
+  even `getActionRoot {S with t := …} r` unifies with `getActionRoot S r`, that routine
+  reading only fields the update copied. Only the clock precondition fails, correctly — it
+  needs restating as `S.t + 1 = actionTime r`.
+- **A write to `σ` or `T` transports none of them.** `S.σ[B] ← σ'` becomes
+  `Function.update S.σ B (some σ')`, which no unfolding relates to `S.σ`; and `hRoot` and
+  `hConfirmed` fail too, because `getActionRoot` reaches `candidateTree` reaches
+  `viableLeaves`, which reads `S.σ[L]`. So `on_block` invalidates every store assumption.
+
+The stopgap would be transport lemmas — `b ∈ Function.update m B (some v) ↔ b = B ∨ b ∈ m`
+as `@[simp]`, after which even `simp_all` in an autoparam carries coherence across a write.
+The real answer is the invariant below, so that a caller re-derives rather than transports.
+
+### How to prove the coherence invariant, when `Analysis/` exists — 2026-08-21
+
+- **State the implication, not the equivalence.** `processUpdates` prunes on finality —
+  `S.T ← S.T.filter (· ∼ S.F)` — which drops blocks from the tree while leaving their map
+  entries, so `B ∈ S.T ↔ B ∈ S.σ` is false after any finalization. `→` is what survives, and
+  is what the action assumes.
+- **Reachability as an inductive predicate** over the handlers (`gen`, `slot`, `block`,
+  `tick`, `att`), giving one induction case per handler.
+- `onSlot`, `onAttestation` and `onTick` are free, for the probe's reason: they write only
+  fields nothing reads. `onBlock` is the only real case — new tree `S.T ∪ {B}`, new map
+  `Function.update S.σ B (some σ')`, one case split on `b = B` — and `processUpdates` on top
+  preserves it because pruning only shrinks `T`.
+- `Σ.J, Σ.F ∈ Σ.T`, which is what `hRoot` needs, stacks on two more: that `Σ.T` is closed
+  under taking ancestors (`onBlock` requires the parent accepted; pruning preserves it since
+  an ancestor of a block compatible with `Σ.F` is compatible), and that a chain state's
+  justified block lies on its own chain, `σ[B].J ⪯ B` — a Figure 1 fact, not a store fact.
+- Mechanics: the handlers are `Id.run do`, so `unfold` leaves `__do_jp` continuations;
+  `simp only [onBlock]` plus `split` per `if` is the route, and the `lean-proof-idioms` skill
+  applies. No `while` is involved, and coherence never needs to look inside
+  `stateTransition`.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:
@@ -3002,6 +3101,17 @@ Each given as a correction; standing until revoked:
   the draft's spelling, backticked.
 
 ## Next
+
+0. **The new subtree, where 2026-08-21 left it.** `Spec/Consensus/` renders all six figures
+   of `consensus.pdf` plus `Validator.lean`, the honest-validator layer, whose only routine
+   so far is `onSGFGVotingAction` — still a skeleton, its invented lines marked `skeleton:`.
+   `lake build Spec` green, `make sorries` zero, `make cites` green at 535. The dictated
+   pieces still missing: what the head field carries once §5 defines confirmation, the
+   veto's real rule, `propose_block`, the Goldfish vote itself, and the two standing
+   omissions from the old pipeline (the source-proposal branch, the signing history).
+   The next structural step is `Analysis/Consensus/` and the coherence invariant, per the
+   2026-08-21 entries above — it is what turns four assumptions into one proof and unblocks
+   any caller that writes to the store.
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
    entry, plus the two additions in the recovery entry above), on the word.
