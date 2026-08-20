@@ -81,19 +81,45 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     ingredients are recorded in `CONTEXT.md`, the substantial one being that `Σ.T` is closed
     under taking ancestors. -/
 structure ActionAssumptions (S : Store Validator Ω) : Prop where
-  /-- Every accepted block has a recorded state — the map-domain coherence the `Store` type
-      does not enforce. -/
-  stateOfAccepted : ∀ B ∈ S.T, B ∈ S.σ
-  /-- Every block the round's walk could return is accepted: its candidates are, and so is
-      the walk start it falls back to. Matches the walk's own result type, so the action
-      applies this to `.property` directly. -/
-  candidateAccepted : ∀ r B,
-    B ∈ confirmationCandidates S r (getActionRoot S r) ∨ B = getActionRoot S r → B ∈ S.T
+  /-- The accepted blocks are exactly those with a recorded state — the map-domain
+      coherence the `Store` type does not enforce. -/
+  coherent : ∀ B, B ∈ S.T ↔ B ∈ S.σ
+  /-- The round's walk start is accepted. `get_action_root` returns either a block it has
+      just tested for membership in `C(Σ)` or the fork-choice root, so this needs only that
+      `Σ.J` and `Σ.F` are accepted — which Definition 7 states in prose and the type does
+      not enforce — but establishing it here would mean reasoning through that routine's
+      `Id.run do`. -/
+  walkStartAccepted : ∀ r, getActionRoot S r ∈ S.T
+
+/-- Everything the round's walk can return is accepted: `candidateAccepted`, derived rather
+    than assumed (Roberto, 2026-08-21). The candidates are a filter of `S.T` by way of
+    `candidateTreeFrom` and `candidateTree`, so set reasoning reaches `S.T`; the two
+    walk-start cases — the singleton inside `confirmationCandidates`, and the walk's own
+    fallback — are what `walkStartAccepted` is for.
+
+    **A theorem in `Spec/`**, under `CLAUDE.md`'s one exception: `stateAt`'s autoparam
+    cannot exist without it. It is the price of stating the assumptions as two general facts
+    instead of one tailored to the reads, and it needs maintaining whenever
+    `confirmationCandidates`, `candidateTreeFrom` or `candidateTree` changes. -/
+theorem mem_T_of_walkResult {S : Store Validator Ω} (hS : ActionAssumptions S) (r : Nat)
+    {B : Block Validator}
+    (h : B ∈ confirmationCandidates S r (getActionRoot S r) ∨ B = getActionRoot S r) :
+    B ∈ S.T := by
+  rcases h with h | rfl
+  · simp only [confirmationCandidates, Store.candidateTreeFrom, Store.candidateTree,
+      Finset.mem_union, Finset.mem_singleton, Finset.mem_filter] at h
+    rcases h with rfl | ⟨h, _⟩
+    · exact hS.walkStartAccepted r
+    · rcases h with ⟨⟨hT, _⟩, _⟩ | rfl
+      · exact hT
+      · exact hS.walkStartAccepted r
+  · exact hS.walkStartAccepted r
 
 /-- The state a store's map records for `B`, with the proof that it records one taken as an
     **autoparam**. Three alternatives, in order: a hypothesis in context; `B` is the round's
-    walk start, so `Or.inr rfl` reaches `candidateAccepted`; or a witness that `B` is one of
-    the round's candidates is in context, which is what the walk's result type supplies.
+    walk start, so `Or.inr rfl` carries it through `mem_T_of_walkResult`; or a witness that
+    `B` is one of the round's candidates is in context, which is what the walk's result type
+    supplies.
 
     Anything the alternatives do not cover must pass its proof by hand, and a call that can
     reach none of them fails where it stands.
@@ -105,10 +131,10 @@ def stateAt (m : Block Validator → Option (ChainState Validator)) (B : Block V
     (h : B ∈ m := by
       solve
         | assumption
-        | exact ActionAssumptions.stateOfAccepted (by assumption) _
-            (ActionAssumptions.candidateAccepted (by assumption) _ _ (Or.inr rfl))
-        | exact ActionAssumptions.stateOfAccepted (by assumption) _
-            (ActionAssumptions.candidateAccepted (by assumption) _ _ (by assumption))) :
+        | exact (ActionAssumptions.coherent (by assumption) _).mp
+            (mem_T_of_walkResult (by assumption) _ (Or.inr rfl))
+        | exact (ActionAssumptions.coherent (by assumption) _).mp
+            (mem_T_of_walkResult (by assumption) _ (by assumption))) :
     ChainState Validator :=
   (m B).get h
 
