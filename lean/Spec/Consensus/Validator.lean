@@ -214,7 +214,8 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   let walkStart := getActionRoot S r
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
   -- admits, the walk start among them, so there is always one
-  let C := (S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)).val
+  let C : Block Validator :=
+    S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
   -- state. Both reads are core's bracket: the hypotheses above *are* their side conditions,
   -- so `get_elem_tactic` closes each with `assumption`
