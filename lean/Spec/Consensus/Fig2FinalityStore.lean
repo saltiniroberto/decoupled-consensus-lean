@@ -133,13 +133,23 @@ The explicit `some` is the one this subtree writes (Roberto, 2026-08-22): shorte
 three that still names both fields, where the constructor form leaves a reader to remember the
 argument order and the draft's own `Σ.head[r][i] ← (α.head, Σ.t)` says even less.
 
-Two other routes to the bare `{ … }` were measured and declined. A `macro_rules` alternative on
-the assignment itself works — a macro sees the right-hand side as syntax, before elaboration,
-so it can spot `Lean.Parser.Term.structInst` and insert the `some` — and it was declined for
-hiding the `some` in the notation layer. And taking the `Option` off the row, so the record
-carries absence in a `block : Option (Block …)` field, makes `{ … }` elaborate directly and
-even stops the read raising; it was declined because it invents a `processedAt` for every
-absent entry, which is the objection that made `Σ.σ` `Option`-valued to begin with.
+Two other routes reach the bare `{ … }`. Both were measured, and both declined.
+
+**The assignment macro could insert the `some`.** A macro sees its right-hand side as syntax,
+before elaboration, so it can test whether that syntax is a `Lean.Parser.Term.structInst` and
+wrap it. Declined: it would put an invisible `some` into every indexed write in the subtree.
+
+**Or the row could stop being `Option`-valued.** `StoreRow` would be
+`Validator → Recorded Validator`, so every index has a record, and the write's expected type
+would be `Recorded Validator` — a structure, which is what `{ … }` needs. Absence would then
+have to live inside the record, as a `block : Option (Block …)` field, `none` meaning "nothing
+recorded here". The read would stop raising too, there being no `Option` left to fail on.
+
+Declined for what that costs: every absent entry would carry a `processedAt` anyway. `Store.gen`
+would fill the whole table with records holding an invented time, and any reader of
+`processedAt` would have to check `block` first to know whether the time meant anything. It is
+the same objection that keeps `Σ.σ` `Option`-valued rather than a total
+`Block → ChainState` — a total map has to invent a value for every block it does not record.
 
 The table bracket does not raise: a table is total, every index having a row. -/
 

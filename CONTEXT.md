@@ -3373,15 +3373,22 @@ ambient class: `select : (s : Finset (Block Validator)) → s.Nonempty → {B //
     by anything acting after elaboration.
   - Any form that gives the term a type of its own works, the `α → Option α` coercion applying
     from there: the ascription, an explicit `some { … }`, or `Recorded.mk H Σ.t`.
-  - Three routes to the *bare* `{ … }` were measured. A `CoeTail (Block V × Int)
-    (Option (Recorded V))` buys back the draft's own `← (α.head, Σ.t)` instead — works, and
-    rejected for hiding the conversion. A `macro_rules` alternative on the assignment works
-    too, since a macro sees the right-hand side as syntax before elaboration and can spot
-    `Lean.Parser.Term.structInst` and insert the `some` — rejected for hiding the `some` in
-    the notation layer. And taking the `Option` off the row, so the record carries absence in
-    a `block : Option (Block …)` field, makes `{ … }` elaborate directly and stops the read
-    raising as well — rejected because it invents a `processedAt` for every absent entry,
-    which is the objection that made `Σ.σ` `Option`-valued to begin with.
+  - Three routes to the *bare* `{ … }` were measured, and all three work. Each was rejected,
+    and for a different reason:
+    - a `CoeTail (Block V × Int) (Option (Recorded V))`, which buys back the draft's own
+      `← (α.head, Σ.t)` — rejected for hiding the conversion behind a pair that no longer
+      matches the field;
+    - a `macro_rules` alternative on the assignment, which works because a macro sees its
+      right-hand side as syntax before elaboration and can test it for
+      `Lean.Parser.Term.structInst` and wrap it — rejected because it would put an invisible
+      `some` into every indexed write in the subtree;
+    - making `StoreRow` total, `Validator → Recorded Validator`, so the write's expected type
+      is a structure and `{ … }` elaborates directly. Absence then moves inside the record, as
+      `block : Option (Block …)`, and the read stops raising as a bonus. Rejected because every
+      absent entry would still carry a `processedAt`: `Store.gen` would fill the table with
+      invented times, and a reader of `processedAt` would have to check `block` first to know
+      whether the time meant anything. Same objection that keeps `Σ.σ` `Option`-valued instead
+      of a total `Block → ChainState`.
 
 ### Readability rules for this subtree, from the same session
 
