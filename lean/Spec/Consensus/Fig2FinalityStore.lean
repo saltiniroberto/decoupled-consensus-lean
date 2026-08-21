@@ -1,5 +1,5 @@
-import Mathlib.Data.Finset.Fold
 import Spec.Consensus.Fig1StateTransition
+import Spec.Consensus.Raise
 
 /-!
 # Figure 2 — Finality store
@@ -48,6 +48,14 @@ And the parent's recorded state is read through the map's `Option`, so a parent 
 that the map misses also rejects — unreachable once the map-domain coherence invariant is
 proved, the same seam the old rendering documents.
 
+## What is general lives elsewhere
+
+Two things were carved out on 2026-08-21, so that this file says what Figure 2 says: the
+failure vocabulary — one payload-free `Error`, and `ResultOrExcept` — is in `Raise.lean`, and
+`Finset.filterM`, the filter that propagates a monad's effect, is in `FinsetM.lean`. Neither
+renders anything of the draft. What stays here is the state map's own reads, `B ∈ S.σ` and
+`S.σ[B]`, because the map is Definition 7's field.
+
 ## Totality, and the one way a handler fails
 
 A block that fails admission leaves the store unchanged — except for the root-proposal
@@ -63,47 +71,6 @@ which `Analysis/` proves of every reachable store — no handler here can fail.
 -/
 
 set_option autoImplicit false
-
-/-! ## A filter over a `Finset` that propagates the monad's effect
-
-`Finset.filter` is pure, so a predicate that can fail has nowhere to put the failure. This is
-the version that does, and it is where the rendering's raising reads meet its sets:
-`viableLeaves` reads the state map per leaf, and a missing entry has to reach the caller.
-
-**`Finset.fold` is the only route, and its two instance arguments are the whole design.** A
-`Finset` is a `Multiset` with a nodup proof, and a `Multiset` is a list up to permutation, so
-there is no computable loop over one: no `ForIn` instance exists, and `Finset.toList` depends
-on `Classical.choice`. `fold` is available instead, at the price of a commutative and
-associative combining operation — and supplying those two instances *is* what it means for a
-monad to be usable over a set. A monad whose effects notice the order cannot supply them, and
-should not: `StateM` is the example, where two writes in different orders leave different
-states.
-
-Measured 2026-08-21: computable — `#eval` runs it — with `Finset.fold` itself choice-free.
-The `Classical.choice` in the axiom list of anything built on it comes from `Finset.union_comm`
-inside the commutativity instance, which is a `Prop` field and erased at compile time.
--/
-
-namespace Finset
-
-variable {α : Type} {m : Type → Type}
-
-/-- Combine two monadic sets: run both, take the union. -/
-def unionM [DecidableEq α] [Monad m] (x y : m (Finset α)) : m (Finset α) := do
-  let a ← x
-  let b ← y
-  return a ∪ b
-
-/-- `s.filterM p`: keep the members `p` accepts, in any monad whose `unionM` does not care
-    about the order the set is traversed in. -/
-def filterM [DecidableEq α] [Monad m]
-    [Std.Commutative (unionM (α := α) (m := m))]
-    [Std.Associative (unionM (α := α) (m := m))]
-    (p : α → m Bool) (s : Finset α) : m (Finset α) :=
-  s.fold unionM (pure ∅) fun a => do
-    if ← p a then return {a} else return ∅
-
-end Finset
 
 namespace Consensus
 
@@ -232,64 +199,6 @@ scoped instance stateMapMembership :
 scoped instance (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
     Decidable (B ∈ σ) :=
   inferInstanceAs (Decidable ((σ B).isSome = true))
-
-/-- The one failure of this rendering, thrown by every routine that can fail and carrying
-    nothing (Roberto, 2026-08-21). `Σ.σ[B]` raises it when the map does not record `B`, and
-    anything added later raises the same value.
-
-    No payload, and no constructor per cause, deliberately: the error is a rendering
-    artifact, not protocol content. The draft's map is defined on every accepted block, so on
-    a store that has kept that property nothing raises at all — and saying *that* is the
-    theorem worth having, which no amount of detail in the error would help.
-
-    Timing is deliberately not a failure either. A routine's instant is an input
-    precondition, a hypothesis the caller supplies, not something the routine tests — see
-    `onSGFGVotingAction`. A timing constructor existed briefly, commit `42d2139`. -/
-inductive Error where
-  /-- The failure. -/
-  | error
-
-/-- `ResultOrExcept α` is an `α` or the failure: the result type of every routine here that
-    can raise, so no signature repeats the error type. The name is long because `Result` is
-    not a word this rendering can take — `EStateM.Result` is in core, and a bare `Result`
-    inside this namespace would shadow it silently.
-
-    **`abbrev`, not `def`** — measured 2026-08-21. It has to be reducible: instance synthesis
-    does not unfold a plain `def`, so with one the `Monad` and `MonadExcept` instances are
-    not found, `do` and `←` fail, and even `throw .error` cannot resolve its constructor. As
-    an `abbrev` everything applies through it — `do`, `throw`, `←`, and `Except.toOption` and
-    friends — while signatures and `#check` output read `ResultOrExcept α`. -/
-abbrev ResultOrExcept (α : Type) := Except Error α
-
-/-- Any two failures are the same failure. An `instance`, not a `theorem`, because `Spec/`
-    holds no theorems — and it is needed by the two instances below, which a definition
-    cannot exist without. -/
-instance : Subsingleton Error := ⟨fun e e' => by cases e; cases e'; rfl⟩
-
-/-- `Finset.unionM` at `ResultOrExcept` is commutative — **and only because the failure
-    carries no payload**. The failure-failure case needs the two failures to be equal, which
-    is `Subsingleton Error`; give `Error` a payload and this is false, not merely unproved,
-    and `filterM` cannot be used over this monad at all. -/
-instance {α : Type} [DecidableEq α] :
-    Std.Commutative (Finset.unionM (α := α) (m := ResultOrExcept)) where
-  comm x y := by
-    cases x <;> cases y
-    all_goals simp only [Finset.unionM, Except.bind, bind, pure]
-    all_goals first
-      | rfl
-      | exact congrArg _ (Subsingleton.elim _ _)
-      | exact congrArg _ (Finset.union_comm _ _)
-
-/-- And associative, for the same reason. -/
-instance {α : Type} [DecidableEq α] :
-    Std.Associative (Finset.unionM (α := α) (m := ResultOrExcept)) where
-  assoc x y z := by
-    cases x <;> cases y <;> cases z <;>
-      simp only [Finset.unionM, Except.bind, bind, pure] <;>
-      first
-        | rfl
-        | exact congrArg _ (Subsingleton.elim _ _)
-        | exact congrArg _ (Finset.union_assoc _ _ _)
 
 /-- `σ[B]`, the read behind the bracket: the state recorded for `B`, or the failure. -/
 def stateAt (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :

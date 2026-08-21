@@ -3219,10 +3219,16 @@ roots. `getWalkRoot`, `onAttestation`, `onSlot`, `vetoed` and Figure 4's scores 
   commutativity instance — a `Prop` field, erased at compile time. `Store.viableLeaves` and
   `Store.candidateTree` gained choice in their axiom lists; `onBlock`, `getActionRoot` and
   `onSGFGVotingAction` already had it.
-- **Cost paid**: `Fig2FinalityStore.lean` now imports `Mathlib.Data.Finset.Fold`, and the
-  general `filterM` lives in the `Finset` namespace at the root — declared *outside*
-  `namespace Consensus`, because inside it the name would be `Consensus.Finset.filterM` and
-  its own body's `Finset.fold` would resolve to `Consensus.Finset.fold` and fail. That is the
+- **Where it lives.** Two files of the subtree render no figure and hold what is general, so
+  a figure file states what the draft says and nothing else (Roberto, 2026-08-21):
+  `FinsetM.lean` has `Finset.unionM` and `Finset.filterM` — general Lean machinery, its only
+  import `Mathlib.Data.Finset.Fold` — and `Raise.lean` has `Error`, `Subsingleton Error`,
+  `ResultOrExcept` and the two fold instances. `Model.lean` and `Notation.lean` are the other
+  two non-figure files. The state map's own reads (`B ∈ S.σ`, `S.σ[B]`, `stateAt`) stay in
+  `Fig2FinalityStore.lean`, the map being Definition 7's field.
+- `filterM` is in the `Finset` namespace at the **root**, declared outside
+  `namespace Consensus` — inside it the name would be `Consensus.Finset.filterM` and its own
+  body's `Finset.fold` would resolve to `Consensus.Finset.fold` and fail. That is the
   `lean-proof-idioms` name-shadowing trap, second instance.
 - Two call-shape changes worth knowing: `onBlock`'s last line is `return ← processUpdates S σ'`
   (a bare `return` would wrap the result twice), and `onTick` writes
