@@ -1,3 +1,4 @@
+import Mathlib.Data.Finset.Fold
 import Spec.Consensus.Fig1StateTransition
 
 /-!
@@ -47,14 +48,62 @@ And the parent's recorded state is read through the map's `Option`, so a parent 
 that the map misses also rejects — unreachable once the map-domain coherence invariant is
 proved, the same seam the old rendering documents.
 
-## Totality
+## Totality, and the one way a handler fails
 
-Every handler returns a store; a block that fails admission leaves it unchanged — except
-for the root-proposal registration of lines 5–6, which the figure runs *before* the
-admission test, and this rendering does too.
+A block that fails admission leaves the store unchanged — except for the root-proposal
+registration of lines 5–6, which the figure runs *before* the admission test, and this
+rendering does too. So admission is not a failure.
+
+What *is* a failure: reading the state map at a block it does not record. `viableLeaves`
+does that per leaf, so `process_updates`, `on_block`, `get_head` and the candidate tree all
+return `ResultOrExcept`, and a missing entry propagates to the caller instead of being
+silently read as "not viable" (Roberto, 2026-08-21; the total reading is commit `ebd7626`).
+On a store that keeps the map defined on every accepted block — the coherence invariant,
+which `Analysis/` proves of every reachable store — no handler here can fail.
 -/
 
 set_option autoImplicit false
+
+/-! ## A filter over a `Finset` that propagates the monad's effect
+
+`Finset.filter` is pure, so a predicate that can fail has nowhere to put the failure. This is
+the version that does, and it is where the rendering's raising reads meet its sets:
+`viableLeaves` reads the state map per leaf, and a missing entry has to reach the caller.
+
+**`Finset.fold` is the only route, and its two instance arguments are the whole design.** A
+`Finset` is a `Multiset` with a nodup proof, and a `Multiset` is a list up to permutation, so
+there is no computable loop over one: no `ForIn` instance exists, and `Finset.toList` depends
+on `Classical.choice`. `fold` is available instead, at the price of a commutative and
+associative combining operation — and supplying those two instances *is* what it means for a
+monad to be usable over a set. A monad whose effects notice the order cannot supply them, and
+should not: `StateM` is the example, where two writes in different orders leave different
+states.
+
+Measured 2026-08-21: computable — `#eval` runs it — with `Finset.fold` itself choice-free.
+The `Classical.choice` in the axiom list of anything built on it comes from `Finset.union_comm`
+inside the commutativity instance, which is a `Prop` field and erased at compile time.
+-/
+
+namespace Finset
+
+variable {α : Type} {m : Type → Type}
+
+/-- Combine two monadic sets: run both, take the union. -/
+def unionM [DecidableEq α] [Monad m] (x y : m (Finset α)) : m (Finset α) := do
+  let a ← x
+  let b ← y
+  return a ∪ b
+
+/-- `s.filterM p`: keep the members `p` accepts, in any monad whose `unionM` does not care
+    about the order the set is traversed in. -/
+def filterM [DecidableEq α] [Monad m]
+    [Std.Commutative (unionM (α := α) (m := m))]
+    [Std.Associative (unionM (α := α) (m := m))]
+    (p : α → m Bool) (s : Finset α) : m (Finset α) :=
+  s.fold unionM (pure ∅) fun a => do
+    if ← p a then return {a} else return ∅
+
+end Finset
 
 namespace Consensus
 
@@ -212,6 +261,36 @@ inductive Error where
     friends — while signatures and `#check` output read `ResultOrExcept α`. -/
 abbrev ResultOrExcept (α : Type) := Except Error α
 
+/-- Any two failures are the same failure. An `instance`, not a `theorem`, because `Spec/`
+    holds no theorems — and it is needed by the two instances below, which a definition
+    cannot exist without. -/
+instance : Subsingleton Error := ⟨fun e e' => by cases e; cases e'; rfl⟩
+
+/-- `Finset.unionM` at `ResultOrExcept` is commutative — **and only because the failure
+    carries no payload**. The failure-failure case needs the two failures to be equal, which
+    is `Subsingleton Error`; give `Error` a payload and this is false, not merely unproved,
+    and `filterM` cannot be used over this monad at all. -/
+instance {α : Type} [DecidableEq α] :
+    Std.Commutative (Finset.unionM (α := α) (m := ResultOrExcept)) where
+  comm x y := by
+    cases x <;> cases y
+    all_goals simp only [Finset.unionM, Except.bind, bind, pure]
+    all_goals first
+      | rfl
+      | exact congrArg _ (Subsingleton.elim _ _)
+      | exact congrArg _ (Finset.union_comm _ _)
+
+/-- And associative, for the same reason. -/
+instance {α : Type} [DecidableEq α] :
+    Std.Associative (Finset.unionM (α := α) (m := ResultOrExcept)) where
+  assoc x y z := by
+    cases x <;> cases y <;> cases z <;>
+      simp only [Finset.unionM, Except.bind, bind, pure] <;>
+      first
+        | rfl
+        | exact congrArg _ (Subsingleton.elim _ _)
+        | exact congrArg _ (Finset.union_assoc _ _ _)
+
 /-- `σ[B]`, the read behind the bracket: the state recorded for `B`, or the failure. -/
 def stateAt (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
     ResultOrExcept (ChainState Validator) :=
@@ -270,22 +349,24 @@ def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
     viability is "some viable leaf descends from this block", and both of its readers —
     `candidateTree` and `process_updates`' finalize test — say it that way.
 
-    The height is read with `Option.any`, which is false on a missing entry, so a leaf the
-    map misses is not viable — a member of `T` the map misses is a coherence invariant's
-    business, not this definition's. This is the only place in the file that reads the state
-    map for a height.
+    **This is where the rendering raises** (Roberto, 2026-08-21): the height is read with
+    `Σ.σ[L]`, so a leaf the map does not record fails, and the failure propagates to whoever
+    asked. It is the only place in the file that reads the state map for a height, and
+    everything downstream is `ResultOrExcept` because of it — `candidateTree`,
+    `process_updates`, `get_head`, every root of Figure 5, `on_block`, `on_tick`.
 
-    **Not a `do` block, and it cannot become one** (measured 2026-08-21). Two independent
-    reasons. There is no computable loop over a `Finset`: no `ForIn` instance exists in this
-    import graph, and `Finset.toList` depends on `Classical.choice`, so picking an order
-    needs choice — which is right, since a monadic fold over a set is only well defined when
-    the effect commutes. And the predicate lives inside `Finset.filter`, a pure function with
-    no monad to propagate into, so the raising `S.σ[L]` would produce a `ResultOrExcept` with
-    nowhere to go. Making this routine raise would mean `ResultOrExcept` on `candidateTree`,
-    `process_updates`, `get_head`, every root of Figure 5, `on_block` and `on_tick` — the
-    whole store layer. -/
-def Store.viableLeaves (S : Store Validator Ω) : Finset (Block Validator) :=
-  S.leaves.filter fun L => (S.σ L).any fun σL => σL.h ≥ S.h_max - 1
+    Treating a missing entry as *not viable* instead — `(S.σ L).any …`, total — was the
+    previous reading, commit `ebd7626`. The two agree on any store that keeps the coherence
+    invariant; raising is the strict one, and it cannot answer a fork choice wrongly if the
+    invariant is ever violated.
+
+    `Finset.filterM` is what carries the failure out of a set; see its own docstring on why
+    `Finset.fold` is the only route and what its two instances mean. -/
+def Store.viableLeaves (S : Store Validator Ω) :
+    ResultOrExcept (Finset (Block Validator)) :=
+  S.leaves.filterM fun L => do
+    let σL ← S.σ[L]
+    return σL.h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
@@ -304,8 +385,10 @@ def Store.forkChoiceRoot (S : Store Validator Ω) : Block Validator := Id.run do
     **The draft's `V(Σ)` is not a definition here.** Its viable-blocks set has exactly two
     readers, this one and `process_updates`' finalize test, and each writes its condition
     out over `viableLeaves` (Roberto, 2026-08-20). -/
-def Store.candidateTree (S : Store Validator Ω) : Finset (Block Validator) :=
-  S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ S.viableLeaves, B ⪯ L
+def Store.candidateTree (S : Store Validator Ω) :
+    ResultOrExcept (Finset (Block Validator)) := do
+  let VL ← S.viableLeaves
+  return S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ VL, B ⪯ L
 
 /-- The blocks a walk from `R` may occupy: `R` itself, together with the candidates
     descending from it.
@@ -315,8 +398,9 @@ def Store.candidateTree (S : Store Validator Ω) : Finset (Block Validator) :=
     subset of `C(Σ)`, and it is never empty, which is what makes a selection over it
     total. -/
 def Store.candidateTreeFrom (S : Store Validator Ω) (R : Block Validator) :
-    Finset (Block Validator) :=
-  (S.candidateTree.filter fun B => R ⪯ B) ∪ {R}
+    ResultOrExcept (Finset (Block Validator)) := do
+  let CT ← S.candidateTree
+  return (CT.filter fun B => R ⪯ B) ∪ {R}
 
 end StoreDefs
 
@@ -339,7 +423,7 @@ variable [DecidableEq Validator] [Electorate Validator] [Params] [BlockHash Vali
     the new `Σ.F` — the pruned blocks remain available as signed evidence, outside this
     store. -/
 def processUpdates (S : Store Validator Ω) (σ : ChainState Validator) :
-    Store Validator Ω := Id.run do
+    ResultOrExcept (Store Validator Ω) := do
   let mut S := S
   S.h_max ← max S.h_max σ.h                                   -- line 13
   -- line 14: `(σ.h_j, hash(σ.J)) > (Σ.h_j, hash(Σ.J))` is the strict lexicographic
@@ -351,7 +435,8 @@ def processUpdates (S : Store Validator Ω) (σ : ChainState Validator) :
   -- `candidateTree` on why `V(Σ)` is not a definition here. Note it is *not*
   -- `σ.F ∈ C(Σ)`: this block lies below `Σ.J`, so it need not descend from the
   -- fork-choice root.
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ ∃ L ∈ S.viableLeaves, σ.F ⪯ L then
+  let VL ← S.viableLeaves
+  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ ∃ L ∈ VL, σ.F ⪯ L then
     S.F ← σ.F                                                 -- line 17
     S.T ← S.T.filter fun B => B ∼ S.F                         -- line 18: keep the compatible
   return S                                                    -- line 19
@@ -362,7 +447,8 @@ def processUpdates (S : Store Validator Ω) (σ : ChainState Validator) :
     started, the parent accepted, and `B` descending from `Σ.F`; an admitted block is
     replayed with Figure 1's transition, stored, and its post-state offered to
     `process_updates`. -/
-def onBlock (S : Store Validator Ω) (B : Block Validator) : Store Validator Ω := Id.run do
+def onBlock (S : Store Validator Ω) (B : Block Validator) :
+    ResultOrExcept (Store Validator Ω) := do
   let mut S := S
   -- line 5, strengthened: only a nonempty proposal root registers — see the module header
   if B.isOpening ∧ S.rootProposal (round B.slot) = none ∧ B.proposalRoot ≠ none then
@@ -378,18 +464,20 @@ def onBlock (S : Store Validator Ω) (B : Block Validator) : Store Validator Ω 
   let σ' := stateTransition σp B
   S.σ[B] ← some σ'
   S.T ← S.T ∪ {B}                                             -- line 10
-  return processUpdates S σ'                                  -- line 11
+  return ← processUpdates S σ'                                -- line 11
 
 end Handlers
 
 /-- `get_head(Σ, Ω)` (Figure 2, lines 24–25): a block in `C(Σ)`, selected using the
     store's own available-chain data `ω`, through the unspecified `Selection.select`. On an
     empty candidate tree — not excluded by the types, though a store the handlers built
-    keeps its fork-choice root viable — the fork-choice root is returned, so the routine
-    is total. -/
+    keeps its fork-choice root viable — the fork-choice root is returned, so the *selection*
+    never fails. Deriving the candidate tree can, which is why the result is
+    `ResultOrExcept`. -/
 def getHead [DecidableEq Validator] [Selection Validator Ω] (S : Store Validator Ω) :
-    Block Validator :=
-  if h : S.candidateTree.Nonempty then (Selection.select S.ω S.candidateTree h).val
-  else S.forkChoiceRoot
+    ResultOrExcept (Block Validator) := do
+  let CT ← S.candidateTree
+  if h : CT.Nonempty then return (Selection.select S.ω CT h).val
+  return S.forkChoiceRoot
 
 end Consensus

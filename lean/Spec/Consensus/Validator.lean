@@ -49,8 +49,9 @@ instance (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Decidable (v
 
     Skeleton to the extent `vetoed` is. -/
 def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block Validator) :
-    Finset (Block Validator) :=
-  {walkStart} ∪ (S.candidateTreeFrom walkStart).filter fun B => ¬ vetoed S r B
+    ResultOrExcept (Finset (Block Validator)) := do
+  let CTF ← S.candidateTreeFrom walkStart
+  return {walkStart} ∪ CTF.filter fun B => ¬ vetoed S r B
 
 /-- `s` is a *subtree rooted at* `R`: `R` is in it, everything in it descends from `R`, and
     it has no gaps — every block lying between `R` and a member is itself a member. A walk
@@ -73,9 +74,14 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
 
     **The result is `Except`, and the reads raise** (Roberto, 2026-08-21). `Σ.σ[B]` is the
     raising read of `Fig2FinalityStore.lean` — the draft's own spelling, no side condition —
-    so `let σ ← S.σ[B]` propagates a missing map entry to the caller. Three of the four hypotheses this routine used to take existed only
-    to justify those two reads — map-domain coherence, that the walk start is accepted, and
-    that the confirmation has a recorded state — and the exception subsumes all three.
+    so `let σ ← S.σ[B]` propagates a missing map entry to the caller. Three of the four
+    hypotheses this routine used to take existed only to justify those two reads — map-domain
+    coherence, that the walk start is accepted, and that the confirmation has a recorded
+    state — and the exception subsumes all three.
+
+    Two more of the body's lines bind with `←` rather than `:=`: `get_action_root` and
+    `confirmation_candidates` derive `C(Σ)`, which reads the map per viable leaf, so they
+    raise for the same reason the two state reads do.
 
     **The instant stays an input precondition** (Roberto, 2026-08-21): `S.t = actionTime r`,
     an autoparam discharged by `assumption`, so a caller holding it under any name writes
@@ -141,11 +147,11 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     ResultOrExcept (Attestation Validator) := do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
-  let walkStart := getActionRoot S r
+  let walkStart ← getActionRoot S r
   -- the confirmation: run Goldfish from the walk start over the candidates the veto
   -- admits, the walk start among them, so there is always one
   let C : Block Validator :=
-    S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
+    S.goldfishConfirmation walkStart (← confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
   -- state. Both reads raise on a block the map does not record, and propagate
   let σStart ← S.σ[walkStart]

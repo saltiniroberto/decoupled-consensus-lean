@@ -20,6 +20,13 @@ for a notion the draft has not yet written — and nothing here claims what prop
 The figure writes line 6 as a bare call; the parameter's type lets it mutate the store,
 which Section 6 will settle.
 
+## `on_tick` returns `ResultOrExcept`
+
+Lines 8 and 10 derive the round's SG and action roots, and those read `C(Σ)`, hence the state
+map per viable leaf — see `viableLeaves` in `Fig2FinalityStore.lean`. A block in `Σ.T` the
+map does not record therefore fails the whole tick. `on_attestation` reads neither and stays
+total.
+
 ## The `assert` is a reject exit
 
 Line 2's `assert Σ.t < t` is a precondition on the caller. Rendered as: a stale tick —
@@ -51,7 +58,7 @@ variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Vali
 def onTick (S : Store Validator Ω) (t : Int)
     (isOpeningProposer : Nat → Bool)
     (proposeBlock : Store Validator Ω → Nat → Store Validator Ω) :
-    Store Validator Ω := Id.run do
+    ResultOrExcept (Store Validator Ω) := do
   let mut S := S
   -- line 2: `assert Σ.t < t` — a stale tick leaves the store unchanged
   if ¬ (S.t < t) then
@@ -63,9 +70,9 @@ def onTick (S : Store Validator Ω) (t : Int)
     if isOpeningProposer r then
       S ← proposeBlock S r                                    -- line 6: `propose_block(Σ)`
   if let some r := roundStartingAt (t - Params.Δ) then        -- line 7: `t = t_r + Δ`
-    S.sgRoot[r] ← some (getSGRoot S r)                        -- line 8
+    S.sgRoot[r] ← some (← getSGRoot S r)                      -- line 8
   if let some r := roundStartingAt (t - 6 * Params.Δ) then    -- line 9: `t = a_r`
-    S.actionRoot[r] ← some (getActionRoot S r)                -- line 10
+    S.actionRoot[r] ← some (← getActionRoot S r)              -- line 10
   return S                                                    -- line 11
 
 /-- `on_attestation(Σ, α)` (Figure 6, lines 12–20): ignore an empty head; otherwise keep,

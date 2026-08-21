@@ -3189,6 +3189,46 @@ So the rule is about the shared continuation, not about `if` or `for`. Consequen
   does not accept dot notation for the `Coherent` lemmas, its result unfolding to a `∀` first
   — write `Coherent.of_write_σ (hR.coherent hpb) …`.
 
+### The store layer is monadic: `viableLeaves` raises — 2026-08-21
+
+Roberto's call, the last step of the exception thread. `Store.viableLeaves` reads the state
+map per leaf with `Σ.σ[L]`, so a leaf the map does not record fails, and the failure
+propagates. Eleven definitions carry `ResultOrExcept` because of it: `viableLeaves`,
+`candidateTree`, `candidateTreeFrom`, `processUpdates`, `onBlock`, `getHead` (Figure 2);
+`getProposalRoot`, `getLowerRoot`, `getSGRoot`, `getActionRoot` (Figure 5);
+`confirmationCandidates` (`Validator.lean`); and `onTick` (Figure 6), which calls two of the
+roots. `getWalkRoot`, `onAttestation`, `onSlot`, `vetoed` and Figure 4's scores stay total.
+
+- **What it buys.** The total reading — `(S.σ L).any …`, commit `ebd7626` — treats a missing
+  entry as *not viable*, which is a silent answer. The two agree on any store that keeps the
+  coherence invariant; raising cannot answer a fork choice wrongly if the invariant is ever
+  violated.
+- **`Finset.filterM` is what carries a failure out of a set**, in the root `Finset` namespace
+  in `Fig2FinalityStore.lean`, with `Finset.unionM` beside it. `Finset.fold` is the only
+  route: a `Finset` is a `Multiset` is a list up to permutation, so there is no computable
+  loop — no `ForIn` instance exists, and `Finset.toList` needs `Classical.choice`. `fold`
+  costs a commutative and associative combining operation, and **supplying those two
+  instances is what it means for a monad to be usable over a set.** `StateM` cannot and
+  should not: two writes in different orders leave different states.
+- **The instances exist only because `Error` carries no payload.** The failure-failure case of
+  commutativity needs the two failures equal, which is `Subsingleton Error`. Give `Error` a
+  payload and `Std.Commutative` is *false*, not merely unproved, and `filterM` cannot be used
+  over `ResultOrExcept` at all. The payload-free decision is what admits the monad.
+- **Computable**, measured by `#eval`: `Finset.fold` is choice-free, and the
+  `Classical.choice` that appears in the axiom lists comes from `Finset.union_comm` inside the
+  commutativity instance — a `Prop` field, erased at compile time. `Store.viableLeaves` and
+  `Store.candidateTree` gained choice in their axiom lists; `onBlock`, `getActionRoot` and
+  `onSGFGVotingAction` already had it.
+- **Cost paid**: `Fig2FinalityStore.lean` now imports `Mathlib.Data.Finset.Fold`, and the
+  general `filterM` lives in the `Finset` namespace at the root — declared *outside*
+  `namespace Consensus`, because inside it the name would be `Consensus.Finset.filterM` and
+  its own body's `Finset.fold` would resolve to `Consensus.Finset.fold` and fail. That is the
+  `lean-proof-idioms` name-shadowing trap, second instance.
+- Two call-shape changes worth knowing: `onBlock`'s last line is `return ← processUpdates S σ'`
+  (a bare `return` would wrap the result twice), and `onTick` writes
+  `S.sgRoot[r] ← some (← getSGRoot S r)` — the `←` nests inside the assignment macro's
+  right-hand side without trouble.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:

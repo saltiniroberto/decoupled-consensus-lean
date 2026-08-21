@@ -23,6 +23,13 @@ and lets the store's `ω` pick, so the routine is total without a chain hypothes
 old rendering's totalization, with the selection data read off the store instead of an
 ambient instance.
 
+## Every root returns `ResultOrExcept`
+
+Each of these reads `C(Σ)`, and deriving the candidate tree reads the state map per viable
+leaf — see `viableLeaves` in `Fig2FinalityStore.lean`. So a block in `Σ.T` that the map does
+not record makes the whole derivation fail, and the failure propagates. `get_walk_root` is
+the exception: it reads only the fork-choice root and `Σ.sg_root[r]`, so it stays total.
+
 ## Two `Option` seams, both documented at the line
 
 `Σ.root_proposal[r]` is `none` until a round-`r` opening block carrying a nonempty
@@ -61,8 +68,10 @@ def deepest (S : Store Validator Ω) (s : Finset (Block Validator)) (h : s.Nonem
     the round's opening proposer, at `t_r`, sets its opening block's proposal-root field
     to — the deepest block in `C(Σ)` with grade 2, or the current fork-choice root when no
     such block exists. -/
-def getProposalRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
-  let G := S.candidateTree.filter fun B => G2 S r B           -- line 2
+def getProposalRoot (S : Store Validator Ω) (r : Nat) :
+    ResultOrExcept (Block Validator) := do
+  let CT ← S.candidateTree
+  let G := CT.filter fun B => G2 S r B                        -- line 2
   if hG : G.Nonempty then                                     -- line 3
     return deepest S G hG                                     -- line 4
   return S.forkChoiceRoot                                     -- line 5
@@ -70,8 +79,10 @@ def getProposalRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.r
 /-- `get_lower_root(Σ, r)` (Figure 5, lines 6–10; Definition 14's `R_low`): the deepest
     block in `C(Σ)` with grade 3 strictly descending from the fork-choice root, or the
     fork-choice root itself when there is none. -/
-def getLowerRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
-  let G := S.candidateTree.filter fun B =>
+def getLowerRoot (S : Store Validator Ω) (r : Nat) :
+    ResultOrExcept (Block Validator) := do
+  let CT ← S.candidateTree
+  let G := CT.filter fun B =>
     G3 S r B ∧ S.forkChoiceRoot ≺ B                           -- line 7
   if hG : G.Nonempty then                                     -- line 8
     return deepest S G hG                                     -- line 9
@@ -82,13 +93,15 @@ def getLowerRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run 
     `R_prop` exactly when `R_low ⪯ R_prop`, `R_prop ∈ C(Σ)` and `G1(R_prop)`; on acceptance
     the SG root is `R_prop`, otherwise `R_low` — the lower root is not retained. `on_tick`
     stores the result in `Σ.sg_root[r]`. -/
-def getSGRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
-  let Rlow := getLowerRoot S r                                -- line 12
+def getSGRoot (S : Store Validator Ω) (r : Nat) :
+    ResultOrExcept (Block Validator) := do
+  let Rlow ← getLowerRoot S r                                 -- line 12
   -- lines 13–15: `if Σ.root_proposal[r] = ⊥ then return R_low; R_prop ← Σ.root_proposal[r]`.
   -- The `⊥` case falls through to the closing `return R_low`.
   if hp : (S.rootProposal r).isSome then
     let Rprop := (S.rootProposal r).get hp
-    if Rlow ⪯ Rprop ∧ Rprop ∈ S.candidateTree ∧ G1 S r Rprop then  -- line 16
+    let CT ← S.candidateTree
+    if Rlow ⪯ Rprop ∧ Rprop ∈ CT ∧ G1 S r Rprop then          -- line 16
       return Rprop                                            -- line 17
   return Rlow                                                 -- lines 14 and 18
 
@@ -111,10 +124,12 @@ def getWalkRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run d
     A validator's own selection needs no external backing, while a round root adopted from
     others must still be viable and majority-backed at signing time. `on_tick` stores the
     result in `Σ.action_root[r]`. -/
-def getActionRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
+def getActionRoot (S : Store Validator Ω) (r : Nat) :
+    ResultOrExcept (Block Validator) := do
   let C := S.forkChoiceRoot                                   -- line 25
   let R := getWalkRoot S r                                    -- line 26
-  if R ∈ S.candidateTree ∧ (R = C ∨ G1 S r R) then            -- line 27
+  let CT ← S.candidateTree
+  if R ∈ CT ∧ (R = C ∨ G1 S r R) then                         -- line 27
     return R                                                  -- line 28
   return C                                                    -- line 29
 
