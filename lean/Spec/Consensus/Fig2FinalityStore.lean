@@ -111,14 +111,32 @@ chains as `(Σ.head[r])[i]`. Validity is `True` at both levels, closed by `get_e
 own `trivial`, so a read owes nothing. `def` and not `abbrev`, or the name would unfold away
 before the lookup.
 
-The row bracket **raises**, as `Σ.σ[B]` does, so `(← Σ.vote[s][i]).1` reads the recorded
+The row bracket **raises**, as `Σ.σ[B]` does, so `(← Σ.gfVote[s][i]).block` reads the recorded
 block and the routine that does it carries `ResultOrExcept`. Two consequences. "Is it unset?"
-is `i ∉ Σ.vote[s]`, not `= none` — a raising read is no `Option`. And the raw `Option` stays
-reachable by application, `Σ.vote[s] i`, because a row *is* a function: that is what keeps the
-counting definitions total, out of `filterM`, and it is the same pair of spellings `Σ.σ B` and
-`Σ.σ[B]` already offer.
+is `i ∉ Σ.gfVote[s]`, not `= none` — a raising read is no `Option`. And the raw `Option` stays
+reachable by application, `Σ.gfVote[s] i`, because a row *is* a function: that is what keeps
+the counting definitions total, out of `filterM`, and it is the same pair of spellings `Σ.σ B`
+and `Σ.σ[B]` already offer.
+
+One friction from `Recorded` being a structure: a write needs `some ⟨…⟩` and not `⟨…⟩`. The
+anonymous constructor cannot choose between building the `Option` and building the `Recorded`,
+and the `α → Option α` coercion is not tried on it — so the pair's `Σ.head[r][i] ← (H, Σ.t)`,
+which did coerce, becomes `Σ.head[r][i] ← some ⟨H, Σ.t⟩`.
 
 The table bracket does not raise: a table is total, every index having a row. -/
+
+/-- A block together with the time it was processed: what `Σ.head[r][i]` and
+    `Σ.gfVote[s][i]` each record.
+
+    A structure and not a pair (Roberto, 2026-08-22), so that a reader of
+    `rec.processedAt < t` does not have to remember which of `.1` and `.2` is the time. One
+    structure serves both fields because both record the same thing — an attestation head is
+    a block, and both times are processing times. -/
+structure Recorded (Validator : Type) where
+  /-- The block: an attestation's head, or a Goldfish vote's target. -/
+  block : Block Validator
+  /-- When this validator's first such object for the index was processed. -/
+  processedAt : Int
 
 /-- One optional entry per validator. -/
 def StoreRow (Validator V : Type) := Validator → Option V
@@ -145,7 +163,7 @@ scoped instance {V : Type} (row : StoreRow Validator V) (i : Validator) : Decida
     instance one level down (Roberto, 2026-08-22). So `(← Σ.vote[s][i]).1` reads the recorded
     block, and a routine that does it carries `ResultOrExcept`.
 
-    The raw `Option` is still reachable by application, `Σ.vote[s] i`, because a row *is* a
+    The raw `Option` is still reachable by application, `Σ.gfVote[s] i`, because a row *is* a
     function — which is what keeps the counting definitions total and out of `filterM`. The
     same two spellings `Σ.σ` has: `Σ.σ B` for the option, `Σ.σ[B]` to raise. -/
 scoped instance storeRowGetElem {V : Type} :
@@ -182,29 +200,31 @@ structure Store (Validator : Type) where
   /-- `head[·]` (Definition 10; read by Figure 4's scores, written by Figure 6's
       `on_attestation`): per round and validator, the first processed nonempty attestation
       head with its processing time, `none` until one arrives. -/
-  head : StoreTable Validator (Block Validator × Int)
+  head : StoreTable Validator (Recorded Validator)
   /-- `equiv[·]` (Definition 10; read by Figure 4, written by Figure 6): per round and
       validator, the time at which a head different from the stored one was first
       processed — the equivocation time — `none` while none was. -/
   equiv : StoreTable Validator Int
-  /-- `vote[·]`: per **slot** and validator, the first processed Goldfish vote with its
+  /-- `gf_vote[·]`: per **slot** and validator, the first processed Goldfish vote with its
       processing time, `none` until one arrives. Written by `on_goldfish_vote`
-      (`Goldfish.lean`), read by the counting there.
+      (`Goldfish.lean`), read by the counting there. The `gf` says Goldfish: these are
+      Definition 4's votes, not the attestations of Definition 3.
 
       **Beyond Definition 10** (Roberto, 2026-08-22): the draft's timed store keeps this
       bookkeeping for attestation heads and not for Goldfish votes, and Section 5, which
       would need it, is undrafted. The shape is `head[·]`'s exactly — first write wins, the
       time recorded beside the value — one level down, keyed by slot rather than round,
       because a Goldfish vote belongs to a slot. -/
-  vote : StoreTable Validator (Block Validator × Int)
-  /-- `vote_equiv[·]`: per slot and validator, the time at which a Goldfish vote for a
+  gfVote : StoreTable Validator (Recorded Validator)
+  /-- `gf_vote_equiv[·]`: per slot and validator, the time at which a Goldfish vote for a
       *different* block was first processed — the vote-equivocation time — `none` while none
-      was. `equiv[·]`'s shape, and beyond Definition 10 for the same reason as `vote[·]`.
+      was. `equiv[·]`'s shape, and beyond Definition 10 for the same reason as
+      `gf_vote[·]`.
 
       Separate from `equiv[·]`: that one records equivocation in attestation heads, this one
       in raw votes, and the draft's Definition 3 and Definition 4 are separate objects with
       separate signatures. A validator can equivocate in one and not the other. -/
-  voteEquiv : StoreTable Validator Int
+  gfVoteEquiv : StoreTable Validator Int
   /-- `sg_root[·]` (Definition 10; written by Figure 6 at the opening slot's vote time,
       read by Figure 5's `get_walk_root`): per round, the SG root derived at `t_r + Δ`,
       `none` until that write. Fixed after it. -/
@@ -306,8 +326,8 @@ def Store.gen
   rootProposal := fun _ => none
   head := fun _ _ => none
   equiv := fun _ _ => none
-  vote := fun _ _ => none
-  voteEquiv := fun _ _ => none
+  gfVote := fun _ _ => none
+  gfVoteEquiv := fun _ _ => none
   sgRoot := fun _ => none
   actionRoot := fun _ => none
   t := -1

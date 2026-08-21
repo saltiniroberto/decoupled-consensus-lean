@@ -13,7 +13,7 @@ bookkeeping that records it, and the unit it is counted in — and stops.
 
 ## The bookkeeping mirrors the attestation heads
 
-`Σ.vote[s][i]` and `Σ.vote_equiv[s][i]` (fields of `Store`, `Fig2FinalityStore.lean`) are
+`Σ.gfVote[s][i]` and `Σ.gf_vote_equiv[s][i]` (fields of `Store`, `Fig2FinalityStore.lean`) are
 `head[·]` and `equiv[·]` one level down: first write wins, the processing time recorded beside
 the value, and a later vote for a different block records the vote-equivocation time instead.
 Keyed by **slot**, because a Goldfish vote belongs to a slot where an attestation belongs to a
@@ -133,10 +133,10 @@ def onGoldfishVote (S : Store Validator) (v : GoldfishVote Validator) :
   let mut S := S
   let i := v.validator
   let s := v.slot
-  if i ∉ S.vote[s] then
-    S.vote[s][i] ← (v.block, S.t)
-  else if (← S.vote[s][i]).1 ≠ v.block ∧ i ∉ S.voteEquiv[s] then
-    S.voteEquiv[s][i] ← S.t
+  if i ∉ S.gfVote[s] then
+    S.gfVote[s][i] ← some ⟨v.block, S.t⟩
+  else if (← S.gfVote[s][i]).block ≠ v.block ∧ i ∉ S.gfVoteEquiv[s] then
+    S.gfVoteEquiv[s][i] ← S.t
   return S
 
 end Handler
@@ -152,19 +152,19 @@ variable [DecidableEq Validator] [Committees Validator]
 
     The *direct* vote for `B`, not support in Section 5's sense: no ancestor of `B` is
     counted. Whatever closure the confirmation rule wants is that rule's, and it is not
-    drafted. The time bound is why `vote[·]` records a processing time at all — Section 5 will
+    drafted. The time bound is why `gf_vote[·]` records a processing time at all — Section 5 will
     need to read the same slot at two instants — and this definition takes it as an argument
     rather than fixing one. -/
 def Store.voters (S : Store Validator) (s : Nat) (t : Int) (B : Block Validator) :
     Finset Validator :=
-  {i ∈ Committees.committee s | (S.vote[s] i).any fun rec => rec.2 < t ∧ rec.1 = B}
+  {i ∈ Committees.committee s | (S.gfVote[s] i).any fun rec => rec.processedAt < t ∧ rec.block = B}
 
 /-- The committee members whose slot-`s` vote-equivocation was processed before `t`.
-    Figure 4's `equivocators` one level down, and the reason `vote_equiv[·]` exists: a
+    Figure 4's `equivocators` one level down, and the reason `gf_vote_equiv[·]` exists: a
     validator that voted twice for one slot supplies no unit, and a counting rule that wants
     to exclude it reads this. -/
 def Store.voteEquivocators (S : Store Validator) (s : Nat) (t : Int) : Finset Validator :=
-  {i ∈ Committees.committee s | (S.voteEquiv[s] i).any fun tE => tE < t}
+  {i ∈ Committees.committee s | (S.gfVoteEquiv[s] i).any fun tE => tE < t}
 
 end Counting
 

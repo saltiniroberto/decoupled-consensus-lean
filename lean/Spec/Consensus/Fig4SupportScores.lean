@@ -35,7 +35,7 @@ variable {Validator : Type}
 /-- The round-`(r−1)` head entries Definition 11 reads — empty for `r = 0`, the draft's
     "for round 0 the round-`(−1)` entries are empty". -/
 def Store.prevHead (S : Store Validator) :
-    StoreTable Validator (Block Validator × Int)
+    StoreTable Validator (Recorded Validator)
   | 0 => fun _ => none
   | r + 1 => S.head[r]
 
@@ -54,7 +54,7 @@ variable [DecidableEq Validator] [Electorate Validator] [Params]
     ever summed. -/
 def supporters (S : Store Validator) (r : Nat) (j : Int) (B : Block Validator) :
     Finset Validator :=
-  {i ∈ Electorate.V | (S.prevHead[r] i).any fun (H, tH) => tH < gradeInstant r j ∧ B ⪯ H}
+  {i ∈ Electorate.V | (S.prevHead[r] i).any fun rec => rec.processedAt < gradeInstant r j ∧ B ⪯ rec.block}
 
 /-- `E_j` (Definition 11): the validators whose stored round-`(r−1)` equivocation time is
     before round `r`'s instant `Γ^j`. Likewise intersected with the electorate. -/

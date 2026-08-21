@@ -3352,6 +3352,22 @@ ambient class: `select : (s : Finset (Block Validator)) → s.Nonempty → {B //
 - This is where the old rendering already was — `Spec/Defs/Recovery.lean` keeps its chooser
   ambient by typeclass. The second attempt spent two days going the other way and back.
 
+### `Σ.gfVote` and the `Recorded` structure — 2026-08-22
+
+- `Store.vote` renamed `Store.gfVote`, and `voteEquiv` to `gfVoteEquiv` with it: the `gf` says
+  Goldfish, so a reader is not left guessing whether the field holds Definition 3's
+  attestations or Definition 4's votes. `Store.voters` and `Store.voteEquivocators` keep their
+  names — nothing else in the subtree counts votes.
+- `head[·]` and `gf_vote[·]` hold `Recorded Validator` — a structure with `block` and
+  `processedAt` — instead of a pair, so reads say what they mean: `rec.processedAt < t` and
+  `rec.block = B` where they were `rec.2` and `rec.1`. One structure for both fields, both
+  recording the same thing.
+- **A write needs `some ⟨…⟩`, not `⟨…⟩`.** The anonymous constructor cannot choose between
+  building the `Option` and building the `Recorded`, and the `α → Option α` coercion is not
+  tried on it. So the pair's `Σ.head[r][i] ← (H, Σ.t)`, which *did* coerce, becomes
+  `← some ⟨H, Σ.t⟩`. Structure-instance syntax `{ block := …, processedAt := … }` fails the
+  same way — `Option` is not a structure, so the expected type cannot be unfolded to one.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:
