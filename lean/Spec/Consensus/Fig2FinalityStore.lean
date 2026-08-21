@@ -294,15 +294,23 @@ def Store.forkChoiceRoot (S : Store Validator Ω) : Block Validator := Id.run do
     readers, this one and `process_updates`' finalize test, and each writes its condition
     out over `viableLeaves` (Roberto, 2026-08-20).
 
-    `filterM` with the read inside the predicate, rather than one bind above a pure `filter`
-    (Roberto, 2026-08-21). The two give the same set — `viableLeaves` does not depend on `B` —
-    but this one re-derives it once per accepted block, so the map is read `|Σ.T|` times over
-    rather than once. That is a cost in evaluation, not in meaning; `process_updates` binds
-    once instead, because its condition is not a filter. -/
+    **One bind above a pure `filter`, not `filterM`** (Roberto, 2026-08-21). Both compile and
+    give the same set, `viableLeaves` not depending on `B` — but `filterM` puts the read
+    inside the predicate, so it re-derives the viable leaves once per accepted block and the
+    state map is read `|Σ.T|` times over instead of once. Binding once also says the true
+    thing: viability is a property of the store, computed before the filter, not part of the
+    per-block condition. `52193b1` has the `filterM` version.
+
+    The arrow cannot be inlined into the `filter` itself. `(← e)` lifts to the nearest
+    enclosing `do` statement, and inside `fun B => …` there is none, so Lean reports "Cannot
+    lift nested action over a binder" rather than silently moving the read out of the
+    predicate. Its suggestion to add a `do` does not apply either: `Finset.filter` takes a
+    pure predicate, which is what `filterM` exists for. Where no binder intervenes the inline
+    form is fine — `candidateTreeFrom` below writes `(← S.candidateTree).filter …`. -/
 def Store.candidateTree (S : Store Validator Ω) :
-    ResultOrExcept (Finset (Block Validator)) :=
-  S.T.filterM fun B => do
-    return S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ (← S.viableLeaves), B ⪯ L
+    ResultOrExcept (Finset (Block Validator)) := do
+  let viableLeaves ← S.viableLeaves
+  return S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ viableLeaves, B ⪯ L
 
 /-- The blocks a walk from `R` may occupy: `R` itself, together with the candidates
     descending from it.
@@ -313,8 +321,7 @@ def Store.candidateTree (S : Store Validator Ω) :
     total. -/
 def Store.candidateTreeFrom (S : Store Validator Ω) (R : Block Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
-  let CT ← S.candidateTree
-  return (CT.filter fun B => R ⪯ B) ∪ {R}
+  return ((← S.candidateTree).filter fun B => R ⪯ B) ∪ {R}
 
 end StoreDefs
 

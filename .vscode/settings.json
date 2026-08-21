@@ -12,5 +12,5 @@
   // carries generated files that `make index` and `make mapping` rewrite, so a buffer holding a
   // previous version is a normal state here rather than a rare one. Saving is therefore worth
   // making deliberate.
-  "files.autoSave": "off"
+  // "files.autoSave": "off"
 }
