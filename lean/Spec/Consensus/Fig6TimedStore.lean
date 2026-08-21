@@ -20,12 +20,17 @@ for a notion the draft has not yet written — and nothing here claims what prop
 The figure writes line 6 as a bare call; the parameter's type lets it mutate the store,
 which Section 6 will settle.
 
-## `on_tick` returns `ResultOrExcept`
+## Both handlers return `ResultOrExcept`
 
-Lines 8 and 10 derive the round's SG and action roots, and those read `C(Σ)`, hence the state
-map per viable leaf — see `viableLeaves` in `Fig2FinalityStore.lean`. A block in `Σ.T` the
-map does not record therefore fails the whole tick. `on_attestation` reads neither and stays
-total.
+`on_tick`'s lines 8 and 10 derive the round's SG and action roots, and those read `C(Σ)`,
+hence the state map per viable leaf — see `viableLeaves` in `Fig2FinalityStore.lean`. A block
+in `Σ.T` the map does not record therefore fails the whole tick.
+
+`on_attestation` fails for a different reason: line 18 reads `Σ.head[r][i]`, and the row
+bracket raises when there is no entry (`Fig2FinalityStore.lean`). The read is unreachable —
+the branch above tested `i ∉ Σ.head[r]` — so this failure never fires on any store; it is the
+price of writing line 18 the way the figure writes it, `α.head ≠ Σ.head[r][i]`, rather than
+through an `Option` test.
 
 ## The `assert` is a reject exit
 
@@ -81,17 +86,16 @@ def onTick (S : Store Validator Ω) (t : Int)
     the equivocation time. Definition 11's support scores read these entries against the
     grade instants. -/
 def onAttestation (S : Store Validator Ω) (a : Attestation Validator) :
-    Store Validator Ω := Id.run do
+    ResultOrExcept (Store Validator Ω) := do
   let mut S := S
   let i := a.validator                                        -- line 13
   let r := a.round
   -- line 14: `if α.head = ⊥ then return Σ`
   let some H := a.head | return S                             -- line 15
-  if S.head[r][i] = none then                                 -- line 16: `i ∉ Σ.head[r]`
-    S.head[r][i] ← some (H, S.t)                              -- line 17
-  -- line 18: `else if α.head ≠ Σ.head[r][i]'s head and i ∉ Σ.equiv[r]`
-  else if (S.head[r][i]).any (fun hd => H ≠ hd.1) ∧ S.equiv[r][i] = none then
-    S.equiv[r][i] ← some S.t                                  -- line 19
+  if i ∉ S.head[r] then                                       -- line 16: `i ∉ Σ.head[r]`
+    S.head[r][i] ← (H, S.t)                                   -- line 17
+  else if H ≠ (← S.head[r][i]).1 ∧ i ∉ S.equiv[r] then        -- line 18
+    S.equiv[r][i] ← S.t                                       -- line 19
   return S                                                    -- line 20
 
 end Handlers

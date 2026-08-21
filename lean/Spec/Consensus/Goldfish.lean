@@ -121,16 +121,22 @@ variable {Ω : Type} [DecidableEq Validator]
     `on_attestation`'s shape (Figure 6, lines 12–20), and it renders no figure line — see the
     module header. Two differences from that routine, both from Definition 4: a Goldfish vote
     carries a block and not an `Option`, so there is no empty case to ignore; and the key is
-    the vote's slot, not a round. -/
+    the vote's slot, not a round.
+
+    **Why the result raises** (Roberto, 2026-08-22): the equivocation test reads
+    `(← Σ.vote[s][i]).1`, and the row bracket raises when there is no entry. The failure is
+    unreachable — the branch above tested `i ∉ Σ.vote[s]` — so it never fires on any store.
+    It is the price of reading the recorded block directly rather than through an `Option`
+    test, and `on_attestation` pays the same price for the same reason. -/
 def onGoldfishVote (S : Store Validator Ω) (v : GoldfishVote Validator) :
-    Store Validator Ω := Id.run do
+    ResultOrExcept (Store Validator Ω) := do
   let mut S := S
   let i := v.validator
   let s := v.slot
-  if S.vote[s][i] = none then
+  if i ∉ S.vote[s] then
     S.vote[s][i] ← (v.block, S.t)
-  else if (S.vote[s][i]).any (fun rec => rec.1 ≠ v.block) ∧ S.voteEquiv[s][i] = none then
-    S.voteEquiv[s][i] ← some S.t
+  else if (← S.vote[s][i]).1 ≠ v.block ∧ i ∉ S.voteEquiv[s] then
+    S.voteEquiv[s][i] ← S.t
   return S
 
 end Handler
@@ -151,14 +157,14 @@ variable {Ω : Type} [DecidableEq Validator] [Committees Validator]
     rather than fixing one. -/
 def Store.voters (S : Store Validator Ω) (s : Nat) (t : Int) (B : Block Validator) :
     Finset Validator :=
-  {i ∈ Committees.committee s | (S.vote[s][i]).any fun rec => rec.2 < t ∧ rec.1 = B}
+  {i ∈ Committees.committee s | (S.vote[s] i).any fun rec => rec.2 < t ∧ rec.1 = B}
 
 /-- The committee members whose slot-`s` vote-equivocation was processed before `t`.
     Figure 4's `equivocators` one level down, and the reason `vote_equiv[·]` exists: a
     validator that voted twice for one slot supplies no unit, and a counting rule that wants
     to exclude it reads this. -/
 def Store.voteEquivocators (S : Store Validator Ω) (s : Nat) (t : Int) : Finset Validator :=
-  {i ∈ Committees.committee s | (S.voteEquiv[s][i]).any fun tE => tE < t}
+  {i ∈ Committees.committee s | (S.voteEquiv[s] i).any fun tE => tE < t}
 
 end Counting
 

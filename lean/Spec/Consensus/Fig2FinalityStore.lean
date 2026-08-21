@@ -103,9 +103,14 @@ chains as `(Σ.head[r])[i]`. Validity is `True` at both levels, closed by `get_e
 own `trivial`, so a read owes nothing. `def` and not `abbrev`, or the name would unfold away
 before the lookup.
 
-What this does *not* change is what is stored. `Σ.vote[s][i]` is an `Option (Block × Int)` —
-the block *and* its processing time — so it cannot be compared against a block. That takes
-either an accessor for the first component or two separate tables, and neither is here. -/
+The row bracket **raises**, as `Σ.σ[B]` does, so `(← Σ.vote[s][i]).1` reads the recorded
+block and the routine that does it carries `ResultOrExcept`. Two consequences. "Is it unset?"
+is `i ∉ Σ.vote[s]`, not `= none` — a raising read is no `Option`. And the raw `Option` stays
+reachable by application, `Σ.vote[s] i`, because a row *is* a function: that is what keeps the
+counting definitions total, out of `filterM`, and it is the same pair of spellings `Σ.σ B` and
+`Σ.σ[B]` already offer.
+
+The table bracket does not raise: a table is total, every index having a row. -/
 
 /-- One optional entry per validator. -/
 def StoreRow (Validator V : Type) := Validator → Option V
@@ -118,10 +123,26 @@ scoped instance storeTableGetElem {V : Type} :
     GetElem (StoreTable Validator V) Nat (StoreRow Validator V) (fun _ _ => True) where
   getElem t r _ := t r
 
-/-- `row[i]`: the entry for a validator. -/
+/-- `i ∈ row`: the row has an entry for `i`. What "is it unset?" is spelled with, now that
+    the bracket below no longer returns an `Option`. -/
+scoped instance storeRowMembership {V : Type} :
+    Membership Validator (StoreRow Validator V) where
+  mem row i := (row i).isSome
+
+/-- The membership is a `Bool` in disguise, so an `if _ : i ∈ row` can test it. -/
+scoped instance {V : Type} (row : StoreRow Validator V) (i : Validator) : Decidable (i ∈ row) :=
+  inferInstanceAs (Decidable ((row i).isSome = true))
+
+/-- `row[i]`: the entry for a validator, **raising** when there is none — `Σ.σ[B]`'s
+    instance one level down (Roberto, 2026-08-22). So `(← Σ.vote[s][i]).1` reads the recorded
+    block, and a routine that does it carries `ResultOrExcept`.
+
+    The raw `Option` is still reachable by application, `Σ.vote[s] i`, because a row *is* a
+    function — which is what keeps the counting definitions total and out of `filterM`. The
+    same two spellings `Σ.σ` has: `Σ.σ B` for the option, `Σ.σ[B]` to raise. -/
 scoped instance storeRowGetElem {V : Type} :
-    GetElem (StoreRow Validator V) Validator (Option V) (fun _ _ => True) where
-  getElem row i _ := row i
+    GetElem (StoreRow Validator V) Validator (ResultOrExcept V) (fun _ _ => True) where
+  getElem row i _ := if h : i ∈ row then .ok ((row i).get h) else .error .error
 
 /-- The store (Definition 7 of the draft), in the draft's field order:
     `Σ = (s, T, σ[·], F, J, h_j, h_max)` — written `S`, see the module header — plus

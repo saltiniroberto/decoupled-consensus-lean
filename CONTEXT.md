@@ -3311,12 +3311,25 @@ make the same spelling work as a **read**.
   since undone).
 - All four fields converted, plus `prevHead`/`prevEquiv` in Figure 4, so every read in the
   subtree uses the bracket and none uses application.
-- **What it does not fix**: `Σ.vote[s][i]` is an `Option (Block × Int)`, the block *and* its
-  processing time, so it cannot be compared against a block — `S.vote[s][i] ≠ v.block` is a
-  type error, which is what prompted this. The comparison still reads
-  `(S.vote[s][i]).any (fun rec => rec.1 ≠ v.block)`. Getting `≠ some v.block` would need an
-  accessor for the first component, or two separate tables; neither was taken, the second
-  because Definition 10 bundles a head with its time on purpose.
+- **The row bracket raises**, as `Σ.σ[B]` does (Roberto, 2026-08-22, after two rounds on the
+  spelling). `Σ.vote[s][i] : ResultOrExcept V`, so `(← Σ.vote[s][i]).1` reads the recorded
+  block and the handler carries `ResultOrExcept`. The table bracket does not raise — a table
+  is total, every index having a row.
+  - **"Is it unset?" becomes `i ∉ Σ.vote[s]`**, not `= none`: a raising read is no `Option`.
+    The `Membership` instance on `StoreRow` is what supplies it, exactly as `B ∈ S.σ` does.
+  - **The raw `Option` stays reachable by application**, `Σ.vote[s] i`, because a row *is* a
+    function. That is what keeps `voters`, `voteEquivocators`, `supporters` and `equivocators`
+    total and out of `filterM`, and it is the same pair of spellings `Σ.σ B` / `Σ.σ[B]` already
+    offers.
+  - `onGoldfishVote` and `onAttestation` both return `ResultOrExcept (Store …)` now. Both
+    failures are **unreachable** — each sits in the `else` of an `i ∉ …` test — so neither
+    fires on any store. It is the price of writing Figure 6's line 18 the way the figure
+    writes it, `α.head ≠ Σ.head[r][i]`, instead of through an `Option` test.
+  - Two other shapes were measured and set aside. `S.vote[s][i].1` with a *checked* row
+    bracket works too (element `V`, validity `i ∈ row`, the proof found by `get_elem_tactic`
+    inside `if h : i ∈ S.vote[s]`), and needs no monad at all — `scratch/CheckedTable.lean` had
+    it. And binding the entry with a dependent `if` plus `.get h` works with no instance change.
+    Both were rejected in favour of the arrow, which matches `Σ.σ[B]`.
 - Small win from Roberto's own edit: the write needs no `some` — `Σ.vote[s][i] ← (v.block, S.t)`
   coerces, Lean inserting `Option.some` at the expected type.
 
