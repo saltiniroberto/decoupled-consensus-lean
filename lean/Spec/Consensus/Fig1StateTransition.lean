@@ -100,15 +100,15 @@ variable [Electorate Validator]
 /-- `Q_target(σ) = {i : σ.target_participation[i]}`, intersected with the electorate,
     since only `V`'s weights are ever summed. -/
 def ChainState.Qtarget (σ : ChainState Validator) : Finset Validator :=
-  Electorate.V.filter fun i => σ.targetParticipation i
+  {i ∈ Electorate.V | σ.targetParticipation i}
 
 /-- `Q_prog(σ) = {i : σ.progress[i]}`, likewise. -/
 def ChainState.Qprog (σ : ChainState Validator) : Finset Validator :=
-  Electorate.V.filter fun i => σ.progress i
+  {i ∈ Electorate.V | σ.progress i}
 
 /-- `Q_finality(σ) = {i : σ.finalize[i]}`, likewise. -/
 def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
-  Electorate.V.filter fun i => σ.finalize i
+  {i ∈ Electorate.V | σ.finalize i}
 
 end QuorumSets
 

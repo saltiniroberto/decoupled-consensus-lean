@@ -51,7 +51,7 @@ instance (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Decidable (v
 def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
   let CTF ← S.candidateTreeFrom walkStart
-  return {walkStart} ∪ CTF.filter fun B => ¬ vetoed S r B
+  return {walkStart} ∪ {B ∈ CTF | ¬ vetoed S r B}
 
 /-- `s` is a *subtree rooted at* `R`: `R` is in it, everything in it descends from `R`, and
     it has no gaps — every block lying between `R` and a member is itself a member. A walk

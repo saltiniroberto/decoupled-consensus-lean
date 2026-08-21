@@ -251,7 +251,7 @@ instance (S : Store Validator Ω) (L : Block Validator) : Decidable (S.isLeaf L)
 
 /-- The leaves of `Σ.T`, as a set. -/
 def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
-  S.T.filter fun L => S.isLeaf L
+  {L ∈ S.T | S.isLeaf L}
 
 /-- The leaves whose recorded state-height is at least `Σ.h_max − 1`: the leaves that
     witness a branch reaching within one height of the store's frontier. Definition 8's
@@ -310,7 +310,7 @@ def Store.forkChoiceRoot (S : Store Validator Ω) : Block Validator := Id.run do
 def Store.candidateTree (S : Store Validator Ω) :
     ResultOrExcept (Finset (Block Validator)) := do
   let viableLeaves ← S.viableLeaves
-  return S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ viableLeaves, B ⪯ L
+  return {B ∈ S.T | S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ viableLeaves, B ⪯ L}
 
 /-- The blocks a walk from `R` may occupy: `R` itself, together with the candidates
     descending from it.
@@ -321,7 +321,7 @@ def Store.candidateTree (S : Store Validator Ω) :
     total. -/
 def Store.candidateTreeFrom (S : Store Validator Ω) (R : Block Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
-  return ((← S.candidateTree).filter fun B => R ⪯ B) ∪ {R}
+  return {B ∈ (← S.candidateTree) | R ⪯ B} ∪ {R}
 
 end StoreDefs
 
@@ -359,7 +359,7 @@ def processUpdates (S : Store Validator Ω) (σ : ChainState Validator) :
   let VL ← S.viableLeaves
   if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ ∃ L ∈ VL, σ.F ⪯ L then
     S.F ← σ.F                                                 -- line 17
-    S.T ← S.T.filter fun B => B ∼ S.F                         -- line 18: keep the compatible
+    S.T ← {B ∈ S.T | B ∼ S.F}                                 -- line 18, the figure's own set
   return S                                                    -- line 19
 
 /-- `on_block(Σ, B)` (Figure 2, lines 4–11). Lines 5–6 register the round's root proposal

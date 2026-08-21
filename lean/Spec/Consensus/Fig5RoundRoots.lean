@@ -59,7 +59,7 @@ variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Vali
     has no choice to make. -/
 def deepest (S : Store Validator Ω) (s : Finset (Block Validator)) (h : s.Nonempty) :
     Block Validator :=
-  (Selection.select S.ω (s.filter fun B => ∀ C ∈ s, depth C ≤ depth B)
+  (Selection.select S.ω {B ∈ s | ∀ C ∈ s, depth C ≤ depth B}
     (by
       obtain ⟨B, hB, hmax⟩ := s.exists_max_image depth h
       exact ⟨B, Finset.mem_filter.mpr ⟨hB, hmax⟩⟩)).val
@@ -71,7 +71,7 @@ def deepest (S : Store Validator Ω) (s : Finset (Block Validator)) (h : s.Nonem
 def getProposalRoot (S : Store Validator Ω) (r : Nat) :
     ResultOrExcept (Block Validator) := do
   let CT ← S.candidateTree
-  let G := CT.filter fun B => G2 S r B                        -- line 2
+  let G := {B ∈ CT | G2 S r B}                                -- line 2
   if hG : G.Nonempty then                                     -- line 3
     return deepest S G hG                                     -- line 4
   return S.forkChoiceRoot                                     -- line 5
@@ -82,8 +82,7 @@ def getProposalRoot (S : Store Validator Ω) (r : Nat) :
 def getLowerRoot (S : Store Validator Ω) (r : Nat) :
     ResultOrExcept (Block Validator) := do
   let CT ← S.candidateTree
-  let G := CT.filter fun B =>
-    G3 S r B ∧ S.forkChoiceRoot ≺ B                           -- line 7
+  let G := {B ∈ CT | G3 S r B ∧ S.forkChoiceRoot ≺ B}          -- line 7
   if hG : G.Nonempty then                                     -- line 8
     return deepest S G hG                                     -- line 9
   return S.forkChoiceRoot                                     -- line 10
