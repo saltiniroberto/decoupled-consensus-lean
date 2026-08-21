@@ -3087,6 +3087,68 @@ The real answer is the invariant below, so that a caller re-derives rather than 
   applies. No `while` is involved, and coherence never needs to look inside
   `stateTransition`.
 
+### The raising read, `Σ.σ⟦B⟧`, and why the action stopped taking hypotheses — 2026-08-21
+
+Roberto's call, at the end of a long search for where the SG/FG action's assumptions should
+live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
+`Except (StoreError Validator) (Attestation Validator)`, its two map reads are
+`let σ ← S.σ⟦B⟧`, and it takes **no hypotheses at all**.
+
+- `stateAt` and the `⟦⟧` notation live in `Fig2FinalityStore.lean` beside the `Membership`
+  and `GetElem` instances, that section being the map-reading machinery rather than figure
+  content. `StoreError` has one constructor, `missingState B`.
+- **Both brackets coexist because they are on the same collection with different element
+  types, which `GetElem` cannot do** — `elem` and `valid` are `outParam`, so a collection has
+  exactly one `[]`. `⟦⟧` is a plain `scoped syntax … noWs "⟦" … "⟧"` plus a `macro_rules`, so
+  it is type-directed and claims no spelling outside the namespace. Measured working
+  alongside `S.σ[B]` in the same file.
+- The alternative, **swapping the instance so `S.σ[B]` is the raising read**, stays open and
+  is the next thing to try if this works out. One site changes: `viableLeaves`
+  (`Fig2FinalityStore.lean`), the only other reader. The write `S.σ[B] ← some σ'` is
+  unaffected — the assignment macro produces `Function.update` and never touches `GetElem`.
+- **The clock precondition went too**, for a different reason than the other three. Those
+  existed only to justify the reads, and the exception subsumes them. `S.t = actionTime r` is
+  not about a read, and it is unsuppliable by any caller whose body has a mutating branch
+  before the call — see the entry below. It survives in the docstring and in `on_tick`, which
+  is what schedules the call.
+- The `solve_by_elim` clause on `get_elem_tactic_extensible` is gone with the reads that
+  needed it. Nothing in `Spec/` extends that tactic now.
+- What `Analysis/` owes instead: **the exception never fires** — on a store whose accepted
+  blocks all have recorded states and whose action root is accepted, the action returns
+  `.ok`. That is one step off `Reachable.coherent` on the `coherence-invariant` branch.
+
+### What a hypothesis can reach past in a `do` block — 2026-08-21
+
+Measured on the probe over four shapes, and the reason the assumptions had to go. A plain
+assignment leaves the mutated variable a `let` **with a value**, so `isDefEq` walks back
+through the whole chain of them, however long — a hypothesis stated in the signature about
+the resulting store matches by definitional equality, and `assumption` finds it. Control flow
+that mutates and has a **shared continuation** does not: the do-elaborator binds its result
+to a fresh opaque binder, with no value.
+
+| shape | store after it |
+| --- | --- |
+| `if c then (assign)` with a tail below | opaque — `__r✝ : Unit`, then a valueless store |
+| `if c then (assign; return …)` with a fallthrough | then-branch concrete, fallthrough opaque |
+| `if c then (assign; return …) else (return …)`, nothing after | both branches concrete |
+| `for C in xs do (assign)` | opaque, always |
+
+So the rule is about the shared continuation, not about `if` or `for`. Consequences:
+
+- **A mutating branch inline with a proof-carrying call after it is impossible**, not merely
+  awkward: inside the join point the store is a lambda-bound variable, nothing in scope
+  relates it to what either branch built, and a `∀ S₂, …` hypothesis would need `assumption`
+  to instantiate it, which it does not do. Only *values* cross a join point — which is why
+  the `Except` result works and a hypothesis could not.
+- The diagnosis is not in the error. It reports an unremarkable goal such as
+  `⊢ S.t = actionTime r`; the opacity is visible only by reading the printed context for an
+  entry with no `:=`.
+- Two dead ends worth not repeating: hoisting the branch and the loop into named routines
+  (`maybeJustify`, `acceptAll`) does work, but it forces the whole sequence to be duplicated
+  in a `def` so the signature has a name for the final store; and `Reachable.coherent hpb hR`
+  does not accept dot notation for the `Coherent` lemmas, its result unfolding to a `∀` first
+  — write `Coherent.of_write_σ (hR.coherent hpb) …`.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:
@@ -3109,9 +3171,14 @@ Each given as a correction; standing until revoked:
    pieces still missing: what the head field carries once §5 defines confirmation, the
    veto's real rule, `propose_block`, the Goldfish vote itself, and the two standing
    omissions from the old pipeline (the source-proposal branch, the signing history).
-   The next structural step is `Analysis/Consensus/` and the coherence invariant, per the
-   2026-08-21 entries above — it is what turns four assumptions into one proof and unblocks
-   any caller that writes to the store.
+
+   `onSGFGVotingAction` now takes **no hypotheses**: it returns `Except`, and its map reads
+   are the raising `Σ.σ⟦B⟧`. So a caller writes whatever imperative body it likes — a branch
+   or a loop anywhere, the call at the end — and owes nothing at the call. Two follow-ons,
+   in order: the theorem that the exception never fires on a coherent store, which is one
+   step off `Reachable.coherent` on the `coherence-invariant` branch and is the reason to
+   merge it; and then, if the arrangement holds up, swapping the `GetElem` instance so
+   `Σ.σ[B]` *is* the raising read and `viableLeaves` changes with it.
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
    entry, plus the two additions in the recovery entry above), on the word.

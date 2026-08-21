@@ -68,49 +68,30 @@ def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block
 def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
   R ∈ s ∧ (∀ B ∈ s, R ⪯ B) ∧ ∀ B ∈ s, ∀ C, R ⪯ C → C ⪯ B → C ∈ s
 
-/-- Let the bracket's own tactic close a read by applying the hypotheses in context, so
-    `S.σ[B]` needs nothing written after it (Roberto, 2026-08-21). `solve_by_elim` is
-    general: it applies hypotheses and implications until the goal closes, so it needs no
-    knowledge of this layer — the *assumptions* carry that. It is what lets the action
-    assume its bridge as an implication rather than proving it, which is why **nothing in
-    this file is a theorem**.
-
-    The extension point in Lean 4.32.2 is `get_elem_tactic_extensible`;
-    `get_elem_tactic_trivial` still parses but is deprecated and wired to nothing, so a
-    clause added there is silently ignored (measured 2026-08-21). `macro_rules` has no
-    scoped form, so this clause is tried at every `xs[i]` from here on, after `done` and
-    `assumption` and before core's own alternatives. Two consequences: a bracket that fails
-    downstream may report this search's failure rather than its own, and the search is a
-    search — it will apply any implication in context that fits. -/
-macro_rules
-  | `(tactic| get_elem_tactic_extensible) => `(tactic| solve_by_elim)
-
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
-    Four hypotheses, all autoparams discharged by `assumption`, so a call site holding them
-    writes nothing: `S.t = actionTime r`, that this is the round's action time; `hσ`, that
-    accepted blocks have recorded states — the map-domain coherence the `Store` type does not
-    enforce; `hRoot`, that the round's walk start is accepted; and `hConfirmed`, that the two
-    together give the confirmation a recorded state. A statement supplying any of them must
-    hold it as a *named* hypothesis, since `assumption` does not see anonymous arrow binders
-    during statement elaboration (measured on `lemChainTargetFirstBlock`).
+    **The result is `Except`, and the reads raise** (Roberto, 2026-08-21). `Σ.σ⟦B⟧` is the
+    raising read of `Fig2FinalityStore.lean`, so `let σ ← S.σ⟦B⟧` propagates a missing map
+    entry to the caller and this routine carries **no hypotheses at all**. A caller writes
+    the body it wants — a branch or a loop anywhere, the call at the end — and owes nothing
+    at the call.
 
-    **`hConfirmed` is assumed as an implication, not proved** (Roberto, 2026-08-21). It is
-    provable — the candidates are filters of `Σ.T`, and `hRoot` covers the two walk-start
-    cases — and commit `9f036b9` has that proof; assuming it instead is what keeps this file
-    free of theorems, and it becomes a lemma of `Analysis/` when there is one, discharged at
-    the call rather than assumed. The body still writes its reads plainly, `solve_by_elim`
-    applying whichever hypotheses fit.
+    What that replaced, and why: the four autoparams this took until 2026-08-21 —
+    `S.t = actionTime r`, map-domain coherence, that the walk start is accepted, and that the
+    confirmation has a recorded state. Three of them existed only to justify the two map
+    reads, and the exception subsumes them. The fourth, the clock, is not about a read, and
+    it is gone for a different reason: a caller whose body has a mutating branch before the
+    call *cannot* supply it, the store after a join point being a variable nothing in scope
+    can name. It survives in this docstring and in `on_tick`, which is what actually
+    schedules the call. Earlier shapes, all in git history: a bundle whose fields were shaped
+    to the reads; hypotheses stating the reads' own side conditions; general hypotheses with
+    each read naming its proof in the `'…` form; and general hypotheses with the bridge
+    assumed as an implication and a `solve_by_elim` clause on the bracket's extension point.
 
-    Three earlier shapes are in git history: a bundle whose fields were shaped to the reads;
-    hypotheses stating the reads' own side conditions, so plain reads needed no tactic at
-    all; and general hypotheses with each read naming its proof in the `'…` form.
-
-    `hRoot` stays assumed rather than derived because `get_action_root` returns either a
-    block it has just tested for membership in `C(Σ)` or the fork-choice root: reaching it
-    needs only that `Σ.J` and `Σ.F` are accepted, which Definition 7 states in prose and the
-    type does not enforce, but it means reasoning through that routine's `Id.run do`.
+    Nothing in this file is a theorem, and now nothing needs one. What `Analysis/` owes
+    instead is the statement that the exception never fires: on a store whose accepted blocks
+    all have recorded states, and whose action root is accepted, this returns `.ok`.
 
     **The body is a skeleton, not a rule.** The pipeline as dictated so far, 2026-08-20,
     with the remaining inventions marked `skeleton:`. What it does:
@@ -142,14 +123,8 @@ macro_rules
     source-proposal branch — the old rule prefers the graded proposal's state over the
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
-def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
-    (_ : S.t = actionTime r := by assumption)
-    (hσ : ∀ B, B ∈ S.T → B ∈ S.σ := by assumption)
-    (hRoot : getActionRoot S r ∈ S.T := by assumption)
-    (hConfirmed : (∀ B, B ∈ S.T → B ∈ S.σ) → getActionRoot S r ∈ S.T →
-        (S.goldfishConfirmation (getActionRoot S r)
-          (confirmationCandidates S r (getActionRoot S r))).val ∈ S.σ := by assumption) :
-    Attestation Validator := Id.run do
+def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat) :
+    Except (StoreError Validator) (Attestation Validator) := do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r
@@ -158,13 +133,12 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
   let C : Block Validator :=
     S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
-  -- state. Both reads are plain: `solve_by_elim` closes the first from `hσ` and `hRoot`,
-  -- the second by applying `hConfirmed` to them
-  let σStart := S.σ[walkStart]
+  -- state. Both reads raise on a block the map does not record, and propagate
+  let σStart ← S.σ⟦walkStart⟧
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC := S.σ[C]
+  let σC ← S.σ⟦C⟧
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h
