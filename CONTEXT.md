@@ -3362,11 +3362,19 @@ ambient class: `select : (s : Finset (Block Validator)) → s.Nonempty → {B //
   `processedAt` — instead of a pair, so reads say what they mean: `rec.processedAt < t` and
   `rec.block = B` where they were `rec.2` and `rec.1`. One structure for both fields, both
   recording the same thing.
-- **A write needs `some ⟨…⟩`, not `⟨…⟩`.** The anonymous constructor cannot choose between
-  building the `Option` and building the `Recorded`, and the `α → Option α` coercion is not
-  tried on it. So the pair's `Σ.head[r][i] ← (H, Σ.t)`, which *did* coerce, becomes
-  `← some ⟨H, Σ.t⟩`. Structure-instance syntax `{ block := …, processedAt := … }` fails the
-  same way — `Option` is not a structure, so the expected type cannot be unfolded to one.
+- **The writes name their fields**:
+  `Σ.head[r][i] ← ({ block := H, processedAt := Σ.t } : Recorded Validator)`.
+  - The ascription is what makes it elaborate. Neither `⟨…⟩` nor a bare `{…}` works against
+    `Option (Recorded …)`: both take their meaning *from* the expected type, which is not a
+    structure, so elaboration stops there and **no coercion is ever consulted** — measured
+    with two `CoeTail` instances in scope, and it failed with both. Same shape as the
+    `(← S.σ[B])` finding: notation whose meaning comes from the expected type cannot be helped
+    by anything acting after elaboration.
+  - Any form that gives the term a type of its own works, the `α → Option α` coercion applying
+    from there: the ascription, an explicit `some { … }`, or `Recorded.mk H Σ.t`.
+  - A `CoeTail (Block V × Int) (Option (Recorded V))` would buy back the draft's own
+    `← (α.head, Σ.t)` spelling — measured working — and was rejected: it hides the conversion,
+    and naming the fields is worth more than the characters.
 
 ### Readability rules for this subtree, from the same session
 

@@ -134,7 +134,7 @@ def onGoldfishVote (S : Store Validator) (v : GoldfishVote Validator) :
   let i := v.validator
   let s := v.slot
   if i ∉ S.gfVote[s] then
-    S.gfVote[s][i] ← some ⟨v.block, S.t⟩
+    S.gfVote[s][i] ← ({ block := v.block, processedAt := S.t } : Recorded Validator)
   else if (← S.gfVote[s][i]).block ≠ v.block ∧ i ∉ S.gfVoteEquiv[s] then
     S.gfVoteEquiv[s][i] ← S.t
   return S

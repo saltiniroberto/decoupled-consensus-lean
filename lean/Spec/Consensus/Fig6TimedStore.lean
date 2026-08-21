@@ -93,7 +93,8 @@ def onAttestation (S : Store Validator) (a : Attestation Validator) :
   -- line 14: `if α.head = ⊥ then return Σ`
   let some H := a.head | return S                             -- line 15
   if i ∉ S.head[r] then                                       -- line 16: `i ∉ Σ.head[r]`
-    S.head[r][i] ← some ⟨H, S.t⟩                              -- line 17
+    -- line 17
+    S.head[r][i] ← ({ block := H, processedAt := S.t } : Recorded Validator)
   else if H ≠ (← S.head[r][i]).block ∧ i ∉ S.equiv[r] then    -- line 18
     S.equiv[r][i] ← S.t                                       -- line 19
   return S                                                    -- line 20

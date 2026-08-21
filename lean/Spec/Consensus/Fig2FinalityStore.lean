@@ -118,10 +118,20 @@ reachable by application, `Σ.gfVote[s] i`, because a row *is* a function: that 
 the counting definitions total, out of `filterM`, and it is the same pair of spellings `Σ.σ B`
 and `Σ.σ[B]` already offer.
 
-One friction from `Recorded` being a structure: a write needs `some ⟨…⟩` and not `⟨…⟩`. The
-anonymous constructor cannot choose between building the `Option` and building the `Recorded`,
-and the `α → Option α` coercion is not tried on it — so the pair's `Σ.head[r][i] ← (H, Σ.t)`,
-which did coerce, becomes `Σ.head[r][i] ← some ⟨H, Σ.t⟩`.
+One friction from `Recorded` being a structure, and how the writes are spelled because of it.
+Neither `⟨…⟩` nor a bare `{…}` works against `Option (Recorded …)`: both take their meaning
+*from* the expected type, which is not a structure, so elaboration stops before any coercion
+is considered — measured 2026-08-22 with two `CoeTail` instances in scope, and it failed with
+both. What works is any form that gives the term a type of its own, after which the
+`α → Option α` coercion applies:
+
+    Σ.head[r][i] ← ({ block := H, processedAt := Σ.t } : Recorded Validator)   -- what is used
+    Σ.head[r][i] ← some { block := H, processedAt := Σ.t }
+    Σ.head[r][i] ← Recorded.mk H Σ.t
+
+The ascription is the one this subtree writes (Roberto, 2026-08-22): it names both fields at
+the write, where the constructor form leaves a reader to remember the argument order, and the
+draft's own `Σ.head[r][i] ← (α.head, Σ.t)` says even less.
 
 The table bracket does not raise: a table is total, every index having a row. -/
 
