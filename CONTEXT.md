@@ -3106,14 +3106,19 @@ live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
   is the next thing to try if this works out. One site changes: `viableLeaves`
   (`Fig2FinalityStore.lean`), the only other reader. The write `S.σ[B] ← some σ'` is
   unaffected — the assignment macro produces `Function.update` and never touches `GetElem`.
-- **The clock precondition became the routine's first line**, `if S.t ≠ actionTime r then
-  throw (.wrongTime S.t (actionTime r))` (Roberto put it back, 2026-08-21). It is not about a
-  read, so the exception does not subsume it, and it could not stay a hypothesis either: no
-  caller whose body has a mutating branch before the call can supply one — see the entry
-  below. Checked and raised, it costs the caller nothing. `StoreError` carries the second
-  constructor for it, and the draft's `assert`s are the precedent: Figure 6's
-  `assert Σ.t < t` is a reject exit because `on_tick` has a store to return, and this layer
-  raises because it does not.
+- **The instant stays an input precondition**, `(_ : S.t = actionTime r := by assumption)`
+  (Roberto, 2026-08-21, after two reversals). It is not a read, so the exception has no
+  business with it, and testing its own schedule is not the routine's job — `on_tick` decides
+  when this runs. It was briefly a raised check with a `wrongTime` constructor on
+  `StoreError`, commit `42d2139`; both are gone.
+- **The trick that makes a hypothesis survive a join point after all: write the field last.**
+  A body whose mutating branch or loop sits before the call cannot name the store — but if the
+  statement immediately before the call is `Σ.t ← t`, the goal `S.t = actionTime r` is a
+  projection of a record update, and that reduces to `t` **whatever the base**, opaque or not.
+  So the caller's hypothesis is `t = actionTime r`, about the value written rather than about
+  the store, and the control flow above stops mattering. `scratch/Probe.lean` keeps its inline
+  `if` and inline `for` on exactly this. It generalizes: any precondition naming one field can
+  be met by writing that field immediately before the call.
 - **Reading the result**: `let α ← onSGFGVotingAction i S r` propagates inside another
   `Except` routine; `.toOption` absorbs it; and a caller that must return a store writes
   `((… ).toOption).elim S (onAttestation S)`, which leaves the store alone on a failure —

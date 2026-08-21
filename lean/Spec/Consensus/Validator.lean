@@ -73,22 +73,28 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
 
     **The result is `Except`, and the reads raise** (Roberto, 2026-08-21). `Σ.σ⟦B⟧` is the
     raising read of `Fig2FinalityStore.lean`, so `let σ ← S.σ⟦B⟧` propagates a missing map
-    entry to the caller and this routine carries **no hypotheses at all**. A caller writes
-    the body it wants — a branch or a loop anywhere, the call at the end — and owes nothing
-    at the call.
+    entry to the caller. Three of the four hypotheses this routine used to take existed only
+    to justify those two reads — map-domain coherence, that the walk start is accepted, and
+    that the confirmation has a recorded state — and the exception subsumes all three.
 
-    What that replaced, and why: the four autoparams this took until 2026-08-21 —
-    `S.t = actionTime r`, map-domain coherence, that the walk start is accepted, and that the
-    confirmation has a recorded state. Three of them existed only to justify the two map
-    reads, and the exception subsumes them. The fourth, the clock, is **still here, as the
-    routine's first line**: it is not about a read, so nothing subsumes it, and it could not
-    stay a hypothesis either — a caller whose body has a mutating branch before the call
-    cannot supply one, the store after a join point being a variable nothing in scope can
-    name. Checked and raised, it costs the caller nothing. Earlier shapes, all in git
-    history: a bundle whose fields were shaped to the reads; hypotheses stating the reads'
-    own side conditions; general hypotheses with each read naming its proof in the `'…` form;
-    and general hypotheses with the bridge assumed as an implication and a `solve_by_elim`
-    clause on the bracket's extension point.
+    **The instant stays an input precondition** (Roberto, 2026-08-21): `S.t = actionTime r`,
+    an autoparam discharged by `assumption`, so a caller holding it under any name writes
+    nothing at the call. It is not a read, so the exception has no business with it, and it
+    is not the routine's job to test its own schedule — `on_tick` is what decides when this
+    runs. It was briefly a raised check, commit `42d2139`; that is what made `StoreError`
+    carry a timing constructor, and it does not any more.
+
+    What that costs a caller, precisely: it must be able to *name* the store it calls on. A
+    body whose last mutating branch or loop sits between the clock write and the call cannot,
+    the store after a join point being a variable nothing in an enclosing signature can name.
+    Two ways out, both cheap: write `Σ.t` after the branch, so the goal reduces through the
+    record update to the written value whatever the base; or put the branch in a named
+    routine. `scratch/Probe.lean` uses the first.
+
+    Earlier shapes, all in git history: a bundle whose fields were shaped to the reads;
+    hypotheses stating the reads' own side conditions; general hypotheses with each read
+    naming its proof in the `'…` form; and general hypotheses with the bridge assumed as an
+    implication and a `solve_by_elim` clause on the bracket's extension point.
 
     Reading the result: `let α ← onSGFGVotingAction i S r` inside another `Except` routine
     propagates the failure; `(onSGFGVotingAction i S r).toOption` turns it into an `Option`;
@@ -130,11 +136,9 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     source-proposal branch — the old rule prefers the graded proposal's state over the
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
-def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat) :
+def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
+    (_ : S.t = actionTime r := by assumption) :
     Except (StoreError Validator) (Attestation Validator) := do
-  -- the precondition, checked rather than assumed: this runs at `a_r` and nowhere else
-  if S.t ≠ actionTime r then
-    throw (.wrongTime S.t (actionTime r))
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r
