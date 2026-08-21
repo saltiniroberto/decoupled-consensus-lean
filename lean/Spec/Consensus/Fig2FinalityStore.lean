@@ -270,13 +270,22 @@ def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
     viability is "some viable leaf descends from this block", and both of its readers —
     `candidateTree` and `process_updates`' finalize test — say it that way.
 
-    `∃ h : L ∈ S.σ` binds the membership and `(S.σ L).get h` reads through it: a statement
-    is not a `do` block, so the raising `S.σ[L]` would give a `ResultOrExcept` here and there
-    would be nothing to propagate it to. A leaf the map misses is therefore not viable — a
-    member of `T` the map misses is a coherence invariant's business, not this definition's.
-    This is the only place in the file that reads the state map for a height. -/
+    The height is read with `Option.any`, which is false on a missing entry, so a leaf the
+    map misses is not viable — a member of `T` the map misses is a coherence invariant's
+    business, not this definition's. This is the only place in the file that reads the state
+    map for a height.
+
+    **Not a `do` block, and it cannot become one** (measured 2026-08-21). Two independent
+    reasons. There is no computable loop over a `Finset`: no `ForIn` instance exists in this
+    import graph, and `Finset.toList` depends on `Classical.choice`, so picking an order
+    needs choice — which is right, since a monadic fold over a set is only well defined when
+    the effect commutes. And the predicate lives inside `Finset.filter`, a pure function with
+    no monad to propagate into, so the raising `S.σ[L]` would produce a `ResultOrExcept` with
+    nowhere to go. Making this routine raise would mean `ResultOrExcept` on `candidateTree`,
+    `process_updates`, `get_head`, every root of Figure 5, `on_block` and `on_tick` — the
+    whole store layer. -/
 def Store.viableLeaves (S : Store Validator Ω) : Finset (Block Validator) :=
-  S.leaves.filter fun L => ∃ h : L ∈ S.σ, ((S.σ L).get h).h ≥ S.h_max - 1
+  S.leaves.filter fun L => (S.σ L).any fun σL => σL.h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
