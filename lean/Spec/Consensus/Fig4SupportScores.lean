@@ -30,18 +30,18 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator Ω : Type}
+variable {Validator : Type}
 
 /-- The round-`(r−1)` head entries Definition 11 reads — empty for `r = 0`, the draft's
     "for round 0 the round-`(−1)` entries are empty". -/
-def Store.prevHead (S : Store Validator Ω) :
+def Store.prevHead (S : Store Validator) :
     StoreTable Validator (Block Validator × Int)
   | 0 => fun _ => none
   | r + 1 => S.head[r]
 
 /-- The round-`(r−1)` equivocation entries Definition 11 reads — empty for `r = 0`,
     likewise. -/
-def Store.prevEquiv (S : Store Validator Ω) : StoreTable Validator Int
+def Store.prevEquiv (S : Store Validator) : StoreTable Validator Int
   | 0 => fun _ => none
   | r + 1 => S.equiv[r]
 
@@ -52,19 +52,19 @@ variable [DecidableEq Validator] [Electorate Validator] [Params]
     before round `r`'s instant `Γ^j` and supports `B` — the stored entry is `(H, t_H)` with
     `t_H < Γ^j` and `B ⪯ H`. Intersected with the electorate, since only `V`'s weights are
     ever summed. -/
-def supporters (S : Store Validator Ω) (r : Nat) (j : Int) (B : Block Validator) :
+def supporters (S : Store Validator) (r : Nat) (j : Int) (B : Block Validator) :
     Finset Validator :=
   {i ∈ Electorate.V | (S.prevHead[r] i).any fun (H, tH) => tH < gradeInstant r j ∧ B ⪯ H}
 
 /-- `E_j` (Definition 11): the validators whose stored round-`(r−1)` equivocation time is
     before round `r`'s instant `Γ^j`. Likewise intersected with the electorate. -/
-def equivocators (S : Store Validator Ω) (r : Nat) (j : Int) : Finset Validator :=
+def equivocators (S : Store Validator) (r : Nat) (j : Int) : Finset Validator :=
   {i ∈ Electorate.V | (S.prevEquiv[r] i).any fun tE => tE < gradeInstant r j}
 
 /-- `support_scores(Σ, r, j, B)` (Figure 4, lines 1–4): the pair
     `(S_j(B), S̄_j(B)) = (w(H_j(B) \ E_j), w(H_j(B) ∪ E_j))` — the pessimistic score drops
     the equivocators, the optimistic one adds them all. -/
-def supportScores (S : Store Validator Ω) (r : Nat) (j : Int) (B : Block Validator) :
+def supportScores (S : Store Validator) (r : Nat) (j : Int) (B : Block Validator) :
     Nat × Nat := Id.run do
   let Hj := supporters S r j B                                -- line 2
   let Ej := equivocators S r j                                -- line 3
@@ -73,7 +73,7 @@ def supportScores (S : Store Validator Ω) (r : Nat) (j : Int) (B : Block Valida
 /-- `two_view_support(Σ, r, B)` (Figure 4, lines 5–8):
     `S_{−1,1}(B) = w(H_{−1}(B) \ E_1)` — the head cutoff from `Γ^{−1}`, the equivocation
     cutoff from `Γ^1`, which is why Figure 6 writes grade 3 at `Γ^1`. -/
-def twoViewSupport (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Nat := Id.run do
+def twoViewSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.run do
   let Hneg := supporters S r (-1) B                           -- line 6
   let E1 := equivocators S r 1                                -- line 7
   return w(Hneg \ E1)                                         -- line 8: `S_{−1,1}(B)`
@@ -87,31 +87,31 @@ those with grade 3, lie on one chain. Those are the draft's observations, to be 
 where needed, not extra clauses here. -/
 
 /-- `G3(B) ⇔ S_{−1,1}(B) ≥ m` (Definition 12). -/
-def G3 (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Prop :=
+def G3 (S : Store Validator) (r : Nat) (B : Block Validator) : Prop :=
   twoViewSupport S r B ≥ m Validator
 
 /-- `G2(B) ⇔ S_0(B) ≥ m` (Definition 12). -/
-def G2 (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Prop :=
+def G2 (S : Store Validator) (r : Nat) (B : Block Validator) : Prop :=
   (supportScores S r 0 B).1 ≥ m Validator
 
 /-- `G1(B) ⇔ S̄_1(B) ≥ m` (Definition 12). -/
-def G1 (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Prop :=
+def G1 (S : Store Validator) (r : Nat) (B : Block Validator) : Prop :=
   (supportScores S r 1 B).2 ≥ m Validator
 
 /-- `G0(B) ⇔ S̄_2(B) ≥ m` (Definition 12). -/
-def G0 (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Prop :=
+def G0 (S : Store Validator) (r : Nat) (B : Block Validator) : Prop :=
   (supportScores S r 2 B).2 ≥ m Validator
 
-instance (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Decidable (G3 S r B) :=
+instance (S : Store Validator) (r : Nat) (B : Block Validator) : Decidable (G3 S r B) :=
   inferInstanceAs (Decidable (_ ≥ _))
 
-instance (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Decidable (G2 S r B) :=
+instance (S : Store Validator) (r : Nat) (B : Block Validator) : Decidable (G2 S r B) :=
   inferInstanceAs (Decidable (_ ≥ _))
 
-instance (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Decidable (G1 S r B) :=
+instance (S : Store Validator) (r : Nat) (B : Block Validator) : Decidable (G1 S r B) :=
   inferInstanceAs (Decidable (_ ≥ _))
 
-instance (S : Store Validator Ω) (r : Nat) (B : Block Validator) : Decidable (G0 S r B) :=
+instance (S : Store Validator) (r : Nat) (B : Block Validator) : Decidable (G0 S r B) :=
   inferInstanceAs (Decidable (_ ≥ _))
 
 end Scores

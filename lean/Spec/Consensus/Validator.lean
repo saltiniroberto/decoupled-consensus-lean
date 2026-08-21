@@ -23,7 +23,7 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator Ω : Type}
+variable {Validator : Type}
 
 section Actions
 variable [DecidableEq Validator] [Electorate Validator] [Params]
@@ -33,10 +33,10 @@ variable [DecidableEq Validator] [Electorate Validator] [Params]
     might still hold majority support — `G0`, in the role the old paper's strong G0 check
     gave it. Computed outside `goldfishConfirmation`, which sees only the already-filtered
     tree. -/
-def vetoed (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Prop :=
+def vetoed (S : Store Validator) (r : Nat) (Q : Block Validator) : Prop :=
   ∃ B ∈ S.T, S.F ⪯ B ∧ ¬ B ∼ Q ∧ G0 S r B
 
-instance (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Decidable (vetoed S r Q) :=
+instance (S : Store Validator) (r : Nat) (Q : Block Validator) : Decidable (vetoed S r Q) :=
   inferInstanceAs (Decidable (∃ B ∈ S.T, _))
 
 /-- The blocks the round's confirmation may choose among: the walk start, together with the
@@ -48,7 +48,7 @@ instance (S : Store Validator Ω) (r : Nat) (Q : Block Validator) : Decidable (v
     empty, which is what makes the confirmation total.
 
     Skeleton to the extent `vetoed` is. -/
-def confirmationCandidates (S : Store Validator Ω) (r : Nat) (walkStart : Block Validator) :
+def confirmationCandidates (S : Store Validator) (r : Nat) (walkStart : Block Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
   let CTF ← S.candidateTreeFrom walkStart
   return {walkStart} ∪ {B ∈ CTF | ¬ vetoed S r B}
@@ -142,7 +142,7 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     source-proposal branch — the old rule prefers the graded proposal's state over the
     confirmation's — and the signing history, which the old rule filters every pair
     through. -/
-def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
+def onSGFGVotingAction (i : Validator) (S : Store Validator) (r : Nat)
     (_ : S.t = actionTime r := by assumption) :
     ResultOrExcept (Attestation Validator) := do
   -- the walk start (Definition 15's action root): derived here from the current store

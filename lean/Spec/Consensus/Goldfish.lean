@@ -112,7 +112,7 @@ instance [DecidableEq Validator] [Committees Validator] (v : GoldfishVote Valida
 /-! ## The handler -/
 
 section Handler
-variable {Ω : Type} [DecidableEq Validator]
+variable [DecidableEq Validator]
 
 /-- `on_goldfish_vote(Σ, v)`: keep, per slot and validator, the first processed vote with its
     processing time, and the time at which a vote for a *different* block from the same
@@ -128,8 +128,8 @@ variable {Ω : Type} [DecidableEq Validator]
     unreachable — the branch above tested `i ∉ Σ.vote[s]` — so it never fires on any store.
     It is the price of reading the recorded block directly rather than through an `Option`
     test, and `on_attestation` pays the same price for the same reason. -/
-def onGoldfishVote (S : Store Validator Ω) (v : GoldfishVote Validator) :
-    ResultOrExcept (Store Validator Ω) := do
+def onGoldfishVote (S : Store Validator) (v : GoldfishVote Validator) :
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   let i := v.validator
   let s := v.slot
@@ -144,7 +144,7 @@ end Handler
 /-! ## Counting -/
 
 section Counting
-variable {Ω : Type} [DecidableEq Validator] [Committees Validator]
+variable [DecidableEq Validator] [Committees Validator]
 
 /-- The committee members whose recorded slot-`s` vote is for `B` and was processed before
     `t`. One entry per validator, so `.card` is Definition 4's count — one unit each, weight
@@ -155,7 +155,7 @@ variable {Ω : Type} [DecidableEq Validator] [Committees Validator]
     drafted. The time bound is why `vote[·]` records a processing time at all — Section 5 will
     need to read the same slot at two instants — and this definition takes it as an argument
     rather than fixing one. -/
-def Store.voters (S : Store Validator Ω) (s : Nat) (t : Int) (B : Block Validator) :
+def Store.voters (S : Store Validator) (s : Nat) (t : Int) (B : Block Validator) :
     Finset Validator :=
   {i ∈ Committees.committee s | (S.vote[s] i).any fun rec => rec.2 < t ∧ rec.1 = B}
 
@@ -163,7 +163,7 @@ def Store.voters (S : Store Validator Ω) (s : Nat) (t : Int) (B : Block Validat
     Figure 4's `equivocators` one level down, and the reason `vote_equiv[·]` exists: a
     validator that voted twice for one slot supplies no unit, and a counting rule that wants
     to exclude it reads this. -/
-def Store.voteEquivocators (S : Store Validator Ω) (s : Nat) (t : Int) : Finset Validator :=
+def Store.voteEquivocators (S : Store Validator) (s : Nat) (t : Int) : Finset Validator :=
   {i ∈ Committees.committee s | (S.voteEquiv[s] i).any fun tE => tE < t}
 
 end Counting

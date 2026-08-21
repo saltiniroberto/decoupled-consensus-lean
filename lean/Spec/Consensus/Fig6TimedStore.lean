@@ -50,20 +50,20 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator Ω : Type}
+variable {Validator : Type}
 
 section Handlers
-variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Validator Ω]
+variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Validator]
 
 /-- `on_tick(Σ, t)` (Figure 6, lines 1–11): set the clock and run the phase scheduled at
     this instant — the slot handler at a slot start, the opening proposer's
     `propose_block` at `t_r`, the SG-root derivation at the opening slot's vote time
     `t_r + Δ`, the action-root derivation at `a_r`. `isOpeningProposer` and `proposeBlock`
     are Section 6's, taken as parameters — see the module header. -/
-def onTick (S : Store Validator Ω) (t : Int)
+def onTick (S : Store Validator) (t : Int)
     (isOpeningProposer : Nat → Bool)
-    (proposeBlock : Store Validator Ω → Nat → Store Validator Ω) :
-    ResultOrExcept (Store Validator Ω) := do
+    (proposeBlock : Store Validator → Nat → Store Validator) :
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   -- line 2: `assert Σ.t < t` — a stale tick leaves the store unchanged
   if ¬ (S.t < t) then
@@ -85,8 +85,8 @@ def onTick (S : Store Validator Ω) (t : Int)
     and the time at which a *different* head from the same validator was first processed —
     the equivocation time. Definition 11's support scores read these entries against the
     grade instants. -/
-def onAttestation (S : Store Validator Ω) (a : Attestation Validator) :
-    ResultOrExcept (Store Validator Ω) := do
+def onAttestation (S : Store Validator) (a : Attestation Validator) :
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   let i := a.validator                                        -- line 13
   let r := a.round

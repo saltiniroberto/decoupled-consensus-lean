@@ -3333,6 +3333,25 @@ make the same spelling work as a **read**.
 - Small win from Roberto's own edit: the write needs no `some` — `Σ.vote[s][i] ← (v.block, S.t)`
   coerces, Lean inserting `Option.some` at the expected type.
 
+### `Ω` and `ω` are out of the store — 2026-08-22
+
+Roberto's call, reversing the 2026-08-20 decision that put the available-chain data in the
+store. `Store` takes one type parameter again, `Store Validator`, and `Selection` is an
+ambient class: `select : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}`.
+
+- What the store field bought was that every selection was a function of the store alone.
+  What it cost was `Ω` in the signature of every definition that mentions a store — and the
+  draft itself passes `Ω` to `get_head` as call-time input rather than storing it. The data is
+  still unspecified and still reachable wherever a choice is made.
+- Consequences: `Store.gen` takes only the walk; `getHead` and `deepest` call
+  `Selection.select` with no store argument; **`deepest` takes no store at all** now, the set
+  and its nonemptiness being everything it reads.
+- `goldfishConfirmation` stays a store field, and is now the only one beyond Definitions 7
+  and 10. It has a different reason: it can differ per store value, where the selection data
+  cannot.
+- This is where the old rendering already was — `Spec/Defs/Recovery.lean` keeps its chooser
+  ambient by typeclass. The second attempt spent two days going the other way and back.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:

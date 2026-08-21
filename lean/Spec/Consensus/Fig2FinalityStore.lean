@@ -74,20 +74,28 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator Ω : Type}
+variable {Validator : Type}
 
-/-- What can be done with the draft's `Ω`: choose one block from a nonempty set. The
-    subtype carries the membership proof, so anything chosen is one of the candidates —
-    Definition 8's `get_head(Σ, Ω) ∈ C(Σ)`.
+/-- What the draft's `Ω` can do: choose one block from a nonempty set. The subtype carries
+    the membership proof, so anything chosen is one of the candidates — Definition 8's
+    `get_head(Σ, Ω) ∈ C(Σ)`.
 
     Unspecified: only the input and output types are given, and the draft's Section 5 is
     what will say how the choice is made. A class rather than an `opaque` definition so
     that it stays computable relative to an instance — an `opaque` chooser would need to
     produce an element of a nonempty `Finset`, whose only witness is `Exists.choose`, and
-    that makes every caller `noncomputable` (measured 2026-08-21). -/
-class Selection (Validator Ω : Type) where
+    that makes every caller `noncomputable` (measured 2026-08-21).
+
+    **`Ω` is not a type parameter and the store carries no `ω`** (Roberto, 2026-08-22). The
+    available-chain data was a store field from 2026-08-20 to today, and a type parameter of
+    `Store` with it, so that every selection was a function of the store alone. What that
+    cost was `Ω` in the signature of every definition that mentions a store — and the draft
+    itself passes `Ω` to `get_head` as call-time input rather than storing it. As an ambient
+    class the data is still unspecified and still available wherever a choice is made, and
+    the stores lose a parameter they never read. -/
+class Selection (Validator : Type) where
   /-- Choose from a nonempty set, using the validator's available-chain data. -/
-  select : Ω → (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
+  select : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
 
 /-! ### The per-validator tables: `Σ.head[r][i]` and friends, as reads
 
@@ -150,7 +158,7 @@ scoped instance storeRowGetElem {V : Type} :
     action_root[·])`, the draft's `Σ += (…)`, landed field by field as Figures 2 and 4–6
     consumed it. Initially the per-round maps are empty; the scheduled hooks fill each
     round's entries, fixed after their scheduled writes. -/
-structure Store (Validator Ω : Type) where
+structure Store (Validator : Type) where
   /-- `s`, the current slot. -/
   s : Nat
   /-- `T`, the tree of accepted blocks. -/
@@ -209,16 +217,6 @@ structure Store (Validator Ω : Type) where
       below time 0 — the draft leaves the initial value unstated, and `on_tick`'s
       precondition `Σ.t < t` must pass at `t = 0` — at `-1`, an arbitrary such value. -/
   t : Int
-  /-- `ω`, the draft's "available-chain data that selects among the candidates". Its type
-      `Ω` is a parameter of the store and stays abstract until the draft's Section 5 says
-      what the data is; what can be *done* with it is the `Selection` class below.
-
-      **A store field, beyond Definitions 7 and 10** (Roberto, 2026-08-20): the draft
-      passes `Ω` to `get_head` as call-time input, and the old rendering kept it ambient
-      by typeclass and out of the store; carrying it here instead makes every selection —
-      `get_head`, the deepest-picks, Section 5's confirmation when it lands — a function
-      of the store alone. -/
-  ω : Ω
   /-- The round's Goldfish walk: from a walk start, over a candidate set, to the block the
       round confirms. **Only its type is given here** — the draft's Section 5 will define
       the walk, and until then a store value supplies whatever function it likes.
@@ -230,8 +228,9 @@ structure Store (Validator Ω : Type) where
 
       A field rather than an `opaque` definition, so that no inhabitation witness is needed
       and the walk stays computable; and a field rather than a `Selection` method, so that
-      it can differ per store value. Beyond Definitions 7 and 10, like `ω` above: the draft
-      does not make the walk a store component. -/
+      it can differ per store value. Beyond Definitions 7 and 10: the draft does not make
+      the walk a store component. It is the store's only such field now — `ω` was the other,
+      and it went on 2026-08-22; see `Selection`. -/
   goldfishConfirmation : (walkStart : Block Validator) →
     (candidates : Finset (Block Validator)) →
     {B // B ∈ candidates ∨ B = walkStart}
@@ -293,10 +292,10 @@ variable [DecidableEq Validator]
     `F = B_gen`, `(J, h_j) = (B_gen, 0)`, `h_max = 1`. The per-round maps start empty.
     The fields the draft's genesis prose does not fix are the two beyond Definitions 7
     and 10 — the validator's selection data and its walk — so they are the arguments. -/
-def Store.gen (ω : Ω)
+def Store.gen
     (goldfishConfirmation : (walkStart : Block Validator) →
       (candidates : Finset (Block Validator)) → {B // B ∈ candidates ∨ B = walkStart}) :
-    Store Validator Ω where
+    Store Validator where
   s := 0
   T := {.genesis}
   σ := fun B => if B = .genesis then some .gen else none
@@ -312,20 +311,19 @@ def Store.gen (ω : Ω)
   sgRoot := fun _ => none
   actionRoot := fun _ => none
   t := -1
-  ω := ω
   goldfishConfirmation := goldfishConfirmation
 
 /-- `L` is a *leaf* of `Σ.T` (Definition 8 of the draft): an accepted block without
     accepted children. "Without accepted children" is written
     `∀ C ∈ S.T, C.parent ≠ some L` — no accepted block names `L` as its parent. -/
-def Store.isLeaf (S : Store Validator Ω) (L : Block Validator) : Prop :=
+def Store.isLeaf (S : Store Validator) (L : Block Validator) : Prop :=
   L ∈ S.T ∧ ∀ C ∈ S.T, C.parent ≠ some L
 
-instance (S : Store Validator Ω) (L : Block Validator) : Decidable (S.isLeaf L) :=
+instance (S : Store Validator) (L : Block Validator) : Decidable (S.isLeaf L) :=
   inferInstanceAs (Decidable (_ ∧ _))
 
 /-- The leaves of `Σ.T`, as a set. -/
-def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
+def Store.leaves (S : Store Validator) : Finset (Block Validator) :=
   {L ∈ S.T | S.isLeaf L}
 
 /-- The leaves whose recorded state-height is at least `Σ.h_max − 1`: the leaves that
@@ -346,7 +344,7 @@ def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
 
     `Finset.filterM` is what carries the failure out of a set; see its own docstring on why
     `Finset.fold` is the only route and what its two instances mean. -/
-def Store.viableLeaves (S : Store Validator Ω) :
+def Store.viableLeaves (S : Store Validator) :
     ResultOrExcept (Finset (Block Validator)) :=
   S.leaves.filterM fun L => do
     return (← S.σ[L]).h ≥ S.h_max - 1
@@ -354,7 +352,7 @@ def Store.viableLeaves (S : Store Validator Ω) :
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
     `Σ.h_max = Σ.h_j + 1` — and `Σ.F` otherwise. -/
-def Store.forkChoiceRoot (S : Store Validator Ω) : Block Validator := Id.run do
+def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
   if S.h_max = S.h_j + 1 then                                 -- line 21
     return S.J                                                -- line 22
   return S.F                                                  -- line 23
@@ -382,7 +380,7 @@ def Store.forkChoiceRoot (S : Store Validator Ω) : Block Validator := Id.run do
     predicate. Its suggestion to add a `do` does not apply either: `Finset.filter` takes a
     pure predicate, which is what `filterM` exists for. Where no binder intervenes the inline
     form is fine — `candidateTreeFrom` below writes `(← S.candidateTree).filter …`. -/
-def Store.candidateTree (S : Store Validator Ω) :
+def Store.candidateTree (S : Store Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
   let viableLeaves ← S.viableLeaves
   return {B ∈ S.T | S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ viableLeaves, B ⪯ L}
@@ -394,7 +392,7 @@ def Store.candidateTree (S : Store Validator Ω) :
     candidate — a walk from `R` must be able to stay where it starts. So this is not a
     subset of `C(Σ)`, and it is never empty, which is what makes a selection over it
     total. -/
-def Store.candidateTreeFrom (S : Store Validator Ω) (R : Block Validator) :
+def Store.candidateTreeFrom (S : Store Validator) (R : Block Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
   return {B ∈ (← S.candidateTree) | R ⪯ B} ∪ {R}
 
@@ -404,7 +402,7 @@ end StoreDefs
 
 /-- `on_slot(Σ, s)` (Figure 2, lines 1–3): advance the store's slot at the start of slot
     `s`, before any block of that slot is processed. -/
-def onSlot (S : Store Validator Ω) (s : Nat) : Store Validator Ω := Id.run do
+def onSlot (S : Store Validator) (s : Nat) : Store Validator := Id.run do
   let mut S := S
   S.s ← s                                                     -- line 2
   return S                                                    -- line 3
@@ -418,8 +416,8 @@ variable [DecidableEq Validator] [Electorate Validator] [Params] [BlockHash Vali
     proper descendant of `Σ.F` below `Σ.J`, pruning every accepted block conflicting with
     the new `Σ.F` — the pruned blocks remain available as signed evidence, outside this
     store. -/
-def processUpdates (S : Store Validator Ω) (σ : ChainState Validator) :
-    ResultOrExcept (Store Validator Ω) := do
+def processUpdates (S : Store Validator) (σ : ChainState Validator) :
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   S.h_max ← max S.h_max σ.h                                   -- line 13
   -- line 14: `(σ.h_j, hash(σ.J)) > (Σ.h_j, hash(Σ.J))` is the strict lexicographic
@@ -443,8 +441,8 @@ def processUpdates (S : Store Validator Ω) (σ : ChainState Validator) :
     started, the parent accepted, and `B` descending from `Σ.F`; an admitted block is
     replayed with Figure 1's transition, stored, and its post-state offered to
     `process_updates`. -/
-def onBlock (S : Store Validator Ω) (B : Block Validator) :
-    ResultOrExcept (Store Validator Ω) := do
+def onBlock (S : Store Validator) (B : Block Validator) :
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   -- line 5, strengthened: only a nonempty proposal root registers — see the module header
   if B.isOpening ∧ S.rootProposal (round B.slot) = none ∧ B.proposalRoot ≠ none then
@@ -465,15 +463,15 @@ def onBlock (S : Store Validator Ω) (B : Block Validator) :
 end Handlers
 
 /-- `get_head(Σ, Ω)` (Figure 2, lines 24–25): a block in `C(Σ)`, selected using the
-    store's own available-chain data `ω`, through the unspecified `Selection.select`. On an
+    validator's own available-chain data, through the unspecified `Selection.select`. On an
     empty candidate tree — not excluded by the types, though a store the handlers built
     keeps its fork-choice root viable — the fork-choice root is returned, so the *selection*
     never fails. Deriving the candidate tree can, which is why the result is
     `ResultOrExcept`. -/
-def getHead [DecidableEq Validator] [Selection Validator Ω] (S : Store Validator Ω) :
+def getHead [DecidableEq Validator] [Selection Validator] (S : Store Validator) :
     ResultOrExcept (Block Validator) := do
   let CT ← S.candidateTree
-  if h : CT.Nonempty then return (Selection.select S.ω CT h).val
+  if h : CT.Nonempty then return (Selection.select CT h).val
   return S.forkChoiceRoot
 
 end Consensus

@@ -19,9 +19,9 @@ The routines appear in the figure's own order, which is already callee-first.
 The draft's two deepest-selections are over sets its Definition 12 argues lie on one chain
 — two conflicting blocks cannot both hold direct support `m` — where the depth-maximal
 element is unique. Over an arbitrary `Finset`, `deepest` keeps the depth-maximal elements
-and lets the store's `ω` pick, so the routine is total without a chain hypothesis: the
-old rendering's totalization, with the selection data read off the store instead of an
-ambient instance.
+and lets `Selection.select` pick, so the routine is total without a chain hypothesis: the
+old rendering's totalization, and like it the selection data is an ambient instance rather
+than a store field.
 
 ## Every root returns `ResultOrExcept`
 
@@ -43,7 +43,7 @@ set_option autoImplicit false
 
 namespace Consensus
 
-variable {Validator Ω : Type}
+variable {Validator : Type}
 
 /-- How many blocks `B`'s chain has, up to and including `B`. The draft's "deepest"
     selections compare blocks by chain position; this is that measure, off the ancestor
@@ -51,15 +51,18 @@ variable {Validator Ω : Type}
 def depth (B : Block Validator) : Nat := (ancestors B).length
 
 section Roots
-variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Validator Ω]
+variable [DecidableEq Validator] [Electorate Validator] [Params] [Selection Validator]
 
-/-- The deepest block of a nonempty set: the depth-maximal elements, the store's `ω`
-    picking among them through `Selection.select`. See the module header — on the one-chain
-    sets the draft applies this to, the depth-maximal element is unique and the selection
-    has no choice to make. -/
-def deepest (S : Store Validator Ω) (s : Finset (Block Validator)) (h : s.Nonempty) :
+/-- The deepest block of a nonempty set: the depth-maximal elements, the validator's
+    available-chain data picking among them through `Selection.select`. See the module
+    header — on the one-chain sets the draft applies this to, the depth-maximal element is
+    unique and the selection has no choice to make.
+
+    It takes no store: it did while the selection data was a store field, and since that
+    went (2026-08-22) the set and its nonemptiness are all it reads. -/
+def deepest (s : Finset (Block Validator)) (h : s.Nonempty) :
     Block Validator :=
-  (Selection.select S.ω {B ∈ s | ∀ C ∈ s, depth C ≤ depth B}
+  (Selection.select {B ∈ s | ∀ C ∈ s, depth C ≤ depth B}
     (by
       obtain ⟨B, hB, hmax⟩ := s.exists_max_image depth h
       exact ⟨B, Finset.mem_filter.mpr ⟨hB, hmax⟩⟩)).val
@@ -68,23 +71,23 @@ def deepest (S : Store Validator Ω) (s : Finset (Block Validator)) (h : s.Nonem
     the round's opening proposer, at `t_r`, sets its opening block's proposal-root field
     to — the deepest block in `C(Σ)` with grade 2, or the current fork-choice root when no
     such block exists. -/
-def getProposalRoot (S : Store Validator Ω) (r : Nat) :
+def getProposalRoot (S : Store Validator) (r : Nat) :
     ResultOrExcept (Block Validator) := do
   let CT ← S.candidateTree
   let G := {B ∈ CT | G2 S r B}                                -- line 2
   if hG : G.Nonempty then                                     -- line 3
-    return deepest S G hG                                     -- line 4
+    return deepest G hG                                       -- line 4
   return S.forkChoiceRoot                                     -- line 5
 
 /-- `get_lower_root(Σ, r)` (Figure 5, lines 6–10; Definition 14's `R_low`): the deepest
     block in `C(Σ)` with grade 3 strictly descending from the fork-choice root, or the
     fork-choice root itself when there is none. -/
-def getLowerRoot (S : Store Validator Ω) (r : Nat) :
+def getLowerRoot (S : Store Validator) (r : Nat) :
     ResultOrExcept (Block Validator) := do
   let CT ← S.candidateTree
   let G := {B ∈ CT | G3 S r B ∧ S.forkChoiceRoot ≺ B}          -- line 7
   if hG : G.Nonempty then                                     -- line 8
-    return deepest S G hG                                     -- line 9
+    return deepest G hG                                       -- line 9
   return S.forkChoiceRoot                                     -- line 10
 
 /-- `get_sg_root(Σ, r)` (Figure 5, lines 11–18; Definition 14): at the opening slot's vote
@@ -92,7 +95,7 @@ def getLowerRoot (S : Store Validator Ω) (r : Nat) :
     `R_prop` exactly when `R_low ⪯ R_prop`, `R_prop ∈ C(Σ)` and `G1(R_prop)`; on acceptance
     the SG root is `R_prop`, otherwise `R_low` — the lower root is not retained. `on_tick`
     stores the result in `Σ.sg_root[r]`. -/
-def getSGRoot (S : Store Validator Ω) (r : Nat) :
+def getSGRoot (S : Store Validator) (r : Nat) :
     ResultOrExcept (Block Validator) := do
   let Rlow ← getLowerRoot S r                                 -- line 12
   -- lines 13–15: `if Σ.root_proposal[r] = ⊥ then return R_low; R_prop ← Σ.root_proposal[r]`.
@@ -109,7 +112,7 @@ def getSGRoot (S : Store Validator Ω) (r : Nat) :
     `R_SG = Σ.sg_root[r]` when `C ⪯ R_SG` — otherwise the step does not occur. An unset
     `Σ.sg_root[r]` — unreachable at the `a_r` read, which follows the `t_r + Δ` write —
     returns `C`. -/
-def getWalkRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run do
+def getWalkRoot (S : Store Validator) (r : Nat) : Block Validator := Id.run do
   let C := S.forkChoiceRoot                                   -- line 20
   if hs : (S.sgRoot r).isSome then
     let Rsg := (S.sgRoot r).get hs
@@ -123,7 +126,7 @@ def getWalkRoot (S : Store Validator Ω) (r : Nat) : Block Validator := Id.run d
     A validator's own selection needs no external backing, while a round root adopted from
     others must still be viable and majority-backed at signing time. `on_tick` stores the
     result in `Σ.action_root[r]`. -/
-def getActionRoot (S : Store Validator Ω) (r : Nat) :
+def getActionRoot (S : Store Validator) (r : Nat) :
     ResultOrExcept (Block Validator) := do
   let C := S.forkChoiceRoot                                   -- line 25
   let R := getWalkRoot S r                                    -- line 26
