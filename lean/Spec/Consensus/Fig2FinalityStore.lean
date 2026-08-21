@@ -292,11 +292,17 @@ def Store.forkChoiceRoot (S : Store Validator Ω) : Block Validator := Id.run do
 
     **The draft's `V(Σ)` is not a definition here.** Its viable-blocks set has exactly two
     readers, this one and `process_updates`' finalize test, and each writes its condition
-    out over `viableLeaves` (Roberto, 2026-08-20). -/
+    out over `viableLeaves` (Roberto, 2026-08-20).
+
+    `filterM` with the read inside the predicate, rather than one bind above a pure `filter`
+    (Roberto, 2026-08-21). The two give the same set — `viableLeaves` does not depend on `B` —
+    but this one re-derives it once per accepted block, so the map is read `|Σ.T|` times over
+    rather than once. That is a cost in evaluation, not in meaning; `process_updates` binds
+    once instead, because its condition is not a filter. -/
 def Store.candidateTree (S : Store Validator Ω) :
-    ResultOrExcept (Finset (Block Validator)) := do
-  let VL ← S.viableLeaves
-  return S.T.filter fun B => S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ VL, B ⪯ L
+    ResultOrExcept (Finset (Block Validator)) :=
+  S.T.filterM fun B => do
+    return S.forkChoiceRoot ⪯ B ∧ ∃ L ∈ (← S.viableLeaves), B ⪯ L
 
 /-- The blocks a walk from `R` may occupy: `R` itself, together with the candidates
     descending from it.
