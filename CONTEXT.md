@@ -3106,11 +3106,20 @@ live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
   is the next thing to try if this works out. One site changes: `viableLeaves`
   (`Fig2FinalityStore.lean`), the only other reader. The write `S.σ[B] ← some σ'` is
   unaffected — the assignment macro produces `Function.update` and never touches `GetElem`.
-- **The clock precondition went too**, for a different reason than the other three. Those
-  existed only to justify the reads, and the exception subsumes them. `S.t = actionTime r` is
-  not about a read, and it is unsuppliable by any caller whose body has a mutating branch
-  before the call — see the entry below. It survives in the docstring and in `on_tick`, which
-  is what schedules the call.
+- **The clock precondition became the routine's first line**, `if S.t ≠ actionTime r then
+  throw (.wrongTime S.t (actionTime r))` (Roberto put it back, 2026-08-21). It is not about a
+  read, so the exception does not subsume it, and it could not stay a hypothesis either: no
+  caller whose body has a mutating branch before the call can supply one — see the entry
+  below. Checked and raised, it costs the caller nothing. `StoreError` carries the second
+  constructor for it, and the draft's `assert`s are the precedent: Figure 6's
+  `assert Σ.t < t` is a reject exit because `on_tick` has a store to return, and this layer
+  raises because it does not.
+- **Reading the result**: `let α ← onSGFGVotingAction i S r` propagates inside another
+  `Except` routine; `.toOption` absorbs it; and a caller that must return a store writes
+  `((… ).toOption).elim S (onAttestation S)`, which leaves the store alone on a failure —
+  `Option.elim` rather than a `match`, per this subtree's rules. `try`/`catch` works too, so a
+  dispatcher can tell `wrongTime` (its own scheduling bug) from `missingState` (an incoherent
+  store). `scratch/Probe.lean` has the four worked out.
 - The `solve_by_elim` clause on `get_elem_tactic_extensible` is gone with the reads that
   needed it. Nothing in `Spec/` extends that tactic now.
 - What `Analysis/` owes instead: **the exception never fires** — on a store whose accepted

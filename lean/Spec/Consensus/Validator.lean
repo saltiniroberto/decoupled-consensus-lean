@@ -80,14 +80,21 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     What that replaced, and why: the four autoparams this took until 2026-08-21 —
     `S.t = actionTime r`, map-domain coherence, that the walk start is accepted, and that the
     confirmation has a recorded state. Three of them existed only to justify the two map
-    reads, and the exception subsumes them. The fourth, the clock, is not about a read, and
-    it is gone for a different reason: a caller whose body has a mutating branch before the
-    call *cannot* supply it, the store after a join point being a variable nothing in scope
-    can name. It survives in this docstring and in `on_tick`, which is what actually
-    schedules the call. Earlier shapes, all in git history: a bundle whose fields were shaped
-    to the reads; hypotheses stating the reads' own side conditions; general hypotheses with
-    each read naming its proof in the `'…` form; and general hypotheses with the bridge
-    assumed as an implication and a `solve_by_elim` clause on the bracket's extension point.
+    reads, and the exception subsumes them. The fourth, the clock, is **still here, as the
+    routine's first line**: it is not about a read, so nothing subsumes it, and it could not
+    stay a hypothesis either — a caller whose body has a mutating branch before the call
+    cannot supply one, the store after a join point being a variable nothing in scope can
+    name. Checked and raised, it costs the caller nothing. Earlier shapes, all in git
+    history: a bundle whose fields were shaped to the reads; hypotheses stating the reads'
+    own side conditions; general hypotheses with each read naming its proof in the `'…` form;
+    and general hypotheses with the bridge assumed as an implication and a `solve_by_elim`
+    clause on the bracket's extension point.
+
+    Reading the result: `let α ← onSGFGVotingAction i S r` inside another `Except` routine
+    propagates the failure; `(onSGFGVotingAction i S r).toOption` turns it into an `Option`;
+    and a caller that must return a store regardless — `on_tick`, when it dispatches this —
+    writes `((onSGFGVotingAction i S r).toOption).elim S (onAttestation S)`, which leaves the
+    store alone on a failure. `scratch/Probe.lean` has the three worked out.
 
     Nothing in this file is a theorem, and now nothing needs one. What `Analysis/` owes
     instead is the statement that the exception never fires: on a store whose accepted blocks
@@ -125,6 +132,9 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat) :
     Except (StoreError Validator) (Attestation Validator) := do
+  -- the precondition, checked rather than assumed: this runs at `a_r` and nowhere else
+  if S.t ≠ actionTime r then
+    throw (.wrongTime S.t (actionTime r))
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r

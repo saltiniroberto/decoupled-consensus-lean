@@ -210,13 +210,17 @@ scoped instance stateMapLawfulGetElem :
       have h2 : σ B = none := by simpa using hb'
       exact h2
 
-/-- What a store read can fail on. One constructor so far, for the map: reading the state of
-    a block the map does not record. A read that raises this is a rendering artifact — the
-    draft's map is defined on every accepted block, so on a store that has kept that
-    property no read here can fail, and saying so is a theorem of `Analysis/`. -/
+/-- What a routine over the store can fail on. Both constructors are rendering artifacts:
+    the draft's map is defined on every accepted block, and its routines run at the instants
+    the schedule names, so on a store that has kept those properties nothing here can fire.
+    Saying so is a theorem of `Analysis/`. -/
 inductive StoreError (Validator : Type) where
   /-- `Σ.σ[B]` where `B` is not recorded. -/
   | missingState (B : Block Validator)
+  /-- `Σ.t` is not the instant the routine requires — `now` against `expected`. The draft
+      writes these as `assert`s; Figure 6's `assert Σ.t < t` is rendered as a reject exit
+      instead, because `on_tick` has a store to return and this layer does not. -/
+  | wrongTime (now expected : Int)
 
 /-- `σ⟦B⟧`, the raising read: the state recorded for `B`, or the error naming `B`. The
     checked read `σ[B]` and this one sit side by side — see the section header. -/
