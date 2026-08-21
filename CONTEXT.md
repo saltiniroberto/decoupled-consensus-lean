@@ -3235,6 +3235,42 @@ roots. `getWalkRoot`, `onAttestation`, `onSlot`, `vetoed` and Figure 4's scores 
   `S.sgRoot[r] ← some (← getSGRoot S r)` — the `←` nests inside the assignment macro's
   right-hand side without trouble.
 
+### Goldfish votes: `index` dropped, committees a class — 2026-08-22
+
+`Spec/Consensus/Goldfish.lean`, a new non-figure file: Definition 4's raw vote and the slot
+committees it presupposes. Roberto's call, after working out what VRF sortition does to the
+draft as written.
+
+- **Definition 4's `index` is not rendered.** It presupposes an enumerated committee, and
+  under VRF sortition there is none: a validator learns privately that it was drawn, so
+  nobody holds the committee until proofs arrive and two observers hold different subsets at
+  once. "The third member" is undefined until the votes have been counted.
+- **And if the index is signed, BLS aggregation breaks.** A bitfield over committee positions
+  is compact only when every signer signs the *identical* message — one aggregate signature
+  plus a bitfield naming signers, which is why Ethereum's attestations carry no validator
+  identity in the signed payload. An index inside the signed tuple gives each member a
+  different message, and aggregate verification over distinct messages costs a pairing per
+  message. So identity belongs in the envelope; the vote names its signer and aggregation is
+  not a protocol notion.
+- **The trade that stays open**, stated in the file and not decided: a compact bitfield needs
+  publicly computable ordered committees, which rules out private sortition. Public shuffled
+  committees give canonical indices and `|committee|`-bit fields at the cost of predictability
+  to an adaptive adversary; private VRF keeps unpredictability but must transmit the signer
+  set, a bitfield over all of `V`; indexing over `V` rather than the committee is the middle
+  option. If the draft comes to rely on cheap aggregation, "committees are publicly computable
+  and ordered" is an assumption to state — it is not stated yet, because nothing needs it.
+- **Weight plays no part**, per Definition 4: Goldfish support is a count of validators where
+  an attestation's is a sum of weights, so nothing in the file mentions `w(·)`. Consequence
+  worth remembering: `committee : Nat → Finset Validator` gives each member exactly one unit,
+  so weighted sortition drawing one validator several times in a slot is inexpressible. That
+  matches Definition 4 as written; Algorand-style multiple draws would need a multiset or a
+  per-member count.
+- What the file holds: the `Committees` class, `GoldfishVote` (`validator`, `slot`, `block`),
+  `eligible`, and `votersFor` — the *direct* voters for a block, no ancestor closure. Section
+  5's confirmation is undrafted and nothing here anticipates it. The old rendering's
+  `Spec/Defs/Voting.lean` and `Spec/Defs/Recovery.lean` reached the same shape from the old
+  spec's Assumption 3, independently.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:

@@ -11,6 +11,7 @@ import Spec.Consensus.Model
 import Spec.Consensus.Notation
 import Spec.Consensus.FinsetM
 import Spec.Consensus.Raise
+import Spec.Consensus.Goldfish
 import Spec.Consensus.Fig1StateTransition
 import Spec.Consensus.Fig2FinalityStore
 import Spec.Consensus.Fig3Schedule
@@ -50,13 +51,14 @@ the notation — so the rendering of record stays frozen while the draft's is wr
 `Model.lean` grows on demand as its figure files consume definitions;
 `Fig<n><Subject>.lean` names the draft's own figure numbering.
 
-Four of its files render no figure, and each says so in its own header: `Model.lean`, the
+Five of its files render no figure, and each says so in its own header: `Model.lean`, the
 draft's Section 1 vocabulary; `Notation.lean`, the assignment macros; `FinsetM.lean`, a
 filter over a `Finset` that propagates a monad's effect, general Lean machinery with no
-protocol content; and `Raise.lean`, the failure vocabulary — one payload-free `Error` and
-`ResultOrExcept` — which every routine that can fail shares. The last two were carved out of
-`Fig2FinalityStore.lean` on 2026-08-21, so that a figure file states what the draft says and
-nothing else.
+protocol content; `Raise.lean`, the failure vocabulary — one payload-free `Error` and
+`ResultOrExcept` — which every routine that can fail shares; and `Goldfish.lean`,
+Definition 4's raw votes and the slot committees they are cast by. `FinsetM.lean` and
+`Raise.lean` were carved out of `Fig2FinalityStore.lean` on 2026-08-21, so that a figure file
+states what the draft says and nothing else.
 
 Present from the old source: healing's Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`),
 the companion's Figure 2 (`hft:alg:store`), and the vocabulary those three need. Healing's
