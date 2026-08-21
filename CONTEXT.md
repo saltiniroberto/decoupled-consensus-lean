@@ -3363,7 +3363,8 @@ ambient class: `select : (s : Finset (Block Validator)) → s.Nonempty → {B //
   `rec.block = B` where they were `rec.2` and `rec.1`. One structure for both fields, both
   recording the same thing.
 - **The writes name their fields**:
-  `Σ.head[r][i] ← ({ block := H, processedAt := Σ.t } : Recorded Validator)`.
+  `Σ.head[r][i] ← some { block := H, processedAt := Σ.t }` — shortest of the three working
+  forms that still names both fields.
   - The ascription is what makes it elaborate. Neither `⟨…⟩` nor a bare `{…}` works against
     `Option (Recorded …)`: both take their meaning *from* the expected type, which is not a
     structure, so elaboration stops there and **no coercion is ever consulted** — measured
@@ -3372,9 +3373,15 @@ ambient class: `select : (s : Finset (Block Validator)) → s.Nonempty → {B //
     by anything acting after elaboration.
   - Any form that gives the term a type of its own works, the `α → Option α` coercion applying
     from there: the ascription, an explicit `some { … }`, or `Recorded.mk H Σ.t`.
-  - A `CoeTail (Block V × Int) (Option (Recorded V))` would buy back the draft's own
-    `← (α.head, Σ.t)` spelling — measured working — and was rejected: it hides the conversion,
-    and naming the fields is worth more than the characters.
+  - Three routes to the *bare* `{ … }` were measured. A `CoeTail (Block V × Int)
+    (Option (Recorded V))` buys back the draft's own `← (α.head, Σ.t)` instead — works, and
+    rejected for hiding the conversion. A `macro_rules` alternative on the assignment works
+    too, since a macro sees the right-hand side as syntax before elaboration and can spot
+    `Lean.Parser.Term.structInst` and insert the `some` — rejected for hiding the `some` in
+    the notation layer. And taking the `Option` off the row, so the record carries absence in
+    a `block : Option (Block …)` field, makes `{ … }` elaborate directly and stops the read
+    raising as well — rejected because it invents a `processedAt` for every absent entry,
+    which is the objection that made `Σ.σ` `Option`-valued to begin with.
 
 ### Readability rules for this subtree, from the same session
 

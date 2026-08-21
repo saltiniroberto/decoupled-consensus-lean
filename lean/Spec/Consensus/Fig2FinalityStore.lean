@@ -125,13 +125,21 @@ is considered — measured 2026-08-22 with two `CoeTail` instances in scope, and
 both. What works is any form that gives the term a type of its own, after which the
 `α → Option α` coercion applies:
 
-    Σ.head[r][i] ← ({ block := H, processedAt := Σ.t } : Recorded Validator)   -- what is used
-    Σ.head[r][i] ← some { block := H, processedAt := Σ.t }
+    Σ.head[r][i] ← some { block := H, processedAt := Σ.t }                    -- what is used
+    Σ.head[r][i] ← ({ block := H, processedAt := Σ.t } : Recorded Validator)
     Σ.head[r][i] ← Recorded.mk H Σ.t
 
-The ascription is the one this subtree writes (Roberto, 2026-08-22): it names both fields at
-the write, where the constructor form leaves a reader to remember the argument order, and the
-draft's own `Σ.head[r][i] ← (α.head, Σ.t)` says even less.
+The explicit `some` is the one this subtree writes (Roberto, 2026-08-22): shortest of the
+three that still names both fields, where the constructor form leaves a reader to remember the
+argument order and the draft's own `Σ.head[r][i] ← (α.head, Σ.t)` says even less.
+
+Two other routes to the bare `{ … }` were measured and declined. A `macro_rules` alternative on
+the assignment itself works — a macro sees the right-hand side as syntax, before elaboration,
+so it can spot `Lean.Parser.Term.structInst` and insert the `some` — and it was declined for
+hiding the `some` in the notation layer. And taking the `Option` off the row, so the record
+carries absence in a `block : Option (Block …)` field, makes `{ … }` elaborate directly and
+even stops the read raising; it was declined because it invents a `processedAt` for every
+absent entry, which is the objection that made `Σ.σ` `Option`-valued to begin with.
 
 The table bracket does not raise: a table is total, every index having a row. -/
 
