@@ -71,9 +71,9 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
 /-- Validator `i`'s SG and FG action for round `r`, performed at `a_r`: the one combined
     attestation of the round, its SG half the head, its FG half the two pairs.
 
-    **The result is `Except`, and the reads raise** (Roberto, 2026-08-21). `Σ.σ⟦B⟧` is the
-    raising read of `Fig2FinalityStore.lean`, so `let σ ← S.σ⟦B⟧` propagates a missing map
-    entry to the caller. Three of the four hypotheses this routine used to take existed only
+    **The result is `Except`, and the reads raise** (Roberto, 2026-08-21). `Σ.σ[B]` is the
+    raising read of `Fig2FinalityStore.lean` — the draft's own spelling, no side condition —
+    so `let σ ← S.σ[B]` propagates a missing map entry to the caller. Three of the four hypotheses this routine used to take existed only
     to justify those two reads — map-domain coherence, that the walk start is accepted, and
     that the confirmation has a recorded state — and the exception subsumes all three.
 
@@ -138,7 +138,7 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     (_ : S.t = actionTime r := by assumption) :
-    Except Error (Attestation Validator) := do
+    ResultOrExcept (Attestation Validator) := do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r
@@ -148,11 +148,11 @@ def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     S.goldfishConfirmation walkStart (confirmationCandidates S r walkStart)
   -- skeleton: the finality half, independent of the confirmation, off the walk start's
   -- state. Both reads raise on a block the map does not record, and propagate
-  let σStart ← S.σ⟦walkStart⟧
+  let σStart ← S.σ[walkStart]
   let finalityPair : FinalityPair Validator :=
     if σStart.h_j > σStart.h_F then .pair σStart.h_j σStart.J else .empty
   -- skeleton: the current-height half, off the confirmation's state, no history
-  let σC ← S.σ⟦C⟧
+  let σC ← S.σ[C]
   let heightPair : HeightPair Validator :=
     if σC.h % Params.K = 0 ∧ σC.h - σC.h_F > Params.D then .emptyTarget σC.h
     else .target σC.h σC.T_h

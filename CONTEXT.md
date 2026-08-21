@@ -3087,33 +3087,51 @@ The real answer is the invariant below, so that a caller re-derives rather than 
   applies. No `while` is involved, and coherence never needs to look inside
   `stateTransition`.
 
-### The raising read, `Σ.σ⟦B⟧`, and why the action stopped taking hypotheses — 2026-08-21
+### The raising read `Σ.σ[B]`, and why the action stopped taking hypotheses — 2026-08-21
 
 Roberto's call, at the end of a long search for where the SG/FG action's assumptions should
 live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
-`Except Error (Attestation Validator)`, its two map reads are `let σ ← S.σ⟦B⟧`, and the only
+`ResultOrExcept (Attestation Validator)`, its two map reads are `let σ ← S.σ[B]`, and the only
 hypothesis it keeps is the instant.
 
-- `stateAt` and the `⟦⟧` notation live in `Fig2FinalityStore.lean` beside the `Membership`
-  and `GetElem` instances, that section being the map-reading machinery rather than figure
-  content.
-- **`Error` is one payload-free value, thrown by anyone** (Roberto, 2026-08-21). No type
-  parameter, one constructor, no cause distinguished. The reasoning: the error is a rendering
+- `Error`, `ResultOrExcept`, `stateAt` and the `GetElem` instance live in
+  `Fig2FinalityStore.lean`, in the section that is the map-reading machinery rather than
+  figure content.
+- **`Error` is one payload-free value, thrown by anyone, and `ResultOrExcept α` abbreviates
+  `Except Error α`** (Roberto, 2026-08-21). No type parameter on the error, one constructor,
+  no cause distinguished. Two things about the abbreviation, both measured:
+  - it must be an `abbrev`, not a `def` — instance synthesis does not unfold a plain `def`, so
+    with one the `Monad` and `MonadExcept` instances are not found, `do` and `←` fail, and
+    `throw .error` cannot even resolve its constructor. As an `abbrev` everything applies
+    through it, and `#check` prints `ResultOrExcept α`;
+  - the name is long on purpose. `Result` was the first choice and is too common a word to
+    take: `EStateM.Result` is in core, and inside `namespace Consensus` a bare `Result` would
+    shadow it silently. `Error` is in the same position — `Lean.MessageData` and
+    `MessageType.error` are both in scope, and the ambiguity showed up once already, in a
+    `.error` dotted-identifier error listing `Except.error` and `MessageType.error` as
+    candidates. `Error` has not been renamed yet. The reasoning: the error is a rendering
   artifact, not protocol content, so the fact worth having is that nothing raises at all on a
   coherent store — and no amount of detail in the error helps prove that. It also keeps every
   signature short and every `do` block in one error type, which is what `Except`'s monad
   instance requires. `Except Error α` is isomorphic to `Option α`; `Except` is kept because
   it reads as raising rather than as possibly-absent, and because a payload can be added
   later without touching the callers' shape.
-- **Both brackets coexist because they are on the same collection with different element
-  types, which `GetElem` cannot do** — `elem` and `valid` are `outParam`, so a collection has
-  exactly one `[]`. `⟦⟧` is a plain `scoped syntax … noWs "⟦" … "⟧"` plus a `macro_rules`, so
-  it is type-directed and claims no spelling outside the namespace. Measured working
-  alongside `S.σ[B]` in the same file.
-- The alternative, **swapping the instance so `S.σ[B]` is the raising read**, stays open and
-  is the next thing to try if this works out. One site changes: `viableLeaves`
-  (`Fig2FinalityStore.lean`), the only other reader. The write `S.σ[B] ← some σ'` is
-  unaffected — the assignment macro produces `Function.update` and never touches `GetElem`.
+- **`S.σ[B]` itself is the raising read** (Roberto, 2026-08-21, the second arrangement). The
+  `GetElem` instance returns `ResultOrExcept (ChainState Validator)` with validity `fun _ _ =>
+  True`, which `get_elem_tactic` closes by `trivial`, so the draft's own spelling carries no
+  side condition and no obligation. `⟦⟧` is gone, and so are the `GetElem?` and
+  `LawfulGetElem` instances — neither means anything once `[]` is total.
+  - The first arrangement was a raising `⟦⟧` beside the checked `[]`, commits `b13dc9f` to
+    `78dbcec`. Both cannot live under one bracket: `GetElem`'s `elem` and `valid` are
+    `outParam`, so a collection has exactly one `[]`.
+  - Two sites changed with it. `viableLeaves` now reads `(S.σ L).get h` under an
+    `∃ h : L ∈ S.σ` binder — a statement is not a `do` block, so there is nothing for a
+    `ResultOrExcept` to propagate to there. And `scratch/BangExample.lean`, the `!`-route
+    sketch, no longer compiles; its header says so.
+  - The write `S.σ[B] ← some σ'` is unaffected: the assignment macro produces
+    `Function.update` and never touches `GetElem`.
+  - `B ∈ S.σ` stays, and is still what `stateAt` tests, what `viableLeaves` asks, and what
+    the coherence invariant is stated over.
 - **The instant stays an input precondition**, `(_ : S.t = actionTime r := by assumption)`
   (Roberto, 2026-08-21, after two reversals). It is not a read, so the exception has no
   business with it, and testing its own schedule is not the routine's job — `on_tick` decides
@@ -3194,13 +3212,13 @@ Each given as a correction; standing until revoked:
    veto's real rule, `propose_block`, the Goldfish vote itself, and the two standing
    omissions from the old pipeline (the source-proposal branch, the signing history).
 
-   `onSGFGVotingAction` now takes **no hypotheses**: it returns `Except`, and its map reads
-   are the raising `Σ.σ⟦B⟧`. So a caller writes whatever imperative body it likes — a branch
-   or a loop anywhere, the call at the end — and owes nothing at the call. Two follow-ons,
-   in order: the theorem that the exception never fires on a coherent store, which is one
-   step off `Reachable.coherent` on the `coherence-invariant` branch and is the reason to
-   merge it; and then, if the arrangement holds up, swapping the `GetElem` instance so
-   `Σ.σ[B]` *is* the raising read and `viableLeaves` changes with it.
+   `onSGFGVotingAction` now returns `ResultOrExcept (Attestation Validator)`, reads the map
+   with `let σ ← S.σ[B]`, and keeps one hypothesis: the instant. So a caller writes whatever
+   imperative body it likes — a branch or a loop anywhere, the call at the end — and writes
+   nothing at the call. The follow-on is the theorem that **the exception never fires**: on a
+   store whose accepted blocks all have recorded states and whose action root is accepted,
+   the action returns `.ok`. That is one step off `Reachable.coherent` on the
+   `coherence-invariant` branch, which is the reason to merge it.
 
 1. **Fix the statement layer over `ValidatorState`** (sketch in the 2026-08-18 schedule
    entry, plus the two additions in the recovery entry above), on the word.

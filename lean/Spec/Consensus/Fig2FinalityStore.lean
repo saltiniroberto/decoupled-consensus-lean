@@ -147,71 +147,45 @@ structure Store (Validator Ω : Type) where
     (candidates : Finset (Block Validator)) →
     {B // B ∈ candidates ∨ B = walkStart}
 
-/-! ### `B ∈ S.σ`, `S.σ[B]` and `S.σ⟦B⟧` — three ways to read the map
+/-! ### `B ∈ S.σ` and `S.σ[B]` — the membership, and the read that raises
 
 The draft writes `Σ.σ[B]` unconditionally, its map being defined exactly on the accepted
-blocks; here the field is `Option`-valued, so a bare read owes a proof that `B` is
-recorded. These instances — ported from the old rendering, `Spec/Defs/Store.lean`, whose
-header carries the measurements — let that proof stay anonymous: `B ∈ S.σ` is "the map is
-defined at `B`" (definitionally `(S.σ B).isSome`), and `S.σ[B]` elaborates its side
-condition with `get_elem_tactic`, which finds any hypothesis of that type in context,
-named or not: `if _ : B ∈ S.σ then … S.σ[B] …` passes nothing by hand.
+blocks. Here the field is `Option`-valued, so a read has to say what it does when the entry
+is absent, and **`S.σ[B]` raises** (Roberto, 2026-08-21): it returns
+`ResultOrExcept (ChainState Validator)`, so in a `do` block over that monad
+`let σB ← S.σ[B]` propagates a missing entry to the caller with no proof written anywhere and
+no check either. The draft's own spelling, and no proof obligation at the call — which is
+what lets a caller write any imperative body it likes and dispatch at the end.
 
-**`S.σ⟦B⟧` is the same read, raising instead of asking** (Roberto, 2026-08-21). It returns
-`Except Error (ChainState Validator)`, so in a `do` block over that monad
-`let σB ← S.σ⟦B⟧` propagates a missing entry to the caller with no proof written anywhere
-and no check either. It is what the draft's Section 6 uses; the figures keep `[]`.
+`B ∈ S.σ` stays, meaning "the map is defined at `B`" (definitionally `(S.σ B).isSome`). It
+is what `stateAt` tests, what `viableLeaves` asks below, and what the coherence invariant of
+`Analysis/` is stated over. The proof-carrying read that used to be `S.σ[B]` has no notation
+any more — write `(S.σ B).get h`, as `viableLeaves` does.
 
-Why a second bracket rather than one: `GetElem`'s element type and validity predicate are
-both `outParam`, so a collection has exactly one `[]`, and `viableLeaves` below needs the
-proof-carrying one. Reserving the draft's own spelling for the draft's own total read keeps
-the figures auditable, and a different bracket says out loud that this read can fail. The
-alternative — swap the instance so `S.σ[B]` is the raising read, and change `viableLeaves`,
-the only other reader — stays open; this arrangement is the one to try first.
+There is exactly one `[]` per collection because `GetElem`'s element type and validity
+predicate are both `outParam`, so the two readings cannot coexist under one bracket. A
+raising `S.σ⟦B⟧` beside a checked `S.σ[B]` was the first arrangement, commits `b13dc9f` to
+`78dbcec`; this is the second, and it is the draft's spelling.
 
-Two hazards, measured on the old rendering: the `∀ x ∈ s` binder does not reach the
-bracket — write `∀ B (_ : B ∈ S.σ), …` — and `rw` on a store inside a bracket read fails
-with "motive is not type correct" where `simp only` succeeds. -/
+The side condition is `True`, discharged by `get_elem_tactic`'s own `trivial`, so no
+`get_elem_tactic` extension is needed and none is installed. `S.σ[B]?` and `S.σ[B]!` are
+gone with the checked read: neither means anything once `[]` is already total.
+
+One hazard, measured on the old rendering: `rw` on a store inside a bracket read fails with
+"motive is not type correct" where `simp only` succeeds. -/
 
 /-- `B ∈ σ`: the map is defined at `B`. -/
 scoped instance stateMapMembership :
     Membership (Block Validator) (Block Validator → Option (ChainState Validator)) where
   mem σ B := (σ B).isSome
 
-/-- The membership is a `Bool` in disguise, so an `if _ : B ∈ S.σ` can test it. The old
-    rendering never needed this: it read the map only in statements. -/
+/-- The membership is a `Bool` in disguise, so an `if _ : B ∈ S.σ` can test it. -/
 scoped instance (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
     Decidable (B ∈ σ) :=
   inferInstanceAs (Decidable ((σ B).isSome = true))
 
-/-- `σ[B]`: the state recorded for `B`, given that `B` is recorded. -/
-scoped instance stateMapGetElem :
-    GetElem (Block Validator → Option (ChainState Validator)) (Block Validator)
-      (ChainState Validator) (fun σ B => B ∈ σ) where
-  getElem σ B h := (σ B).get h
-
-/-- `σ[B]?`: the same read with no side condition, which is the map itself. -/
-scoped instance stateMapGetElemOpt :
-    GetElem? (Block Validator → Option (ChainState Validator)) (Block Validator)
-      (ChainState Validator) (fun σ B => B ∈ σ) where
-  getElem? σ B := σ B
-
-/-- The two agree, which is what lets the core `getElem?_pos`/`getElem?_neg` lemmas
-    fire. -/
-scoped instance stateMapLawfulGetElem :
-    LawfulGetElem (Block Validator → Option (ChainState Validator)) (Block Validator)
-      (ChainState Validator) (fun σ B => B ∈ σ) where
-  getElem?_def σ B _ := by
-    by_cases hb : B ∈ σ
-    · rw [dif_pos hb]
-      exact (Option.some_get hb).symm
-    · rw [dif_neg hb]
-      have hb' : ¬ (σ B).isSome = true := hb
-      have h2 : σ B = none := by simpa using hb'
-      exact h2
-
 /-- The one failure of this rendering, thrown by every routine that can fail and carrying
-    nothing (Roberto, 2026-08-21). `Σ.σ⟦B⟧` raises it when the map does not record `B`, and
+    nothing (Roberto, 2026-08-21). `Σ.σ[B]` raises it when the map does not record `B`, and
     anything added later raises the same value.
 
     No payload, and no constructor per cause, deliberately: the error is a rendering
@@ -226,18 +200,30 @@ inductive Error where
   /-- The failure. -/
   | error
 
-/-- `σ⟦B⟧`, the raising read: the state recorded for `B`, or the error naming `B`. The
-    checked read `σ[B]` and this one sit side by side — see the section header. -/
+/-- `ResultOrExcept α` is an `α` or the failure: the result type of every routine here that
+    can raise, so no signature repeats the error type. The name is long because `Result` is
+    not a word this rendering can take — `EStateM.Result` is in core, and a bare `Result`
+    inside this namespace would shadow it silently.
+
+    **`abbrev`, not `def`** — measured 2026-08-21. It has to be reducible: instance synthesis
+    does not unfold a plain `def`, so with one the `Monad` and `MonadExcept` instances are
+    not found, `do` and `←` fail, and even `throw .error` cannot resolve its constructor. As
+    an `abbrev` everything applies through it — `do`, `throw`, `←`, and `Except.toOption` and
+    friends — while signatures and `#check` output read `ResultOrExcept α`. -/
+abbrev ResultOrExcept (α : Type) := Except Error α
+
+/-- `σ[B]`, the read behind the bracket: the state recorded for `B`, or the failure. -/
 def stateAt (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
-    Except Error (ChainState Validator) :=
-  if h : B ∈ σ then .ok σ[B] else .error .error
+    ResultOrExcept (ChainState Validator) :=
+  if h : B ∈ σ then .ok ((σ B).get h) else .error .error
 
-/-- `σ⟦B⟧` for `stateAt σ B`. Scoped, and directed by the type of the thing before the
-    bracket rather than by its name, so it claims no spelling outside this namespace. -/
-scoped syntax:max term noWs "⟦" term "⟧" : term
-
-macro_rules
-  | `($σ⟦$B⟧) => `(stateAt $σ $B)
+/-- `σ[B]`: the raising read. The validity predicate is `True` — the bracket owes nothing,
+    the failure being in the result type instead — so `get_elem_tactic` closes it with
+    `trivial` and a call site writes nothing. -/
+scoped instance stateMapGetElem :
+    GetElem (Block Validator → Option (ChainState Validator)) (Block Validator)
+      (ResultOrExcept (ChainState Validator)) (fun _ _ => True) where
+  getElem σ B _ := stateAt σ B
 
 section StoreDefs
 variable [DecidableEq Validator]
@@ -284,13 +270,13 @@ def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
     viability is "some viable leaf descends from this block", and both of its readers —
     `candidateTree` and `process_updates`' finalize test — say it that way.
 
-    `∃ _ : L ∈ S.σ` is what lets the height be read as `S.σ[L].h`: the binder puts the
-    membership in context, where the bracket's side condition finds it. A leaf the map
-    misses is therefore not viable — a member of `T` the map misses is a coherence
-    invariant's business, not this definition's. This is the only place in the file that
-    reads the state map for a height. -/
+    `∃ h : L ∈ S.σ` binds the membership and `(S.σ L).get h` reads through it: a statement
+    is not a `do` block, so the raising `S.σ[L]` would give a `ResultOrExcept` here and there
+    would be nothing to propagate it to. A leaf the map misses is therefore not viable — a
+    member of `T` the map misses is a coherence invariant's business, not this definition's.
+    This is the only place in the file that reads the state map for a height. -/
 def Store.viableLeaves (S : Store Validator Ω) : Finset (Block Validator) :=
-  S.leaves.filter fun L => ∃ _ : L ∈ S.σ, S.σ[L].h ≥ S.h_max - 1
+  S.leaves.filter fun L => ∃ h : L ∈ S.σ, ((S.σ L).get h).h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
