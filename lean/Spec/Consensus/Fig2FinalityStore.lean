@@ -274,8 +274,7 @@ def Store.leaves (S : Store Validator Ω) : Finset (Block Validator) :=
 def Store.viableLeaves (S : Store Validator Ω) :
     ResultOrExcept (Finset (Block Validator)) :=
   S.leaves.filterM fun L => do
-    let σL ← S.σ[L]
-    return σL.h ≥ S.h_max - 1
+    return (← S.σ[L]).h ≥ S.h_max - 1
 
 /-- `fork_choice_root(Σ)` (Figure 2, lines 20–23), Definition 8's fork-choice root: `Σ.J`
     while the justified pair sits one height under the store's frontier —
