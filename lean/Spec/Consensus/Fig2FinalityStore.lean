@@ -147,7 +147,7 @@ structure Store (Validator Ω : Type) where
     (candidates : Finset (Block Validator)) →
     {B // B ∈ candidates ∨ B = walkStart}
 
-/-! ### `B ∈ S.σ` and `S.σ[B]`, through `Membership` and `GetElem`
+/-! ### `B ∈ S.σ`, `S.σ[B]` and `S.σ⟦B⟧` — three ways to read the map
 
 The draft writes `Σ.σ[B]` unconditionally, its map being defined exactly on the accepted
 blocks; here the field is `Option`-valued, so a bare read owes a proof that `B` is
@@ -156,6 +156,18 @@ header carries the measurements — let that proof stay anonymous: `B ∈ S.σ` 
 defined at `B`" (definitionally `(S.σ B).isSome`), and `S.σ[B]` elaborates its side
 condition with `get_elem_tactic`, which finds any hypothesis of that type in context,
 named or not: `if _ : B ∈ S.σ then … S.σ[B] …` passes nothing by hand.
+
+**`S.σ⟦B⟧` is the same read, raising instead of asking** (Roberto, 2026-08-21). It returns
+`Except (StoreError Validator) (ChainState Validator)`, so in a `do` block over that monad
+`let σB ← S.σ⟦B⟧` propagates a missing entry to the caller with no proof written anywhere
+and no check either. It is what the draft's Section 6 uses; the figures keep `[]`.
+
+Why a second bracket rather than one: `GetElem`'s element type and validity predicate are
+both `outParam`, so a collection has exactly one `[]`, and `viableLeaves` below needs the
+proof-carrying one. Reserving the draft's own spelling for the draft's own total read keeps
+the figures auditable, and a different bracket says out loud that this read can fail. The
+alternative — swap the instance so `S.σ[B]` is the raising read, and change `viableLeaves`,
+the only other reader — stays open; this arrangement is the one to try first.
 
 Two hazards, measured on the old rendering: the `∀ x ∈ s` binder does not reach the
 bracket — write `∀ B (_ : B ∈ S.σ), …` — and `rw` on a store inside a bracket read fails
@@ -197,6 +209,27 @@ scoped instance stateMapLawfulGetElem :
       have hb' : ¬ (σ B).isSome = true := hb
       have h2 : σ B = none := by simpa using hb'
       exact h2
+
+/-- What a store read can fail on. One constructor so far, for the map: reading the state of
+    a block the map does not record. A read that raises this is a rendering artifact — the
+    draft's map is defined on every accepted block, so on a store that has kept that
+    property no read here can fail, and saying so is a theorem of `Analysis/`. -/
+inductive StoreError (Validator : Type) where
+  /-- `Σ.σ[B]` where `B` is not recorded. -/
+  | missingState (B : Block Validator)
+
+/-- `σ⟦B⟧`, the raising read: the state recorded for `B`, or the error naming `B`. The
+    checked read `σ[B]` and this one sit side by side — see the section header. -/
+def stateAt (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
+    Except (StoreError Validator) (ChainState Validator) :=
+  if h : B ∈ σ then .ok σ[B] else .error (.missingState B)
+
+/-- `σ⟦B⟧` for `stateAt σ B`. Scoped, and directed by the type of the thing before the
+    bracket rather than by its name, so it claims no spelling outside this namespace. -/
+scoped syntax:max term noWs "⟦" term "⟧" : term
+
+macro_rules
+  | `($σ⟦$B⟧) => `(stateAt $σ $B)
 
 section StoreDefs
 variable [DecidableEq Validator]
