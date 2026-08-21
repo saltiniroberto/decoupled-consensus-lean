@@ -3266,10 +3266,33 @@ draft as written.
   matches Definition 4 as written; Algorand-style multiple draws would need a multiset or a
   per-member count.
 - What the file holds: the `Committees` class, `GoldfishVote` (`validator`, `slot`, `block`),
-  `eligible`, and `votersFor` — the *direct* voters for a block, no ancestor closure. Section
-  5's confirmation is undrafted and nothing here anticipates it. The old rendering's
-  `Spec/Defs/Voting.lean` and `Spec/Defs/Recovery.lean` reached the same shape from the old
-  spec's Assumption 3, independently.
+  `eligible`, the `on_goldfish_vote` handler, and two counting definitions. Section 5's
+  confirmation is undrafted and nothing here anticipates it. The old rendering's
+  `Spec/Defs/Voting.lean` and `Spec/Defs/Recovery.lean` reached the same vote shape from the
+  old spec's Assumption 3, independently.
+- **Two store fields for votes, beyond Definition 10** (Roberto, 2026-08-22).
+  `Σ.vote[s][i] : Option (Block × Int)` is the first processed Goldfish vote with its
+  processing time; `Σ.vote_equiv[s][i] : Option Int` is the time a vote for a different block
+  was first processed. `head[·]` and `equiv[·]` exactly, one level down and keyed by **slot**
+  rather than round, because a Goldfish vote belongs to a slot. Definition 10 keeps this
+  bookkeeping only for attestation heads.
+  - They live on `Store` in `Fig2FinalityStore.lean` with the rest of Definition 10's fields;
+    the handler and the counting live in `Goldfish.lean`, which therefore imports Fig 2 — the
+    fields need only `Block`, so nothing is circular.
+  - `on_goldfish_vote` is `on_attestation`'s shape and renders no figure line: the draft's
+    Figure 6 has `on_tick` and `on_attestation` only. Like `on_attestation` it records whatever
+    arrives **without testing eligibility** — committee membership is applied where votes are
+    counted, so a non-member's vote occupies its own key and is never read. Two differences
+    from `on_attestation`, both from Definition 4: a vote's block is not an `Option`, so there
+    is no empty case; and the key is a slot.
+  - `Store.voters s t B` and `Store.voteEquivocators s t` are the counting side, Figure 4's
+    `supporters`/`equivocators` one level down. Both take the time bound as an argument rather
+    than fixing one — which is what the recorded processing time is *for*, since Section 5, if
+    it follows the old spec's Definition 39, reads one slot at two instants. `voters` counts
+    the **direct** vote only: no ancestor closure, that being the confirmation rule's business.
+  - Vote equivocation is separate from head equivocation, and both are kept: Definition 3 and
+    Definition 4 are different objects with different signatures, so a validator can equivocate
+    in one and not the other.
 
 ### Readability rules for this subtree, from the same session
 

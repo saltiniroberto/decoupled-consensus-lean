@@ -124,6 +124,24 @@ structure Store (Validator Ω : Type) where
       validator, the time at which a head different from the stored one was first
       processed — the equivocation time — `none` while none was. -/
   equiv : Nat → Validator → Option Int
+  /-- `vote[·]`: per **slot** and validator, the first processed Goldfish vote with its
+      processing time, `none` until one arrives. Written by `on_goldfish_vote`
+      (`Goldfish.lean`), read by the counting there.
+
+      **Beyond Definition 10** (Roberto, 2026-08-22): the draft's timed store keeps this
+      bookkeeping for attestation heads and not for Goldfish votes, and Section 5, which
+      would need it, is undrafted. The shape is `head[·]`'s exactly — first write wins, the
+      time recorded beside the value — one level down, keyed by slot rather than round,
+      because a Goldfish vote belongs to a slot. -/
+  vote : Nat → Validator → Option (Block Validator × Int)
+  /-- `vote_equiv[·]`: per slot and validator, the time at which a Goldfish vote for a
+      *different* block was first processed — the vote-equivocation time — `none` while none
+      was. `equiv[·]`'s shape, and beyond Definition 10 for the same reason as `vote[·]`.
+
+      Separate from `equiv[·]`: that one records equivocation in attestation heads, this one
+      in raw votes, and the draft's Definition 3 and Definition 4 are separate objects with
+      separate signatures. A validator can equivocate in one and not the other. -/
+  voteEquiv : Nat → Validator → Option Int
   /-- `sg_root[·]` (Definition 10; written by Figure 6 at the opening slot's vote time,
       read by Figure 5's `get_walk_root`): per round, the SG root derived at `t_r + Δ`,
       `none` until that write. Fixed after it. -/
@@ -234,6 +252,8 @@ def Store.gen (ω : Ω)
   rootProposal := fun _ => none
   head := fun _ _ => none
   equiv := fun _ _ => none
+  vote := fun _ _ => none
+  voteEquiv := fun _ _ => none
   sgRoot := fun _ => none
   actionRoot := fun _ => none
   t := -1

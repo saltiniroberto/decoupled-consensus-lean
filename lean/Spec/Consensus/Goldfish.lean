@@ -1,4 +1,4 @@
-import Spec.Consensus.Model
+import Spec.Consensus.Fig2FinalityStore
 
 /-!
 # Goldfish votes and slot committees
@@ -8,8 +8,22 @@ is Goldfish's; these are its raw votes, separate objects from the attestations o
 Definition 3, cast by a slot's committee and counted one unit per member.
 
 The confirmation rule over these votes is the draft's Section 5, which is `[To be drafted.]`
-Nothing here anticipates it: this file gives the vote, who may cast one, and the unit it is
-counted in, and stops.
+Nothing here anticipates it: this file gives the vote, who may cast one, the store
+bookkeeping that records it, and the unit it is counted in — and stops.
+
+## The bookkeeping mirrors the attestation heads
+
+`Σ.vote[s][i]` and `Σ.vote_equiv[s][i]` (fields of `Store`, `Fig2FinalityStore.lean`) are
+`head[·]` and `equiv[·]` one level down: first write wins, the processing time recorded beside
+the value, and a later vote for a different block records the vote-equivocation time instead.
+Keyed by **slot**, because a Goldfish vote belongs to a slot where an attestation belongs to a
+round. Both fields are beyond Definition 10, which keeps this bookkeeping only for heads
+(Roberto, 2026-08-22).
+
+`on_goldfish_vote` below is `on_attestation`'s shape and renders no line of any figure — the
+draft's Figure 6 has `on_tick` and `on_attestation` only. Like `on_attestation` it records
+whatever arrives without testing eligibility; committee membership is applied where votes are
+*counted*, so a non-member's vote occupies its own key and is never read.
 
 ## `index` is dropped
 
@@ -85,27 +99,66 @@ structure GoldfishVote (Validator : Type) where
   /-- The block the vote supports. -/
   block : Block Validator
 
-section Counting
-variable [DecidableEq Validator] [Committees Validator]
-
 /-- The vote was cast by a member of its slot's committee. A vote from a non-member is not a
     Goldfish vote of that slot, and nothing counts it. -/
-def GoldfishVote.eligible (v : GoldfishVote Validator) : Prop :=
+def GoldfishVote.eligible [DecidableEq Validator] [Committees Validator]
+    (v : GoldfishVote Validator) : Prop :=
   v.validator ∈ Committees.committee v.slot
 
-instance (v : GoldfishVote Validator) : Decidable v.eligible :=
+instance [DecidableEq Validator] [Committees Validator] (v : GoldfishVote Validator) :
+    Decidable v.eligible :=
   inferInstanceAs (Decidable (_ ∈ _))
 
-/-- The committee members who voted for `B` in slot `s`, among the votes in `A`. One entry
-    per validator however many of its votes are in `A`, so `.card` is Definition 4's count —
-    one unit each, weight playing no part.
+/-! ## The handler -/
 
-    This is the *direct* vote for `B`, not support in Section 5's sense: no ancestor of `B`
-    is counted here. Whatever closure the confirmation rule wants is that rule's, and it is
-    not drafted. -/
-def votersFor (A : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :
+section Handler
+variable {Ω : Type} [DecidableEq Validator]
+
+/-- `on_goldfish_vote(Σ, v)`: keep, per slot and validator, the first processed vote with its
+    processing time, and the time at which a vote for a *different* block from the same
+    validator was first processed.
+
+    `on_attestation`'s shape (Figure 6, lines 12–20), and it renders no figure line — see the
+    module header. Two differences from that routine, both from Definition 4: a Goldfish vote
+    carries a block and not an `Option`, so there is no empty case to ignore; and the key is
+    the vote's slot, not a round. -/
+def onGoldfishVote (S : Store Validator Ω) (v : GoldfishVote Validator) :
+    Store Validator Ω := Id.run do
+  let mut S := S
+  let i := v.validator
+  let s := v.slot
+  if S.vote s i = none then
+    S.vote[s][i] ← some (v.block, S.t)
+  else if (S.vote s i).any (fun rec => v.block ≠ rec.1) ∧ S.voteEquiv s i = none then
+    S.voteEquiv[s][i] ← some S.t
+  return S
+
+end Handler
+
+/-! ## Counting -/
+
+section Counting
+variable {Ω : Type} [DecidableEq Validator] [Committees Validator]
+
+/-- The committee members whose recorded slot-`s` vote is for `B` and was processed before
+    `t`. One entry per validator, so `.card` is Definition 4's count — one unit each, weight
+    playing no part.
+
+    The *direct* vote for `B`, not support in Section 5's sense: no ancestor of `B` is
+    counted. Whatever closure the confirmation rule wants is that rule's, and it is not
+    drafted. The time bound is why `vote[·]` records a processing time at all — Section 5 will
+    need to read the same slot at two instants — and this definition takes it as an argument
+    rather than fixing one. -/
+def Store.voters (S : Store Validator Ω) (s : Nat) (t : Int) (B : Block Validator) :
     Finset Validator :=
-  ({v ∈ A | v.eligible ∧ v.slot = s ∧ v.block = B}).image GoldfishVote.validator
+  {i ∈ Committees.committee s | (S.vote s i).any fun rec => rec.2 < t ∧ rec.1 = B}
+
+/-- The committee members whose slot-`s` vote-equivocation was processed before `t`.
+    Figure 4's `equivocators` one level down, and the reason `vote_equiv[·]` exists: a
+    validator that voted twice for one slot supplies no unit, and a counting rule that wants
+    to exclude it reads this. -/
+def Store.voteEquivocators (S : Store Validator Ω) (s : Nat) (t : Int) : Finset Validator :=
+  {i ∈ Committees.committee s | (S.voteEquiv s i).any fun tE => tE < t}
 
 end Counting
 

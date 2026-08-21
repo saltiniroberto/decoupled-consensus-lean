@@ -11,9 +11,9 @@ import Spec.Consensus.Model
 import Spec.Consensus.Notation
 import Spec.Consensus.FinsetM
 import Spec.Consensus.Raise
-import Spec.Consensus.Goldfish
 import Spec.Consensus.Fig1StateTransition
 import Spec.Consensus.Fig2FinalityStore
+import Spec.Consensus.Goldfish
 import Spec.Consensus.Fig3Schedule
 import Spec.Consensus.Fig4SupportScores
 import Spec.Consensus.Fig5RoundRoots
