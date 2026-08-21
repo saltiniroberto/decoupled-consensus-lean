@@ -35,15 +35,15 @@ variable {Validator Ω : Type}
 /-- The round-`(r−1)` head entries Definition 11 reads — empty for `r = 0`, the draft's
     "for round 0 the round-`(−1)` entries are empty". -/
 def Store.prevHead (S : Store Validator Ω) :
-    Nat → Validator → Option (Block Validator × Int)
+    StoreTable Validator (Block Validator × Int)
   | 0 => fun _ => none
-  | r + 1 => S.head r
+  | r + 1 => S.head[r]
 
 /-- The round-`(r−1)` equivocation entries Definition 11 reads — empty for `r = 0`,
     likewise. -/
-def Store.prevEquiv (S : Store Validator Ω) : Nat → Validator → Option Int
+def Store.prevEquiv (S : Store Validator Ω) : StoreTable Validator Int
   | 0 => fun _ => none
-  | r + 1 => S.equiv r
+  | r + 1 => S.equiv[r]
 
 section Scores
 variable [DecidableEq Validator] [Electorate Validator] [Params]
@@ -54,12 +54,12 @@ variable [DecidableEq Validator] [Electorate Validator] [Params]
     ever summed. -/
 def supporters (S : Store Validator Ω) (r : Nat) (j : Int) (B : Block Validator) :
     Finset Validator :=
-  {i ∈ Electorate.V | (S.prevHead r i).any fun (H, tH) => tH < gradeInstant r j ∧ B ⪯ H}
+  {i ∈ Electorate.V | (S.prevHead[r][i]).any fun (H, tH) => tH < gradeInstant r j ∧ B ⪯ H}
 
 /-- `E_j` (Definition 11): the validators whose stored round-`(r−1)` equivocation time is
     before round `r`'s instant `Γ^j`. Likewise intersected with the electorate. -/
 def equivocators (S : Store Validator Ω) (r : Nat) (j : Int) : Finset Validator :=
-  {i ∈ Electorate.V | (S.prevEquiv r i).any fun tE => tE < gradeInstant r j}
+  {i ∈ Electorate.V | (S.prevEquiv[r][i]).any fun tE => tE < gradeInstant r j}
 
 /-- `support_scores(Σ, r, j, B)` (Figure 4, lines 1–4): the pair
     `(S_j(B), S̄_j(B)) = (w(H_j(B) \ E_j), w(H_j(B) ∪ E_j))` — the pessimistic score drops

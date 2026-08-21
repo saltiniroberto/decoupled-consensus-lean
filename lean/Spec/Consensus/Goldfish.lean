@@ -127,9 +127,9 @@ def onGoldfishVote (S : Store Validator Ω) (v : GoldfishVote Validator) :
   let mut S := S
   let i := v.validator
   let s := v.slot
-  if S.vote s i = none then
-    S.vote[s][i] ← some (v.block, S.t)
-  else if (S.vote s i).any (fun rec => v.block ≠ rec.1) ∧ S.voteEquiv s i = none then
+  if S.vote[s][i] = none then
+    S.vote[s][i] ← (v.block, S.t)
+  else if (S.vote[s][i]).any (fun rec => rec.1 ≠ v.block) ∧ S.voteEquiv[s][i] = none then
     S.voteEquiv[s][i] ← some S.t
   return S
 
@@ -151,14 +151,14 @@ variable {Ω : Type} [DecidableEq Validator] [Committees Validator]
     rather than fixing one. -/
 def Store.voters (S : Store Validator Ω) (s : Nat) (t : Int) (B : Block Validator) :
     Finset Validator :=
-  {i ∈ Committees.committee s | (S.vote s i).any fun rec => rec.2 < t ∧ rec.1 = B}
+  {i ∈ Committees.committee s | (S.vote[s][i]).any fun rec => rec.2 < t ∧ rec.1 = B}
 
 /-- The committee members whose slot-`s` vote-equivocation was processed before `t`.
     Figure 4's `equivocators` one level down, and the reason `vote_equiv[·]` exists: a
     validator that voted twice for one slot supplies no unit, and a counting rule that wants
     to exclude it reads this. -/
 def Store.voteEquivocators (S : Store Validator Ω) (s : Nat) (t : Int) : Finset Validator :=
-  {i ∈ Committees.committee s | (S.voteEquiv s i).any fun tE => tE < t}
+  {i ∈ Committees.committee s | (S.voteEquiv[s][i]).any fun tE => tE < t}
 
 end Counting
 

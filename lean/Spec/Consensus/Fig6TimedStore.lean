@@ -87,10 +87,10 @@ def onAttestation (S : Store Validator Ω) (a : Attestation Validator) :
   let r := a.round
   -- line 14: `if α.head = ⊥ then return Σ`
   let some H := a.head | return S                             -- line 15
-  if S.head r i = none then                                   -- line 16: `i ∉ Σ.head[r]`
+  if S.head[r][i] = none then                                 -- line 16: `i ∉ Σ.head[r]`
     S.head[r][i] ← some (H, S.t)                              -- line 17
   -- line 18: `else if α.head ≠ Σ.head[r][i]'s head and i ∉ Σ.equiv[r]`
-  else if (S.head r i).any (fun hd => H ≠ hd.1) ∧ S.equiv r i = none then
+  else if (S.head[r][i]).any (fun hd => H ≠ hd.1) ∧ S.equiv[r][i] = none then
     S.equiv[r][i] ← some S.t                                  -- line 19
   return S                                                    -- line 20
 

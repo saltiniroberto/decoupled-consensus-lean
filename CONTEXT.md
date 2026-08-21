@@ -3294,6 +3294,32 @@ draft as written.
     Definition 4 are different objects with different signatures, so a validator can equivocate
     in one and not the other.
 
+### `Σ.head[r][i]` as a read: `StoreRow` and `StoreTable` — 2026-08-22
+
+Definition 10's `head[·]`, `equiv[·]` and the two vote fields are one shape — an optional
+entry per index and validator, the index a round for the attestation bookkeeping and a slot
+for the votes. The assignment macro always wrote them `Σ.head[r][i] ← e`; two named types now
+make the same spelling work as a **read**.
+
+- `StoreRow Validator V := Validator → Option V` and
+  `StoreTable Validator V := Nat → StoreRow Validator V`, each with a `GetElem` whose validity
+  is `True` — closed by `get_elem_tactic`'s own `trivial`, so a read owes nothing. `Σ.head[r][i]`
+  chains as `(Σ.head[r])[i]`.
+- **A name is needed because instances and dot notation resolve on a type's head constant**,
+  and `Nat → Validator → Option V` has none. `def`, not `abbrev`, or the name unfolds away
+  before the lookup. Same finding as the `S.σ.get` experiment of 2026-08-21 (commit `d3cea50`,
+  since undone).
+- All four fields converted, plus `prevHead`/`prevEquiv` in Figure 4, so every read in the
+  subtree uses the bracket and none uses application.
+- **What it does not fix**: `Σ.vote[s][i]` is an `Option (Block × Int)`, the block *and* its
+  processing time, so it cannot be compared against a block — `S.vote[s][i] ≠ v.block` is a
+  type error, which is what prompted this. The comparison still reads
+  `(S.vote[s][i]).any (fun rec => rec.1 ≠ v.block)`. Getting `≠ some v.block` would need an
+  accessor for the first component, or two separate tables; neither was taken, the second
+  because Definition 10 bundles a head with its time on purpose.
+- Small win from Roberto's own edit: the write needs no `some` — `Σ.vote[s][i] ← (v.block, S.t)`
+  coerces, Lean inserting `Option.some` at the expected type.
+
 ### Readability rules for this subtree, from the same session
 
 Each given as a correction; standing until revoked:

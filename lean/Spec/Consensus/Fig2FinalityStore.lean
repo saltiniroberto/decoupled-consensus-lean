@@ -89,6 +89,40 @@ class Selection (Validator Ω : Type) where
   /-- Choose from a nonempty set, using the validator's available-chain data. -/
   select : Ω → (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
 
+/-! ### The per-validator tables: `Σ.head[r][i]` and friends, as reads
+
+Definition 10's `head[·]`, `equiv[·]` and the two vote fields are all the same shape — an
+optional entry per index and validator, where the index is a round for the attestation
+bookkeeping and a slot for the votes. The assignment macro has always written them
+`Σ.head[r][i] ← e`; these two named types and their instances make the same spelling work as a
+**read**, which a bare function type cannot (Roberto, 2026-08-22).
+
+The reason a name is needed: instances and dot notation resolve on the head constant of a
+type, and `Nat → Validator → Option V` has none. So each level gets one, and `Σ.head[r][i]`
+chains as `(Σ.head[r])[i]`. Validity is `True` at both levels, closed by `get_elem_tactic`'s
+own `trivial`, so a read owes nothing. `def` and not `abbrev`, or the name would unfold away
+before the lookup.
+
+What this does *not* change is what is stored. `Σ.vote[s][i]` is an `Option (Block × Int)` —
+the block *and* its processing time — so it cannot be compared against a block. That takes
+either an accessor for the first component or two separate tables, and neither is here. -/
+
+/-- One optional entry per validator. -/
+def StoreRow (Validator V : Type) := Validator → Option V
+
+/-- Definition 10's per-index bookkeeping: a `StoreRow` for each round or slot. -/
+def StoreTable (Validator V : Type) := Nat → StoreRow Validator V
+
+/-- `t[r]`: the row at an index. -/
+scoped instance storeTableGetElem {V : Type} :
+    GetElem (StoreTable Validator V) Nat (StoreRow Validator V) (fun _ _ => True) where
+  getElem t r _ := t r
+
+/-- `row[i]`: the entry for a validator. -/
+scoped instance storeRowGetElem {V : Type} :
+    GetElem (StoreRow Validator V) Validator (Option V) (fun _ _ => True) where
+  getElem row i _ := row i
+
 /-- The store (Definition 7 of the draft), in the draft's field order:
     `Σ = (s, T, σ[·], F, J, h_j, h_max)` — written `S`, see the module header — plus
     Definition 10's timed extension `(t, head[·], equiv[·], root_proposal[·], sg_root[·],
@@ -119,11 +153,11 @@ structure Store (Validator Ω : Type) where
   /-- `head[·]` (Definition 10; read by Figure 4's scores, written by Figure 6's
       `on_attestation`): per round and validator, the first processed nonempty attestation
       head with its processing time, `none` until one arrives. -/
-  head : Nat → Validator → Option (Block Validator × Int)
+  head : StoreTable Validator (Block Validator × Int)
   /-- `equiv[·]` (Definition 10; read by Figure 4, written by Figure 6): per round and
       validator, the time at which a head different from the stored one was first
       processed — the equivocation time — `none` while none was. -/
-  equiv : Nat → Validator → Option Int
+  equiv : StoreTable Validator Int
   /-- `vote[·]`: per **slot** and validator, the first processed Goldfish vote with its
       processing time, `none` until one arrives. Written by `on_goldfish_vote`
       (`Goldfish.lean`), read by the counting there.
@@ -133,7 +167,7 @@ structure Store (Validator Ω : Type) where
       would need it, is undrafted. The shape is `head[·]`'s exactly — first write wins, the
       time recorded beside the value — one level down, keyed by slot rather than round,
       because a Goldfish vote belongs to a slot. -/
-  vote : Nat → Validator → Option (Block Validator × Int)
+  vote : StoreTable Validator (Block Validator × Int)
   /-- `vote_equiv[·]`: per slot and validator, the time at which a Goldfish vote for a
       *different* block was first processed — the vote-equivocation time — `none` while none
       was. `equiv[·]`'s shape, and beyond Definition 10 for the same reason as `vote[·]`.
@@ -141,7 +175,7 @@ structure Store (Validator Ω : Type) where
       Separate from `equiv[·]`: that one records equivocation in attestation heads, this one
       in raw votes, and the draft's Definition 3 and Definition 4 are separate objects with
       separate signatures. A validator can equivocate in one and not the other. -/
-  voteEquiv : Nat → Validator → Option Int
+  voteEquiv : StoreTable Validator Int
   /-- `sg_root[·]` (Definition 10; written by Figure 6 at the opening slot's vote time,
       read by Figure 5's `get_walk_root`): per round, the SG root derived at `t_r + Δ`,
       `none` until that write. Fixed after it. -/
