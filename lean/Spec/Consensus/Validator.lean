@@ -81,7 +81,7 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     an autoparam discharged by `assumption`, so a caller holding it under any name writes
     nothing at the call. It is not a read, so the exception has no business with it, and it
     is not the routine's job to test its own schedule — `on_tick` is what decides when this
-    runs. It was briefly a raised check, commit `42d2139`; that is what made `StoreError`
+    runs. It was briefly a raised check, commit `42d2139`; that is what made the error type
     carry a timing constructor, and it does not any more.
 
     What that costs a caller, precisely: it must be able to *name* the store it calls on. A
@@ -138,7 +138,7 @@ def IsSubtreeFrom (R : Block Validator) (s : Finset (Block Validator)) : Prop :=
     through. -/
 def onSGFGVotingAction (i : Validator) (S : Store Validator Ω) (r : Nat)
     (_ : S.t = actionTime r := by assumption) :
-    Except (StoreError Validator) (Attestation Validator) := do
+    Except Error (Attestation Validator) := do
   -- the walk start (Definition 15's action root): derived here from the current store
   -- rather than read from `Σ.action_root[r]`
   let walkStart := getActionRoot S r

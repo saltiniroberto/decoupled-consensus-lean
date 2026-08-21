@@ -158,7 +158,7 @@ condition with `get_elem_tactic`, which finds any hypothesis of that type in con
 named or not: `if _ : B ∈ S.σ then … S.σ[B] …` passes nothing by hand.
 
 **`S.σ⟦B⟧` is the same read, raising instead of asking** (Roberto, 2026-08-21). It returns
-`Except (StoreError Validator) (ChainState Validator)`, so in a `do` block over that monad
+`Except Error (ChainState Validator)`, so in a `do` block over that monad
 `let σB ← S.σ⟦B⟧` propagates a missing entry to the caller with no proof written anywhere
 and no check either. It is what the draft's Section 6 uses; the figures keep `[]`.
 
@@ -210,23 +210,27 @@ scoped instance stateMapLawfulGetElem :
       have h2 : σ B = none := by simpa using hb'
       exact h2
 
-/-- What a read of the store can fail on. One constructor, for the map: the state of a block
-    the map does not record. Raising it is a rendering artifact — the draft's map is defined
-    on every accepted block, so on a store that has kept that property no read can fail, and
-    saying so is a theorem of `Analysis/`.
+/-- The one failure of this rendering, thrown by every routine that can fail and carrying
+    nothing (Roberto, 2026-08-21). `Σ.σ⟦B⟧` raises it when the map does not record `B`, and
+    anything added later raises the same value.
 
-    Timing is deliberately *not* here. A routine's instant is an input precondition, a
-    hypothesis the caller supplies, not something the routine tests — see
-    `onSGFGVotingAction`. A `wrongTime` constructor existed briefly, commit `42d2139`. -/
-inductive StoreError (Validator : Type) where
-  /-- `Σ.σ[B]` where `B` is not recorded. -/
-  | missingState (B : Block Validator)
+    No payload, and no constructor per cause, deliberately: the error is a rendering
+    artifact, not protocol content. The draft's map is defined on every accepted block, so on
+    a store that has kept that property nothing raises at all — and saying *that* is the
+    theorem worth having, which no amount of detail in the error would help.
+
+    Timing is deliberately not a failure either. A routine's instant is an input
+    precondition, a hypothesis the caller supplies, not something the routine tests — see
+    `onSGFGVotingAction`. A timing constructor existed briefly, commit `42d2139`. -/
+inductive Error where
+  /-- The failure. -/
+  | error
 
 /-- `σ⟦B⟧`, the raising read: the state recorded for `B`, or the error naming `B`. The
     checked read `σ[B]` and this one sit side by side — see the section header. -/
 def stateAt (σ : Block Validator → Option (ChainState Validator)) (B : Block Validator) :
-    Except (StoreError Validator) (ChainState Validator) :=
-  if h : B ∈ σ then .ok σ[B] else .error (.missingState B)
+    Except Error (ChainState Validator) :=
+  if h : B ∈ σ then .ok σ[B] else .error .error
 
 /-- `σ⟦B⟧` for `stateAt σ B`. Scoped, and directed by the type of the thing before the
     bracket rather than by its name, so it claims no spelling outside this namespace. -/

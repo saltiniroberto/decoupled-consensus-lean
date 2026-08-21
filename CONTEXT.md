@@ -3091,12 +3091,20 @@ The real answer is the invariant below, so that a caller re-derives rather than 
 
 Roberto's call, at the end of a long search for where the SG/FG action's assumptions should
 live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
-`Except (StoreError Validator) (Attestation Validator)`, its two map reads are
-`let σ ← S.σ⟦B⟧`, and it takes **no hypotheses at all**.
+`Except Error (Attestation Validator)`, its two map reads are `let σ ← S.σ⟦B⟧`, and the only
+hypothesis it keeps is the instant.
 
 - `stateAt` and the `⟦⟧` notation live in `Fig2FinalityStore.lean` beside the `Membership`
   and `GetElem` instances, that section being the map-reading machinery rather than figure
-  content. `StoreError` has one constructor, `missingState B`.
+  content.
+- **`Error` is one payload-free value, thrown by anyone** (Roberto, 2026-08-21). No type
+  parameter, one constructor, no cause distinguished. The reasoning: the error is a rendering
+  artifact, not protocol content, so the fact worth having is that nothing raises at all on a
+  coherent store — and no amount of detail in the error helps prove that. It also keeps every
+  signature short and every `do` block in one error type, which is what `Except`'s monad
+  instance requires. `Except Error α` is isomorphic to `Option α`; `Except` is kept because
+  it reads as raising rather than as possibly-absent, and because a payload can be added
+  later without touching the callers' shape.
 - **Both brackets coexist because they are on the same collection with different element
   types, which `GetElem` cannot do** — `elem` and `valid` are `outParam`, so a collection has
   exactly one `[]`. `⟦⟧` is a plain `scoped syntax … noWs "⟦" … "⟧"` plus a `macro_rules`, so
@@ -3109,8 +3117,8 @@ live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
 - **The instant stays an input precondition**, `(_ : S.t = actionTime r := by assumption)`
   (Roberto, 2026-08-21, after two reversals). It is not a read, so the exception has no
   business with it, and testing its own schedule is not the routine's job — `on_tick` decides
-  when this runs. It was briefly a raised check with a `wrongTime` constructor on
-  `StoreError`, commit `42d2139`; both are gone.
+  when this runs. It was briefly a raised check with a `wrongTime` constructor on the error
+  type, commit `42d2139`; both are gone.
 - **The trick that makes a hypothesis survive a join point after all: write the field last.**
   A body whose mutating branch or loop sits before the call cannot name the store — but if the
   statement immediately before the call is `Σ.t ← t`, the goal `S.t = actionTime r` is a
@@ -3122,9 +3130,9 @@ live. The answer turned out to be nowhere: `onSGFGVotingAction` returns
 - **Reading the result**: `let α ← onSGFGVotingAction i S r` propagates inside another
   `Except` routine; `.toOption` absorbs it; and a caller that must return a store writes
   `((… ).toOption).elim S (onAttestation S)`, which leaves the store alone on a failure —
-  `Option.elim` rather than a `match`, per this subtree's rules. `try`/`catch` works too, so a
-  dispatcher can tell `wrongTime` (its own scheduling bug) from `missingState` (an incoherent
-  store). `scratch/Probe.lean` has the four worked out.
+  `Option.elim` rather than a `match`, per this subtree's rules. `try`/`catch` works too,
+  though with a payload-free error a handler can only recover or rethrow.
+  `scratch/Probe.lean` has the four worked out.
 - The `solve_by_elim` clause on `get_elem_tactic_extensible` is gone with the reads that
   needed it. Nothing in `Spec/` extends that tactic now.
 - What `Analysis/` owes instead: **the exception never fires** — on a store whose accepted
