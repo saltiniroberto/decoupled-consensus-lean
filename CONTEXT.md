@@ -3736,7 +3736,15 @@ this list when a new call lands.
    - **`foldResults`** (`Set β` of every permutation's fold) or the equivalent relation:
      order *never settled*, all outcomes carried — provably a singleton exactly when the
      fold's instances hold, and the natural object for the lean-sts step relation
-     (`res ∈ possible…`) — but infectious and non-executable as a duty body.
+     (`res ∈ possible…`) — but infectious and non-executable as a duty body. Measured
+     2026-08-23 (`scratch/SetMonadProbe.lean`, `scratch/SetExceptProbe.lean`): Mathlib's
+     opt-in `Set.monad` makes `x ← S` the pick; `ExceptT Error Set` stacks raising on it
+     (the result type must *name* the stack or `do` elaborates in the `Set` monad); the
+     full imperative kit works inside; and a genuine `ForIn` over `Finset` is definable in
+     the stack — pick a listing, loop the list — dissolving the whole loop problem at the
+     price of the architecture. Veil (the sibling `finality` project's DSL) is the worked
+     precedent: its `VeilM` is `NonDetT` over state-and-exceptions, with `pick`,
+     `let x :| p`, havoc, and a `wp` calculus.
 
    Decide before the notation layer grows another production. The one-by-one review started
    2026-08-23 at Figure 2's view merge and is unfinished. Also open: the one deviation, the
