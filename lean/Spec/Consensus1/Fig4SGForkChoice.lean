@@ -88,7 +88,8 @@ def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.
 def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : ResultOrExcept (Block Validator) :=
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})       -- line 14
-  ghost anchor tree (S.sgSupport r) (fun B => 2 * S.sgSupport r B > total)  -- lines 15–16
+  let eligible := fun B => 2 * S.sgSupport r B > total         -- line 15
+  ghost anchor tree (S.sgSupport r) eligible                   -- line 16
 
 end Store
 
