@@ -1,5 +1,5 @@
-import Spec.Consensus.Fig6StateTransition
-import Spec.Consensus.Raise
+import Spec.Consensus1.Fig6StateTransition
+import Spec.Consensus1.Raise
 
 /-!
 # The store
@@ -69,7 +69,7 @@ none.
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 variable {Validator : Type}
 
@@ -199,4 +199,4 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 
 end Derived
 
-end Consensus
+end Consensus1

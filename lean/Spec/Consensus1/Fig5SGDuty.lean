@@ -1,4 +1,4 @@
-import Spec.Consensus.Fig4SGForkChoice
+import Spec.Consensus1.Fig4SGForkChoice
 
 /-!
 # Figure 5 — the SG duty and store handler
@@ -31,7 +31,7 @@ admits `⊥` — nothing an honest duty produces uses it.
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 namespace SG
 
@@ -76,4 +76,4 @@ end Duty
 
 end SG
 
-end Consensus
+end Consensus1

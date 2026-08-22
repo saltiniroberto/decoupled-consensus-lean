@@ -1,4 +1,4 @@
-import Spec.Consensus.Fig1GoldfishWalk
+import Spec.Consensus1.Fig1GoldfishWalk
 
 /-!
 # Figure 3 — available confirmation
@@ -38,7 +38,7 @@ sentence is a change to `Σ.F` and `T_F`, not to this routine.
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 namespace Goldfish
 
@@ -81,4 +81,4 @@ end Confirmation
 
 end Goldfish
 
-end Consensus
+end Consensus1

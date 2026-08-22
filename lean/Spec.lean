@@ -11,15 +11,25 @@ import Spec.Consensus.Model
 import Spec.Consensus.Notation
 import Spec.Consensus.FinsetM
 import Spec.Consensus.Raise
-import Spec.Consensus.Fig6StateTransition
-import Spec.Consensus.Store
-import Spec.Consensus.Fig1GoldfishWalk
-import Spec.Consensus.Fig3AvailableConfirmation
-import Spec.Consensus.Fig2GoldfishDuties
-import Spec.Consensus.Fig4SGForkChoice
-import Spec.Consensus.Fig5SGDuty
-import Spec.Consensus.Fig7FGStore
+import Spec.Consensus.Fig1StateTransition
+import Spec.Consensus.Fig2FinalityStore
+import Spec.Consensus.Goldfish
+import Spec.Consensus.Fig3Schedule
+import Spec.Consensus.Fig4SupportScores
+import Spec.Consensus.Fig5RoundRoots
+import Spec.Consensus.Fig6TimedStore
 import Spec.Consensus.Validator
+import Spec.Consensus1.Model
+import Spec.Consensus1.Notation
+import Spec.Consensus1.Raise
+import Spec.Consensus1.Fig6StateTransition
+import Spec.Consensus1.Store
+import Spec.Consensus1.Fig1GoldfishWalk
+import Spec.Consensus1.Fig3AvailableConfirmation
+import Spec.Consensus1.Fig2GoldfishDuties
+import Spec.Consensus1.Fig4SGForkChoice
+import Spec.Consensus1.Fig5SGDuty
+import Spec.Consensus1.Fig7FGStore
 
 /-!
 # The specification
@@ -46,32 +56,40 @@ is passed to `on_block` — and `Protocol.lean`, the node as a
 `Framework.StsMultisetLog.Protocol` instance.
 
 **`Spec/Consensus/` is a second, separate rendering**: the human-controlled draft
-`consensus-1.pdf` at the repository root, under namespace `Consensus`. It shares nothing with
-the files above — not the base types, not the notation — so the rendering of record stays
-frozen while the draft's is written. `Model.lean` grows on demand as its figure files consume
-definitions; `Fig<n><Subject>.lean` names the draft's own figure numbering.
-
-**It re-renders a newer draft, from 2026-08-22.** `consensus.pdf`, rendered here from
-2026-08-19, is superseded by `consensus-1.pdf`: block-only Goldfish, one store built up in
-three layers, and seven figures none of which matches the older draft's six. The older
-draft's figure files are gone from the tree and remain in git history.
-
-**The draft's three layers are three namespaces.** Sections 2, 3 and 5 each redefine
-`get_head`, and Section 5 redefines `process_block` and `goldfish_eligible` as well — the
-draft can replace a reading, and Lean cannot. So each layer's routines sit in
-`Consensus.Goldfish`, `Consensus.SG` and `Consensus.FG`, and the protocol is the last:
-`FG.getHead` is *the* fork choice. `ghost`, the walk all three instantiate, sits in
-`Consensus` itself.
+`consensus.pdf` at the repository root, built figure by figure from 2026-08-19 under
+namespace `Consensus`. It shares nothing with the files above — not the base types, not
+the notation — so the rendering of record stays frozen while the draft's is written.
+`Model.lean` grows on demand as its figure files consume definitions;
+`Fig<n><Subject>.lean` names the draft's own figure numbering.
 
 Five of its files render no figure, and each says so in its own header: `Model.lean`, the
-draft's Section 1 substrate and its wire objects; `Store.lean`, Definition 1 and the fields
-Sections 3.2 and 5.1 add to it; `Notation.lean`, the assignment macros; `FinsetM.lean`, a
+draft's Section 1 vocabulary; `Notation.lean`, the assignment macros; `FinsetM.lean`, a
 filter over a `Finset` that propagates a monad's effect, general Lean machinery with no
-protocol content; and `Raise.lean`, the failure vocabulary — one payload-free `Error` and
-`ResultOrExcept` — which every routine that can fail shares.
+protocol content; `Raise.lean`, the failure vocabulary — one payload-free `Error` and
+`ResultOrExcept` — which every routine that can fail shares; and `Goldfish.lean`,
+Definition 4's raw votes and the slot committees they are cast by. `FinsetM.lean` and
+`Raise.lean` were carved out of `Fig2FinalityStore.lean` on 2026-08-21, so that a figure file
+states what the draft says and nothing else.
 
-The import order is dependency order, not figure order: Figure 6's chain state is what the
-store's `Σ.σ[·]` maps into, and Figure 3's confirmation is what Figure 2's `on_tick` calls.
+**`Spec/Consensus1/` is a third rendering**: `consensus-1.pdf`, a newer variant of the same
+draft, under namespace `Consensus1` (2026-08-22). It replaces nothing — `Spec/Consensus/`
+stays as it was — because the two drafts share a title and little else. The newer one is
+block-only Goldfish: one store built up in three layers, `ghost` as a named building block,
+per-slot committees, block-carried Goldfish votes as the only relay channel, timestamps on
+every object, and a relative-majority SG fork choice. Gone from it are the candidate tree, the
+grades, the round roots, and five of the older store's fields.
+
+**Its three layers are three namespaces.** Sections 2, 3 and 5 of that draft each redefine
+`get_head`, and Section 5 redefines `process_block` and `goldfish_eligible` as well; a draft
+can replace a reading and Lean cannot. So each layer's routines sit in `Consensus1.Goldfish`,
+`Consensus1.SG` and `Consensus1.FG`, and the protocol is the last — `FG.getHead` is *the* fork
+choice. `ghost`, which all three instantiate, sits in `Consensus1` itself.
+
+Five of its files render no figure: `Model.lean` (Section 1's substrate and the wire objects),
+`Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add), and its own copies of
+`Notation.lean` and `Raise.lean`. The import order is dependency order rather than figure
+order: Figure 6's chain state is what the store's `Σ.σ[·]` maps into, and Figure 3's
+confirmation is what Figure 2's `on_tick` calls.
 
 Present from the old source: healing's Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`),
 the companion's Figure 2 (`hft:alg:store`), and the vocabulary those three need. Healing's

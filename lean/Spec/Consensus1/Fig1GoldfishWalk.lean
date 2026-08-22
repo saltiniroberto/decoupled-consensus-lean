@@ -1,4 +1,4 @@
-import Spec.Consensus.Store
+import Spec.Consensus1.Store
 
 /-!
 # Figure 1 — the Goldfish score and the walk
@@ -15,7 +15,7 @@ The `-- line n` comments use Figure 1's own line numbering, in the draft as of 2
 Figure 4 and Figure 7 each redefine `get_head`, and Figure 7 redefines `goldfish_eligible`
 and `process_block`. The draft can do that because each section *replaces* the previous
 reading; Lean cannot, so each layer's routine sits in its own namespace —
-`Consensus.Goldfish`, `Consensus.SG`, `Consensus.FG` — and the protocol is the last one. A
+`Consensus1.Goldfish`, `Consensus1.SG`, `Consensus1.FG` — and the protocol is the last one. A
 reader comparing against the draft reads one namespace at a time; a caller wanting "the" fork
 choice wants `FG.getHead`.
 
@@ -55,7 +55,7 @@ its target being read at all.
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 variable {Validator : Type}
 
@@ -170,4 +170,4 @@ end Score
 
 end Goldfish
 
-end Consensus
+end Consensus1

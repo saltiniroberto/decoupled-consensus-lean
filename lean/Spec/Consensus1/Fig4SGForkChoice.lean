@@ -1,4 +1,4 @@
-import Spec.Consensus.Fig1GoldfishWalk
+import Spec.Consensus1.Fig1GoldfishWalk
 
 /-!
 # Figure 4 — the SG fork choice
@@ -40,7 +40,7 @@ different views, and passing `tree` to the walk does not narrow what counts as s
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 namespace SG
 
@@ -108,4 +108,4 @@ end ForkChoice
 
 end SG
 
-end Consensus
+end Consensus1

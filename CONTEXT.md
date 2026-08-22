@@ -3403,11 +3403,24 @@ Each given as a correction; standing until revoked:
   (`Block.isOpening`, Figure 1's justify test). Docstrings quoting the draft's formula keep
   the draft's spelling, backticked.
 
-### `consensus-1.pdf` replaces `consensus.pdf`, and the subtree is re-rendered — 2026-08-22
+### `consensus-1.pdf` is a *third* rendering, `Spec/Consensus1/` — 2026-08-22
 
 A newer variant of the draft arrived. It is a rewrite, not a revision: **block-only Goldfish**,
 one store built up in three layers, and seven figures none of which matches the older draft's
-six. The older draft's rendering is gone from the tree; git history holds it.
+six.
+
+**It lives beside the older rendering, not in place of it** (Roberto's call, after seeing the
+first attempt delete seven files). `Spec/Defs/` renders `latex-specs` and is frozen;
+`Spec/Consensus/` renders `consensus.pdf` and is byte-identical to what it was; and
+`Spec/Consensus1/` renders the newer variant under namespace `Consensus1`. Three renderings,
+sharing nothing — not the base types, not the notation — so `Consensus1` keeps its own copies
+of `Notation.lean` and `Raise.lean`, and `Validator.lean` goes on building against the store
+it was written for.
+
+Two notes on the copies. `Notation.lean` is now duplicated three times, and that is legal
+because the macros are `scoped`: each copy is active only inside its own namespace.
+`FinsetM.lean` is *not* duplicated — its declarations are in the root `Finset` namespace and
+two copies would collide — and `Consensus1` needs none of it, never filtering monadically.
 
 What the two drafts share: the attestation's seven fields, the chain state's shape, `q =
 ⌈2W/3⌉`, and the slot/round arithmetic. What the newer one drops: the candidate tree, the
@@ -3472,30 +3485,30 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   conditions, Section 3.4's intermediate `on_tick` line and `get_head` redirection — Section 5
   changes the same two places and its version is the protocol's.
 
-#### `Validator.lean` is untouched, and the library does not build
+#### `Validator.lean` is untouched, and everything builds
 
-Roberto's instruction was to leave it alone. It imports `Spec.Consensus.Fig6TimedStore`, which
-is gone, so it fails at the **import** stage — and that takes `Spec.lean` with it, so
-`lake build Spec` reports "bad import" rather than compiling anything. Every other module of
-the subtree builds green, checked one at a time.
+It stays in `Spec/Consensus/` against the store it was written for, so `lake build Spec` is
+green across all three renderings. That is the whole reason the newer draft went into its own
+subtree: the first attempt re-rendered in place, which left `Validator.lean` importing a
+deleted file and took the entire library down at the import stage. Recorded because the same
+trap is one `git rm` away any time a draft is superseded.
 
-Three ways out, all his call: port it to the new store; move it out of the build path; or
-delete it, git holding the six commits that built it. Nothing in the new rendering answers to
-it — the old `Σ.action_root[r]`, the grades, `candidateTreeFrom` and the veto have no
-counterpart in this draft, and Section 6, the honest-validator spec it was written against, is
-not in this one at all.
+Nothing in `Consensus1` answers to that file, and nothing needs to: the old
+`Σ.action_root[r]`, the grades, `candidateTreeFrom` and the veto have no counterpart in the
+newer draft, and Section 6 — the honest-validator spec it was written against — is not in that
+draft at all. If the newer draft grows a Section 6, its validator layer is a new file under
+`Consensus1`, not a port of this one.
 
 ## Next
 
-0. **`consensus-1.pdf` is rendered; `Validator.lean` is what blocks the build.** All seven
-   figures of the new draft are in, each module green on its own, but `Validator.lean` still
-   imports a file the re-render deleted, so `lake build Spec` fails at the import stage and
-   nothing in the library compiles until that is resolved. Port it, move it, or delete it —
-   see the 2026-08-22 entry above on why nothing in the new draft answers to it. The one
-   rendering deviation worth revisiting is `FG.getHead`'s gate; the same entry says what it
-   is.
+0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All seven
+   figures of the newer draft are in, `lake build Spec` green across the three renderings.
+   What is open there: the one deviation, `FG.getHead` not handing `ghost` the extended gate
+   (the entry above says why and what closing it would cost); and no `Analysis/` at all for
+   this draft — the coherence invariant on the `coherence-invariant` branch is about the
+   *older* store and does not transfer.
 
-1. **The old subtree, where 2026-08-21 left it — now superseded.** `Spec/Consensus/` renders all six figures
+1. **`Spec/Consensus/`, where 2026-08-22 left it.** `Spec/Consensus/` renders all six figures
    of `consensus.pdf` plus `Validator.lean`, the honest-validator layer, whose only routine
    so far is `onSGFGVotingAction` — still a skeleton, its invented lines marked `skeleton:`.
    `lake build Spec` green, `make sorries` zero, `make cites` green at 535. The dictated

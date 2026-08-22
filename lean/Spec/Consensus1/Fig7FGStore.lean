@@ -1,5 +1,5 @@
-import Spec.Consensus.Fig5SGDuty
-import Spec.Consensus.Fig2GoldfishDuties
+import Spec.Consensus1.Fig5SGDuty
+import Spec.Consensus1.Fig2GoldfishDuties
 
 /-!
 # Figure 7 — the finality gadget in the fork choice
@@ -50,7 +50,7 @@ the live tree's *recorded* heights, which the same `Σ.σ W` application supplie
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 namespace FG
 
@@ -198,4 +198,4 @@ end ForkChoice
 
 end FG
 
-end Consensus
+end Consensus1

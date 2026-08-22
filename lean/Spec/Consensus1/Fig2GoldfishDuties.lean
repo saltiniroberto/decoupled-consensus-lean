@@ -1,5 +1,4 @@
-import Spec.Consensus.FinsetM
-import Spec.Consensus.Fig3AvailableConfirmation
+import Spec.Consensus1.Fig3AvailableConfirmation
 
 /-!
 # Figure 2 — the Goldfish duties and store handlers
@@ -61,7 +60,7 @@ Figure 7 extends it with two lines: the post-state and `update_finality`. That v
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 namespace Goldfish
 
@@ -188,4 +187,4 @@ end Handlers
 
 end Goldfish
 
-end Consensus
+end Consensus1

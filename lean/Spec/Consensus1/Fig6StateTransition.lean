@@ -1,4 +1,4 @@
-import Spec.Consensus.Notation
+import Spec.Consensus1.Notation
 
 /-!
 # Figure 6 — the deterministic finality-gadget state transition
@@ -45,7 +45,7 @@ not met it, so this subtree writes `h % Params.K = 0`, as the previous rendering
 
 set_option autoImplicit false
 
-namespace Consensus
+namespace Consensus1
 
 variable {Validator : Type}
 
@@ -208,4 +208,4 @@ def stateTransition (σ : ChainState Validator) (B : Block Validator) :
 
 end Routines
 
-end Consensus
+end Consensus1
