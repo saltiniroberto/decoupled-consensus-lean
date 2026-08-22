@@ -3678,7 +3678,8 @@ this list when a new call lands.
   identifiers and two-level maps), `|s|` for `Finset.card` (cost: the `abs` bars, shadowed
   in-namespace), `for all x ∈ s with p do acc ← acc ∪ e` (cost: `all` is a token), and the
   raising set-builder `let y ← {x ∈ᴹ s | p}` (a `doElem`, necessarily — the term-macro form
-  loses the `←` to the outer `do`'s lift).
+  loses the `←` to the outer `do`'s lift). **The `for all` productions are parked for
+  review** — see `Next` item 0.
 - **No `match` and no `|` alternatives in spec bodies** — dependent `if h : o.isSome` idiom;
   recursion patterns like a `for`-range bound are the tolerated shape. **No `∣` (divides)**:
   write `% … = 0`.
@@ -3707,8 +3708,15 @@ this list when a new call lands.
 
 0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All seven
    figures of the newer draft are in, `lake build Spec` green across the three renderings.
-   What is open there: the one deviation, the protocol's `Store.getHead` not handing `ghost`
-   the extended eligibility condition
+   What is open there: **the `for all` macros are parked for review** (Roberto, 2026-08-23:
+   "not sure I like the idea of having a macro this narrow — feels very hacky"; park, but
+   come back). The narrowness is forced — a general body cannot be checked order-free — so
+   the real choice is between keeping the loop spelling at all, the principled retreat
+   (`Finset.biUnion` for Figure 2's merge, the set-builder for Figure 4's supporters, both
+   productions and the `all` token deleted), or genuine `for` over `toSortedList` under
+   assumed elementwise orders. The options were laid out in full in the session; decide
+   before the notation layer grows another production. Also open: the one deviation, the
+   protocol's `Store.getHead` not handing `ghost` the extended eligibility condition
    (the entry above says why and what closing it would cost); and no `Analysis/` at all for
    this draft — the coherence invariant on the `coherence-invariant` branch is about the
    *older* store and does not transfer.
