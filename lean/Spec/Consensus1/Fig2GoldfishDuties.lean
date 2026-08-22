@@ -28,9 +28,13 @@ to run it* that is not.
 ## What a duty returns
 
 The draft's duties broadcast and then process their own object: `broadcast B;
-process_block(Σ, B)`. Broadcasting is a send, and there is no network layer here, so each
-duty returns the pair — the object it would broadcast, and the store with that object already
-processed. Nothing is lost and the send is left to whoever wires this up.
+process_block(Σ, B)`. Broadcasting is a send, and there is no network layer here, so a duty
+returns a `DutyResult` — the store with the object already processed, and the messages to
+broadcast — the state-and-send shape of a lean-sts step result (`NodeStepResult` in the
+framework), so the wiring layer can consume a duty without reshaping it (Roberto,
+2026-08-23). Nothing is lost and the send is left to whoever wires this up. `propose_block`
+is converted; `goldfish_vote` below and `sg_vote` in Figure 5 still return pairs, to convert
+on the word.
 
 ## Two collisions with `Finset`, and where each lands
 
@@ -64,6 +68,15 @@ Figure 7 extends it with two lines: the post-state and `update_finality`. That v
 set_option autoImplicit false
 
 namespace Consensus1
+
+/-- What a duty produces: the store afterwards, and the messages it broadcasts. The
+    state-and-send shape of a lean-sts step result, so the wiring layer consumes a duty
+    without reshaping it; the module header says which duties are converted. -/
+structure DutyResult (Validator : Type) [Roots] where
+  /-- The store afterwards. -/
+  state : Store Validator
+  /-- The messages broadcast, for the network to deliver. -/
+  send : Finset (Message Validator)
 
 /-- The root a proposer writes into its block, as an assumed function of the block's parent
     and its slot (Roberto, 2026-08-23; before it, the root was a parameter threaded through
@@ -137,7 +150,7 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
     `ResultOrExcept` because the walk is, and the carried list is `votes` sorted by the
     ambient order; see the module header on both. -/
 def proposeBlock (i : Validator) (S : Store Validator) :
-    ResultOrExcept (Block Validator × Store Validator) := do
+    ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← getHead S votes (s - 1)                              -- line 24
@@ -145,7 +158,7 @@ def proposeBlock (i : Validator) (S : Store Validator) :
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := votes.toSortedList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
-  return (B, processBlock S B)
+  return { state := processBlock S B, send := {Message.block B} }
 
 /-- `goldfish_vote(Σ)` (Figure 2, lines 27–34), run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
@@ -193,7 +206,7 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
   S.t ← t
   S.s ← s
   if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
-    S := (← proposeBlock i S).2                                -- line 4
+    S := (← proposeBlock i S).state                            -- line 4
   if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
     S := (← goldfishVote i S).2                                -- line 6
   if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7

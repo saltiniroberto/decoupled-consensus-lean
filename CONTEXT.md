@@ -3568,6 +3568,18 @@ chooser raises.
   bare `B.parent = H` elaborates against a plain binder and fails against a `mut` one — so
   Figure 1's line 8 writes the coercion explicitly, `B.parent = ↑H`.
 
+### The duty result takes the framework's shape — 2026-08-23
+
+Roberto: `propose_block` should return what an sts step wants, a state and the messages to
+send. `Model.lean` gains `Message`, the three wire objects as one sum (`block`, `gfVote`,
+`sgVote` — one message type per protocol, the lean-sts convention), and
+`Fig2GoldfishDuties.lean` gains `DutyResult` with fields `state : Store Validator` and
+`send : Finset (Message Validator)` — the field names of the framework's `NodeStepResult`,
+whose `send` is a `Multiset` for framework-internal reasons this layer does not have.
+`propose_block` returns it, `send := {Message.block B}`; `on_tick` reads `.state` and still
+drops the sends, the one documented loss. `goldfish_vote` and `sg_vote` still return pairs,
+to convert on the word.
+
 ### `Root` is abstract, and the proposer's root is assumed — 2026-08-23
 
 Roberto's two calls, ending the root-as-`Nat` rendering.

@@ -310,6 +310,17 @@ structure SGVote (Validator : Type) where
       graded protocol, which this draft does not reach. -/
   head : Option (Block Validator)
 
+/-- A wire message: what a duty broadcasts. The draft's three wire objects as one type — the
+    shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
+    can name what it sends (Roberto, 2026-08-23). -/
+inductive Message (Validator : Type) [Roots] where
+  /-- A proposed block. -/
+  | block (B : Block Validator)
+  /-- A Goldfish vote. -/
+  | gfVote (v : GoldfishVote Validator)
+  /-- An SG vote. -/
+  | sgVote (v : SGVote Validator)
+
 /-! ### Decidable equality, written out
 
 Eight functions: `attListBeq`, `gfVoteListBeq` and `optBlockBeq` carry the `List` and
