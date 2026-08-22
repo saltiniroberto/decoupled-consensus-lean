@@ -24,9 +24,10 @@ redefines it.
 
 Everything that takes a store sits in `namespace Store`, so a caller writes
 `S.updateConfirmation k`, `S.majorityForkChoice …`, `S.viable` (Roberto, 2026-08-23) — except
-the layer-redefined names. One namespace holds one `getHead`, so `get_head` (three layers),
-`process_block` (two), `goldfish_eligible` (two), and `get_head`'s own vocabulary here
-(`eligible`, `forkChoice`) keep their layer namespaces.
+the layer-redefined names, one namespace holding one `getHead`. The protocol's readings bear
+the plain `Store` names where they are unique to it (`S.getHead` is Figure 7's); the
+superseded `get_head`s, `process_block` (two layers), `goldfish_eligible` (two), and
+`get_head`'s own vocabulary here (`eligible`, `forkChoice`) keep their layer namespaces.
 
 ## The arg-max step, and where the choice goes
 

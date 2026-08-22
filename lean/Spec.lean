@@ -82,9 +82,11 @@ grades, the round roots, and five of the older store's fields.
 
 **Its three layers are three namespaces.** Sections 2, 3 and 5 of that draft each redefine
 `get_head`, and Section 5 redefines `process_block` and `goldfish_eligible` as well; a draft
-can replace a reading and Lean cannot. So each layer's routines sit in `Consensus1.Goldfish`,
-`Consensus1.SG` and `Consensus1.FG`, and the protocol is the last — `FG.getHead` is *the* fork
-choice. `ghost`, which all three instantiate, sits in `Consensus1` itself.
+can replace a reading and Lean cannot. So the superseded layers' routines sit in
+`Consensus1.Goldfish`, `Consensus1.SG` and `Consensus1.FG`, the store-taking routines sit in
+`Consensus1.Store` for dot notation, and the protocol's fork choice is `Store.getHead` —
+Figure 7's, written `S.getHead`. `ghost`, which all the layers instantiate, sits in
+`Consensus1` itself.
 
 Five of its files render no figure: `Model.lean` (Section 1's substrate and the wire objects),
 `Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add), its own copies of

@@ -3514,7 +3514,8 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 - **The duties return what they would broadcast** alongside the store that has processed it
   — since 2026-08-23 as a `DutyResult` (state and send set, the lean-sts step shape; entry
   below), `on_tick` unioning its duties' sends, so nothing a tick emits is lost.
-- **`FG.getHead` does not pass the extended eligibility condition to `ghost`.** That
+- **The protocol's `get_head` (`Store.getHead` since 2026-08-23, `FG.getHead` before) does
+  not pass the extended eligibility condition to `ghost`.** That
   condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost`'s condition
   parameter is a pure `Block → Bool`. The walk gets the height clause read through the raw
   `Option` instead, so an unrecorded block fails the clause rather than the walk. The two
@@ -3684,9 +3685,12 @@ this list when a new call lands.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
   likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form
   `{ state := …, send := ∅ }`; `match` patterns untouched.
-- **Store-taking routines live in `namespace Store`** for dot notation, except the
-  layer-redefined names (`get_head` ×3, `process_block` ×2, `goldfish_eligible` ×2, and
-  Fig1's `eligible`/`forkChoice`), which keep `Goldfish`/`SG`/`FG`.
+- **Store-taking routines live in `namespace Store`** for dot notation. The protocol's
+  fork choice is `Store.getHead` (Figure 7's; Roberto, 2026-08-23); the superseded
+  `get_head`s, `process_block` ×2, `goldfish_eligible` ×2, and Fig1's
+  `eligible`/`forkChoice` keep `Goldfish`/`SG`/`FG`, one namespace holding one name. Names
+  whose draft prefix the old layer namespace carried spell it themselves now
+  (`Store.sgSupport`).
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by assumption`); `on_tick` discharges them with dependent `if`s and a `have`.
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
@@ -3703,8 +3707,8 @@ this list when a new call lands.
 
 0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All seven
    figures of the newer draft are in, `lake build Spec` green across the three renderings.
-   What is open there: the one deviation, `FG.getHead` not handing `ghost` the extended
-   eligibility condition
+   What is open there: the one deviation, the protocol's `Store.getHead` not handing `ghost`
+   the extended eligibility condition
    (the entry above says why and what closing it would cost); and no `Analysis/` at all for
    this draft — the coherence invariant on the `coherence-invariant` branch is about the
    *older* store and does not transfer.

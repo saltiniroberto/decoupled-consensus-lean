@@ -8,8 +8,10 @@ Definition 5 and Figure 7: `process_block` extended, `update_finality`, `fork_ch
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
 **This is the protocol.** Where a routine here has the same name as one in an earlier layer,
-this is the one a caller wants: `FG.processBlock`, `FG.goldfishEligible`, `FG.getHead`. See
-`Fig1GoldfishWalk.lean` on why the layers are namespaces.
+this is the one a caller wants: `FG.processBlock`, `FG.goldfishEligible`, and the fork
+choice, which bears the plain `Store` name — `S.getHead` — the superseded readings keeping
+`Goldfish`/`SG` (Roberto, 2026-08-23). See `Fig1GoldfishWalk.lean` on why the layers are
+namespaces.
 
 The `-- line n` comments use Figure 7's own line numbering, in the draft as of 2026-08-22.
 
@@ -189,6 +191,10 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
   return σB.h < S.h_max - 1 ∨
     2 * Goldfish.score votes s B > Goldfish.votersCount votes s ∨ B.slot = S.s
 
+end FG
+
+namespace Store
+
 /-- `get_head(Σ, votes, k)` (Figure 7, lines 26–29): the protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
     selects a descendant of it over the same tree. It raises where the filtered tree does.
@@ -204,7 +210,10 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
     subset of `Σ.T`, so every block the walk can reach is recorded. The walk already carries
     `ResultOrExcept` for its tie-break (2026-08-22), so closing this is one signature change —
     `eligible : Block → ResultOrExcept Bool` on Figure 1's `ghost` — not taken yet. Left as
-    it is, with the disagreement named. -/
+    it is, with the disagreement named.
+
+    It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
+    caller wants; the superseded ones keep `Goldfish`/`SG` (Roberto, 2026-08-23). -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     ResultOrExcept (Block Validator) := do
   let root := S.forkChoiceRoot                                 -- line 27
@@ -215,7 +224,7 @@ def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k :
     (fun B => (S.σ B).any (fun σB => σB.h < S.h_max - 1) ∨
       2 * Goldfish.score votes k B > Goldfish.votersCount votes k ∨ B.slot = S.s)
 
-end FG
+end Store
 
 end ForkChoice
 
