@@ -3586,8 +3586,16 @@ Roberto: the functions supposed to run at specific times should say so by autopa
 `onSGFGVotingAction` precedent, retaken: `propose_block` requires `S.t = slotStart S.s`,
 `goldfish_vote` requires `S.t = slotStart S.s + Δ`, `update_confirmation` requires
 `S.t = slotStart s + 6Δ` — each `(_ : … := by assumption)`, an anonymous binder, so a caller
-must hold the fact as a *named* hypothesis. `sg_vote` carries none: its `a_r` is "a public
-parameter in this intermediate protocol", not a schedule the draft fixes.
+must hold the fact as a *named* hypothesis. `sg_vote` requires `S.t = SGSchedule.a (round
+S.s)` (added 2026-08-23, second pass): its `a_r` is "a public parameter in this intermediate
+protocol", which is exactly an ambient class — `SGSchedule` in `Model.lean`, the `Committees`
+move — so the instant is stateable with no formula fixed. `on_tick` gained Section 3.4's
+line, dispatching on it; the branch needs no `have`, its condition being the bare equation
+where the Goldfish conditions are conjunctions `assumption` cannot project into. Two more
+facts from the same pass: Figure 2 now imports Figure 5 (`on_tick` calls `sg_vote`, the same
+inversion as Figure 3), and Fig5's header claim that Fig7 carried a final `on_tick` was
+wrong — Section 5 never touches `on_tick`, so Figure 2's tick plus the Section 3.4 line is
+the protocol's.
 
 `on_tick` discharges all three from its own tests: each `if` became dependent, and a `have`
 restates the tested instant in the action's terms — the clock was written just above the

@@ -190,6 +190,15 @@ def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
     `rR, …, rR + R − 1`, and slot `rR` is its *opening slot*. -/
 def round [Params] (s : Nat) : Nat := s / Params.R
 
+/-- `a_r`, each round's SG vote time: "a public parameter in this intermediate protocol"
+    (Section 3.1). A public parameter is exactly an ambient class — the `Committees` move —
+    so `on_tick` can dispatch on it and `sg_vote` can require it, with the draft fixing no
+    formula. Nothing relates it to the slot schedule; that the draft's instants are distinct
+    is a convention this rendering inherits (see `on_tick`). -/
+class SGSchedule where
+  /-- `a_r`, the SG vote time of round `r`. -/
+  a : Nat → Int
+
 /-! ## Roots -/
 
 /-- The vocabulary of roots (Roberto, 2026-08-23). `Root` is the type of the draft's

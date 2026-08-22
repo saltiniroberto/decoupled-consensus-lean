@@ -13,13 +13,16 @@ The `-- line n` comments use Figure 5's own line numbering, in the draft as of 2
 and voter of Figure 2 call the `get_head` of Figure 4; nothing else in their duties changes.
 Available confirmation is unchanged."
 
-Neither the extra `on_tick` line nor the redirected `get_head` is rendered here, and both for
-the same reason: Section 5 changes the same two places again, and its version is the
-protocol's. `Fig7FGStore.lean` carries the final `on_tick` and the final `get_head`. What this
-file holds is the two routines Figure 5 itself introduces — which Section 5 does not touch.
+The extra `on_tick` line **is** rendered, in Figure 2's `on_tick`: Section 5 never touches
+`on_tick`, so Figure 2's tick plus this line is the protocol's (a first reading claimed
+`Fig7FGStore.lean` carried a final `on_tick`; it carries none — corrected 2026-08-23). The
+redirected `get_head` is not: Section 5 redefines it again, and that version, `Store.getHead`,
+is the protocol's. What this file holds is the two routines Figure 5 itself introduces —
+which Section 5 does not touch.
 
-`a_r` is "a public parameter in this intermediate protocol", not a function of `r` the draft
-fixes, so `sg_vote`'s caller decides when to run it, exactly as it decides who proposes.
+`a_r` is "a public parameter in this intermediate protocol", not a formula the draft fixes —
+which is the `SGSchedule` class in `Model.lean`, the `Committees` move: assumed, so `on_tick`
+can dispatch on it and `sg_vote` can require it.
 
 ## An honest vote is never empty
 
@@ -36,7 +39,7 @@ namespace Consensus1
 variable {Validator : Type} [Roots]
 
 section Duty
-variable [DecidableEq Validator] [Params]
+variable [DecidableEq Validator] [Params] [SGSchedule]
 
 namespace Store
 
@@ -58,15 +61,19 @@ def processSGVote (S : Store Validator) (vote : SGVote Validator) :
       a.validator = vote.validator ∧ b.validator = vote.validator ∧ a ≠ b then
     return S                                                   -- line 9
   S.sgVotes[vote.round] ← S.sgVotes[vote.round] ∪ {vote}       -- line 10
-  S.sgVoteTime[vote] ← some S.t
+  S.sgVoteTime[vote] ← S.t
   return S
 
 /-- `sg_vote(Σ)` (Figure 5, lines 1–4), run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 
     Returns a `DutyResult`, as the Goldfish duties do; see `Fig2GoldfishDuties.lean` on why
-    the broadcast is a returned message rather than a send. Total: this duty runs no walk. -/
-def sgVote (i : Validator) (S : Store Validator) : DutyResult Validator := Id.run do
+    the broadcast is a returned message rather than a send. Total: this duty runs no walk.
+    "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants are, over the
+    assumed `SGSchedule`. -/
+def sgVote (i : Validator) (S : Store Validator)
+    (_ : S.t = SGSchedule.a (round S.s) := by assumption) :
+    DutyResult Validator := Id.run do
   let r := round S.s                                           -- line 2
   -- line 3
   let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)

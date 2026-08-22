@@ -1,4 +1,5 @@
 import Spec.Consensus1.Fig3AvailableConfirmation
+import Spec.Consensus1.Fig5SGDuty
 
 /-!
 # Figure 2 — the Goldfish duties and store handlers
@@ -12,8 +13,9 @@ The `-- line n` comments use Figure 2's own line numbering, in the draft as of 2
 The routines appear callee-first; the figure's order is `on_tick`, `process_block`,
 `process_goldfish_vote`, `propose_block`, `goldfish_vote`.
 
-**Figure 3 comes first in the import order** although it is the later figure: `on_tick` line
-8 calls `update_confirmation`. The file names keep the draft's numbers.
+**Figures 3, 4 and 5 come first in the import order** although they are the later figures:
+`on_tick` line 8 calls `update_confirmation`, and Section 3.4's added line calls `sg_vote`.
+The file names keep the draft's numbers.
 
 ## `ℓ` is `i`, and the proposer test is a parameter
 
@@ -86,7 +88,7 @@ variable {Validator : Type} [Roots]
 
 section Handlers
 variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
-  [LinearOrder (GoldfishVote Validator)] [RootComputation Validator]
+  [LinearOrder (GoldfishVote Validator)] [RootComputation Validator] [SGSchedule]
 
 open Params
 
@@ -210,11 +212,16 @@ def goldfishVote (i : Validator) (S : Store Validator)
     exclusive — distinct multiples of `Δ` — so at most one branch runs, and a tick at no
     action instant returns the re-clocked store with nothing to send.
 
-    Each branch discharges its action's instant precondition: the `if` is dependent, and a
-    `have` states the tested instant in the action's own terms — the clock was written just
-    above, so `S.t` reduces to `t` whatever came before. Line 7 writes the figure's
-    `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal whenever `s > 0` and the form line 8's precondition
-    wants; the docstring above line 8 already said the two coincide.
+    Each branch discharges its action's instant precondition from its own dependent `if` —
+    the clock was written just above, so `S.t` reduces to `t` whatever came before. The
+    three Goldfish branches need a `have` restating the instant, their conditions being
+    conjunctions `assumption` cannot project into; the SG branch's condition is the bare
+    equation, so its `h` is found directly. Line 7 writes the figure's `t_s + 2Δ` as
+    `t_{s−1} + 6Δ`, equal whenever `s > 0` and the form line 8's precondition wants; the
+    docstring above line 8 already said the two coincide. Section 3.4's SG line dispatches
+    on the assumed `SGSchedule`; the draft fixes no relation between `a_r` and the Goldfish
+    instants, so on a schedule that collided, branch order would decide — the draft's
+    instants are taken as distinct.
 
     `ResultOrExcept` because all three actions are. -/
 def onTick (i : Validator) (S : Store Validator) (t : Int)
@@ -234,6 +241,9 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
     have : S.t = slotStart (s - 1) + 6 * (Δ : Int) := h.2
     let S' ← S.updateConfirmation (s - 1)                      -- line 8
     return { state := S', send := ∅ }
+  -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
+  if h : t = SGSchedule.a (round s) then
+    return S.sgVote i
   return { state := S, send := ∅ }
 
 end Store
