@@ -3579,6 +3579,23 @@ chooser raises.
   bare `B.parent = H` elaborates against a plain binder and fails against a `mut` one — so
   Figure 1's line 8 writes the coercion explicitly, `B.parent = ↑H`.
 
+### The timed Goldfish routines carry their instants — 2026-08-23
+
+Roberto: the functions supposed to run at specific times should say so by autoparam. The
+`onSGFGVotingAction` precedent, retaken: `propose_block` requires `S.t = slotStart S.s`,
+`goldfish_vote` requires `S.t = slotStart S.s + Δ`, `update_confirmation` requires
+`S.t = slotStart s + 6Δ` — each `(_ : … := by assumption)`, an anonymous binder, so a caller
+must hold the fact as a *named* hypothesis. `sg_vote` carries none: its `a_r` is "a public
+parameter in this intermediate protocol", not a schedule the draft fixes.
+
+`on_tick` discharges all three from its own tests: each `if` became dependent, and a `have`
+restates the tested instant in the action's terms — the clock was written just above the
+tests, so `S.t` reduces to `t` whatever the base, the join-point trick recorded on
+2026-08-21. One line moved to make the third discharge a projection rather than a proof:
+line 7 tests the figure's `t_s + 2Δ` in the form `t_{s−1} + 6Δ`, equal whenever `s > 0` —
+the identity the 2026-08-22 docstring already stated — so no arithmetic is proved anywhere
+in `Spec/`.
+
 ### Store-taking routines live in `namespace Store` — 2026-08-23
 
 Roberto: everything that takes a store should be in the `Store` namespace, for dot notation.

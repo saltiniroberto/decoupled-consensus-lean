@@ -59,8 +59,12 @@ namespace Store
     Both cutoffs read the timestamps with the raising bracket, through `Finset.filterM`
     (Roberto, 2026-08-23): a held vote the store never stamped raises rather than silently
     failing the cutoff. `process_goldfish_vote` stamps everything it stores, so the raise
-    marks a store the handlers cannot build — a coherence fact for `Analysis/`. -/
-def updateConfirmation (S : Store Validator) (s : Nat) :
+    marks a store the handlers cannot build — a coherence fact for `Analysis/`.
+
+    "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the Figure 2
+    duties' instants are. -/
+def updateConfirmation (S : Store Validator) (s : Nat)
+    (_ : S.t = slotStart s + 6 * (Δ : Int) := by assumption) :
     ResultOrExcept (Store Validator) := do
   let mut S := S
   -- line 2

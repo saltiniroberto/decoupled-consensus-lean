@@ -150,8 +150,15 @@ namespace Store
     puts there, so the function's answer is unconstrained.
 
     `ResultOrExcept` because the walk is, and the carried list is `votes` sorted by the
-    ambient order; see the module header on both. -/
-def proposeBlock (i : Validator) (S : Store Validator) :
+    ambient order; see the module header on both.
+
+    "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
+    the duty tests (Roberto, 2026-08-23; `onSGFGVotingAction` in the second rendering is the
+    precedent). The binder is anonymous, so a caller must hold the fact as a *named*
+    hypothesis for `assumption` to find — `on_tick`'s dependent `if` plus a `have` is the
+    worked example. -/
+def proposeBlock (i : Validator) (S : Store Validator)
+    (_ : S.t = slotStart S.s := by assumption) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
@@ -171,8 +178,11 @@ def proposeBlock (i : Validator) (S : Store Validator) :
     rather than a forced target.
 
     A validator off the slot's committee sends nothing, which the empty `send` says — no
-    `Option` needed. -/
-def goldfishVote (i : Validator) (S : Store Validator) :
+    `Option` needed.
+
+    "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is. -/
+def goldfishVote (i : Validator) (S : Store Validator)
+    (_ : S.t = slotStart S.s + (Δ : Int) := by assumption) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
@@ -200,6 +210,12 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     exclusive — distinct multiples of `Δ` — so at most one branch runs, and a tick at no
     action instant returns the re-clocked store with nothing to send.
 
+    Each branch discharges its action's instant precondition: the `if` is dependent, and a
+    `have` states the tested instant in the action's own terms — the clock was written just
+    above, so `S.t` reduces to `t` whatever came before. Line 7 writes the figure's
+    `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal whenever `s > 0` and the form line 8's precondition
+    wants; the docstring above line 8 already said the two coincide.
+
     `ResultOrExcept` because all three actions are. -/
 def onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : ResultOrExcept (DutyResult Validator) := do
@@ -207,11 +223,15 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
-  if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
+  if h : s > 0 ∧ t = slotStart s ∧ isProposer s i then         -- line 3
+    have : S.t = slotStart S.s := h.2.1
     return ← S.proposeBlock i                                  -- line 4
-  if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
+  if h : s > 0 ∧ t = slotStart s + (Δ : Int) then              -- line 5
+    have : S.t = slotStart S.s + (Δ : Int) := h.2
     return ← S.goldfishVote i                                  -- line 6
-  if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7
+  -- line 7: the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
+  if h : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
+    have : S.t = slotStart (s - 1) + 6 * (Δ : Int) := h.2
     let S' ← S.updateConfirmation (s - 1)                      -- line 8
     return { state := S', send := ∅ }
   return { state := S, send := ∅ }
