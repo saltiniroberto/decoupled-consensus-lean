@@ -3721,12 +3721,25 @@ this list when a new call lands.
    figures of the newer draft are in, `lake build Spec` green across the three renderings.
    What is open there: **the `for all` macros are parked for review** (Roberto, 2026-08-23:
    "not sure I like the idea of having a macro this narrow — feels very hacky"; park, but
-   come back). The narrowness is forced — a general body cannot be checked order-free — so
-   the real choice is between keeping the loop spelling at all, the principled retreat
-   (`Finset.biUnion` for Figure 2's merge, the set-builder for Figure 4's supporters, both
-   productions and the `all` token deleted), or genuine `for` over `toSortedList` under
-   assumed elementwise orders. The options were laid out in full in the session; decide
-   before the notation layer grows another production. Also open: the one deviation, the
+   come back). The narrowness is forced — a general body cannot be checked order-free — and
+   the exits form a spectrum by where the order-question is settled (explored with Roberto,
+   2026-08-23):
+
+   - **fold** (status quo, the macros): order-freedom *proved* per operation, by the
+     `Std.Commutative`/`Std.Associative` instances;
+   - **retreat**: `Finset.biUnion` for Figure 2's merge, the set-builder for Figure 4's
+     supporters — same folds, standard names, productions and the `all` token deleted;
+   - **`Enumeration` class** (`list : Finset α → List α` with a `toFinset`/`Nodup` law):
+     order *assumed* away globally — weaker than a `LinearOrder`, real `for` over
+     `Enumeration.list s`, any body — but an order-sensitive body silently means "whatever
+     the assumed listing makes it";
+   - **`foldResults`** (`Set β` of every permutation's fold) or the equivalent relation:
+     order *never settled*, all outcomes carried — provably a singleton exactly when the
+     fold's instances hold, and the natural object for the lean-sts step relation
+     (`res ∈ possible…`) — but infectious and non-executable as a duty body.
+
+   Decide before the notation layer grows another production. The one-by-one review started
+   2026-08-23 at Figure 2's view merge and is unfinished. Also open: the one deviation, the
    protocol's `Store.getHead` not handing `ghost` the extended eligibility condition
    (the entry above says why and what closing it would cost); and no `Analysis/` at all for
    this draft — the coherence invariant on the `coherence-invariant` branch is about the
