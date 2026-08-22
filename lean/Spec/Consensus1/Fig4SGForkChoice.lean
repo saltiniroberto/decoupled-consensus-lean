@@ -48,7 +48,7 @@ variable {Validator : Type}
 
 section ForkChoice
 variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
-  [Selection Validator] [Params]
+  [TieBreak Validator] [Params]
 
 open Params
 
@@ -90,7 +90,7 @@ def support (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
 /-- `majority_fork_choice(Σ, anchor, tree, r)` (Figure 4, lines 13–16): the shared walk with
     the SG support as its score, gated on a strict majority of the represented weight. -/
 def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
-    (tree : Finset (Block Validator)) (r : Nat) : Block Validator :=
+    (tree : Finset (Block Validator)) (r : Nat) : ResultOrExcept (Block Validator) :=
   let total := w(represented S r)                              -- line 14
   ghost anchor tree (support S r) (fun B => 2 * support S r B > total)  -- lines 15–16
 
@@ -100,8 +100,8 @@ def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     This is the SG layer's head. Figure 7 redefines it again, over the filtered tree and from
     the fork-choice root; that one is the protocol's. -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
-    Block Validator :=
-  let anchor := majorityForkChoice S .genesis S.T (round S.s)   -- line 18
+    ResultOrExcept (Block Validator) := do
+  let anchor ← majorityForkChoice S .genesis S.T (round S.s)    -- line 18
   Goldfish.forkChoice S anchor S.T votes s                      -- line 19
 
 end ForkChoice

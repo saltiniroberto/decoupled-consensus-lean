@@ -67,7 +67,7 @@ namespace Goldfish
 variable {Validator : Type}
 
 section Handlers
-variable [DecidableEq Validator] [Committees Validator] [Selection Validator] [Params]
+variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
 
 open Params
 
@@ -120,12 +120,13 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
     only becomes defined at Section 5, where `process_block` computes it. Section 2's proposer
     cannot know it, and the draft does not say what it puts there.
 
-    `noncomputable` for line 25 alone; see the module header. -/
+    `noncomputable` for line 25 alone, and `ResultOrExcept` because the walk is; see the
+    module header. -/
 noncomputable def proposeBlock (i : Validator) (S : Store Validator) (root : Nat) :
-    Block Validator × Store Validator := Id.run do
+    ResultOrExcept (Block Validator × Store Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
-  let H := getHead S votes (s - 1)                             -- line 24
+  let H ← getHead S votes (s - 1)                              -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let B : Block Validator := .mk H s root votes.toList []
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
@@ -139,7 +140,7 @@ noncomputable def proposeBlock (i : Validator) (S : Store Validator) (root : Nat
     processed so far. That second part is the view merge — the proposal supplies its own view
     rather than a forced target. -/
 def goldfishVote (i : Validator) (S : Store Validator) :
-    Option (GoldfishVote Validator) × Store Validator := Id.run do
+    ResultOrExcept (Option (GoldfishVote Validator) × Store Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`
   let held := {vote ∈ S.gfVotes[s - 1] |
@@ -149,7 +150,7 @@ def goldfishVote (i : Validator) (S : Store Validator) :
   let carried : Finset (GoldfishVote Validator) :=
     ({B ∈ S.T | B.slot = s}).fold (· ∪ ·) ∅ (fun B => B.gfVotes.toFinset)
   let votes := held ∪ carried
-  let H := getHead S votes (s - 1)                             -- line 32
+  let H ← getHead S votes (s - 1)                              -- line 32
   if i ∈ (Committees.K s : Finset Validator) then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote : GoldfishVote Validator := ⟨i, s, H⟩
@@ -168,19 +169,21 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     a tick would emit are not visible to its caller. That is the one place this rendering
     loses something the draft has, and it is what a network layer would have to restore.
 
-    `noncomputable` because `propose_block` is. -/
+    `noncomputable` because `propose_block` is, and `ResultOrExcept` because all three
+    actions are. The binds are written through `:=` — the plain arrow is the assignment
+    macro's, as in `ghost`. -/
 noncomputable def onTick (i : Validator) (S : Store Validator) (t : Int) (root : Nat)
-    (isProposer : Nat → Validator → Bool) : Store Validator := Id.run do
+    (isProposer : Nat → Validator → Bool) : ResultOrExcept (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
   if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
-    S ← (proposeBlock i S root).2                              -- line 4
+    S := (← proposeBlock i S root).2                           -- line 4
   if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
-    S ← (goldfishVote i S).2                                   -- line 6
+    S := (← goldfishVote i S).2                                -- line 6
   if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7
-    S ← updateConfirmation S (s - 1)                           -- line 8
+    S := (← updateConfirmation S (s - 1))                      -- line 8
   return S
 
 end Handlers

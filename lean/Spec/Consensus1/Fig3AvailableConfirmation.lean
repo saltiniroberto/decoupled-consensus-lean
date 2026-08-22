@@ -45,7 +45,7 @@ namespace Goldfish
 variable {Validator : Type}
 
 section Confirmation
-variable [DecidableEq Validator] [Committees Validator] [Selection Validator] [Params]
+variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
 
 open Params
 
@@ -54,8 +54,10 @@ open Params
 
     `Σ.live_confirmed` takes the result unconditionally — it is "the block the last evaluated
     slot confirmed", and an evaluation that walks nowhere leaves genesis, never nothing.
-    `Σ.latest_confirmed` only ever moves forward, line 9 testing `Σ.latest_confirmed ⪯ H`. -/
-def updateConfirmation (S : Store Validator) (s : Nat) : Store Validator := Id.run do
+    `Σ.latest_confirmed` only ever moves forward, line 9 testing `Σ.latest_confirmed ⪯ H`.
+    `ResultOrExcept` because the walk is; it raises nowhere the walk does not. -/
+def updateConfirmation (S : Store Validator) (s : Nat) :
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   -- line 2
   let early := {vote ∈ S.gfVotes[s] |
@@ -71,7 +73,7 @@ def updateConfirmation (S : Store Validator) (s : Nat) : Store Validator := Id.r
     ∃ a ∈ late, a.validator = v}).card
   -- line 6: the majority gate, with no current-slot escape — see the module header
   let eligible := fun B => 2 * score votes s B > votersCount
-  let H := ghost .genesis S.T (score votes s) eligible          -- line 7
+  let H ← ghost .genesis S.T (score votes s) eligible           -- line 7
   S.liveConfirmed ← H                                           -- line 8
   if S.latestConfirmed ⪯ H then                                 -- line 9
     S.latestConfirmed ← H                                       -- line 10

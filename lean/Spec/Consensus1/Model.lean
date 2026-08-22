@@ -49,9 +49,9 @@ The draft gives every block a root — the post-state root of Section 4 — and 
 the lex order `(h_j, J.root)`. It never says what a root *is* or how one is computed, so the
 root is rendered as a `Nat` carried by the block, which is enough for the one place this
 rendering still reads it — the lex order. The walk's tie-break is **not** read off it: that
-is the `Selection` class below, an unspecified fixed choice of which a root order is one
-instance (Roberto, 2026-08-22; the first form filtered to the least `B.root` and kept the
-class for the residue).
+is the `TieBreak` class in `Fig1GoldfishWalk.lean`, an unspecified fixed choice that raises
+on the empty set, of which a root order is one instance (Roberto, 2026-08-22; the first form
+filtered to the least `B.root` here and kept a proof-carrying chooser for the residue).
 
 Two consequences worth stating. Genesis carries one too, fixed at `0` — the draft says "every
 block `B` has a root" and its genesis is a block. And nothing constrains a block's root to
@@ -522,29 +522,5 @@ def Compatible (a b : Block Validator) : Prop := a ⪯ b ∨ b ⪯ a
 
 instance [DecidableEq Validator] : DecidableRel (Compatible (Validator := Validator)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
-
-/-! ## Choosing a block from a nonempty set
-
-`ghost` breaks equal scores among a block's children "by root order" (Figure 1, line 11) — a
-tie-break the draft never defines further, having said neither what a root is nor how one is
-computed. So the tie-break is assumed rather than rendered: the class below chooses one block
-from the maximal-score children, and a root order is one instance of it (Roberto, 2026-08-22;
-the first form filtered to the least `B.root` and kept the class for the residue).
-
-A class is also what getting *one* block out of a nonempty `Finset` computably needs:
-`Finset.toList` depends on `Classical.choice`, so a fold over it makes every caller
-`noncomputable` (measured 2026-08-21), and `Finset.min'` would want a `LinearOrder` on
-blocks, which the model has no way to build — `Validator` carries no order. -/
-
-/-- Choosing one block from a nonempty set: the walk's tie-break. The subtype carries the
-    membership proof, so anything chosen is one of the candidates.
-
-    A class rather than an `opaque` definition so that it stays computable relative to an
-    instance — an `opaque` chooser would need to produce an element of a nonempty `Finset`,
-    whose only witness is `Exists.choose`, and that makes every caller `noncomputable`
-    (measured 2026-08-21). -/
-class Selection (Validator : Type) where
-  /-- Choose from a nonempty set of blocks. -/
-  select : (s : Finset (Block Validator)) → s.Nonempty → {B // B ∈ s}
 
 end Consensus1

@@ -3472,13 +3472,14 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   eligible child still available, which returns the block it stands on. A well-founded
   recursion would need the tree invariant *in the definition*.
 - **The arg-max step's tie-break is assumed, not rendered** (Roberto, 2026-08-22; the first
-  form filtered to the least `B.root` and kept `Selection` for the residue). The draft says
+  form filtered to the least `B.root` and kept a chooser for the residue). The draft says
   "ties by root order" but never says what a root is or how one is computed — Section 1 asks
   only that the tie-break be fixed — so `bestChild` filters to the maximal-score children and
-  hands the set to `Selection.select`, an unspecified fixed choice of which a root order is
-  one instance. `Finset.toList` needs `Classical.choice` and `Finset.min'` would want a
-  `LinearOrder` on blocks, which the model cannot build; the ambient class is the one
-  computable route. `B.root` stays a field: `update_finality`'s lex order still reads it.
+  hands the set to `TieBreak.pick`, an unspecified fixed choice of which a root order is one
+  instance; the entry below says how `pick` fails on the empty set. `Finset.toList` needs
+  `Classical.choice` and `Finset.min'` would want a `LinearOrder` on blocks, which the model
+  cannot build; the ambient class is the one computable route. `B.root` stays a field:
+  `update_finality`'s lex order still reads it.
 - **`propose_block` and `on_tick` are `noncomputable`**, and nothing else is. The block's
   carried votes must be a `List` — a `Finset` is a quotient and cannot appear in an inductive's
   constructor — while the store's `gf_votes[·]` is a `Finset`, as the draft says. Crossing
@@ -3497,12 +3498,14 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   `on_tick` drops those, so the objects a tick emits are invisible to its caller: the one place
   this rendering loses something, and what a network layer would restore.
 - **`FG.getHead` does not pass the extended eligibility condition to `ghost`.** That
-  condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost` takes a
-  `Block → Bool`. The walk gets the height clause read through the raw `Option` instead, so an
-  unrecorded block fails the clause rather than the walk. The two agree wherever `Σ.σ` covers
-  `Σ.T`. A monadic `ghost` would be a change to Figure 1, and is not taken. **This is the one
-  deviation to revisit**, and since the 2026-08-22 `filterM` adoption it is the subtree's only
-  raw-`Option` read of the state map.
+  condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost`'s condition
+  parameter is a pure `Block → Bool`. The walk gets the height clause read through the raw
+  `Option` instead, so an unrecorded block fails the clause rather than the walk. The two
+  agree wherever `Σ.σ` covers `Σ.T`. **This is the one deviation to revisit**, and it has
+  narrowed twice on 2026-08-22: the `filterM` adoption made it the subtree's only raw-`Option`
+  read of the state map, and the `TieBreak.pick` entry below made the walk itself carry
+  `ResultOrExcept`, so closing it is now one signature change — `eligible : Block →
+  ResultOrExcept Bool` on Figure 1's `ghost` — awaiting the word.
 - Absent for want of a consumer: Section 5.1's `E_F(Σ)`, Section 4.1's E1/E2 slashing
   conditions, Section 3.4's intermediate `on_tick` line and `get_head` redirection — Section 5
   changes the same two places and its version is the protocol's.
@@ -3520,6 +3523,44 @@ Nothing in `Consensus1` answers to that file, and nothing needs to: the old
 newer draft, and Section 6 — the honest-validator spec it was written against — is not in that
 draft at all. If the newer draft grows a Section 6, its validator layer is a new file under
 `Consensus1`, not a port of this one.
+
+### The walk raises: `TieBreak.pick` — 2026-08-22
+
+Roberto did not want the nonemptiness proofs inside `bestChild`. The routes weighed, each
+declined for a stated reason: a total chooser with a junk value on `∅` (the Mathlib standard —
+`n / 0 = 0` — but the silent-answer pattern this subtree already rejected once); a named
+lemma above the definition (relocates the proof, keeps it); a linear order on blocks assumed
+as a class (most faithful to "a fixed root order", but order-lifting plumbing). His call: the
+chooser raises.
+
+- **`class TieBreak (Validator)`** — renamed from `Selection`, the field `pick` — with
+  `pick : (s : Finset (Block Validator)) → ResultOrExcept {B // B ∈ s}` and the law
+  `pick_ok : ∀ s, s.Nonempty → ∃ B, pick s = .ok B`. The subtype does most of the specifying:
+  an `.ok` answer is a member by type, and on `∅` the failure is *forced*, `{B // B ∈ ∅}`
+  having no inhabitants. The law adds the converse — a nonempty set is never refused. A
+  `Prop` field of a class is a definition component, not a `Spec/` theorem (the
+  `Electorate.w_pos` precedent); every instance owes its proof.
+- The class lives in `Fig1GoldfishWalk.lean` with its first consumer: it mentions
+  `ResultOrExcept`, so it cannot stay in `Model.lean`, which `Raise.lean` imports.
+- `bestChild` is now `let top := …; return (← TieBreak.pick top)` — no `Nonempty` argument,
+  no `have`, raising exactly on empty `children`.
+- **The cascade**: `ghost`, `Goldfish.forkChoice`/`getHead`, `updateConfirmation`,
+  `proposeBlock`, `goldfishVote`, `onTick`, `SG.majorityForkChoice`/`getHead` and
+  `FG.getHead` all carry `ResultOrExcept` now. Figure 5 is untouched — `sgVote` votes
+  `live_confirmed` and runs no walk. One simplification fell out: `ghost`'s lines 9–10 are
+  back in the figure's own order with no `else` and no dependent `if`, the continuation no
+  longer needing a nonemptiness hypothesis.
+- **The notation cost `Notation.lean` predicted is now paid**: the assignment macro claims
+  `x ← e` for pure re-assignment, so a monadic bind onto a `mut` variable is written
+  `H := (← bestChild …)`, `S := (← proposeBlock i S root).2`.
+- **Subtype-coercion facts, measured** (`scratch/SubtypeCoe.lean`): the `Subtype.val`
+  coercion fires at expected-type positions — `return b`, `return (← e)`, and `:=` onto a
+  typed `mut` variable — but never at field access (`b.slot` fails) nor in an application
+  whose implicit is still open (`Block.slot b` fails); `let ⟨B, hB⟩ ← e` destructures past
+  the question entirely. Related, from the same sitting (`scratch/CoeEqOption.lean`, commit
+  `c2238d1`): the `=` elaborator does not insert a coercion around a `mut`-variable read —
+  bare `B.parent = H` elaborates against a plain binder and fails against a `mut` one — so
+  Figure 1's line 8 writes the coercion explicitly, `B.parent = ↑H`.
 
 ## Next
 

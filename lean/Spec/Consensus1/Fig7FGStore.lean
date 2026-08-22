@@ -56,7 +56,7 @@ variable {Validator : Type}
 
 section ForkChoice
 variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
-  [Selection Validator] [Params]
+  [TieBreak Validator] [Params]
 
 open Params
 
@@ -190,16 +190,17 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
     failing the walk.
 
     On a store whose `Σ.σ` covers `Σ.T` the two readings agree, and the filtered tree is a
-    subset of `Σ.T`, so every block the walk can reach is recorded. Making the walk itself
-    raise would mean a monadic `ghost`, and that needs the loop to carry the monad — which is
-    a change to Figure 1, not to this line. Left as it is, with the disagreement named. -/
+    subset of `Σ.T`, so every block the walk can reach is recorded. The walk already carries
+    `ResultOrExcept` for its tie-break (2026-08-22), so closing this is one signature change —
+    `eligible : Block → ResultOrExcept Bool` on Figure 1's `ghost` — not taken yet. Left as
+    it is, with the disagreement named. -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     ResultOrExcept (Block Validator) := do
   let root := forkChoiceRoot S                                 -- line 27
   let tree ← getFilteredBlockTree S
-  let anchor := SG.majorityForkChoice S root tree (round S.s)   -- line 28
+  let anchor ← SG.majorityForkChoice S root tree (round S.s)    -- line 28
   -- line 29, with the eligibility condition as described above
-  return ghost anchor tree (Goldfish.score votes k)
+  ghost anchor tree (Goldfish.score votes k)
     (fun B => (S.σ B).any (fun σB => σB.h < S.h_max - 1) ∨
       2 * Goldfish.score votes k B > Goldfish.votersCount votes k ∨ B.slot = S.s)
 
