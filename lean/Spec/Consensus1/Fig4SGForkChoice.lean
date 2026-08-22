@@ -71,18 +71,23 @@ def represented (S : Store Validator) (r : Nat) : Finset Validator :=
 /-- `sg_support(Σ, r, B)` (Figure 4, lines 6–12): the represented weight supporting `B`.
 
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
-    that vote's head is a block, and `B` precedes the head. Lines 7–11 build the supporter set
-    and line 12 weighs it.
+    that vote's head is a block, and `B` precedes the head.
 
-    Rendered as a filter rather than the figure's loop: a `Finset` has no computable loop, and
-    the loop only ever adds to a set, so the two agree. -/
-def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
-  -- lines 8–11, as one condition on `v`
-  w({v ∈ S.represented r |
-      ∃ k, S.latest v r = some k ∧
+    Lines 9–10 — `k ← latest(Σ, v, r)`, then the exactly-one-vote test — are one condition
+    here: the draft's `k ←` binds out of an `Option` the loop's `with` clause has already
+    tested, and `∃ k, S.latest v r = some k ∧ …` says the same thing without a dependent
+    `if`. -/
+def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.run do
+  let mut supporters : Finset Validator := ∅                   -- line 7
+  -- line 8: `for all v ∈ V with latest(Σ, v, r) ≠ ⊥ do`
+  for all v ∈ (Electorate.V : Finset Validator) with S.latest v r ≠ ⊥ do
+    -- lines 9–10, as one condition on `v`; see the docstring
+    if ∃ k, S.latest v r = some k ∧
         ∃ a ∈ S.sgVotes[k], a.validator = v ∧
           (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
-          ∃ H, a.head = some H ∧ B ⪯ H})
+          ∃ H, a.head = some H ∧ B ⪯ H then
+      supporters ← supporters ∪ {v}                            -- line 11
+  return w(supporters)                                         -- line 12
 
 /-- `majority_fork_choice(Σ, anchor, tree, r)` (Figure 4, lines 13–16): the shared walk with
     the SG support as its score, gated on a strict majority of the represented weight. -/
