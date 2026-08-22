@@ -39,11 +39,13 @@ wiring layer's to render.
 
 ## Two collisions with `Finset`, and where each lands
 
-**Line 30's `for all B ∈ Σ.T` is a fold.** A `Finset` has no `ForIn` instance and
-`Finset.toList` needs `Classical.choice`, so there is no computable loop over one. Line 31
-accumulates a *union*, which is commutative and associative, so `Finset.fold` is exactly the
-right instrument and the result does not depend on an order — which is why the draft can write
-the loop over a set at all.
+**Line 30's `for all B ∈ Σ.T` is a fold in the figure's own clothes.** A `Finset` has no
+`ForIn` instance and `Finset.toList` needs `Classical.choice`, so there is no computable
+loop over one. Line 31 accumulates a *union*, which is commutative and associative, so
+`Finset.fold` is exactly the right instrument and the result does not depend on an order —
+which is why the draft can write the loop over a set at all. The notation layer's
+`for all … do … ← … ∪ …` renders exactly that body shape as the fold (Roberto, 2026-08-23;
+a bare fold preceded it), so lines 30–31 read as the figure writes them.
 
 **Line 25 crosses from `Finset` to `List`, under an assumed order.** The block's carried
 votes are a `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
@@ -166,17 +168,14 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`
-  let held := {vote ∈ S.gfVotes[s - 1] |
+  let mut votes := {vote ∈ S.gfVotes[s - 1] |
     (S.gfVoteTime vote).any (· < slotStart (s - 1) + 3 * (Δ : Int))}
-  -- lines 30–31, the view merge: every slot-`s` block's carried votes, unioned in. A fold
-  -- rather than a loop — see the module header
-  let carried : Finset (GoldfishVote Validator) :=
-    ({B ∈ S.T | B.slot = s}).fold (· ∪ ·) ∅ (fun B => B.gfVotes.toFinset)
-  let votes := held ∪ carried
+  for all B ∈ S.T with B.slot = s do                           -- line 30: the view merge
+    votes ← votes ∪ B.gfVotes.toFinset                         -- line 31
   let H ← getHead S votes (s - 1)                              -- line 32
   if i ∈ (Committees.K s : Finset Validator) then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
-    let vote : GoldfishVote Validator := ⟨i, s, H⟩
+    let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
     return { state := processGoldfishVote S vote, send := {Message.gfVote vote} }
   return { state := S, send := ∅ }
 

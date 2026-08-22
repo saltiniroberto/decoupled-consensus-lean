@@ -120,6 +120,31 @@ macro_rules
                 (Function.update (($v).$f:ident) $i
                   (Function.update ((($v).$f:ident) $i) $j $e)) })
 
+/-- `for all B ∈ s with p do acc ← acc ∪ e`, the draft's loop over a set (Figure 2, lines
+    30–31; the `with` clause is optional). A `Finset` has no `ForIn` instance and
+    `Finset.toList` needs `Classical.choice`, so there is no computable loop over one — but
+    accumulation by a commutative, associative operation is exactly `Finset.fold`, and a
+    union is one. So this macro renders precisely that body shape as the fold, and nothing
+    else: an accumulator on the left that differs from the one on the right is an error,
+    never a silent reordering.
+
+    Hazard, same section as the module header's: this makes `all` a parser token, so a bare
+    identifier named `all` becomes unwritable wherever this file is imported. Dotted names
+    (`List.all`, `.all`) are untouched. -/
+scoped syntax (name := forAllUnion) "for" "all" ident " ∈ " termBeforeDo
+  ("with" termBeforeDo)? " do " ident " ← " ident " ∪ " term : doElem
+
+macro_rules
+  | `(doElem| for all $x:ident ∈ $s do $acc:ident ← $acc':ident ∪ $e) => do
+      unless acc.getId == acc'.getId do
+        Macro.throwError "for all: the body must accumulate into its own target"
+      `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc (fun $x => $e) $s)
+  | `(doElem| for all $x:ident ∈ $s with $p do $acc:ident ← $acc':ident ∪ $e) => do
+      unless acc.getId == acc'.getId do
+        Macro.throwError "for all: the body must accumulate into its own target"
+      `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc (fun $x => $e)
+          (Finset.filter (fun $x => $p) $s))
+
 /-- `|s|` for `Finset.card s`, as the draft writes it: `|equivocators| + |supporters|`
     (Figure 1, line 4). Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so
     `|{v ∈ K | p v}|` parses with the set-builder's own `|` inside, and a bar in a `match`

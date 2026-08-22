@@ -3402,6 +3402,17 @@ Each given as a correction; standing until revoked:
 - **No `∣` (divides) in code** — Roberto read it as a pipe/or. Write `% … = 0`
   (`Block.isOpening`, Figure 1's justify test). Docstrings quoting the draft's formula keep
   the draft's spelling, backticked.
+- **A message is built by named `mk`** (Roberto, 2026-08-23, for `Consensus1`):
+  `GoldfishVote.mk (validator := i) (slot := s) (target := H)`, never `⟨…⟩` — wire objects
+  only. A `DutyResult` keeps the brace form `{ state := …, send := ∅ }`, and `match`
+  patterns are untouched.
+- **The draft's `for all B ∈ Σ.T with … do` has its own doElem macro** in the `Consensus1`
+  notation layer (2026-08-23): it renders the one loop a `Finset` admits — accumulate by
+  union — as `Finset.fold`, refusing any other body. Two measured costs in its docstring:
+  `all` becomes a parser token (a bare identifier `all` is unwritable wherever the file is
+  imported), and the set before `do` parses as `termBeforeDo` — a plain `term` there
+  swallows the `do` as an application argument, the error surfacing in the macro's own
+  quotation.
 
 ### `consensus-1.pdf` is a *third* rendering, `Spec/Consensus1/` — 2026-08-22
 

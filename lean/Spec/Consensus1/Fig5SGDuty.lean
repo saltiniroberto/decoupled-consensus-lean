@@ -68,7 +68,8 @@ def processSGVote (S : Store Validator) (vote : SGVote Validator) :
     the broadcast is a returned message rather than a send. Total: this duty runs no walk. -/
 def sgVote (i : Validator) (S : Store Validator) : DutyResult Validator := Id.run do
   let r := round S.s                                           -- line 2
-  let vote : SGVote Validator := ⟨i, r, some S.liveConfirmed⟩   -- line 3
+  -- line 3
+  let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
   -- line 4: `broadcast vote; process_sg_vote(Σ, vote)`
   return { state := processSGVote S vote, send := {Message.sgVote vote} }
 
