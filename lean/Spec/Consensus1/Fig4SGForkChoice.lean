@@ -67,19 +67,18 @@ def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
     that vote's head is a block, and `B` precedes the head.
 
-    Lines 9–10 — `k ← latest(Σ, v, r)`, then the exactly-one-vote test — are one condition
-    here: the draft's `k ←` binds out of an `Option` the loop's `with` clause has already
-    tested, and `∃ k, S.latest v r = some k ∧ …` says the same thing without a dependent
-    `if`. -/
+    Line 9's `k ← latest(Σ, v, r)` reads an `Option` the loop's `with` clause has already
+    tested; the notation layer evaluates line 10 under `Option.any`, so a `⊥` contributes
+    nothing — see `forAllUnionBind` in `Notation.lean`. -/
 def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.run do
   let mut supporters : Finset Validator := ∅                   -- line 7
   -- line 8: `for all v ∈ V with latest(Σ, v, r) ≠ ⊥ do`
   for all v ∈ Electorate.V with S.latest v r ≠ ⊥ do
-    -- lines 9–10, as one condition on `v`; see the docstring
-    if ∃ k, S.latest v r = some k ∧
-        ∃ a ∈ S.sgVotes[k], a.validator = v ∧
-          (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
-          ∃ H, a.head = some H ∧ B ⪯ H then
+    k ← S.latest v r                                           -- line 9
+    -- line 10: `sg_votes[k]` holds exactly one distinct vote by `v`, head a block above `B`
+    if ∃ a ∈ S.sgVotes[k], a.validator = v ∧
+        (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
+        ∃ H, a.head = some H ∧ B ⪯ H then
       supporters ← supporters ∪ {v}                            -- line 11
   return w(supporters)                                         -- line 12
 

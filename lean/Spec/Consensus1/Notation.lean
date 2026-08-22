@@ -123,20 +123,18 @@ macro_rules
                   (Function.update ((($v).$f:ident) $i) $j $e)) })
 
 /-- `for all B ∈ s with p do acc ← acc ∪ e`, the draft's loop over a set (Figure 2, lines
-    30–31; the `with` clause is optional), and its conditional form
-    `for all v ∈ s with p do if c then acc ← acc ∪ e` (Figure 4, lines 8–11). A `Finset` has
-    no `ForIn` instance and `Finset.toList` needs `Classical.choice`, so there is no
-    computable loop over one — but accumulation by a commutative, associative operation is
-    exactly `Finset.fold`, and a union is one; a body whose `if` fails contributes `∅`. The
-    macro renders precisely these body shapes as the fold, and nothing else: an accumulator
-    on the left that differs from the one on the right is an error, never a silent
-    reordering.
+    30–31; the `with` clause is optional). A `Finset` has no `ForIn` instance and
+    `Finset.toList` needs `Classical.choice`, so there is no computable loop over one — but
+    accumulation by a commutative, associative operation is exactly `Finset.fold`, and a
+    union is one. The macro renders precisely this body shape as the fold, and nothing else:
+    an accumulator on the left that differs from the one on the right is an error, never a
+    silent reordering. The bound-and-conditional form below extends it for Figure 4.
 
     Hazard, same section as the module header's: this makes `all` a parser token, so a bare
     identifier named `all` becomes unwritable wherever this file is imported. Dotted names
     (`List.all`, `.all`) are untouched. -/
 scoped syntax (name := forAllUnion) "for" "all" ident " ∈ " termBeforeDo
-  ("with" termBeforeDo)? " do " ("if " term " then ")? ident " ← " ident " ∪ " term : doElem
+  ("with" termBeforeDo)? " do " ident " ← " ident " ∪ " term : doElem
 
 macro_rules
   | `(doElem| for all $x:ident ∈ $s do $acc:ident ← $acc':ident ∪ $e) => do
@@ -148,14 +146,36 @@ macro_rules
         Macro.throwError "for all: the body must accumulate into its own target"
       `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc (fun $x => $e)
           (Finset.filter (fun $x => $p) $s))
-  | `(doElem| for all $x:ident ∈ $s do if $c then $acc:ident ← $acc':ident ∪ $e) => do
+
+/-- The bound-and-conditional `for all` (Figure 4, lines 8–11):
+
+        for all v ∈ s with p do
+          k ← e
+          if c then
+            acc ← acc ∪ e'
+
+    Line 9's `k ← e` reads an `Option` the `with` clause has already tested: the expansion
+    evaluates `c` under `Option.any`, `k` bound to the value, so a `⊥` contributes nothing
+    to the fold rather than needing a proof it cannot occur. A separate production rather
+    than optional pieces of the plain one: an optional group that half-matches would commit
+    the parser and break the plain form, where a whole production backtracks. -/
+scoped syntax (name := forAllUnionBind) "for" "all" ident " ∈ " termBeforeDo
+  ("with" termBeforeDo)? " do " ident " ← " term " if " term " then "
+  ident " ← " ident " ∪ " term : doElem
+
+macro_rules
+  | `(doElem| for all $x:ident ∈ $s do $k:ident ← $opt if $c then
+        $acc:ident ← $acc':ident ∪ $e) => do
       unless acc.getId == acc'.getId do
         Macro.throwError "for all: the body must accumulate into its own target"
-      `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc (fun $x => if $c then $e else ∅) $s)
-  | `(doElem| for all $x:ident ∈ $s with $p do if $c then $acc:ident ← $acc':ident ∪ $e) => do
+      `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc
+          (fun $x => if ($opt).any (fun $k => $c) then $e else ∅) $s)
+  | `(doElem| for all $x:ident ∈ $s with $p do $k:ident ← $opt if $c then
+        $acc:ident ← $acc':ident ∪ $e) => do
       unless acc.getId == acc'.getId do
         Macro.throwError "for all: the body must accumulate into its own target"
-      `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc (fun $x => if $c then $e else ∅)
+      `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc
+          (fun $x => if ($opt).any (fun $k => $c) then $e else ∅)
           (Finset.filter (fun $x => $p) $s))
 
 /-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in the
