@@ -65,15 +65,15 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-/-- The root a proposer writes into its block, as an assumed function of the proposer and
-    its store (Roberto, 2026-08-23; before it, the root was a parameter threaded through
+/-- The root a proposer writes into its block, as an assumed function of the block's parent
+    and its slot (Roberto, 2026-08-23; before it, the root was a parameter threaded through
     `on_tick`). The draft calls a block's root its post-state root, and the post-state only
     becomes defined at Section 5 — so this layer can only assume the function exists, and
     nothing constrains its answer, exactly as nothing constrains the root a received block
     claims (`Model.lean`, the `B.root` section). -/
 class RootComputation (Validator : Type) [Roots] where
-  /-- The root for the block the given validator is about to build on the given store. -/
-  compute : Validator → Store Validator → Root
+  /-- The root of the block being built, from its parent and its slot. -/
+  compute : Block Validator → Nat → Root
 
 namespace Goldfish
 
@@ -130,9 +130,9 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
     the pre-freeze part", which is what makes the block a view-merge channel for its
     receivers.
 
-    The block's root is computed, not chosen: `RootComputation.compute i S`, the assumed
-    function of the proposer and its store — the draft does not say what the proposer puts
-    there, so the function's answer is unconstrained.
+    The block's root is computed, not chosen: `RootComputation.compute H s`, the assumed
+    function of the block's parent and its slot — the draft does not say what the proposer
+    puts there, so the function's answer is unconstrained.
 
     `ResultOrExcept` because the walk is, and the carried list is `votes` sorted by the
     ambient order; see the module header on both. -/
@@ -142,7 +142,7 @@ def proposeBlock (i : Validator) (S : Store Validator) :
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← getHead S votes (s - 1)                              -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
-  let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute i S)
+  let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := votes.toSortedList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
   return (B, processBlock S B)

@@ -3583,11 +3583,11 @@ Roberto's two calls, ending the root-as-`Nat` rendering.
   `variable {Validator : Type} [Roots]` per file. `blockBeq` compares roots by
   `decide (rt = rt')`, the `DecidableEq` coming from the order.
 - **`class RootComputation`** in `Fig2GoldfishDuties.lean`:
-  `compute : Validator → Store Validator → Root`, the assumed function computing the root a
-  proposer writes from `propose_block`'s other two parameters. `proposeBlock` and `onTick`
-  lose their `root : Nat` parameter — line 25 writes
-  `root := RootComputation.compute i S` — so the environment no longer threads a root through
-  the tick. The draft calls the root the post-state root and defines the post-state only at
+  `compute : Block Validator → Nat → Root`, the assumed function computing the root a
+  proposer writes from the block's parent and its slot (Roberto's correction; a first cut
+  read it from the proposer and the store). `proposeBlock` and `onTick` lose their
+  `root : Nat` parameter — line 25 writes `root := RootComputation.compute H s` — so the
+  environment no longer threads a root through the tick. The draft calls the root the post-state root and defines the post-state only at
   Section 5, so the function is assumed, its answer unconstrained, exactly as a received
   block's claim is unchecked.
 
