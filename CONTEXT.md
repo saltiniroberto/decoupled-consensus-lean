@@ -3584,6 +3584,13 @@ to convert on the word.
 
 Roberto's two calls, ending the root-as-`Nat` rendering.
 
+- **A class, not a type parameter** — confirmed by Roberto 2026-08-23 after questioning it.
+  The two are logically interconvertible (an instance binder is an implicit parameter, the
+  class a bundle), so the choice is ergonomic: the class fixes type, order and genesis root
+  *together*, unmixably, and instance search makes one vocabulary per context silent. The
+  parameter form wins only for statements mixing two root vocabularies — a cross-instance
+  simulation, say — which nothing foresees; if `Analysis/` ever wants one, explicit
+  `@`-instances still express it.
 - **`class Roots`** in `Model.lean` carries the abstract type: `Root : Type`,
   `genesisRoot : Root` (the draft says every block has a root, and genesis is a block), and
   `ord : LinearOrder Root` — the one thing this rendering still reads off a root,
