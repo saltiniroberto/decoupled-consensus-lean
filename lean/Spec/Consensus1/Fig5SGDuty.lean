@@ -64,13 +64,13 @@ def processSGVote (S : Store Validator) (vote : SGVote Validator) :
 /-- `sg_vote(Σ)` (Figure 5, lines 1–4), run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 
-    Returns the vote it would broadcast alongside the store that has processed it, as the
-    Goldfish duties do; see `Fig2GoldfishDuties.lean` on why the broadcast is not modelled. -/
-def sgVote (i : Validator) (S : Store Validator) :
-    SGVote Validator × Store Validator := Id.run do
+    Returns a `DutyResult`, as the Goldfish duties do; see `Fig2GoldfishDuties.lean` on why
+    the broadcast is a returned message rather than a send. Total: this duty runs no walk. -/
+def sgVote (i : Validator) (S : Store Validator) : DutyResult Validator := Id.run do
   let r := round S.s                                           -- line 2
   let vote : SGVote Validator := ⟨i, r, some S.liveConfirmed⟩   -- line 3
-  return (vote, processSGVote S vote)                          -- line 4
+  -- line 4: `broadcast vote; process_sg_vote(Σ, vote)`
+  return { state := processSGVote S vote, send := {Message.sgVote vote} }
 
 end Duty
 

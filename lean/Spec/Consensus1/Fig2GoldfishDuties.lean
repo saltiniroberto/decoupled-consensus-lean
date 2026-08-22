@@ -31,10 +31,11 @@ The draft's duties broadcast and then process their own object: `broadcast B;
 process_block(Σ, B)`. Broadcasting is a send, and there is no network layer here, so a duty
 returns a `DutyResult` — the store with the object already processed, and the messages to
 broadcast — the state-and-send shape of a lean-sts step result (`NodeStepResult` in the
-framework), so the wiring layer can consume a duty without reshaping it (Roberto,
-2026-08-23). Nothing is lost and the send is left to whoever wires this up. `propose_block`
-is converted; `goldfish_vote` below and `sg_vote` in Figure 5 still return pairs, to convert
-on the word.
+framework, `DutyResult` in `Store.lean`), so the wiring layer can consume a duty without
+reshaping it (Roberto, 2026-08-23). Nothing is lost and the send is left to whoever wires
+this up. The two handlers stay `Store → Store`: the figure gives them no broadcast line, and
+Section 1's "an honest node relays every object it processes" is network behaviour, the
+wiring layer's to render.
 
 ## Two collisions with `Finset`, and where each lands
 
@@ -68,15 +69,6 @@ Figure 7 extends it with two lines: the post-state and `update_finality`. That v
 set_option autoImplicit false
 
 namespace Consensus1
-
-/-- What a duty produces: the store afterwards, and the messages it broadcasts. The
-    state-and-send shape of a lean-sts step result, so the wiring layer consumes a duty
-    without reshaping it; the module header says which duties are converted. -/
-structure DutyResult (Validator : Type) [Roots] where
-  /-- The store afterwards. -/
-  state : Store Validator
-  /-- The messages broadcast, for the network to deliver. -/
-  send : Finset (Message Validator)
 
 /-- The root a proposer writes into its block, as an assumed function of the block's parent
     and its slot (Roberto, 2026-08-23; before it, the root was a parameter threaded through
@@ -166,9 +158,12 @@ def proposeBlock (i : Validator) (S : Store Validator) :
     The merge is lines 29–31: the slot-`(s−1)` votes held before the *previous* slot's view
     freeze at `t_{s−1} + 3Δ`, together with everything carried by any slot-`s` block
     processed so far. That second part is the view merge — the proposal supplies its own view
-    rather than a forced target. -/
+    rather than a forced target.
+
+    A validator off the slot's committee sends nothing, which the empty `send` says — no
+    `Option` needed. -/
 def goldfishVote (i : Validator) (S : Store Validator) :
-    ResultOrExcept (Option (GoldfishVote Validator) × Store Validator) := do
+    ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`
   let held := {vote ∈ S.gfVotes[s - 1] |
@@ -182,8 +177,8 @@ def goldfishVote (i : Validator) (S : Store Validator) :
   if i ∈ (Committees.K s : Finset Validator) then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote : GoldfishVote Validator := ⟨i, s, H⟩
-    return (some vote, processGoldfishVote S vote)
-  return (none, S)
+    return { state := processGoldfishVote S vote, send := {Message.gfVote vote} }
+  return { state := S, send := ∅ }
 
 /-- `on_tick(Σ, t)` (Figure 2, lines 1–8): set the clock and the slot, then run whichever of
     the slot's actions this instant is.
@@ -193,25 +188,30 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
     evaluation of the *previous* slot, and that is the slot line 8 passes.
 
-    The duties' broadcasts are dropped here: `on_tick` returns only the store, so the objects
-    a tick would emit are not visible to its caller. That is the one place this rendering
-    loses something the draft has, and it is what a network layer would have to restore.
+    A `DutyResult` too: the store, and the union of whatever the duties it ran broadcast —
+    so nothing a tick emits is lost to the caller (Roberto, 2026-08-23; a first form
+    returned only the store and dropped the sends).
 
     `ResultOrExcept` because all three actions are. The binds are written through `:=` —
     the plain arrow is the assignment macro's, as in `ghost`. -/
 def onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : ResultOrExcept (Store Validator) := do
+    (isProposer : Nat → Validator → Bool) : ResultOrExcept (DutyResult Validator) := do
   let mut S := S
+  let mut send : Finset (Message Validator) := ∅
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
   if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
-    S := (← proposeBlock i S).state                            -- line 4
+    let r ← proposeBlock i S                                   -- line 4
+    S := r.state
+    send := send ∪ r.send
   if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
-    S := (← goldfishVote i S).2                                -- line 6
+    let r ← goldfishVote i S                                   -- line 6
+    S := r.state
+    send := send ∪ r.send
   if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7
     S := (← updateConfirmation S (s - 1))                      -- line 8
-  return S
+  return { state := S, send := send }
 
 end Handlers
 

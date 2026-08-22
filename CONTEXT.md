@@ -3500,9 +3500,9 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 - **Timestamps are three maps**, one per object kind, since Lean has no sum over them here.
   Each is `Option Int`, `none` standing for both "not processed" and the draft's
   `timestamp(B_gen) = −∞` — which costs nothing, no rule reading a block's timestamp.
-- **The duties return what they would broadcast**, paired with the store that has processed it.
-  `on_tick` drops those, so the objects a tick emits are invisible to its caller: the one place
-  this rendering loses something, and what a network layer would restore.
+- **The duties return what they would broadcast** alongside the store that has processed it
+  — since 2026-08-23 as a `DutyResult` (state and send set, the lean-sts step shape; entry
+  below), `on_tick` unioning its duties' sends, so nothing a tick emits is lost.
 - **`FG.getHead` does not pass the extended eligibility condition to `ghost`.** That
   condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost`'s condition
   parameter is a pure `Block → Bool`. The walk gets the height clause read through the raw
@@ -3576,9 +3576,16 @@ send. `Model.lean` gains `Message`, the three wire objects as one sum (`block`, 
 `Fig2GoldfishDuties.lean` gains `DutyResult` with fields `state : Store Validator` and
 `send : Finset (Message Validator)` — the field names of the framework's `NodeStepResult`,
 whose `send` is a `Multiset` for framework-internal reasons this layer does not have.
-`propose_block` returns it, `send := {Message.block B}`; `on_tick` reads `.state` and still
-drops the sends, the one documented loss. `goldfish_vote` and `sg_vote` still return pairs,
-to convert on the word.
+All three duties return it — `propose_block` and `sg_vote` with their singleton sends,
+`goldfish_vote` with `send := ∅` for a validator off the committee, its `Option` gone — and
+`on_tick` does too, its `send` the union of whatever the duties it ran broadcast. The
+2026-08-22 note "the duties' broadcasts are dropped by `on_tick`, the one place this
+rendering loses something" is repaired and void. The two `process_*` handlers stay
+`Store → Store`: the figures give them no broadcast line, and Section 1's "an honest node
+relays every object it processes" is network behaviour, the wiring layer's to render.
+`DutyResult` sits in `Store.lean` because Figure 5 does not import Figure 2; `Message`
+carries `deriving DecidableEq`, declared below the hand-written equality instances so the
+handler finds them — the union in `on_tick` is what needs it.
 
 ### `Root` is abstract, and the proposer's root is assumed — 2026-08-23
 

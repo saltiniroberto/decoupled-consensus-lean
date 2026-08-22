@@ -310,17 +310,6 @@ structure SGVote (Validator : Type) where
       graded protocol, which this draft does not reach. -/
   head : Option (Block Validator)
 
-/-- A wire message: what a duty broadcasts. The draft's three wire objects as one type — the
-    shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
-    can name what it sends (Roberto, 2026-08-23). -/
-inductive Message (Validator : Type) [Roots] where
-  /-- A proposed block. -/
-  | block (B : Block Validator)
-  /-- A Goldfish vote. -/
-  | gfVote (v : GoldfishVote Validator)
-  /-- An SG vote. -/
-  | sgVote (v : SGVote Validator)
-
 /-! ### Decidable equality, written out
 
 Eight functions: `attListBeq`, `gfVoteListBeq` and `optBlockBeq` carry the `List` and
@@ -491,6 +480,20 @@ instance : DecidableEq (FinalityPair Validator) :=
 instance : DecidableEq (SGVote Validator) := fun a b =>
   decidable_of_iff (a.validator = b.validator ∧ a.round = b.round ∧ a.head = b.head)
     (by cases a; cases b; simp)
+
+/-- A wire message: what a duty broadcasts. The draft's three wire objects as one type — the
+    shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
+    can name what it sends (Roberto, 2026-08-23). Declared below the equality instances so
+    the deriving handler finds them; the equality itself is what `on_tick` unions send sets
+    with. -/
+inductive Message (Validator : Type) [Roots] where
+  /-- A proposed block. -/
+  | block (B : Block Validator)
+  /-- A Goldfish vote. -/
+  | gfVote (v : GoldfishVote Validator)
+  /-- An SG vote. -/
+  | sgVote (v : SGVote Validator)
+deriving DecidableEq
 
 end DecEq
 

@@ -200,4 +200,19 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 
 end Derived
 
+/-! ## What a duty returns
+
+Not draft content: the draft's duties `broadcast` and return nothing. There is no network
+layer here, so a duty returns this instead — the state-and-send shape of a lean-sts step
+result (`NodeStepResult` in the framework), so the wiring layer can consume a duty without
+reshaping it (Roberto, 2026-08-23). It lives in this file because Figure 2's and Figure 5's
+duties both return it, and Figure 5 does not import Figure 2. -/
+
+/-- What a duty produces: the store afterwards, and the messages it broadcasts. -/
+structure DutyResult (Validator : Type) [Roots] where
+  /-- The store afterwards. -/
+  state : Store Validator
+  /-- The messages broadcast, for the network to deliver. -/
+  send : Finset (Message Validator)
+
 end Consensus1
