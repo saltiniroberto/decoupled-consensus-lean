@@ -1,4 +1,3 @@
-import Mathlib.Data.Finset.Sort
 import Spec.Consensus1.Fig3AvailableConfirmation
 
 /-!
@@ -45,8 +44,9 @@ the loop over a set at all.
 votes are a `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
 constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as the
 draft says. `Finset.toList` would cross for free but needs `Classical.choice` — there is no
-canonical representative to pick — so the crossing is `Finset.sort` under an ambient
-`LinearOrder (GoldfishVote Validator)` (Roberto, 2026-08-23): sorting is
+canonical representative to pick — so the crossing is `Finset.toSortedList` (`FinsetM.lean`),
+`Finset.sort` under an ambient `LinearOrder (GoldfishVote Validator)` (Roberto, 2026-08-23):
+sorting is
 permutation-invariant, so it descends to the quotient and yields one canonical list,
 computably. Nothing reads the list's order — votes are consumed as sets on arrival — so the
 assumption is inert protocol-wise, and realistic instances have one (validators are keys,
@@ -133,7 +133,7 @@ def proposeBlock (i : Validator) (S : Store Validator) (root : Nat) :
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← getHead S votes (s - 1)                              -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
-  let B : Block Validator := .mk H s root (votes.sort (· ≤ ·)) []
+  let B : Block Validator := .mk H s root votes.toSortedList []
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
   return (B, processBlock S B)
 

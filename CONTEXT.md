@@ -3485,7 +3485,8 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   and `on_tick`). The block's carried votes must be a `List` — a `Finset` is a quotient and
   cannot appear in an inductive's constructor — while the store's `gf_votes[·]` is a `Finset`,
   as the draft says. `toList` needs `Classical.choice`; `Finset.sort` is computable because
-  sorting is permutation-invariant and so descends to the quotient — at the price of an
+  sorting is permutation-invariant and so descends to the quotient; the figure line reads
+  `votes.toSortedList`, the helper beside `imageM` in `FinsetM.lean` — at the price of an
   ambient `[LinearOrder (GoldfishVote Validator)]` on the handlers section. The assumption is
   inert protocol-wise (nothing reads the list's order; votes are consumed as sets), and with
   it nothing in the subtree is `noncomputable`. The alternative both forms declined,
