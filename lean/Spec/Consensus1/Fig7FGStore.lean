@@ -50,8 +50,6 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-namespace FG
-
 variable {Validator : Type} [Roots]
 
 section ForkChoice
@@ -59,6 +57,8 @@ variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
   [TieBreak Validator] [Params]
 
 open Params
+
+namespace Store
 
 /-! ## Definition 5 — viability -/
 
@@ -104,12 +104,16 @@ def updateFinality (S : Store Validator) (σ : ChainState Validator) :
   if S.F ⪯ σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ S.J.root < σ.J.root)) then
     S.J ← σ.J                                                  -- line 12
     S.h_j ← σ.h_j
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ (← viable S) then           -- line 13
+  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ (← S.viable) then           -- line 13
     S.F ← σ.F                                                  -- line 14
     S.h_F ← σ.h_F
     -- line 15: `max{Σ.σ[B].h : B ∈ T_F(Σ)}`, in the live tree that just shrank
     S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
+
+end Store
+
+namespace FG
 
 /-- `process_block(Σ, B)` (Figure 7, lines 1–8): Figure 2's handler with the two lines this
     layer adds — the post-state at line 4, and `update_finality` at line 8.
@@ -137,9 +141,13 @@ def processBlock (S : Store Validator) (B : Block Validator) :
   S.T ← S.T ∪ {B}                                              -- line 5
   S.blockTime[B] ← some S.t
   for vote in B.gfVotes do                                     -- line 6
-    S ← Goldfish.processGoldfishVote S vote                     -- line 7
+    S ← S.processGoldfishVote vote                              -- line 7
   -- line 8: `update_finality(Σ, Σ.σ[B])` — new at this layer
-  return ← updateFinality S (← S.σ[B])
+  return ← S.updateFinality (← S.σ[B])
+
+end FG
+
+namespace Store
 
 /-! ## The two derived views, and the redefined fork choice -/
 
@@ -159,8 +167,12 @@ def forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     separately at line 27. It raises exactly where `viable` does. -/
 def getFilteredBlockTree (S : Store Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
-  let root := forkChoiceRoot S                                 -- line 21
-  return {B ∈ (← viable S) | root ⪯ B}                         -- line 22
+  let root := S.forkChoiceRoot                                 -- line 21
+  return {B ∈ (← S.viable) | root ⪯ B}                         -- line 22
+
+end Store
+
+namespace FG
 
 /-- `goldfish_eligible(Σ, votes, s, B)` (Figure 7, lines 23–25): Figure 1's gate with a third
     disjunct — "a child whose state height is below `Σ.h_max − 1` is eligible without a
@@ -196,16 +208,16 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
     it is, with the disagreement named. -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     ResultOrExcept (Block Validator) := do
-  let root := forkChoiceRoot S                                 -- line 27
-  let tree ← getFilteredBlockTree S
-  let anchor ← SG.majorityForkChoice S root tree (round S.s)    -- line 28
+  let root := S.forkChoiceRoot                                 -- line 27
+  let tree ← S.getFilteredBlockTree
+  let anchor ← S.majorityForkChoice root tree (round S.s)      -- line 28
   -- line 29, with the eligibility condition as described above
   ghost anchor tree (Goldfish.score votes k)
     (fun B => (S.σ B).any (fun σB => σB.h < S.h_max - 1) ∨
       2 * Goldfish.score votes k B > Goldfish.votersCount votes k ∨ B.slot = S.s)
 
-end ForkChoice
-
 end FG
+
+end ForkChoice
 
 end Consensus1

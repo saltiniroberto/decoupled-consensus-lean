@@ -3579,6 +3579,23 @@ chooser raises.
   bare `B.parent = H` elaborates against a plain binder and fails against a `mut` one — so
   Figure 1's line 8 writes the coercion explicitly, `B.parent = ↑H`.
 
+### Store-taking routines live in `namespace Store` — 2026-08-23
+
+Roberto: everything that takes a store should be in the `Store` namespace, for dot notation.
+So a caller writes `S.updateConfirmation k`, `S.proposeBlock i`, `S.majorityForkChoice
+anchor tree r`, `S.viable`, `S.processGoldfishVote vote` — the store need not be the first
+parameter, dot notation filling the first `Store`-typed one.
+
+**The exception is forced, not chosen: the layer-redefined names.** One namespace holds one
+`getHead`, and the draft defines `get_head` three times, `process_block` twice and
+`goldfish_eligible` twice — the reason the layers are namespaces at all. Those seven, plus
+`get_head`'s own Fig1 vocabulary (`Goldfish.eligible`, `Goldfish.forkChoice`, whose bare
+names would be wrong or ambiguous in `Store`), keep `Goldfish`/`SG`/`FG`. Options if the
+exception grates, not taken: rename per layer inside `Store` (`goldfishGetHead`…), or give
+`FG`'s versions the plain `Store` names as *the* protocol's and keep only the earlier
+layers namespaced. The `namespace Store` blocks sit in the figure files beside the
+definitions they hold; nothing moved files.
+
 ### The duty result takes the framework's shape — 2026-08-23
 
 Roberto: `propose_block` should return what an sts step wants, a state and the messages to

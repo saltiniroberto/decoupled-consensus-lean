@@ -82,8 +82,6 @@ class RootComputation (Validator : Type) [Roots] where
   /-- The root of the block being built, from its parent and its slot. -/
   compute : Block Validator → Nat → Root
 
-namespace Goldfish
-
 variable {Validator : Type} [Roots]
 
 section Handlers
@@ -91,6 +89,8 @@ variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Pa
   [LinearOrder (GoldfishVote Validator)] [RootComputation Validator]
 
 open Params
+
+namespace Store
 
 /-- `process_goldfish_vote(Σ, vote)` (Figure 2, lines 15–20): record a slot-`k` vote with its
     processing time, unless it is from the future, already held, or a third vote by a
@@ -112,6 +112,10 @@ def processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
   S.gfVoteTime[vote] ← some S.t
   return S
 
+end Store
+
+namespace Goldfish
+
 /-- `process_block(Σ, B)` (Figure 2, lines 9–14): accept a block whose slot has started,
     stamp it, and fold in every Goldfish vote it carries.
 
@@ -125,8 +129,12 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
   S.T ← S.T ∪ {B}                                              -- line 12
   S.blockTime[B] ← some S.t
   for vote in B.gfVotes do                                     -- line 13
-    S ← processGoldfishVote S vote                             -- line 14
+    S ← S.processGoldfishVote vote                             -- line 14
   return S
+
+end Goldfish
+
+namespace Store
 
 /-- `propose_block(Σ)` (Figure 2, lines 21–26), run at `t_s`: take every held slot-`(s−1)`
     vote, run the fork choice on it, and build a block on the head carrying **all** of those
@@ -147,12 +155,12 @@ def proposeBlock (i : Validator) (S : Store Validator) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
-  let H ← getHead S votes (s - 1)                              -- line 24
+  let H ← Goldfish.getHead S votes (s - 1)                     -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := votes.toSortedList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
-  return { state := processBlock S B, send := {Message.block B} }
+  return { state := Goldfish.processBlock S B, send := {Message.block B} }
 
 /-- `goldfish_vote(Σ)` (Figure 2, lines 27–34), run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
@@ -172,11 +180,11 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     (S.gfVoteTime vote).any (· < slotStart (s - 1) + 3 * (Δ : Int))}
   for all B ∈ S.T with B.slot = s do                           -- line 30: the view merge
     votes ← votes ∪ B.gfVotes.toFinset                         -- line 31
-  let H ← getHead S votes (s - 1)                              -- line 32
+  let H ← Goldfish.getHead S votes (s - 1)                     -- line 32
   if i ∈ (Committees.K s : Finset Validator) then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
-    return { state := processGoldfishVote S vote, send := {Message.gfVote vote} }
+    return { state := S.processGoldfishVote vote, send := {Message.gfVote vote} }
   return { state := S, send := ∅ }
 
 /-- `on_tick(Σ, t)` (Figure 2, lines 1–8): set the clock and the slot, then run whichever of
@@ -200,16 +208,16 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
   S.t ← t
   S.s ← s
   if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
-    return ← proposeBlock i S                                  -- line 4
+    return ← S.proposeBlock i                                  -- line 4
   if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
-    return ← goldfishVote i S                                  -- line 6
+    return ← S.goldfishVote i                                  -- line 6
   if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7
-    let S' ← updateConfirmation S (s - 1)                      -- line 8
+    let S' ← S.updateConfirmation (s - 1)                      -- line 8
     return { state := S', send := ∅ }
   return { state := S, send := ∅ }
 
-end Handlers
+end Store
 
-end Goldfish
+end Handlers
 
 end Consensus1

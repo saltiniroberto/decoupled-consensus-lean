@@ -42,8 +42,6 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-namespace SG
-
 variable {Validator : Type} [Roots]
 
 section ForkChoice
@@ -51,6 +49,8 @@ variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
   [TieBreak Validator] [Params]
 
 open Params
+
+namespace Store
 
 /-- `latest(Σ, v, r)` (Figure 4, lines 1–5): the greatest round in
     `[max{0, r − ηSG}, r)` whose SG votes hold one by `v`, or `⊥` when there is none.
@@ -69,7 +69,7 @@ def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     weight of this set, and it is both the denominator of the gate and what line 8 of
     `sg_support` iterates over. -/
 def represented (S : Store Validator) (r : Nat) : Finset Validator :=
-  {v ∈ (Electorate.V : Finset Validator) | (latest S v r).isSome}
+  {v ∈ (Electorate.V : Finset Validator) | (S.latest v r).isSome}
 
 /-- `sg_support(Σ, r, B)` (Figure 4, lines 6–12): the represented weight supporting `B`.
 
@@ -81,8 +81,8 @@ def represented (S : Store Validator) (r : Nat) : Finset Validator :=
     the loop only ever adds to a set, so the two agree. -/
 def support (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
   -- lines 8–11, as one condition on `v`
-  w({v ∈ represented S r |
-      ∃ k, latest S v r = some k ∧
+  w({v ∈ S.represented r |
+      ∃ k, S.latest v r = some k ∧
         ∃ a ∈ S.sgVotes[k], a.validator = v ∧
           (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
           ∃ H, a.head = some H ∧ B ⪯ H})
@@ -91,21 +91,26 @@ def support (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
     the SG support as its score, gated on a strict majority of the represented weight. -/
 def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : ResultOrExcept (Block Validator) :=
-  let total := w(represented S r)                              -- line 14
-  ghost anchor tree (support S r) (fun B => 2 * support S r B > total)  -- lines 15–16
+  let total := w(S.represented r)                              -- line 14
+  ghost anchor tree (S.support r) (fun B => 2 * S.support r B > total)  -- lines 15–16
+
+end Store
+
+namespace SG
 
 /-- `get_head(Σ, votes, s)` (Figure 4, lines 17–19): the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
 
     This is the SG layer's head. Figure 7 redefines it again, over the filtered tree and from
     the fork-choice root; that one is the protocol's. -/
+    -- (in `SG`, not `Store`: three layers define a `get_head`, and a namespace holds one)
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     ResultOrExcept (Block Validator) := do
-  let anchor ← majorityForkChoice S .genesis S.T (round S.s)    -- line 18
+  let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
   Goldfish.forkChoice S anchor S.T votes s                      -- line 19
 
-end ForkChoice
-
 end SG
+
+end ForkChoice
 
 end Consensus1

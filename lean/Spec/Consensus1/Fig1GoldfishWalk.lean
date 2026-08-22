@@ -22,6 +22,12 @@ choice wants `FG.getHead`.
 `ghost` itself is not in a layer namespace: it is the shared building block, and no section
 redefines it.
 
+Everything that takes a store sits in `namespace Store`, so a caller writes
+`S.updateConfirmation k`, `S.majorityForkChoice …`, `S.viable` (Roberto, 2026-08-23) — except
+the layer-redefined names. One namespace holds one `getHead`, so `get_head` (three layers),
+`process_block` (two), `goldfish_eligible` (two), and `get_head`'s own vocabulary here
+(`eligible`, `forkChoice`) keep their layer namespaces.
+
 ## The arg-max step, and where the choice goes
 
 Line 11 is `arg max score`, "ties by root order". The maximal-score children are a filter;

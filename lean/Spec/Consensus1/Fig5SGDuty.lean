@@ -33,12 +33,12 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-namespace SG
-
 variable {Validator : Type} [Roots]
 
 section Duty
 variable [DecidableEq Validator] [Params]
+
+namespace Store
 
 /-- `process_sg_vote(Σ, vote)` (Figure 5, lines 5–10): record a round-`r` SG vote with its
     processing time, unless it is from a future round, already held, or a third vote by a
@@ -71,10 +71,10 @@ def sgVote (i : Validator) (S : Store Validator) : DutyResult Validator := Id.ru
   -- line 3
   let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
   -- line 4: `broadcast vote; process_sg_vote(Σ, vote)`
-  return { state := processSGVote S vote, send := {Message.sgVote vote} }
+  return { state := S.processSGVote vote, send := {Message.sgVote vote} }
+
+end Store
 
 end Duty
-
-end SG
 
 end Consensus1

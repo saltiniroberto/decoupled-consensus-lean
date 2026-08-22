@@ -40,14 +40,14 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-namespace Goldfish
-
 variable {Validator : Type} [Roots]
 
 section Confirmation
 variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
 
 open Params
+
+namespace Store
 
 /-- `update_confirmation(Σ, s)` (Figure 3, lines 1–10), run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
@@ -72,15 +72,15 @@ def updateConfirmation (S : Store Validator) (s : Nat) :
   let votersCount := |{v ∈ (Committees.K s : Finset Validator) |
     ∃ a ∈ late, a.validator = v}|
   -- line 6: the majority gate, with no current-slot escape — see the module header
-  let eligible := fun B => 2 * score votes s B > votersCount
-  let H ← ghost .genesis S.T (score votes s) eligible           -- line 7
+  let eligible := fun B => 2 * Goldfish.score votes s B > votersCount
+  let H ← ghost .genesis S.T (Goldfish.score votes s) eligible  -- line 7
   S.liveConfirmed ← H                                           -- line 8
   if S.latestConfirmed ⪯ H then                                 -- line 9
     S.latestConfirmed ← H                                       -- line 10
   return S
 
-end Confirmation
+end Store
 
-end Goldfish
+end Confirmation
 
 end Consensus1
