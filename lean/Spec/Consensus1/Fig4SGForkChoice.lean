@@ -62,12 +62,6 @@ def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
   eligible.max
 
-/-- The *represented* validators: those with a latest round. `W_r` of Definition 3 is the
-    weight of this set, and it is both the denominator of the gate and what line 8 of
-    `sg_support` iterates over. -/
-def represented (S : Store Validator) (r : Nat) : Finset Validator :=
-  {v ∈ (Electorate.V : Finset Validator) | (S.latest v r).isSome}
-
 /-- `sg_support(Σ, r, B)` (Figure 4, lines 6–12): the represented weight supporting `B`.
 
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
@@ -80,7 +74,7 @@ def represented (S : Store Validator) (r : Nat) : Finset Validator :=
 def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.run do
   let mut supporters : Finset Validator := ∅                   -- line 7
   -- line 8: `for all v ∈ V with latest(Σ, v, r) ≠ ⊥ do`
-  for all v ∈ (Electorate.V : Finset Validator) with S.latest v r ≠ ⊥ do
+  for all v ∈ Electorate.V with S.latest v r ≠ ⊥ do
     -- lines 9–10, as one condition on `v`; see the docstring
     if ∃ k, S.latest v r = some k ∧
         ∃ a ∈ S.sgVotes[k], a.validator = v ∧
@@ -93,7 +87,7 @@ def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.
     the SG support as its score, gated on a strict majority of the represented weight. -/
 def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : ResultOrExcept (Block Validator) :=
-  let total := w(S.represented r)                              -- line 14
+  let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})       -- line 14
   ghost anchor tree (S.sgSupport r) (fun B => 2 * S.sgSupport r B > total)  -- lines 15–16
 
 end Store
