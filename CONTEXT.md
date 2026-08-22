@@ -3740,9 +3740,15 @@ this list when a new call lands.
      2026-08-23 (`scratch/SetMonadProbe.lean`, `scratch/SetExceptProbe.lean`): Mathlib's
      opt-in `Set.monad` makes `x ← S` the pick; `ExceptT Error Set` stacks raising on it
      (the result type must *name* the stack or `do` elaborates in the `Set` monad); the
-     full imperative kit works inside; and a genuine `ForIn` over `Finset` is definable in
-     the stack — pick a listing, loop the list — dissolving the whole loop problem at the
-     price of the architecture. Veil (the sibling `finality` project's DSL) is the worked
+     full imperative kit works inside, `return` included; a genuine `ForIn` over `Finset`
+     is definable in the stack — pick a listing, loop the list — dissolving the whole loop
+     problem at the price of the architecture; and with two scoped `MonadLift`s (a bare
+     `Except` into the stack, and `Finset` directly — `MonadLift` needs no monad on the
+     source) a duty reads as pure pseudocode: `let B ← {B ∈ S.T | B.slot = s}`,
+     `let σB ← S.σ[B]`, `let v ← S.gfVotes[s]`, no lift or coercion visible. Callers:
+     compose by `←` inside the stack; consume at the boundary as a relation
+     (`res ∈ (f …).run`, the lean-sts step shape); state `NeverRaises`/`Deterministic` as
+     propositions over `.run`. Veil (the sibling `finality` project's DSL) is the worked
      precedent: its `VeilM` is `NonDetT` over state-and-exceptions, with `pick`,
      `let x :| p`, havoc, and a `wp` calculus.
 
