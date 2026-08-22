@@ -24,11 +24,12 @@ redefines it.
 
 ## The arg-max step, and where the choice goes
 
-Line 11 is `arg max score`, "ties by root order". That is rendered in two filters — the
-maximal-score children, then the least root among those — and `Selection.select` for whatever
-is left. On a tree with distinct roots nothing is left to choose; the class is there so the
-walk is total without the definition assuming it. `Model.lean`'s `Selection` says why a class
-is the only computable route.
+Line 11 is `arg max score`, "ties by root order". The maximal-score children are a filter;
+the tie-break is the ambient `Selection` class, an *unspecified* fixed choice (Roberto,
+2026-08-22). The draft never says what a root is or how one is computed — Section 1 asks only
+that the tie-break be fixed — so committing the Lean to `≤` on `B.root` claimed more than the
+draft does, and a root order is one instance of the class. `Model.lean`'s `Selection` says
+why a class is the only computable route.
 
 ## The figure's `loop` gets a bound
 
@@ -65,24 +66,21 @@ variable {Validator : Type}
 section Ghost
 variable [DecidableEq Validator] [Selection Validator]
 
-/-- Line 11's `arg max score`, ties by root order: the maximal-score members, then the least
-    root among those, then the class for the residue. See the module header. -/
+/-- Line 11's `arg max score`: the maximal-score members, with the tie broken by the ambient
+    `Selection` — the draft's "ties by root order" assumed as an unspecified fixed choice
+    rather than rendered. See the module header. -/
 def bestChild (children : Finset (Block Validator)) (h : children.Nonempty)
     (score : Block Validator → Nat) : Block Validator :=
   let top := {B ∈ children | ∀ C ∈ children, score C ≤ score B}
   have htop : top.Nonempty := by
     obtain ⟨B, hB, hmax⟩ := children.exists_max_image score h
     exact ⟨B, Finset.mem_filter.mpr ⟨hB, hmax⟩⟩
-  let winners := {B ∈ top | ∀ C ∈ top, B.root ≤ C.root}
-  have hw : winners.Nonempty := by
-    obtain ⟨B, hB, hmin⟩ := top.exists_min_image Block.root htop
-    exact ⟨B, Finset.mem_filter.mpr ⟨hB, hmin⟩⟩
-  (Selection.select winners hw).val
+  (Selection.select top htop).val
 
 /-- `ghost(anchor, tree, score, eligible)` (Figure 1, lines 5–11): descend from `anchor`
     through eligible children in `tree`, taking the highest score at each step, and stop
-    where no child is eligible. Ties go to the smaller root — the draft's "ties by root
-    order", with the order fixed as `≤` on `B.root`.
+    where no child is eligible. Ties are broken by the ambient `Selection` — the draft's
+    "ties by root order" is one instance of that choice; see the module header.
 
     The figure's `loop` is bounded by `tree.card`; see the module header. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
@@ -91,7 +89,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
   let mut H := anchor                                          -- line 6
   for _ in [:tree.card] do                                     -- line 7: `loop`, bounded
     -- line 8: the eligible children of the block we stand on
-    let children := {B ∈ tree | B.parent = some H ∧ eligible B}
+    let children := {B ∈ tree | B.parent = ↑H ∧ eligible B}
     if h : children = ∅ then                                   -- line 9
       return H                                                 -- line 10
     else

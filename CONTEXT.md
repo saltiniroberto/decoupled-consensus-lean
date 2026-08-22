@@ -3471,10 +3471,14 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   cost is unchanged from the fuel form — one case the draft has not, the bound reached with an
   eligible child still available, which returns the block it stands on. A well-founded
   recursion would need the tree invariant *in the definition*.
-- **The arg-max step needs a chooser.** Line 11's "ties by root order" is rendered as two
-  filters — maximal score, then least root — and `Selection.select` for the residue.
-  `Finset.toList` needs `Classical.choice` and `Finset.min'` would want a `LinearOrder` on
-  blocks, which the model cannot build. `Selection` is back for this, as an ambient class.
+- **The arg-max step's tie-break is assumed, not rendered** (Roberto, 2026-08-22; the first
+  form filtered to the least `B.root` and kept `Selection` for the residue). The draft says
+  "ties by root order" but never says what a root is or how one is computed — Section 1 asks
+  only that the tie-break be fixed — so `bestChild` filters to the maximal-score children and
+  hands the set to `Selection.select`, an unspecified fixed choice of which a root order is
+  one instance. `Finset.toList` needs `Classical.choice` and `Finset.min'` would want a
+  `LinearOrder` on blocks, which the model cannot build; the ambient class is the one
+  computable route. `B.root` stays a field: `update_finality`'s lex order still reads it.
 - **`propose_block` and `on_tick` are `noncomputable`**, and nothing else is. The block's
   carried votes must be a `List` — a `Finset` is a quotient and cannot appear in an inductive's
   constructor — while the store's `gf_votes[·]` is a `Finset`, as the draft says. Crossing

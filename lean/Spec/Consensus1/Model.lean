@@ -42,13 +42,16 @@ Three things Section 1 states that are **not** rendered, each for a reason:
 * depth. Section 1 defines it and, in this draft, no figure reads it — `ghost` breaks ties by
   root order, not by depth.
 
-## `B.root` is a field, and it is what breaks ties
+## `B.root` is a field
 
 The draft gives every block a root — the post-state root of Section 4 — and uses it twice:
 `ghost` breaks equal scores "by root order", and `update_finality` compares justifications in
-the lex order `(h_j, J.root)`. So a root needs a linear order and nothing else, and it is
-rendered as a `Nat` carried by the block. Where `consensus.pdf` has an abstract `BlockHash`
-class supplying the same tiebreak, this draft puts it in the block.
+the lex order `(h_j, J.root)`. It never says what a root *is* or how one is computed, so the
+root is rendered as a `Nat` carried by the block, which is enough for the one place this
+rendering still reads it — the lex order. The walk's tie-break is **not** read off it: that
+is the `Selection` class below, an unspecified fixed choice of which a root order is one
+instance (Roberto, 2026-08-22; the first form filtered to the least `B.root` and kept the
+class for the residue).
 
 Two consequences worth stating. Genesis carries one too, fixed at `0` — the draft says "every
 block `B` has a root" and its genesis is a block. And nothing constrains a block's root to
@@ -522,20 +525,19 @@ instance [DecidableEq Validator] : DecidableRel (Compatible (Validator := Valida
 
 /-! ## Choosing a block from a nonempty set
 
-`ghost` breaks equal scores "by root order" (Figure 1). Filtering to the maximal-score
-children and then to the least root among those leaves a set, and getting *one* block out of a
-nonempty `Finset` computably needs something: `Finset.toList` depends on `Classical.choice`, so
-a fold over it makes every caller `noncomputable` (measured 2026-08-21), and `Finset.min'`
-would want a `LinearOrder` on blocks, which the model has no way to build — `Validator` carries
-no order.
+`ghost` breaks equal scores among a block's children "by root order" (Figure 1, line 11) — a
+tie-break the draft never defines further, having said neither what a root is nor how one is
+computed. So the tie-break is assumed rather than rendered: the class below chooses one block
+from the maximal-score children, and a root order is one instance of it (Roberto, 2026-08-22;
+the first form filtered to the least `B.root` and kept the class for the residue).
 
-So the residual choice is a class. On the sets the draft applies the walk to it has nothing to
-choose: two children with the same score and the same root are the same block as far as the
-draft is concerned, roots being what identifies them. The class exists to make the walk total
-without assuming that in the definition, exactly as the previous rendering's `deepest` did. -/
+A class is also what getting *one* block out of a nonempty `Finset` computably needs:
+`Finset.toList` depends on `Classical.choice`, so a fold over it makes every caller
+`noncomputable` (measured 2026-08-21), and `Finset.min'` would want a `LinearOrder` on
+blocks, which the model has no way to build — `Validator` carries no order. -/
 
-/-- Choosing one block from a nonempty set. The subtype carries the membership proof, so
-    anything chosen is one of the candidates.
+/-- Choosing one block from a nonempty set: the walk's tie-break. The subtype carries the
+    membership proof, so anything chosen is one of the candidates.
 
     A class rather than an `opaque` definition so that it stays computable relative to an
     instance — an `opaque` chooser would need to produce an element of a nonempty `Finset`,
