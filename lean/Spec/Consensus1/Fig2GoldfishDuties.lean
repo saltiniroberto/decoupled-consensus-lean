@@ -133,7 +133,8 @@ def proposeBlock (i : Validator) (S : Store Validator) (root : Nat) :
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← getHead S votes (s - 1)                              -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
-  let B : Block Validator := .mk H s root votes.toSortedList []
+  let B := Block.mk (parent := H) (slot := s) (root := root)
+    (gfVotes := votes.toSortedList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
   return (B, processBlock S B)
 
