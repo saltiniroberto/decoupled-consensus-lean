@@ -3480,12 +3480,17 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   `Classical.choice` and `Finset.min'` would want a `LinearOrder` on blocks, which the model
   cannot build; the ambient class is the one computable route. `B.root` stays a field:
   `update_finality`'s lex order still reads it.
-- **`propose_block` and `on_tick` are `noncomputable`**, and nothing else is. The block's
-  carried votes must be a `List` — a `Finset` is a quotient and cannot appear in an inductive's
-  constructor — while the store's `gf_votes[·]` is a `Finset`, as the draft says. Crossing
-  between them is `Finset.toList`. Both types stay faithful and the cost is confined to one
-  line; the alternative, list-valued vote tables, would make "at most two per validator" a
-  property of a list and put `.toFinset` at every counting site.
+- **Line 25 crosses `Finset` → `List` by `Finset.sort`, under an assumed order** (Roberto,
+  2026-08-23; the first form used `Finset.toList` and paid `noncomputable` on `propose_block`
+  and `on_tick`). The block's carried votes must be a `List` — a `Finset` is a quotient and
+  cannot appear in an inductive's constructor — while the store's `gf_votes[·]` is a `Finset`,
+  as the draft says. `toList` needs `Classical.choice`; `Finset.sort` is computable because
+  sorting is permutation-invariant and so descends to the quotient — at the price of an
+  ambient `[LinearOrder (GoldfishVote Validator)]` on the handlers section. The assumption is
+  inert protocol-wise (nothing reads the list's order; votes are consumed as sets), and with
+  it nothing in the subtree is `noncomputable`. The alternative both forms declined,
+  list-valued vote tables, would make "at most two per validator" a property of a list and
+  put `.toFinset` at every counting site.
 - **Line 30's `for all B ∈ Σ.T` is a `Finset.fold`**, not a loop: no `ForIn` for `Finset`, and
   the body accumulates a *union*, which is commutative and associative — which is why the
   draft can write a loop over a set at all. Needed `Mathlib.Data.Finset.Lattice.Basic` in the

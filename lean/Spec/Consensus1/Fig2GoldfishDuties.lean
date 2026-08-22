@@ -1,3 +1,4 @@
+import Mathlib.Data.Finset.Sort
 import Spec.Consensus1.Fig3AvailableConfirmation
 
 /-!
@@ -40,16 +41,19 @@ accumulates a *union*, which is commutative and associative, so `Finset.fold` is
 right instrument and the result does not depend on an order — which is why the draft can write
 the loop over a set at all.
 
-**Line 25 cannot be computable.** The block's carried votes are a `List`: a `Finset` is a
-quotient, and a quotient cannot appear in an inductive's constructor, so `Block` could not hold
-one. The store's `Σ.gf_votes[·]` is a `Finset`, as the draft says. Getting from one to the
-other is `Finset.toList`, which needs choice — so `propose_block` is `noncomputable`, and
-`on_tick` with it.
-
-That is a deliberate trade: both types stay as the draft writes them, and the cost is confined
-to the one line that crosses between them. The alternative, holding the store's votes as lists,
-would make "at most two distinct votes per validator" a property of a list and put a
-`toFinset` at every counting site.
+**Line 25 crosses from `Finset` to `List`, under an assumed order.** The block's carried
+votes are a `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
+constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as the
+draft says. `Finset.toList` would cross for free but needs `Classical.choice` — there is no
+canonical representative to pick — so the crossing is `Finset.sort` under an ambient
+`LinearOrder (GoldfishVote Validator)` (Roberto, 2026-08-23): sorting is
+permutation-invariant, so it descends to the quotient and yields one canonical list,
+computably. Nothing reads the list's order — votes are consumed as sets on arrival — so the
+assumption is inert protocol-wise, and realistic instances have one (validators are keys,
+blocks are hashes). The first form used `toList` and paid `noncomputable` on `propose_block`
+and `on_tick`; git history has it. The alternative both forms declined, holding the store's
+votes as lists, would make "at most two distinct votes per validator" a property of a list
+and put a `toFinset` at every counting site.
 
 ## `process_block` here is the Goldfish layer's
 
@@ -68,6 +72,7 @@ variable {Validator : Type}
 
 section Handlers
 variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
+  [LinearOrder (GoldfishVote Validator)]
 
 open Params
 
@@ -120,15 +125,15 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
     only becomes defined at Section 5, where `process_block` computes it. Section 2's proposer
     cannot know it, and the draft does not say what it puts there.
 
-    `noncomputable` for line 25 alone, and `ResultOrExcept` because the walk is; see the
-    module header. -/
-noncomputable def proposeBlock (i : Validator) (S : Store Validator) (root : Nat) :
+    `ResultOrExcept` because the walk is, and the carried list is `votes` sorted by the
+    ambient order; see the module header on both. -/
+def proposeBlock (i : Validator) (S : Store Validator) (root : Nat) :
     ResultOrExcept (Block Validator × Store Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← getHead S votes (s - 1)                              -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
-  let B : Block Validator := .mk H s root votes.toList []
+  let B : Block Validator := .mk H s root (votes.sort (· ≤ ·)) []
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
   return (B, processBlock S B)
 
@@ -169,10 +174,9 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     a tick would emit are not visible to its caller. That is the one place this rendering
     loses something the draft has, and it is what a network layer would have to restore.
 
-    `noncomputable` because `propose_block` is, and `ResultOrExcept` because all three
-    actions are. The binds are written through `:=` — the plain arrow is the assignment
-    macro's, as in `ghost`. -/
-noncomputable def onTick (i : Validator) (S : Store Validator) (t : Int) (root : Nat)
+    `ResultOrExcept` because all three actions are. The binds are written through `:=` —
+    the plain arrow is the assignment macro's, as in `ghost`. -/
+def onTick (i : Validator) (S : Store Validator) (t : Int) (root : Nat)
     (isProposer : Nat → Validator → Bool) : ResultOrExcept (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
