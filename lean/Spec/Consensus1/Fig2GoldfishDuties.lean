@@ -188,30 +188,26 @@ def goldfishVote (i : Validator) (S : Store Validator) :
     `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
     evaluation of the *previous* slot, and that is the slot line 8 passes.
 
-    A `DutyResult` too: the store, and the union of whatever the duties it ran broadcast —
-    so nothing a tick emits is lost to the caller (Roberto, 2026-08-23; a first form
-    returned only the store and dropped the sends).
+    A `DutyResult` too, so nothing a tick emits is lost to the caller. Each action branch
+    returns its result directly (Roberto, 2026-08-23): the three instants are mutually
+    exclusive — distinct multiples of `Δ` — so at most one branch runs, and a tick at no
+    action instant returns the re-clocked store with nothing to send.
 
-    `ResultOrExcept` because all three actions are. The binds are written through `:=` —
-    the plain arrow is the assignment macro's, as in `ghost`. -/
+    `ResultOrExcept` because all three actions are. -/
 def onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : ResultOrExcept (DutyResult Validator) := do
   let mut S := S
-  let mut send : Finset (Message Validator) := ∅
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
   if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
-    let r ← proposeBlock i S                                   -- line 4
-    S := r.state
-    send := send ∪ r.send
+    return ← proposeBlock i S                                  -- line 4
   if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
-    let r ← goldfishVote i S                                   -- line 6
-    S := r.state
-    send := send ∪ r.send
+    return ← goldfishVote i S                                  -- line 6
   if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7
-    S := (← updateConfirmation S (s - 1))                      -- line 8
-  return { state := S, send := send }
+    let S' ← updateConfirmation S (s - 1)                      -- line 8
+    return { state := S', send := ∅ }
+  return { state := S, send := ∅ }
 
 end Handlers
 

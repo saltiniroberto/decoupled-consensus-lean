@@ -3578,14 +3578,15 @@ send. `Model.lean` gains `Message`, the three wire objects as one sum (`block`, 
 whose `send` is a `Multiset` for framework-internal reasons this layer does not have.
 All three duties return it — `propose_block` and `sg_vote` with their singleton sends,
 `goldfish_vote` with `send := ∅` for a validator off the committee, its `Option` gone — and
-`on_tick` does too, its `send` the union of whatever the duties it ran broadcast. The
-2026-08-22 note "the duties' broadcasts are dropped by `on_tick`, the one place this
-rendering loses something" is repaired and void. The two `process_*` handlers stay
-`Store → Store`: the figures give them no broadcast line, and Section 1's "an honest node
-relays every object it processes" is network behaviour, the wiring layer's to render.
-`DutyResult` sits in `Store.lean` because Figure 5 does not import Figure 2; `Message`
-carries `deriving DecidableEq`, declared below the hand-written equality instances so the
-handler finds them — the union in `on_tick` is what needs it.
+`on_tick` does too, each action branch returning its duty's result directly (Roberto's
+call; a union-accumulator form preceded it, and with it went `Message`'s only `DecidableEq`
+consumer, so the deriving clause is gone again — the three instants are mutually exclusive,
+distinct multiples of `Δ`). The 2026-08-22 note "the duties' broadcasts are dropped by
+`on_tick`, the one place this rendering loses something" is repaired and void. The two
+`process_*` handlers stay `Store → Store`: the figures give them no broadcast line, and
+Section 1's "an honest node relays every object it processes" is network behaviour, the
+wiring layer's to render. `DutyResult` sits in `Store.lean` because Figure 5 does not
+import Figure 2.
 
 ### `Root` is abstract, and the proposer's root is assumed — 2026-08-23
 
