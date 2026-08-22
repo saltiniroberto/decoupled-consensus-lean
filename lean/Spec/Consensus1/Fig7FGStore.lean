@@ -52,7 +52,7 @@ namespace Consensus1
 
 namespace FG
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 section ForkChoice
 variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]

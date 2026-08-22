@@ -46,9 +46,8 @@ constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `
 draft says. `Finset.toList` would cross for free but needs `Classical.choice` — there is no
 canonical representative to pick — so the crossing is `Finset.toSortedList` (`FinsetM.lean`),
 `Finset.sort` under an ambient `LinearOrder (GoldfishVote Validator)` (Roberto, 2026-08-23):
-sorting is
-permutation-invariant, so it descends to the quotient and yields one canonical list,
-computably. Nothing reads the list's order — votes are consumed as sets on arrival — so the
+sorting is permutation-invariant, so it descends to the quotient and yields one canonical
+list, computably. Nothing reads the list's order — votes are consumed as sets on arrival — so the
 assumption is inert protocol-wise, and realistic instances have one (validators are keys,
 blocks are hashes). The first form used `toList` and paid `noncomputable` on `propose_block`
 and `on_tick`; git history has it. The alternative both forms declined, holding the store's
@@ -66,13 +65,23 @@ set_option autoImplicit false
 
 namespace Consensus1
 
+/-- The root a proposer writes into its block, as an assumed function of the proposer and
+    its store (Roberto, 2026-08-23; before it, the root was a parameter threaded through
+    `on_tick`). The draft calls a block's root its post-state root, and the post-state only
+    becomes defined at Section 5 — so this layer can only assume the function exists, and
+    nothing constrains its answer, exactly as nothing constrains the root a received block
+    claims (`Model.lean`, the `B.root` section). -/
+class RootComputation (Validator : Type) [Roots] where
+  /-- The root for the block the given validator is about to build on the given store. -/
+  compute : Validator → Store Validator → Root
+
 namespace Goldfish
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 section Handlers
 variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
-  [LinearOrder (GoldfishVote Validator)]
+  [LinearOrder (GoldfishVote Validator)] [RootComputation Validator]
 
 open Params
 
@@ -121,19 +130,19 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
     the pre-freeze part", which is what makes the block a view-merge channel for its
     receivers.
 
-    The block's root is a parameter: it is the post-state root, and what the post-state *is*
-    only becomes defined at Section 5, where `process_block` computes it. Section 2's proposer
-    cannot know it, and the draft does not say what it puts there.
+    The block's root is computed, not chosen: `RootComputation.compute i S`, the assumed
+    function of the proposer and its store — the draft does not say what the proposer puts
+    there, so the function's answer is unconstrained.
 
     `ResultOrExcept` because the walk is, and the carried list is `votes` sorted by the
     ambient order; see the module header on both. -/
-def proposeBlock (i : Validator) (S : Store Validator) (root : Nat) :
+def proposeBlock (i : Validator) (S : Store Validator) :
     ResultOrExcept (Block Validator × Store Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← getHead S votes (s - 1)                              -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
-  let B := Block.mk (parent := H) (slot := s) (root := root)
+  let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute i S)
     (gfVotes := votes.toSortedList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
   return (B, processBlock S B)
@@ -177,14 +186,14 @@ def goldfishVote (i : Validator) (S : Store Validator) :
 
     `ResultOrExcept` because all three actions are. The binds are written through `:=` —
     the plain arrow is the assignment macro's, as in `ghost`. -/
-def onTick (i : Validator) (S : Store Validator) (t : Int) (root : Nat)
+def onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : ResultOrExcept (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
   if s > 0 ∧ t = slotStart s ∧ isProposer s i then             -- line 3
-    S := (← proposeBlock i S root).2                           -- line 4
+    S := (← proposeBlock i S).2                                -- line 4
   if s > 0 ∧ t = slotStart s + (Δ : Int) then                  -- line 5
     S := (← goldfishVote i S).2                                -- line 6
   if s > 0 ∧ t = slotStart s + 2 * (Δ : Int) then              -- line 7

@@ -3456,10 +3456,10 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 
 #### Decisions taken while rendering, each in a docstring at its line
 
-- **`B.root` is a field, `Nat`-valued**, replacing the old `BlockHash` class. The draft uses it
-  twice — `ghost` breaks ties "by root order", `update_finality` compares `(h_j, J.root)` — so
-  it needs a linear order and nothing else. Genesis carries `0`. Nothing constrains a block's
-  root to match the post-state it would compute: the block *claims* one.
+- **`B.root` is a field of the abstract type `Root`** (Roberto, 2026-08-23; it began as a
+  `Nat` with `0` at genesis, replacing the old `BlockHash` class). The entry below has the
+  `Roots` class. Nothing constrains a block's root to match the post-state it would compute:
+  the block *claims* one.
 - **`nj` is a stored field of the chain state**, written by `advance_height` and read by the
   justify event. The older draft recomputed the test inline, which is a *different rule*: this
   one reads the `h_F` of the height's entry, not of the moment the justification fires.
@@ -3567,6 +3567,29 @@ chooser raises.
   `c2238d1`): the `=` elaborator does not insert a coercion around a `mut`-variable read —
   bare `B.parent = H` elaborates against a plain binder and fails against a `mut` one — so
   Figure 1's line 8 writes the coercion explicitly, `B.parent = ↑H`.
+
+### `Root` is abstract, and the proposer's root is assumed — 2026-08-23
+
+Roberto's two calls, ending the root-as-`Nat` rendering.
+
+- **`class Roots`** in `Model.lean` carries the abstract type: `Root : Type`,
+  `genesisRoot : Root` (the draft says every block has a root, and genesis is a block), and
+  `ord : LinearOrder Root` — the one thing this rendering still reads off a root,
+  `update_finality`'s lex comparison `(h_j, J.root)`. `export Roots (Root)` gives the bare
+  spelling, and a scoped instance surfaces the order.
+- **Every inductive of the mutual family takes `[Roots]`**, `HeightPair` and `FinalityPair`
+  included: Lean requires one parameter list across a `mutual` block, so the two that never
+  mention a root carry the instance anyway. Everything downstream picks it up through one
+  `variable {Validator : Type} [Roots]` per file. `blockBeq` compares roots by
+  `decide (rt = rt')`, the `DecidableEq` coming from the order.
+- **`class RootComputation`** in `Fig2GoldfishDuties.lean`:
+  `compute : Validator → Store Validator → Root`, the assumed function computing the root a
+  proposer writes from `propose_block`'s other two parameters. `proposeBlock` and `onTick`
+  lose their `root : Nat` parameter — line 25 writes
+  `root := RootComputation.compute i S` — so the environment no longer threads a root through
+  the tick. The draft calls the root the post-state root and defines the post-state only at
+  Section 5, so the function is assumed, its answer unconstrained, exactly as a received
+  block's claim is unchecked.
 
 ## Next
 

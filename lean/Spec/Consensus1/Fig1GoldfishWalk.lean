@@ -73,7 +73,7 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 /-! ## The shared walk -/
 
@@ -87,7 +87,7 @@ variable {Validator : Type}
     answer `.ok` there. What the type cannot force is the converse, so `pick_ok` is a field:
     a nonempty set is never refused. A `Prop` field of a class is a definition component, not
     a `Spec/` theorem — the `Electorate.w_pos` precedent — and every instance owes its proof. -/
-class TieBreak (Validator : Type) where
+class TieBreak (Validator : Type) [Roots] where
   /-- One member of `s`, or the failure on the empty set. -/
   pick : (s : Finset (Block Validator)) → ResultOrExcept {B // B ∈ s}
   /-- A nonempty set is never refused. -/

@@ -35,7 +35,7 @@ namespace Consensus1
 
 namespace SG
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 section Duty
 variable [DecidableEq Validator] [Params]

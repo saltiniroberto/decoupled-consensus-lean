@@ -42,22 +42,25 @@ Three things Section 1 states that are **not** rendered, each for a reason:
 * depth. Section 1 defines it and, in this draft, no figure reads it — `ghost` breaks ties by
   root order, not by depth.
 
-## `B.root` is a field
+## `B.root` is a field of an abstract type `Root`
 
-The draft gives every block a root — the post-state root of Section 4 — and uses it twice:
-`ghost` breaks equal scores "by root order", and `update_finality` compares justifications in
-the lex order `(h_j, J.root)`. It never says what a root *is* or how one is computed, so the
-root is rendered as a `Nat` carried by the block, which is enough for the one place this
-rendering still reads it — the lex order. The walk's tie-break is **not** read off it: that
-is the `TieBreak` class in `Fig1GoldfishWalk.lean`, an unspecified fixed choice that raises
-on the empty set, of which a root order is one instance (Roberto, 2026-08-22; the first form
-filtered to the least `B.root` here and kept a proof-carrying chooser for the residue).
+The draft gives every block a root — the post-state root of Section 4 — and this rendering
+reads it in one place: `update_finality` compares justifications in the lex order
+`(h_j, J.root)`. What a root *is* the draft never says, so the type is abstract: the `Roots`
+class carries the type, the linear order the lex comparison needs, and the root `B_gen`
+carries — the draft says "every block `B` has a root" and its genesis is a block (Roberto,
+2026-08-23; the first form was a `Nat` with `0` at genesis). The walk's tie-break is **not**
+read off the root: that is `TieBreak` in `Fig1GoldfishWalk.lean`, an unspecified fixed choice
+of which a root order is one instance.
 
-Two consequences worth stating. Genesis carries one too, fixed at `0` — the draft says "every
-block `B` has a root" and its genesis is a block. And nothing constrains a block's root to
-match the post-state it would compute: the block *claims* a root, and whether the claim is
-true is a validity question this rendering does not ask, exactly as it does not ask whether a
-block was signed by its slot's proposer.
+Nothing constrains a block's root to match the post-state it would compute: the block
+*claims* a root — the proposer's own claim is the assumed `RootComputation` of Figure 2 —
+and whether the claim is true is a validity question this rendering does not ask, exactly as
+it does not ask whether a block was signed by its slot's proposer.
+
+Every inductive in the mutual family takes the `[Roots]` binder, `HeightPair` and
+`FinalityPair` included: mutual inductives must share one parameter list, so the two that
+never mention a root carry the instance anyway.
 
 ## Block equality is decided by hand
 
@@ -187,6 +190,26 @@ def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
     `rR, …, rR + R − 1`, and slot `rR` is its *opening slot*. -/
 def round [Params] (s : Nat) : Nat := s / Params.R
 
+/-! ## Roots -/
+
+/-- The vocabulary of roots (Roberto, 2026-08-23). `Root` is the type of the draft's
+    post-state roots, abstract — the draft never says what a root is or how one is computed.
+    `ord` is the linear order `update_finality`'s lex comparison `(h_j, J.root)` reads.
+    `genesisRoot` is `B_gen`'s: the draft says every block has a root, and its genesis is a
+    block. The module header says what a root does and does not promise. -/
+class Roots where
+  /-- The type of roots. -/
+  Root : Type
+  /-- `B_gen`'s root. -/
+  genesisRoot : Root
+  /-- The linear order the lex comparison reads. -/
+  ord : LinearOrder Root
+
+export Roots (Root)
+
+/-- The order on `Root`, as an instance. -/
+scoped instance [Roots] : LinearOrder Root := Roots.ord
+
 /-! ## The wire objects, as one mutual family
 
 Three of the draft's objects name each other. A block carries Goldfish votes and
@@ -195,11 +218,11 @@ and in both of its pairs. -/
 
 mutual
 
-/-- A block (Sections 1, 2.1 and 4 of the draft). Genesis has no parent, slot `0`, root `0`
-    and nothing carried; every other block has a parent, a slot, a root — the post-state
-    root, see the module header — a list of Goldfish votes of the *previous* slot, and a list
-    of combined attestations. Chains are in bijection with their tips and the draft
-    identifies the two, so this type is both.
+/-- A block (Sections 1, 2.1 and 4 of the draft). Genesis has no parent, slot `0`, the
+    `Roots.genesisRoot` and nothing carried; every other block has a parent, a slot, a root —
+    the post-state root, see the module header — a list of Goldfish votes of the *previous*
+    slot, and a list of combined attestations. Chains are in bijection with their tips and
+    the draft identifies the two, so this type is both.
 
     `B.gf_votes` is the draft's only relay channel: "there is no proposal envelope: the block
     is the only wire object a proposer emits".
@@ -210,11 +233,11 @@ mutual
     proposer's signature is not modelled — proposer assignment is outside the draft's scope,
     and whether a block was signed by its slot's proposer is a fact for the execution layer,
     when one exists. -/
-inductive Block (Validator : Type) where
+inductive Block (Validator : Type) [Roots] where
   /-- `B_gen`. -/
   | genesis
   /-- Every other block. -/
-  | mk (parent : Block Validator) (slot : Nat) (root : Nat)
+  | mk (parent : Block Validator) (slot : Nat) (root : Root)
       (gfVotes : List (GoldfishVote Validator))
       (attestations : List (Attestation Validator))
 
@@ -225,7 +248,7 @@ inductive Block (Validator : Type) where
     well-formed vote, every rule that counts votes tests committee membership itself, and a
     store can receive a malformed vote. The signature is not modelled; `validator` stands in
     for it, as in `Block`. -/
-structure GoldfishVote (Validator : Type) where
+structure GoldfishVote (Validator : Type) [Roots] where
   /-- The voting committee member. -/
   validator : Validator
   /-- The slot the vote belongs to. -/
@@ -239,7 +262,7 @@ structure GoldfishVote (Validator : Type) where
     and finality components are carried as the draft's two pairs, which is what makes the
     unwritable combination — a height `⊥` under a named target — unrepresentable. The
     signature itself is not modelled; the `validator` field stands in for it, as in `Block`. -/
-structure Attestation (Validator : Type) where
+structure Attestation (Validator : Type) [Roots] where
   /-- The signing validator. -/
   validator : Validator
   /-- The round the attestation belongs to. -/
@@ -254,7 +277,7 @@ structure Attestation (Validator : Type) where
 /-- An attestation's height pair `(height, target)`: a *target vote* `(h, T)` with
     `T ≠ ⊥`, an *empty-target vote* `(h, ⊥)`, or the empty pair `(⊥, ⊥)`. `(⊥, T)` is not a
     case, which is why this is an inductive type rather than two `Option` fields. -/
-inductive HeightPair (Validator : Type) where
+inductive HeightPair (Validator : Type) [Roots] where
   /-- A target vote `(h, T)`. -/
   | target (h : Nat) (T : Block Validator)
   /-- An empty-target vote `(h, ⊥)`. -/
@@ -263,13 +286,15 @@ inductive HeightPair (Validator : Type) where
   | empty
 
 /-- An attestation's finality pair: `(h_f, T_f)` with `T_f ≠ ⊥`, or the empty pair. -/
-inductive FinalityPair (Validator : Type) where
+inductive FinalityPair (Validator : Type) [Roots] where
   /-- `(h_f, T_f)` with `T_f ≠ ⊥`. -/
   | pair (h : Nat) (T : Block Validator)
   /-- The empty pair. -/
   | empty
 
 end
+
+variable [Roots]
 
 /-- An SG vote (Section 3.1): the tuple `(v, r, H)` from a validator `v ∈ V` with head `H`,
     a block or `⊥`. Not part of the mutual family above, and it needs no hand-written
@@ -304,7 +329,7 @@ mutual
 def blockBeq : Block Validator → Block Validator → Bool
   | .genesis, .genesis => true
   | .mk p s rt vs as, .mk p' s' rt' vs' as' =>
-      blockBeq p p' && s == s' && rt == rt' && gfVoteListBeq vs vs' && attListBeq as as'
+      blockBeq p p' && s == s' && decide (rt = rt') && gfVoteListBeq vs vs' && attListBeq as as'
   | _, _ => false
 
 /-- Structural equality of Goldfish votes. -/
@@ -361,7 +386,7 @@ theorem blockBeq_iff : ∀ (a b : Block Validator), blockBeq a b = true ↔ a = 
       rw [blockBeq, Block.mk.injEq]
       rw [Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true]
       rw [blockBeq_iff p p', gfVoteListBeq_iff vs vs', attListBeq_iff as as']
-      simp only [beq_iff_eq]
+      simp only [beq_iff_eq, decide_eq_true_eq]
       simp only [and_assoc]
 
 /-- `gfVoteBeq` decides equality of Goldfish votes. -/
@@ -470,10 +495,10 @@ def slot : Block Validator → Nat
   | .genesis => 0
   | .mk _ s _ _ _ => s
 
-/-- `B.root`, the post-state root. `0` at genesis — see the module header on what the root
-    is for and what carrying one does not promise. -/
-def root : Block Validator → Nat
-  | .genesis => 0
+/-- `B.root`, the post-state root; `Roots.genesisRoot` at genesis. See the module header on
+    what the root is for and what carrying one does not promise. -/
+def root : Block Validator → Root
+  | .genesis => Roots.genesisRoot
   | .mk _ _ rt _ _ => rt
 
 /-- `B.gf_votes`, the carried Goldfish votes of slot `B.slot − 1`. Empty at genesis. -/

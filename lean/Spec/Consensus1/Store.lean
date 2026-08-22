@@ -72,7 +72,7 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 /-! ### The three map types, and how each is read -/
 

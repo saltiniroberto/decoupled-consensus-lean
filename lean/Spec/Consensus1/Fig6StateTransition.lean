@@ -47,7 +47,7 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 /-! ## Definition 4 — the chain state -/
 

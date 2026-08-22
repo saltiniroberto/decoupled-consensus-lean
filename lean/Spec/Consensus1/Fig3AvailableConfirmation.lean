@@ -42,7 +42,7 @@ namespace Consensus1
 
 namespace Goldfish
 
-variable {Validator : Type}
+variable {Validator : Type} [Roots]
 
 section Confirmation
 variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
