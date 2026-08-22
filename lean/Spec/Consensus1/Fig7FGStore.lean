@@ -33,19 +33,17 @@ fact of the `Store` type. `Analysis/` is where it belongs.
 
 ## Reading the state map, and where that lands
 
-Definition 5 and line 25 read `Σ.σ[W].h` and `Σ.σ[B].h`. The bracket raises when the map does
-not record the block, so a routine reading it carries `ResultOrExcept` — and that is why
-`viable`, `getFilteredBlockTree`, `goldfishEligible` and `getHead` all do, while
-`forkChoiceRoot` does not.
+Definition 5 and lines 15 and 25 read `Σ.σ[W].h` and `Σ.σ[B].h`. The bracket raises when the
+map does not record the block, so a routine reading it carries `ResultOrExcept` —
+`processBlock`, `updateFinality`, `viable`, `getFilteredBlockTree`, `goldfishEligible` and
+`getHead` all do, and `forkChoiceRoot` alone does not, reading no map. A missing entry
+reaches the caller instead of becoming a silent answer; on a store whose `Σ.σ` covers `Σ.T`
+nothing raises at all, and that theorem belongs to `Analysis/`.
 
-Definition 5's `∃W` is a *set-builder* over the live tree, which is a pure filter with no
-monad to propagate into, so its inner read goes through the raw `Option` — `Σ.σ W` by
-application — rather than the bracket. That is the same split the state map's docstring
-describes: application for the option, brackets to raise.
-
-`update_finality` is the exception that proves the rule. It reads no `Σ.σ[·]`: the state it
-folds in arrives as its argument, and `Σ.h_max`'s recomputation at line 15 is a maximum over
-the live tree's *recorded* heights, which the same `Σ.σ W` application supplies.
+A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
+`Finset.filterM` collects Definition 5's witnesses, and `Finset.imageM` collects line 15's
+heights. The one read the monad cannot reach is inside `get_head`'s walk — see its docstring,
+this subtree's one named deviation.
 -/
 
 set_option autoImplicit false
@@ -68,11 +66,14 @@ open Params
     live block is *viable* when it has a live descendant whose state height is at most one
     below the current maximum.
 
-    The inner read is `Σ.σ W` by application, not `Σ.σ[W]`: this is a filter, and a raising
-    read there would have nothing to propagate into. A descendant the map does not record
-    therefore does not witness viability — see the module header. -/
-def viable (S : Store Validator) : Finset (Block Validator) :=
-  {B ∈ S.liveTree | ∃ W ∈ S.liveTree, B ⪯ W ∧ (S.σ W).any (fun σW => σW.h ≥ S.h_max - 1)}
+    Definition 5's `W` are collected first — the live blocks whose recorded height reaches
+    `Σ.h_max − 1` — and the set-builder then asks for a descendant among them. The collection
+    reads `Σ.σ[W]` per live block through `Finset.filterM`, so a live block the map does not
+    record raises rather than silently failing to witness. -/
+def viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator)) := do
+  let witnesses ← S.liveTree.filterM fun W => do
+    return (← S.σ[W]).h ≥ S.h_max - 1
+  return {B ∈ S.liveTree | ∃ W ∈ witnesses, B ⪯ W}
 
 /-! ## The store handler, extended -/
 
@@ -86,21 +87,28 @@ def viable (S : Store Validator) : Finset (Block Validator) :=
     descendant of itself below `Σ.J`, and `Σ.h_max` is recomputed inside the live tree the
     advance just shrank.
 
+    Two reads raise. Line 13's viability, whose `(← viable S)` is evaluated before the
+    conjunction is tested — the `←` lifts above the `if` — so the routine raises on a store
+    with an unrecorded live block even when `σ.F` offers no advance; on a store where nothing
+    raises the two readings agree. And line 15's heights, collected through `Finset.imageM`,
+    so a live block the map does not record fails the recomputation rather than contributing
+    a placeholder.
+
     Line 15's maximum is over the recorded heights of the *new* live tree, so it can go down;
     line 10's cannot. -/
 def updateFinality (S : Store Validator) (σ : ChainState Validator) :
-    Store Validator := Id.run do
+    ResultOrExcept (Store Validator) := do
   let mut S := S
   S.h_max ← max S.h_max σ.h                                    -- line 10
   -- line 11: `(σ.h_j, σ.J.root) > (Σ.h_j, Σ.J.root)`, the lex order written out
   if S.F ⪯ σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ S.J.root < σ.J.root)) then
     S.J ← σ.J                                                  -- line 12
     S.h_j ← σ.h_j
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ viable S then               -- line 13
+  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ (← viable S) then           -- line 13
     S.F ← σ.F                                                  -- line 14
     S.h_F ← σ.h_F
-    -- line 15: recomputed in the live tree that just shrank
-    S.h_max ← (S.liveTree.image (fun B => (S.σ B).elim 0 (·.h))).max.getD 0
+    -- line 15: `max{Σ.σ[B].h : B ∈ T_F(Σ)}`, in the live tree that just shrank
+    S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
 
 /-- `process_block(Σ, B)` (Figure 7, lines 1–8): Figure 2's handler with the two lines this
@@ -131,7 +139,7 @@ def processBlock (S : Store Validator) (B : Block Validator) :
   for vote in B.gfVotes do                                     -- line 6
     S ← Goldfish.processGoldfishVote S vote                     -- line 7
   -- line 8: `update_finality(Σ, Σ.σ[B])` — new at this layer
-  return updateFinality S (← S.σ[B])
+  return ← updateFinality S (← S.σ[B])
 
 /-! ## The two derived views, and the redefined fork choice -/
 
@@ -148,10 +156,11 @@ def forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
 
     "Goldfish starts at the root even if the root is not in the filtered tree" — so this set
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
-    separately at line 27. -/
-def getFilteredBlockTree (S : Store Validator) : Finset (Block Validator) :=
+    separately at line 27. It raises exactly where `viable` does. -/
+def getFilteredBlockTree (S : Store Validator) :
+    ResultOrExcept (Finset (Block Validator)) := do
   let root := forkChoiceRoot S                                 -- line 21
-  {B ∈ viable S | root ⪯ B}                                    -- line 22
+  return {B ∈ (← viable S) | root ⪯ B}                         -- line 22
 
 /-- `goldfish_eligible(Σ, votes, s, B)` (Figure 7, lines 23–25): Figure 1's gate with a third
     disjunct — "a child whose state height is below `Σ.h_max − 1` is eligible without a
@@ -171,26 +180,26 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
 
 /-- `get_head(Σ, votes, k)` (Figure 7, lines 26–29): the protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
-    selects a descendant of it over the same tree.
+    selects a descendant of it over the same tree. It raises where the filtered tree does.
 
-    **The extended gate is not what `ghost` receives here**, and that is a deviation worth
-    stating plainly. `ghost` takes a `Block → Bool` predicate; this layer's gate returns
-    `ResultOrExcept Bool`, so the two do not compose. What the walk is given instead is the
-    gate with the height clause read through the raw `Option`: a block the map does not record
-    fails the height clause rather than failing the walk.
+    **The extended eligibility condition is not what `ghost` receives here**, and that is a
+    deviation worth stating plainly. `ghost` takes a `Block → Bool` predicate; this layer's
+    condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — so the two do not compose.
+    What the walk is given instead is the same condition with the height clause read through
+    the raw `Option`: a block the map does not record fails the height clause rather than
+    failing the walk.
 
     On a store whose `Σ.σ` covers `Σ.T` the two readings agree, and the filtered tree is a
     subset of `Σ.T`, so every block the walk can reach is recorded. Making the walk itself
-    raise would mean a monadic `ghost`, and that needs the recursion to carry the monad —
-    which is a change to Figure 1, not to this line. Left as it is, with the disagreement
-    named. -/
+    raise would mean a monadic `ghost`, and that needs the loop to carry the monad — which is
+    a change to Figure 1, not to this line. Left as it is, with the disagreement named. -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
-    Block Validator :=
+    ResultOrExcept (Block Validator) := do
   let root := forkChoiceRoot S                                 -- line 27
-  let tree := getFilteredBlockTree S
+  let tree ← getFilteredBlockTree S
   let anchor := SG.majorityForkChoice S root tree (round S.s)   -- line 28
-  -- line 29, with the gate as described above
-  ghost anchor tree (Goldfish.score votes k)
+  -- line 29, with the eligibility condition as described above
+  return ghost anchor tree (Goldfish.score votes k)
     (fun B => (S.σ B).any (fun σB => σB.h < S.h_max - 1) ∨
       2 * Goldfish.score votes k B > Goldfish.votersCount votes k ∨ B.slot = S.s)
 

@@ -1,4 +1,5 @@
 import Spec.Consensus1.Model
+import Spec.Consensus1.FinsetM
 
 /-!
 # Failure: one `Error`, and `ResultOrExcept`
@@ -9,8 +10,8 @@ kept out of the figure files so that each of those states what the draft says an
 else (Roberto, 2026-08-21).
 
 A copy of `Spec/Consensus/Raise.lean` under this subtree's namespace, for the reason
-`Notation.lean` gives: the renderings share nothing. One thing differs from that copy — the
-`Finset.unionM` fold instances are absent, this rendering never filtering monadically.
+`Notation.lean` gives: the renderings share nothing. The fold instances below are the same
+copy's, at this subtree's own error type.
 
 The draft has no failures. Its state map is defined on every accepted block and its routines
 run at the instants the schedule names, so every raise below is a rendering artifact: it marks
@@ -27,13 +28,13 @@ last one decisive:
   that it never fires;
 * it keeps every signature short and every `do` block in a single error type, which is what
   `Monad (Except ε)` requires, `ε` being fixed across a bind;
-* **a payload would make a monadic fold over a set ill-defined.** The other rendering's
-  `Finset.filterM` needs its combining operation commutative, and the failure-failure case
-  needs the two failures to be *equal* — which is `Subsingleton Error`. With a payload
-  `Std.Commutative` is false, not merely unproved, because the result would depend on which
-  failure the traversal met first. This rendering never filters monadically — Definition 5's
-  set-builder reads the state map through the raw `Option` instead — so the instances are not
-  here; the reason to keep the error payload-free is.
+* **`Finset.filterM` and `Finset.imageM` could not be used over it otherwise.** Those folds
+  need their combining operation commutative, and the failure-failure case needs the two
+  failures to be *equal* — which is `Subsingleton Error`. Give `Error` a payload and
+  `Std.Commutative` becomes false, not merely unproved, because the result would then depend
+  on which failure the traversal met first. Figure 7's `viable` and `update_finality` are the
+  consumers (2026-08-22, Roberto's call — a first form read the map through the raw `Option`
+  inside the set-builders, which answered silently where this raises).
 
 `ResultOrExcept α` is `Except Error α`, and the long name is deliberate: `Result` is too
 common a word to take — `EStateM.Result` is in core, and a bare `Result` inside this namespace
@@ -68,5 +69,29 @@ instance : Subsingleton Error := ⟨fun e e' => by cases e; cases e'; rfl⟩
     an `abbrev` everything applies through it — `do`, `throw`, `←`, and `Except.toOption` and
     friends — while signatures and `#check` output read `ResultOrExcept α`. -/
 abbrev ResultOrExcept (α : Type) := Except Error α
+
+/-- `Finset.unionM` at `ResultOrExcept` is commutative — **and only because the failure
+    carries no payload**. The failure-failure case needs the two failures to be equal, which
+    is `Subsingleton Error`. -/
+instance {α : Type} [DecidableEq α] :
+    Std.Commutative (Finset.unionM (α := α) (m := ResultOrExcept)) where
+  comm x y := by
+    cases x <;> cases y
+    all_goals simp only [Finset.unionM, Except.bind, bind, pure]
+    all_goals first
+      | rfl
+      | exact congrArg _ (Subsingleton.elim _ _)
+      | exact congrArg _ (Finset.union_comm _ _)
+
+/-- And associative, for the same reason. -/
+instance {α : Type} [DecidableEq α] :
+    Std.Associative (Finset.unionM (α := α) (m := ResultOrExcept)) where
+  assoc x y z := by
+    cases x <;> cases y <;> cases z <;>
+      simp only [Finset.unionM, Except.bind, bind, pure] <;>
+      first
+        | rfl
+        | exact congrArg _ (Subsingleton.elim _ _)
+        | exact congrArg _ (Finset.union_assoc _ _ _)
 
 end Consensus1

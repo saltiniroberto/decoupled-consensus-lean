@@ -3420,7 +3420,20 @@ it was written for.
 Two notes on the copies. `Notation.lean` is now duplicated three times, and that is legal
 because the macros are `scoped`: each copy is active only inside its own namespace.
 `FinsetM.lean` is *not* duplicated — its declarations are in the root `Finset` namespace and
-two copies would collide — and `Consensus1` needs none of it, never filtering monadically.
+two copies would collide. `Consensus1` first went without it, reading the state map inside
+its set-builders through the raw `Option`; on 2026-08-22 Roberto had the exception style
+carried through, so `Spec/Consensus1/FinsetM.lean` now *imports* the second rendering's file
+— the one cross-subtree import, legal because that file holds no protocol content — and adds
+`Finset.imageM`, the effectful image, which sits there rather than in the original because
+`Spec/Consensus/` stays as it was. `Consensus1/Raise.lean` carries the same two
+`Finset.unionM` fold instances as the `Consensus` copy, at its own error type. The consumers,
+all in `Fig7FGStore.lean`: `viable` collects Definition 5's witnesses with `filterM`
+(reading `Σ.σ[W]` per live block, raising where the first form silently failed to witness);
+`updateFinality` is `ResultOrExcept` — line 13's `(← viable S)` lifts above the `if`, so it
+raises on an unrecorded live block even when no advance is offered, and line 15's
+`max{Σ.σ[B].h : B ∈ T_F(Σ)}` goes through `imageM`; `getFilteredBlockTree` and `FG.getHead`
+propagate. The one raw-`Option` read left in the subtree is the walk predicate inside
+`FG.getHead` — the named deviation below, narrowed to exactly that.
 
 What the two drafts share: the attestation's seven fields, the chain state's shape, `q =
 ⌈2W/3⌉`, and the slot/round arithmetic. What the newer one drops: the candidate tree, the
@@ -3479,11 +3492,13 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 - **The duties return what they would broadcast**, paired with the store that has processed it.
   `on_tick` drops those, so the objects a tick emits are invisible to its caller: the one place
   this rendering loses something, and what a network layer would restore.
-- **`FG.getHead` does not pass the extended gate to `ghost`.** The gate returns
-  `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost` takes a `Block → Bool`. The walk
-  gets the height clause read through the raw `Option` instead, so an unrecorded block fails
-  the clause rather than the walk. The two agree wherever `Σ.σ` covers `Σ.T`. A monadic `ghost`
-  would be a change to Figure 1, and is not taken. **This is the one deviation to revisit.**
+- **`FG.getHead` does not pass the extended eligibility condition to `ghost`.** That
+  condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost` takes a
+  `Block → Bool`. The walk gets the height clause read through the raw `Option` instead, so an
+  unrecorded block fails the clause rather than the walk. The two agree wherever `Σ.σ` covers
+  `Σ.T`. A monadic `ghost` would be a change to Figure 1, and is not taken. **This is the one
+  deviation to revisit**, and since the 2026-08-22 `filterM` adoption it is the subtree's only
+  raw-`Option` read of the state map.
 - Absent for want of a consumer: Section 5.1's `E_F(Σ)`, Section 4.1's E1/E2 slashing
   conditions, Section 3.4's intermediate `on_tick` line and `get_head` redirection — Section 5
   changes the same two places and its version is the protocol's.
@@ -3506,7 +3521,8 @@ draft at all. If the newer draft grows a Section 6, its validator layer is a new
 
 0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All seven
    figures of the newer draft are in, `lake build Spec` green across the three renderings.
-   What is open there: the one deviation, `FG.getHead` not handing `ghost` the extended gate
+   What is open there: the one deviation, `FG.getHead` not handing `ghost` the extended
+   eligibility condition
    (the entry above says why and what closing it would cost); and no `Analysis/` at all for
    this draft — the coherence invariant on the `coherence-invariant` branch is about the
    *older* store and does not transfer.

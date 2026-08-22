@@ -21,6 +21,7 @@ import Spec.Consensus.Fig6TimedStore
 import Spec.Consensus.Validator
 import Spec.Consensus1.Model
 import Spec.Consensus1.Notation
+import Spec.Consensus1.FinsetM
 import Spec.Consensus1.Raise
 import Spec.Consensus1.Fig6StateTransition
 import Spec.Consensus1.Store
@@ -86,8 +87,10 @@ can replace a reading and Lean cannot. So each layer's routines sit in `Consensu
 choice. `ghost`, which all three instantiate, sits in `Consensus1` itself.
 
 Five of its files render no figure: `Model.lean` (Section 1's substrate and the wire objects),
-`Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add), and its own copies of
-`Notation.lean` and `Raise.lean`. The import order is dependency order rather than figure
+`Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add), its own copies of
+`Notation.lean` and `Raise.lean`, and `FinsetM.lean` — the monadic image, which *imports* the
+second rendering's `FinsetM.lean` instead of copying it, a root-namespace declaration being
+uncopyable. The import order is dependency order rather than figure
 order: Figure 6's chain state is what the store's `Σ.σ[·]` maps into, and Figure 3's
 confirmation is what Figure 2's `on_tick` calls.
 
