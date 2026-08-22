@@ -50,8 +50,8 @@ claims for pure re-assignment, so the monadic bind is written `H := (← bestChi
 The figure writes `loop … return H`, which terminates because each step moves to a child and
 `tree` is finite. That argument is about the tree being a tree — parent-closed and acyclic —
 which is an invariant of `Σ.T` rather than a fact about the `Finset` this routine takes. So
-line 7's `loop` is written `for _ in [:tree.card]`: a descent through distinct blocks of
-`tree` visits at most `tree.card` of them, so on anything that really is a tree the bound is
+line 7's `loop` is written `for _ in [:|tree|]`: a descent through distinct blocks of
+`tree` visits at most `|tree|` of them, so on anything that really is a tree the bound is
 never reached and the `for` runs exactly the figure's `loop`.
 
 What the bound costs is one reachable case the draft does not have: the iterations run out
@@ -109,14 +109,14 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
     through eligible children in `tree`, taking the highest score at each step, and stop
     where no child is eligible. Ties are broken by the ambient `TieBreak`.
 
-    The figure's `loop` is bounded by `tree.card`, and the result is `ResultOrExcept`
+    The figure's `loop` is bounded by `|tree|`, and the result is `ResultOrExcept`
     because the tie-break raises — on a set line 9 keeps empty sets out of, so the raise is
     unreachable here. See the module header for both. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     (score : Block Validator → Nat) (eligible : Block Validator → Bool) :
     ResultOrExcept (Block Validator) := do
   let mut H := anchor                                          -- line 6
-  for _ in [:tree.card] do                                     -- line 7: `loop`, bounded
+  for _ in [:|tree|] do                                        -- line 7: `loop`, bounded
     -- line 8: the eligible children of the block we stand on
     let children := {B ∈ tree | B.parent = ↑H ∧ eligible B}
     if children = ∅ then                                       -- line 9
@@ -151,13 +151,13 @@ def score (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validat
   -- line 3: `{v ∈ K_s \ equivocators : (v, s, B') ∈ votes with B ⪯ B'}`
   let supporters := {v ∈ (Committees.K s : Finset Validator) \ eq |
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
-  eq.card + supporters.card                                    -- line 4
+  |eq| + |supporters|                                          -- line 4
 
 /-- `voters_count = |{v ∈ K_s : votes holds a vote by v}|`: the participants `N_s(votes)` of
     Definition 2, as a count. Line 13 of `goldfish_eligible`, and line 5 of Figure 3's
     confirmation, which counts a *different* vote set against the same shape. -/
 def votersCount (votes : Finset (GoldfishVote Validator)) (s : Nat) : Nat :=
-  ({v ∈ (Committees.K s : Finset Validator) | ∃ a ∈ votes, a.validator = v}).card
+  |{v ∈ (Committees.K s : Finset Validator) | ∃ a ∈ votes, a.validator = v}|
 
 /-- `goldfish_eligible(Σ, votes, s, B)` (Figure 1, lines 12–14): a strict majority of the
     participants support `B`, or `B` is a block of the current slot.

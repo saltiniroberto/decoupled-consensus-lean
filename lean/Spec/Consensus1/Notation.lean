@@ -5,8 +5,8 @@ import Spec.Consensus1.Model
 
 **This file is not a specification.** It holds no protocol content — no state, no routine,
 nothing that can be checked against the draft. It is the notation layer that lets the
-figure files carry the draft's own assignment statements: `σ.h ← σ.h + 1`,
-`σ.target_participation, σ.progress ← false^V`.
+figure files carry the draft's own assignment statements — `σ.h ← σ.h + 1`,
+`σ.target_participation, σ.progress ← false^V` — and its cardinality bars, `|votes|`.
 
 It is a duplicate — the third — of `Spec/Defs/Notation.lean`, under this subtree's own
 namespace, because the renderings share nothing, not even by import, so each stays untouched
@@ -119,5 +119,17 @@ macro_rules
             { $v with $f:ident :=
                 (Function.update (($v).$f:ident) $i
                   (Function.update ((($v).$f:ident) $i) $j $e)) })
+
+/-- `|s|` for `Finset.card s`, as the draft writes it: `|equivocators| + |supporters|`
+    (Figure 1, line 4). Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so
+    `|{v ∈ K | p v}|` parses with the set-builder's own `|` inside, and a bar in a `match`
+    alternative is untouched (both measured, 2026-08-23; not in the older notation layers,
+    whose figures write no cardinality).
+
+    What it costs, measured the same day: two macros on one spelling do not overload, so
+    while this namespace is open the `abs` bars stop elaborating — `|x| : Int` becomes
+    `Finset.card x` and fails. Nothing in this subtree takes an absolute value; write
+    `abs x` if one ever does. A mistake is a type error, never a silent one. -/
+scoped macro:max atomic("|" noWs) s:term noWs "|" : term => `(Finset.card $s)
 
 end Consensus1
