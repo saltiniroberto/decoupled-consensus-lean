@@ -71,8 +71,7 @@ namespace Store
     reads `Σ.σ[W]` per live block through `Finset.filterM`, so a live block the map does not
     record raises rather than silently failing to witness. -/
 def viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator)) := do
-  let witnesses ← S.liveTree.filterM fun W => do
-    return (← S.σ[W]).h ≥ S.h_max - 1
+  let witnesses ← {W ∈ᴹ S.liveTree | (← S.σ[W]).h ≥ S.h_max - 1}
   return {B ∈ S.liveTree | ∃ W ∈ witnesses, B ⪯ W}
 
 /-! ## The store handler, extended -/

@@ -1,4 +1,5 @@
 import Spec.Consensus1.Model
+import Spec.Consensus1.FinsetM
 
 /-!
 # Notation for rendering the draft's figures as pseudocode
@@ -6,7 +7,8 @@ import Spec.Consensus1.Model
 **This file is not a specification.** It holds no protocol content — no state, no routine,
 nothing that can be checked against the draft. It is the notation layer that lets the
 figure files carry the draft's own assignment statements — `σ.h ← σ.h + 1`,
-`σ.target_participation, σ.progress ← false^V` — and its cardinality bars, `|votes|`.
+`σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, and its
+set-builders whose condition raises, `{x ∈ᴹ s | p}`.
 
 It is a duplicate — the third — of `Spec/Defs/Notation.lean`, under this subtree's own
 namespace, because the renderings share nothing, not even by import, so each stays untouched
@@ -144,6 +146,32 @@ macro_rules
         Macro.throwError "for all: the body must accumulate into its own target"
       `(doElem| $acc:ident := Finset.fold (· ∪ ·) $acc (fun $x => $e)
           (Finset.filter (fun $x => $p) $s))
+
+/-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in the
+    draft's own clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads
+    a store map with the raising bracket has no monad to fail into; this form expands to
+    `s.filterM (fun x => do return p)`, and a `(← …)` inside `p` lifts into that inner `do`
+    `ᴹ` says monadic. The spelling is distinct from the pure builder's on purpose:
+    overloading `∈` would make every pure filter ambiguous.
+
+    **It must be a `doElem`, claiming the whole `let … ← {…}` statement** — measured
+    2026-08-23, and it is the recorded term-versus-doElem trap hit live: as a *term* macro
+    the enclosing `do` scans the bind's right side before the macro expands, lifts the
+    user's `(← …)` out of the builder, and the bound variable escapes its binder ("Unknown
+    identifier `vote`"). As a `doElem` the macro owns the statement, so the arrow lands
+    inside the `do` the expansion itself emits, which shields it. -/
+scoped syntax (name := filterMBind) (priority := high)
+  "let " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
+
+/-- The `let mut` form of the raising set-builder; `goldfish_vote`'s line 29 is the case. -/
+scoped syntax (name := filterMBindMut) (priority := high)
+  "let " "mut " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
+
+macro_rules
+  | `(doElem| let $y:ident ← {$x:ident ∈ᴹ $s | $p}) =>
+      `(doElem| let $y:ident ← Finset.filterM (fun $x => do return $p) $s)
+  | `(doElem| let mut $y:ident ← {$x:ident ∈ᴹ $s | $p}) =>
+      `(doElem| let mut $y:ident ← Finset.filterM (fun $x => do return $p) $s)
 
 /-- `|s|` for `Finset.card s`, as the draft writes it: `|equivocators| + |supporters|`
     (Figure 1, line 4). Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so

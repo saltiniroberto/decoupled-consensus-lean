@@ -68,11 +68,9 @@ def updateConfirmation (S : Store Validator) (s : Nat)
     ResultOrExcept (Store Validator) := do
   let mut S := S
   -- line 2
-  let early ← S.gfVotes[s].filterM fun vote => do
-    return (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)
+  let early ← {vote ∈ᴹ S.gfVotes[s] | (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)}
   -- line 3
-  let late ← S.gfVotes[s].filterM fun vote => do
-    return (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)
+  let late ← {vote ∈ᴹ S.gfVotes[s] | (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)}
   -- line 4: the early votes whose validator `late` does not catch equivocating
   let votes := {vote ∈ early |
     ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}

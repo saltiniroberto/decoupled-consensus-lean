@@ -3663,6 +3663,42 @@ Roberto's two calls, ending the root-as-`Nat` rendering.
   Section 5, so the function is assumed, its answer unconstrained, exactly as a received
   block's claim is unchecked.
 
+### The `Consensus1` style sheet — running list, updated 2026-08-23
+
+Every stylistic call Roberto has made for this subtree, in one place; the dated entries
+above carry the reasoning, the docstrings at each point of use carry the mechanics. Update
+this list when a new call lands.
+
+- **Raise, never answer silently.** Map reads are raising brackets (`Σ.σ[B]`,
+  `Σ.timestamp[x]` via `TimeMap`), set operations that read them go through
+  `filterM`/`imageM`, `TieBreak.pick` raises on `∅`, and the raw `Option` stays reachable by
+  application. One deviation stands: the walk predicate inside `FG.getHead`.
+- **Pseudocode spelling, gaps closed in `Notation.lean`**: assignment arrows (incl. bare
+  identifiers and two-level maps), `|s|` for `Finset.card` (cost: the `abs` bars, shadowed
+  in-namespace), `for all x ∈ s with p do acc ← acc ∪ e` (cost: `all` is a token), and the
+  raising set-builder `let y ← {x ∈ᴹ s | p}` (a `doElem`, necessarily — the term-macro form
+  loses the `←` to the outer `do`'s lift).
+- **No `match` and no `|` alternatives in spec bodies** — dependent `if h : o.isSome` idiom;
+  recursion patterns like a `for`-range bound are the tolerated shape. **No `∣` (divides)**:
+  write `% … = 0`.
+- **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
+  likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form
+  `{ state := …, send := ∅ }`; `match` patterns untouched.
+- **Store-taking routines live in `namespace Store`** for dot notation, except the
+  layer-redefined names (`get_head` ×3, `process_block` ×2, `goldfish_eligible` ×2, and
+  Fig1's `eligible`/`forkChoice`), which keep `Goldfish`/`SG`/`FG`.
+- **Scheduled routines carry their instant as an anonymous autoparam**
+  (`… := by assumption`); `on_tick` discharges them with dependent `if`s and a `have`.
+- **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
+  (abstract `Root`, its order, genesis's root), `TieBreak`, `RootComputation`, and
+  `[LinearOrder (GoldfishVote Validator)]` for `toSortedList`. Class over type parameter,
+  confirmed 2026-08-23.
+- **Duties return `DutyResult`** (`state`, `send` — the lean-sts step shape); `on_tick`
+  returns from each action branch directly.
+- **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H`.
+- **Line comments cite the figure's own numbering**; docstrings are self-contained and cite
+  nothing (the 2026-08-19 pivot).
+
 ## Next
 
 0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All seven
