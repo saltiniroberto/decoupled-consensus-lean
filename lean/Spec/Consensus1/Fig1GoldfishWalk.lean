@@ -30,19 +30,20 @@ is left. On a tree with distinct roots nothing is left to choose; the class is t
 walk is total without the definition assuming it. `Model.lean`'s `Selection` says why a class
 is the only computable route.
 
-## `ghost` is a walk with no bound, and Lean wants one
+## The figure's `loop` gets a bound
 
 The figure writes `loop … return H`, which terminates because each step moves to a child and
 `tree` is finite. That argument is about the tree being a tree — parent-closed and acyclic —
 which is an invariant of `Σ.T` rather than a fact about the `Finset` this routine takes. So
-the recursion is on an explicit `fuel : Nat`, and the caller passes `tree.card`, which is at
-least the length of any descending path.
+line 7's `loop` is written `for _ in [:tree.card]`: a descent through distinct blocks of
+`tree` visits at most `tree.card` of them, so on anything that really is a tree the bound is
+never reached and the `for` runs exactly the figure's `loop`.
 
-What that costs is one reachable case the draft does not have: `fuel = 0` with an eligible
-child still available. The routine returns the block it is standing on, which is the same
-answer the figure gives when no child is eligible, and `Analysis/` is where "the fuel never
-runs out on a real tree" belongs. The alternative — a well-founded recursion on the set of
-strict descendants — needs the tree invariant in the *definition*, and `Spec/` is not the
+What the bound costs is one reachable case the draft does not have: the iterations run out
+with an eligible child still available, and the routine returns the block it stands on — the
+same answer the figure gives when no child is eligible. `Analysis/` is where "the bound is
+never reached on a real tree" belongs. The alternative — a well-founded recursion on the set
+of strict descendants — needs the tree invariant in the *definition*, and `Spec/` is not the
 place to assume it.
 
 ## The score counts equivocators for every block
@@ -83,29 +84,20 @@ def bestChild (children : Finset (Block Validator)) (h : children.Nonempty)
     where no child is eligible. Ties go to the smaller root — the draft's "ties by root
     order", with the order fixed as `≤` on `B.root`.
 
-    `fuel` bounds the descent; see the module header. The public entry point is `ghostFrom`
-    below, which supplies it. -/
-def ghostFuel (fuel : Nat) (anchor : Block Validator) (tree : Finset (Block Validator))
-    (score : Block Validator → Nat) (eligible : Block Validator → Bool) :
-    Block Validator :=
-  match fuel with
-  | 0 => anchor
-  | fuel + 1 =>
-      -- line 8: the eligible children of the block we stand on
-      let children := {B ∈ tree | B.parent = some anchor ∧ eligible B}
-      if h : children.Nonempty then                            -- line 9
-        ghostFuel fuel (bestChild children h score) tree score eligible  -- line 11
-      else
-        anchor                                                 -- line 10
-
-/-- `ghost(anchor, tree, score, eligible)`, with the descent bounded by the tree's size.
-
-    A path descending through distinct blocks of `tree` visits at most `tree.card` of them,
-    so this is the figure's `loop` whenever `tree` really is a tree. -/
+    The figure's `loop` is bounded by `tree.card`; see the module header. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     (score : Block Validator → Nat) (eligible : Block Validator → Bool) :
-    Block Validator :=
-  ghostFuel tree.card anchor tree score eligible
+    Block Validator := Id.run do
+  let mut H := anchor                                          -- line 6
+  for _ in [:tree.card] do                                     -- line 7: `loop`, bounded
+    -- line 8: the eligible children of the block we stand on
+    let children := {B ∈ tree | B.parent = some H ∧ eligible B}
+    if h : children = ∅ then                                   -- line 9
+      return H                                                 -- line 10
+    else
+      -- line 11: `H ← arg max score`, ties by root order
+      H ← bestChild children (Finset.nonempty_iff_ne_empty.mpr h) score
+  return H  -- the bound is reached: not a figure line, see the module header
 
 end Ghost
 

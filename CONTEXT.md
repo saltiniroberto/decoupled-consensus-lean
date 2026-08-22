@@ -3450,11 +3450,14 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 - **`nj` is a stored field of the chain state**, written by `advance_height` and read by the
   justify event. The older draft recomputed the test inline, which is a *different rule*: this
   one reads the `h_F` of the height's entry, not of the moment the justification fires.
-- **`ghost` recurses on explicit fuel**, `tree.card` at the call. The figure's `loop`
-  terminates because the tree is a tree, which is an invariant of `Σ.T` and not a fact about
-  the `Finset` the routine takes. The cost is one case the draft has not: fuel exhausted with
-  an eligible child, which returns the block it stands on. A well-founded recursion would need
-  the tree invariant *in the definition*.
+- **`ghost` is the figure's own loop, bounded** (reshaped 2026-08-22 on Roberto's word — the
+  first form, a fuel recursion `ghostFuel`, looked nothing like the figure). `Id.run do`,
+  `let mut H := anchor`, and line 7's `loop` written `for _ in [:tree.card]`: the figure's
+  `loop` terminates because the tree is a tree, which is an invariant of `Σ.T` and not a fact
+  about the `Finset` the routine takes, so Lean gets the bound as a visible range instead. The
+  cost is unchanged from the fuel form — one case the draft has not, the bound reached with an
+  eligible child still available, which returns the block it stands on. A well-founded
+  recursion would need the tree invariant *in the definition*.
 - **The arg-max step needs a chooser.** Line 11's "ties by root order" is rendered as two
   filters — maximal score, then least root — and `Selection.select` for the residue.
   `Finset.toList` needs `Classical.choice` and `Finset.min'` would want a `LinearOrder` on
