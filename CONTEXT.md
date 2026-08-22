@@ -3585,13 +3585,16 @@ chooser raises.
 Roberto: the functions supposed to run at specific times should say so by autoparam. The
 `onSGFGVotingAction` precedent, retaken: `propose_block` requires `S.t = slotStart S.s`,
 `goldfish_vote` requires `S.t = slotStart S.s + Δ`, `update_confirmation` requires
-`S.t = slotStart s + 6Δ` — each `(_ : … := by assumption)`, an anonymous binder, so a caller
-must hold the fact as a *named* hypothesis. `sg_vote` requires `S.t = SGSchedule.a (round
+`S.t = slotStart s + 6Δ` — each an anonymous autoparam whose tactic is
+`solve_by_elim [And.left, And.right]` (second pass, 2026-08-23; `by assumption` first): it
+finds the instant even *inside a conjunction*, so a caller's dependent `if` on a
+several-part condition discharges it with no `have`, and `on_tick`'s branches are pure
+figure lines. A caller must still hold the fact as a hypothesis, named by `if h :` or
+otherwise. `sg_vote` requires `S.t = SGSchedule.a (round
 S.s)` (added 2026-08-23, second pass): its `a_r` is "a public parameter in this intermediate
 protocol", which is exactly an ambient class — `SGSchedule` in `Model.lean`, the `Committees`
 move — so the instant is stateable with no formula fixed. `on_tick` gained Section 3.4's
-line, dispatching on it; the branch needs no `have`, its condition being the bare equation
-where the Goldfish conditions are conjunctions `assumption` cannot project into. Two more
+line, dispatching on it. Two more
 facts from the same pass: Figure 2 now imports Figure 5 (`on_tick` calls `sg_vote`, the same
 inversion as Figure 3), and Fig5's header claim that Fig7 carried a final `on_tick` was
 wrong — Section 5 never touches `on_tick`, so Figure 2's tick plus the Section 3.4 line is

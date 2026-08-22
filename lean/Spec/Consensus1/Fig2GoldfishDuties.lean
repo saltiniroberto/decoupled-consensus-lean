@@ -156,11 +156,12 @@ namespace Store
 
     "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
     the duty tests (Roberto, 2026-08-23; `onSGFGVotingAction` in the second rendering is the
-    precedent). The binder is anonymous, so a caller must hold the fact as a *named*
-    hypothesis for `assumption` to find — `on_tick`'s dependent `if` plus a `have` is the
-    worked example. -/
+    precedent). The autoparam tactic is `solve_by_elim` over the `And` projections rather
+    than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
+    dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
+    `have` (Roberto, 2026-08-23, second pass). -/
 def proposeBlock (i : Validator) (S : Store Validator)
-    (_ : S.t = slotStart S.s := by assumption) :
+    (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
@@ -182,9 +183,10 @@ def proposeBlock (i : Validator) (S : Store Validator)
     A validator off the slot's committee sends nothing, which the empty `send` says — no
     `Option` needed.
 
-    "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is. -/
+    "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
+    same conjunction-projecting tactic. -/
 def goldfishVote (i : Validator) (S : Store Validator)
-    (_ : S.t = slotStart S.s + (Δ : Int) := by assumption) :
+    (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
@@ -212,16 +214,15 @@ def goldfishVote (i : Validator) (S : Store Validator)
     exclusive — distinct multiples of `Δ` — so at most one branch runs, and a tick at no
     action instant returns the re-clocked store with nothing to send.
 
-    Each branch discharges its action's instant precondition from its own dependent `if` —
-    the clock was written just above, so `S.t` reduces to `t` whatever came before. The
-    three Goldfish branches need a `have` restating the instant, their conditions being
-    conjunctions `assumption` cannot project into; the SG branch's condition is the bare
-    equation, so its `h` is found directly. Line 7 writes the figure's `t_s + 2Δ` as
-    `t_{s−1} + 6Δ`, equal whenever `s > 0` and the form line 8's precondition wants; the
-    docstring above line 8 already said the two coincide. Section 3.4's SG line dispatches
-    on the assumed `SGSchedule`; the draft fixes no relation between `a_r` and the Goldfish
-    instants, so on a schedule that collided, branch order would decide — the draft's
-    instants are taken as distinct.
+    Each branch discharges its action's instant precondition from its own dependent `if`:
+    the clock was written just above, so `S.t` reduces to `t` whatever came before, and the
+    duties' autoparam tactic projects the instant out of the branch's conjunction, so no
+    branch restates anything. Line 7 writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal
+    whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
+    already said the two coincide. Section 3.4's SG line dispatches on the assumed
+    `SGSchedule`; the draft fixes no relation between `a_r` and the Goldfish instants, so on
+    a schedule that collided, branch order would decide — the draft's instants are taken as
+    distinct.
 
     `ResultOrExcept` because all three actions are. -/
 def onTick (i : Validator) (S : Store Validator) (t : Int)
@@ -231,14 +232,11 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
   S.t ← t
   S.s ← s
   if h : s > 0 ∧ t = slotStart s ∧ isProposer s i then         -- line 3
-    have : S.t = slotStart S.s := h.2.1
     return ← S.proposeBlock i                                  -- line 4
   if h : s > 0 ∧ t = slotStart s + (Δ : Int) then              -- line 5
-    have : S.t = slotStart S.s + (Δ : Int) := h.2
     return ← S.goldfishVote i                                  -- line 6
   -- line 7: the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
   if h : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
-    have : S.t = slotStart (s - 1) + 6 * (Δ : Int) := h.2
     let S' ← S.updateConfirmation (s - 1)                      -- line 8
     return { state := S', send := ∅ }
   -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`

@@ -64,7 +64,7 @@ namespace Store
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the Figure 2
     duties' instants are. -/
 def updateConfirmation (S : Store Validator) (s : Nat)
-    (_ : S.t = slotStart s + 6 * (Δ : Int) := by assumption) :
+    (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     ResultOrExcept (Store Validator) := do
   let mut S := S
   -- line 2

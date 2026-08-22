@@ -72,7 +72,7 @@ def processSGVote (S : Store Validator) (vote : SGVote Validator) :
     "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants are, over the
     assumed `SGSchedule`. -/
 def sgVote (i : Validator) (S : Store Validator)
-    (_ : S.t = SGSchedule.a (round S.s) := by assumption) :
+    (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
     DutyResult Validator := Id.run do
   let r := round S.s                                           -- line 2
   -- line 3
