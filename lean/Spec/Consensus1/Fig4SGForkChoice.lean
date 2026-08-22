@@ -57,13 +57,9 @@ namespace Store
 
     The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on". -/
 def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
-  -- line 2
-  let eligible := {k ∈ Finset.range r |
-    max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v}
-  if h : eligible.Nonempty then
-    some (eligible.max' h)                                     -- line 5
-  else
-    ⊥                                                          -- line 4
+  -- lines 2-5: the greatest eligible round; `Finset.max` answers `⊥` when there is none
+  ({k ∈ Finset.range r |
+    max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v}).max
 
 /-- The *represented* validators: those with a latest round. `W_r` of Definition 3 is the
     weight of this set, and it is both the denominator of the gate and what line 8 of
