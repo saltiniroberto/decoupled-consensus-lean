@@ -3403,9 +3403,99 @@ Each given as a correction; standing until revoked:
   (`Block.isOpening`, Figure 1's justify test). Docstrings quoting the draft's formula keep
   the draft's spelling, backticked.
 
+### `consensus-1.pdf` replaces `consensus.pdf`, and the subtree is re-rendered — 2026-08-22
+
+A newer variant of the draft arrived. It is a rewrite, not a revision: **block-only Goldfish**,
+one store built up in three layers, and seven figures none of which matches the older draft's
+six. The older draft's rendering is gone from the tree; git history holds it.
+
+What the two drafts share: the attestation's seven fields, the chain state's shape, `q =
+⌈2W/3⌉`, and the slot/round arithmetic. What the newer one drops: the candidate tree, the
+grades `G0`–`G3`, the round roots, `Σ.head[·]`/`Σ.equiv[·]`, `Σ.root_proposal[·]`,
+`Σ.sg_root[·]`, `Σ.action_root[·]`, and the SG/FG action time. What it adds: `ghost` as a named
+building block, per-slot committees `K_s`, block-carried Goldfish votes as the only relay
+channel, timestamps on everything, available confirmation over two cutoffs, and a
+relative-majority SG fork choice.
+
+**The three layers are three namespaces.** Sections 2, 3 and 5 each redefine `get_head`, and
+Section 5 redefines `process_block` and `goldfish_eligible` too. A draft can replace a reading;
+Lean cannot. So `Consensus.Goldfish`, `Consensus.SG`, `Consensus.FG`, with the protocol being
+the last — `FG.getHead` is *the* fork choice — and `ghost` in `Consensus` itself, no section
+redefining it.
+
+**File layout.** `Model.lean` (Section 1's substrate and the wire objects), `Store.lean`
+(Definition 1 plus the fields Sections 3.2 and 5.1 add), then `Fig<n>` per figure. The import
+order is dependency order, not figure order: Figure 6's chain state is what `Σ.σ[·]` maps into,
+and Figure 3's confirmation is what Figure 2's `on_tick` calls.
+
+#### Decisions taken while rendering, each in a docstring at its line
+
+- **`B.root` is a field, `Nat`-valued**, replacing the old `BlockHash` class. The draft uses it
+  twice — `ghost` breaks ties "by root order", `update_finality` compares `(h_j, J.root)` — so
+  it needs a linear order and nothing else. Genesis carries `0`. Nothing constrains a block's
+  root to match the post-state it would compute: the block *claims* one.
+- **`nj` is a stored field of the chain state**, written by `advance_height` and read by the
+  justify event. The older draft recomputed the test inline, which is a *different rule*: this
+  one reads the `h_F` of the height's entry, not of the moment the justification fires.
+- **`ghost` recurses on explicit fuel**, `tree.card` at the call. The figure's `loop`
+  terminates because the tree is a tree, which is an invariant of `Σ.T` and not a fact about
+  the `Finset` the routine takes. The cost is one case the draft has not: fuel exhausted with
+  an eligible child, which returns the block it stands on. A well-founded recursion would need
+  the tree invariant *in the definition*.
+- **The arg-max step needs a chooser.** Line 11's "ties by root order" is rendered as two
+  filters — maximal score, then least root — and `Selection.select` for the residue.
+  `Finset.toList` needs `Classical.choice` and `Finset.min'` would want a `LinearOrder` on
+  blocks, which the model cannot build. `Selection` is back for this, as an ambient class.
+- **`propose_block` and `on_tick` are `noncomputable`**, and nothing else is. The block's
+  carried votes must be a `List` — a `Finset` is a quotient and cannot appear in an inductive's
+  constructor — while the store's `gf_votes[·]` is a `Finset`, as the draft says. Crossing
+  between them is `Finset.toList`. Both types stay faithful and the cost is confined to one
+  line; the alternative, list-valued vote tables, would make "at most two per validator" a
+  property of a list and put `.toFinset` at every counting site.
+- **Line 30's `for all B ∈ Σ.T` is a `Finset.fold`**, not a loop: no `ForIn` for `Finset`, and
+  the body accumulates a *union*, which is commutative and associative — which is why the
+  draft can write a loop over a set at all. Needed `Mathlib.Data.Finset.Lattice.Basic` in the
+  import graph for the two instances, and the fold's result type annotated, or the instance
+  search is stuck inside the `do` block.
+- **Timestamps are three maps**, one per object kind, since Lean has no sum over them here.
+  Each is `Option Int`, `none` standing for both "not processed" and the draft's
+  `timestamp(B_gen) = −∞` — which costs nothing, no rule reading a block's timestamp.
+- **The duties return what they would broadcast**, paired with the store that has processed it.
+  `on_tick` drops those, so the objects a tick emits are invisible to its caller: the one place
+  this rendering loses something, and what a network layer would restore.
+- **`FG.getHead` does not pass the extended gate to `ghost`.** The gate returns
+  `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost` takes a `Block → Bool`. The walk
+  gets the height clause read through the raw `Option` instead, so an unrecorded block fails
+  the clause rather than the walk. The two agree wherever `Σ.σ` covers `Σ.T`. A monadic `ghost`
+  would be a change to Figure 1, and is not taken. **This is the one deviation to revisit.**
+- Absent for want of a consumer: Section 5.1's `E_F(Σ)`, Section 4.1's E1/E2 slashing
+  conditions, Section 3.4's intermediate `on_tick` line and `get_head` redirection — Section 5
+  changes the same two places and its version is the protocol's.
+
+#### `Validator.lean` is untouched, and the library does not build
+
+Roberto's instruction was to leave it alone. It imports `Spec.Consensus.Fig6TimedStore`, which
+is gone, so it fails at the **import** stage — and that takes `Spec.lean` with it, so
+`lake build Spec` reports "bad import" rather than compiling anything. Every other module of
+the subtree builds green, checked one at a time.
+
+Three ways out, all his call: port it to the new store; move it out of the build path; or
+delete it, git holding the six commits that built it. Nothing in the new rendering answers to
+it — the old `Σ.action_root[r]`, the grades, `candidateTreeFrom` and the veto have no
+counterpart in this draft, and Section 6, the honest-validator spec it was written against, is
+not in this one at all.
+
 ## Next
 
-0. **The new subtree, where 2026-08-21 left it.** `Spec/Consensus/` renders all six figures
+0. **`consensus-1.pdf` is rendered; `Validator.lean` is what blocks the build.** All seven
+   figures of the new draft are in, each module green on its own, but `Validator.lean` still
+   imports a file the re-render deleted, so `lake build Spec` fails at the import stage and
+   nothing in the library compiles until that is resolved. Port it, move it, or delete it —
+   see the 2026-08-22 entry above on why nothing in the new draft answers to it. The one
+   rendering deviation worth revisiting is `FG.getHead`'s gate; the same entry says what it
+   is.
+
+1. **The old subtree, where 2026-08-21 left it — now superseded.** `Spec/Consensus/` renders all six figures
    of `consensus.pdf` plus `Validator.lean`, the honest-validator layer, whose only routine
    so far is `onSGFGVotingAction` — still a skeleton, its invented lines marked `skeleton:`.
    `lake build Spec` green, `make sorries` zero, `make cites` green at 535. The dictated
