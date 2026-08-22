@@ -150,8 +150,11 @@ form.
   exists. Hand-write the instance after the decidability section.
 - `Finset.card`, `Finset.exists_min_image` and `Std.Commutative (· ∪ ·)` each needed an import
   added to `Model.lean`: `Mathlib.Data.Finset.Card`, `.Max`, `.Lattice.Basic`.
-- `typeclass instance problem is stuck: Committees ?m` — annotate the call,
-  `(Committees.K s : Finset Validator)`.
+- `typeclass instance problem is stuck: Committees ?m` — only when nothing else in the
+  expression determines `Validator` (measured 2026-08-23, `scratch/AscriptionProbe.lean`):
+  a condition mentioning `a.validator = v`, or a membership `i ∈ Committees.K s` with `i`
+  typed, pins it and no ascription is needed. Annotate `(Committees.K s : Finset Validator)`
+  only in the bare case.
 
 **The one that took the library down.** Re-rendering the draft in place deleted seven files and
 left `Validator.lean` importing `Spec.Consensus.Fig6TimedStore`, which fails at the *import*

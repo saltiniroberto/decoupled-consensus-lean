@@ -191,7 +191,7 @@ def goldfishVote (i : Validator) (S : Store Validator)
   for all B ∈ S.T with B.slot = s do                           -- line 30: the view merge
     votes ← votes ∪ B.gfVotes.toFinset                         -- line 31
   let H ← Goldfish.getHead S votes (s - 1)                     -- line 32
-  if i ∈ (Committees.K s : Finset Validator) then              -- line 33
+  if i ∈ Committees.K s then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
     return { state := S.processGoldfishVote vote, send := {Message.gfVote vote} }

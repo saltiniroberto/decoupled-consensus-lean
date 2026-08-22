@@ -145,7 +145,7 @@ variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator]
     validator. Line 2 of `goldfish_score`, named because the score and the participant count
     both read it. -/
 def equivocators (votes : Finset (GoldfishVote Validator)) (s : Nat) : Finset Validator :=
-  {v ∈ (Committees.K s : Finset Validator) |
+  {v ∈ Committees.K s |
     ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
 
 /-- `goldfish_score(votes, s, B)` (Figure 1, lines 1–4): every equivocator, plus every
@@ -155,7 +155,7 @@ def equivocators (votes : Finset (GoldfishVote Validator)) (s : Nat) : Finset Va
 def score (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) : Nat :=
   let eq := equivocators votes s
   -- line 3: `{v ∈ K_s \ equivocators : (v, s, B') ∈ votes with B ⪯ B'}`
-  let supporters := {v ∈ (Committees.K s : Finset Validator) \ eq |
+  let supporters := {v ∈ Committees.K s \ eq |
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
   |eq| + |supporters|                                          -- line 4
 
@@ -163,7 +163,7 @@ def score (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validat
     Definition 2, as a count. Line 13 of `goldfish_eligible`, and line 5 of Figure 3's
     confirmation, which counts a *different* vote set against the same shape. -/
 def votersCount (votes : Finset (GoldfishVote Validator)) (s : Nat) : Nat :=
-  |{v ∈ (Committees.K s : Finset Validator) | ∃ a ∈ votes, a.validator = v}|
+  |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
 
 /-- `goldfish_eligible(Σ, votes, s, B)` (Figure 1, lines 12–14): a strict majority of the
     participants support `B`, or `B` is a block of the current slot.

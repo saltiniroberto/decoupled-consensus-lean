@@ -75,7 +75,7 @@ def updateConfirmation (S : Store Validator) (s : Nat)
   let votes := {vote ∈ early |
     ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
   -- line 5: the denominator is `late`'s participants
-  let votersCount := |{v ∈ (Committees.K s : Finset Validator) |
+  let votersCount := |{v ∈ Committees.K s |
     ∃ a ∈ late, a.validator = v}|
   -- line 6: the majority gate, with no current-slot escape — see the module header
   let eligible := fun B => 2 * Goldfish.score votes s B > votersCount
