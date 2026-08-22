@@ -175,9 +175,9 @@ def proposeBlock (i : Validator) (S : Store Validator) :
 def goldfishVote (i : Validator) (S : Store Validator) :
     ResultOrExcept (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
-  -- line 29: held before the freeze at `t_{s−1} + 3Δ`
-  let mut votes := {vote ∈ S.gfVotes[s - 1] |
-    (S.gfVoteTime vote).any (· < slotStart (s - 1) + 3 * (Δ : Int))}
+  -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
+  let mut votes ← S.gfVotes[s - 1].filterM fun vote => do
+    return (← S.gfVoteTime[vote]) < slotStart (s - 1) + 3 * (Δ : Int)
   for all B ∈ S.T with B.slot = s do                           -- line 30: the view merge
     votes ← votes ∪ B.gfVotes.toFinset                         -- line 31
   let H ← Goldfish.getHead S votes (s - 1)                     -- line 32

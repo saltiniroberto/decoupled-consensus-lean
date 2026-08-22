@@ -26,12 +26,16 @@ so there is one map per kind — blocks, Goldfish votes, SG votes — and `Σ.ti
 rendered as whichever one `x` belongs to. Nothing is lost: every rule reads the timestamp of
 an object whose kind is fixed by the line it appears on.
 
-Each map is `Option Int`-valued, `none` meaning "not processed". That also stands in for the
-draft's `Σ.timestamp(B_gen) = −∞`: genesis is in `Σ.T` from the start with no stamp, and the
-two readings agree because **no rendered rule reads a block's timestamp at all** — the block
-map is written by `process_block` and read by nothing, exactly as in the draft. Vote
-timestamps are read, always on a vote drawn from a `gf_votes[·]` or `sg_votes[·]` set, so
-always on a processed one.
+Each map is a `TimeMap`, `Option Int` under the hood, `none` meaning "not processed". That
+also stands in for the draft's `Σ.timestamp(B_gen) = −∞`: genesis is in `Σ.T` from the start
+with no stamp, and the two readings agree because **no rendered rule reads a block's
+timestamp at all** — the block map is written by `process_block` and read by nothing,
+exactly as in the draft. Vote timestamps are read, always on a vote drawn from a
+`gf_votes[·]` or `sg_votes[·]` set, so always on a processed one — which is why the bracket
+read `Σ.timestamp[x]` **raises**, exactly as `Σ.σ[B]` does (Roberto, 2026-08-23): an
+unstamped held vote marks a store the handlers cannot build, and the failure reaches the
+caller instead of the vote silently failing a cutoff. The raw `Option` stays reachable by
+application, `S.gfVoteTime vote`.
 
 ## What the type does not enforce
 
@@ -88,6 +92,16 @@ scoped instance voteTableGetElem {α : Type} :
     GetElem (VoteTable α) Nat (Finset α) (fun _ _ => True) where
   getElem tbl k _ := tbl k
 
+/-- A processing-time map, one per kind of object: `Σ.timestamp(x)` restricted to that
+    kind. Named for the same reason as `VoteTable`. -/
+def TimeMap (α : Type) := α → Option Int
+
+/-- `times[x]`, the raising read: when `x` was processed, or the failure if it was not.
+    The raw `Option` stays reachable by application, the map being a function. -/
+scoped instance timeMapGetElem {α : Type} :
+    GetElem (TimeMap α) α (ResultOrExcept Int) (fun _ _ => True) where
+  getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
+
 /-- The block-state map of Section 5.1. Named for the same reason as `VoteTable`. -/
 def StateMap (Validator : Type) := Block Validator → Option (ChainState Validator)
 
@@ -122,12 +136,12 @@ structure Store (Validator : Type) where
   T : Finset (Block Validator)
   /-- `Σ.timestamp(B)` for a block: when it was processed, `none` if it was not. Written by
       `process_block`; read by nothing, in this draft. See the module header. -/
-  blockTime : Block Validator → Option Int
+  blockTime : TimeMap (Block Validator)
   /-- `Σ.gf_votes[k]`, the processed slot-`k` Goldfish votes. -/
   gfVotes : VoteTable (GoldfishVote Validator)
   /-- `Σ.timestamp(vote)` for a Goldfish vote. This is the map every Goldfish rule reads:
       the freeze in `goldfish_vote`, and both cutoffs in `update_confirmation`. -/
-  gfVoteTime : GoldfishVote Validator → Option Int
+  gfVoteTime : TimeMap (GoldfishVote Validator)
   /-- `Σ.live_confirmed`, the block the last evaluated slot confirmed. -/
   liveConfirmed : Block Validator
   /-- `Σ.latest_confirmed`, the monotone record the node exposes. "No rule in this protocol
@@ -137,7 +151,7 @@ structure Store (Validator : Type) where
   sgVotes : VoteTable (SGVote Validator)
   /-- `Σ.timestamp(vote)` for an SG vote (Section 3.2). Written by `process_sg_vote`; no
       rendered rule reads it, `latest` selecting by round rather than by time. -/
-  sgVoteTime : SGVote Validator → Option Int
+  sgVoteTime : TimeMap (SGVote Validator)
   /-- `Σ.σ[B]`, the stored post-state of each processed block (Section 5.1). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/
   σ : StateMap Validator
