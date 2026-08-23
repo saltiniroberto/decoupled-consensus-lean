@@ -3765,7 +3765,8 @@ this list when a new call lands.
   prefix spelled since no namespace carries it). `voters_count` is a `let` at each of its
   three sites, being a local in the pdf, like the equivocator set.
 - **Scheduled routines carry their instant as an anonymous autoparam**
-  (`… := by assumption`); `on_tick` discharges them with dependent `if`s and a `have`.
+  (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
+  dependent `if`s alone, no `have`s (second pass 2026-08-23; entry above).
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
   (abstract `Root`, its order, genesis's root), `RootComputation`, `SGSchedule`. Class over
   type parameter, confirmed 2026-08-23. Two former members dissolved into nondeterminism the
