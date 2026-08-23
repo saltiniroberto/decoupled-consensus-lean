@@ -3868,9 +3868,15 @@ this list when a new call lands.
   review): the order-free loops are written as the sets they build (`biUnion`, the
   set-builder), and a genuinely order-sensitive loop would use `Nondet.lean`'s `for` over a
   `Finset`. The `all` token is freed with them.
-- **No `match` and no `|` alternatives in spec bodies** — dependent `if h : o.isSome` idiom;
-  recursion patterns like a `for`-range bound are the tolerated shape. **No `∣` (divides)**:
-  write `% … = 0`.
+- **No `match` and no `|` alternatives in spec bodies** — the dependent-`if` idiom;
+  recursion patterns like a `for`-range bound are the tolerated shape. **Absence is tested
+  `x ≠ ⊥`, never `.isSome`** (Roberto, 2026-08-23), and extraction is `x.value` —
+  `Option.value` in `Model.lean`, whose `x ≠ ⊥` hypothesis is an autoparam the dependent
+  `if _ :` discharges, so no named hypothesis and no proof term appear. It is declared
+  `_root_.Option.value`: dot notation resolves fields in the type's own namespace only, so
+  a `Consensus1.Option.value` is invisible to `x.value` (measured). The store's map
+  machinery (`GetElem` instances, the `StateMap` membership) keeps `.isSome` internally —
+  the rule is about spec bodies. **No `∣` (divides)**: write `% … = 0`.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
   likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form
   `{ state := …, send := ∅ }`; `match` patterns untouched.

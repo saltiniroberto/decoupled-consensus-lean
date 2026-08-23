@@ -86,6 +86,17 @@ namespace Consensus1
     leak into a file that means something else by `⊥`. -/
 scoped instance {α : Type} : Bot (Option α) := ⟨none⟩
 
+/-- The value of an option already tested against `⊥`: the hypothesis `x ≠ ⊥` — the
+    draft's own spelling of the test, which this subtree prescribes over `.isSome` — is
+    an autoparam, so a dependent `if _ : x ≠ ⊥` discharges it invisibly and the branch
+    writes `x.value`, no named hypothesis and no proof term. (A coercion cannot do this:
+    coercion resolution sees types only, and a hypothesis in context is invisible to it.)
+    The tactic is the instants' own, so a test buried in a conjunction still
+    discharges. -/
+def _root_.Option.value {α : Type} (x : Option α)
+    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
+  x.get (Option.ne_none_iff_isSome.mp h)
+
 /-! ## Validators and weights -/
 
 /-- The draft's model of validators: a fixed set `V`, and a fixed positive integer weight
