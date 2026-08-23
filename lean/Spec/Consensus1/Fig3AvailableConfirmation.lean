@@ -34,6 +34,25 @@ live tree is `T_F(Σ)`; at this layer nothing has been finalized yet and `Σ.T` 
 is. Section 5.2 says available confirmation "runs its own walk from `Σ.F` over `T_F(Σ)`", so
 the anchor and the tree are the ones this layer has, and the later layer's version of that
 sentence is a change to `Σ.F` and `T_F`, not to this routine.
+
+## Extract
+
+Confirmation is the same walk over a stricter vote set and a larger denominator. Let
+`early` and `late` be the slot-`s` votes timestamped before `t_s + 2Δ` and before
+`t_s + 6Δ`. The walk scores `votes = {vote ∈ early : vote.validator does not equivocate
+in late}` against the participant count of `late`: a validator counts when it voted in
+time and no second vote of its has appeared since, while the denominator counts
+everyone who voted at all.
+
+Because `early ⊆ late`, a validator equivocating in `early` equivocates in `late` too,
+so `votes` holds at most one vote per validator and the score's equivocator clause
+never fires here. At most one child can pass the eligibility condition, so the descent
+has no choice to make.
+
+Slot `s` is evaluated once, at `t_s + 6Δ`, from genesis over the live tree. The result
+is at worst genesis, never empty. `Σ.live_confirmed` takes the result unconditionally;
+`Σ.latest_confirmed` only ever moves forward.
+
 -/
 
 set_option autoImplicit false

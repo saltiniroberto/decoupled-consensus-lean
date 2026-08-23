@@ -36,6 +36,33 @@ the definition rather than a hypothesis of it.
 supports the child through which it descends." So `sg_support` tests `B ⪯ H` on the block
 itself, with no reference to the `tree` the walk is running over — the two are deliberately
 different views, and passing `tree` to the walk does not narrow what counts as support.
+
+## Extract
+
+SG means stabilization gadget. This intermediate protocol adds one message layer to
+Goldfish: a relative-majority fork choice over the latest SG votes selects the root
+from which the Goldfish walk starts.
+
+For a fixed integer `R ≥ 1`, round r consists of the R slots from rR on, and
+`round(s) = ⌊s/R⌋`. Each round has one SG vote time `a_r`, a public parameter in this
+intermediate protocol. A round-`r` vote is read from round `r + 1` on.
+
+Fix an expiry window `ηSG ≥ 1` in rounds. `latest(Σ, v, r)` is the greatest round `k`
+with `max(0, r − ηSG) ≤ k < r` whose `sg_votes[k]` holds a vote by `v`, or `⊥` when
+there is none. A validator with a latest round is represented: it counts in the
+denominator whatever its votes say. It supports a block only when its latest round
+holds exactly one distinct vote by it and that vote's head is a block. An empty or
+equivocating latest round therefore supplies no support and, because only the latest
+round is read, also silences every older head; a later clean round restores support.
+
+`sg_support(Σ, r, B)` is the represented weight supporting `B`. Ancestry is read in the
+live tree `T`, so a head outside a restricted child tree still supports the child
+through which it descends. `majority_fork_choice` runs the walk with this score, the
+eligibility condition a strict majority of the entire represented weight. An
+equivocator supplies no support but stays in the denominator, so equivocating weight
+can only raise the bar, and two conflicting children cannot both pass: the descent is
+uniquely determined.
+
 -/
 
 set_option autoImplicit false

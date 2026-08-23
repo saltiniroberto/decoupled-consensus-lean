@@ -41,6 +41,32 @@ reads the `h_F` of the height's *entry*, not of the moment the justification fir
 
 The draft writes the divisibility as `(K | h)`. Lean's `∣` reads as a pipe to anyone who has
 not met it, so this subtree writes `h % Params.K = 0`, as the previous rendering did.
+
+## Extract
+
+The finality gadget extends each non-genesis block with a list of combined attestations
+and a post-state root, and defines the weighted quorum threshold `q = ⌈2W/3⌉`; a quorum
+is a set of validators whose total weight is at least `q`.
+
+Height is a finality counter and is separate from slot. Genesis is justified and
+finalized at height 0, and every chain starts at height 1. A justification or a
+progress event increments height by one. An honest validator emits at most one proposal
+per slot, one Goldfish vote per slot, and one combined attestation per round.
+
+Every block is evaluated from its parent's immutable post-state,
+`σ[B] = state_transition(σ[B.parent], B)`, and the result is a deterministic function
+of the chain ending at `B`. A chain state is
+`σ = (L, s, h, T_h, nj, target_participation, progress, finalize, J, h_j, F, h_F)`:
+`L` is the latest block, `s = L.slot`, `h` the current height, and `T_h` the block that
+carried the transition into height `h`. The arrays `target_participation`, `progress`
+and `finalize` contain one Boolean per validator; their quorum sets `Q_target(σ)`,
+`Q_prog(σ)` and `Q_finality(σ)` are derived when used. The pair `(J, h_j)` is the
+latest justification on the chain, and `(F, h_F)` its latest finalization.
+
+The Boolean `nj` is computed when the chain enters `h` and remains fixed until the
+height changes: fix constants `K ≥ 2` and `D ≥ 1`; on entry into a new height `h`,
+after the same transition has applied any finalization, `nj ← (K ∣ h) ∧ (h − h_F > D)`.
+
 -/
 
 set_option autoImplicit false

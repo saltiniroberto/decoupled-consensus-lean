@@ -69,6 +69,28 @@ Definition 2: an equivocator "counts for every block and stays among the partici
 can neither create nor block a descent". That is why line 2 collects them separately and line
 4 adds both cardinalities: a validator with two votes is added to every block's score without
 its target being read at all.
+
+## Extract
+
+Fix a vote slot `s` and a set `votes` of slot-`s` votes. Validator `v ∈ K_s`
+equivocates when `votes` holds two of its distinct votes, and participates when it
+holds at least one. `goldfish_score(votes, s, B)` counts every equivocator plus every
+non-equivocating participant whose target descends from `B`. An equivocator counts for
+every block and stays among the participants, so it can neither create nor block a
+descent; a non-equivocating validator counts once, in one subtree.
+
+Throughout this document, `ghost(anchor, tree, score, eligible)` is used as a building
+block, where `score` is a function on blocks and `eligible` a predicate on blocks. It
+descends from `anchor` through eligible children in `tree`, taking the highest score at
+each step, and stops where no child is eligible.
+
+Goldfish instantiates the walk with `goldfish_score(votes, s, ·)` and the eligibility
+condition `2 goldfish_score(votes, s, B) > voters_count or B.slot = Σ.s`, with
+`voters_count = |{v ∈ K_s : votes holds a vote by v}|`. The majority condition enforces
+timeliness; it only does not apply to proposals from the current slot, which cannot yet
+have votes. At slot 0 the vote set is empty, no child is eligible, and the head is
+genesis.
+
 -/
 
 set_option autoImplicit false

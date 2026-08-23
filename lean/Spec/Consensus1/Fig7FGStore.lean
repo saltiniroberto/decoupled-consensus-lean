@@ -47,6 +47,31 @@ A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
 heights. The former deviation — the walk once received the eligibility condition with its
 height clause read through the raw `Option` — closed on 2026-08-23: `ghost`'s condition
 slot is `ResultOrExcept`, so line 29 passes `goldfish_eligible` itself.
+
+## Extract
+
+The store adds a block state map `Σ.σ[·]` and finality state
+`(Σ.F, Σ.h_F, Σ.J, Σ.h_j, Σ.h_max)`. It retains every processed block; the live tree is
+derived below the finalized block, `T_F(Σ) = {B ∈ Σ.T : Σ.F ⪯ B}`.
+
+Figure 7 extends the block handler: it computes and stores the post-state, then folds
+it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
+tracks the lex-greatest justification event compatible with the finalized block. `Σ.F`
+advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯ Σ.J`
+always holds and finalization never reverts. When it advances, `Σ.h_max` is recomputed
+inside the new live tree; it otherwise only grows.
+
+A live block is viable when it has a live descendant whose state height is at most one
+below the current maximum:
+`V(Σ) = {B ∈ T_F(Σ) : ∃ W ∈ T_F(Σ), B ⪯ W, Σ.σ[W].h ≥ Σ.h_max − 1}`. Fork choice uses
+two derived views: `fork_choice_root(Σ)`, the block the walk starts from, and
+`get_filtered_block_tree(Σ)`, the viable blocks below it, which limit the selectable
+children. Goldfish starts at the root even if the root is not in the filtered tree.
+
+At this layer `goldfish_eligible` gains one clause: a child whose state height is below
+`Σ.h_max − 1` is eligible without a majority. Available confirmation runs its own walk
+from `Σ.F` over `T_F(Σ)`; it uses neither the SG root nor the filtered tree.
+
 -/
 
 set_option autoImplicit false
