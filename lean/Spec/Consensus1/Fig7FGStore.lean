@@ -36,7 +36,7 @@ fact of the `Store` type. `Analysis/` is where it belongs.
 ## Reading the state map, and where that lands
 
 Definition 5 and lines 15 and 25 read `Σ.σ[W].h` and `Σ.σ[B].h`. The bracket raises when the
-map does not record the block, so a routine reading it carries `ResultOrExcept` —
+map does not record the block, so a routine reading it carries `DRE` —
 `processBlock`, `updateFinality`, `viable`, `getFilteredBlockTree`, `goldfishEligible` and
 `getHead` all do, and `forkChoiceRoot` alone does not, reading no map. A missing entry
 reaches the caller instead of becoming a silent answer; on a store whose `Σ.σ` covers `Σ.T`
@@ -46,7 +46,7 @@ A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
 `Finset.filterM` collects Definition 5's witnesses, and `Finset.imageM` collects line 15's
 heights. The former deviation — the walk once received the eligibility condition with its
 height clause read through the raw `Option` — closed on 2026-08-23: `ghost`'s condition
-slot is `ResultOrExcept`, so line 29 passes `goldfish_eligible` itself.
+slot is `DRE`, so line 29 passes `goldfish_eligible` itself.
 
 ## Extract
 
@@ -93,7 +93,7 @@ open Params
     `Σ.h_max − 1` — and the set-builder then asks for a descendant among them. The collection
     reads `Σ.σ[W]` per live block through `Finset.filterM`, so a live block the map does not
     record raises rather than silently failing to witness. -/
-def Store.viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator)) := do
+def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
   let witnesses ← {W ∈ᴹ S.liveTree | (← S.σ[W]).h ≥ S.h_max - 1}
   return {B ∈ S.liveTree | ∃ W ∈ witnesses, B ⪯ W}
 
@@ -119,7 +119,7 @@ def Store.viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator
     Line 15's maximum is over the recorded heights of the *new* live tree, so it can go down;
     line 10's cannot. -/
 def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
-    ResultOrExcept (Store Validator) := do
+    DRE (Store Validator) := do
   let mut S := S
   S.h_max ← max S.h_max σ.h                                    -- line 10
   -- line 11: `(σ.h_j, σ.J.root) > (Σ.h_j, Σ.J.root)`, the lex order written out
@@ -146,7 +146,7 @@ def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     it: genesis is in `Σ.T` from the start and is never processed. This rendering rejects it,
     leaving the store unchanged, which is the same thing every other admission failure does. -/
 def Store.processBlock (S : Store Validator) (B : Block Validator) :
-    ResultOrExcept (Store Validator) := do
+    DRE (Store Validator) := do
   let mut S := S
   if B.slot > S.s then                                         -- line 2
     return S                                                   -- line 3
@@ -180,7 +180,7 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
     separately at line 27. It raises exactly where `viable` does. -/
 def Store.getFilteredBlockTree (S : Store Validator) :
-    ResultOrExcept (Finset (Block Validator)) := do
+    DRE (Finset (Block Validator)) := do
   let root := S.forkChoiceRoot                                 -- line 21
   return {B ∈ (← S.viable) | root ⪯ B}                         -- line 22
 
@@ -193,9 +193,9 @@ def Store.getFilteredBlockTree (S : Store Validator) :
 
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
     none — and it is what line 29 hands the walk, `ghost`'s condition slot being
-    `ResultOrExcept`. In `Store` for dot notation, its bare name unique to this layer. -/
+    `DRE`. In `Store` for dot notation, its bare name unique to this layer. -/
 def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
-    (s : Nat) (B : Block Validator) : ResultOrExcept Bool := do
+    (s : Nat) (B : Block Validator) : DRE Bool := do
   let σB ← S.σ[B]
   -- line 24: `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
   -- figure writes it
@@ -209,7 +209,7 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
     selects a descendant of it over the same tree. It raises where the filtered tree does.
 
     The walk receives `goldfish_eligible` itself: `ghost`'s condition slot is
-    `ResultOrExcept`, so the extended condition — which raises, reading `Σ.σ[B].h` — passes
+    `DRE`, so the extended condition — which raises, reading `Σ.σ[B].h` — passes
     directly, and the deviation this line carried from 2026-08-22 is closed (Roberto,
     2026-08-23; the history is in `CONTEXT.md`).
 

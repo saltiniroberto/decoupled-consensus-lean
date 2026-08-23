@@ -3869,6 +3869,15 @@ structure, not a product (Roberto, 2026-08-24, the `DutyResult` move): `SigningR
 on it (the draft never says how attestations reach a proposer; the first specification's
 attestation is a wire message, and the import keeps that answer).
 
+### `ResultOrExcept` is `DRE` — 2026-08-24
+
+Roberto: `NDRE` is the nondeterministic result with exception, so the deterministic one
+is `DRE`. The `Consensus1` abbrev renamed subtree-wide (code, docstrings, doc pages);
+`Raise.lean`'s header carries the naming note, including the surviving reason the bare
+name `Result` was never taken. **Only this subtree**: the second rendering's
+`Consensus.ResultOrExcept` keeps its name, as does every dated entry below — they record
+what was. Historical searches need both names.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
@@ -3884,7 +3893,7 @@ this list when a new call lands.
   arrows (incl. bare identifiers and two-level maps), `|s|` for `Finset.card` (cost: the
   `abs` bars, shadowed in-namespace), the raising set-builder `let y ← {x ∈ᴹ s | p}` (a
   `doElem`, necessarily — the term-macro form loses the `←` to the outer `do`'s lift; its
-  expansion pins `ResultOrExcept` so it lifts whole inside `NDRE`), and the pick
+  expansion pins `DRE` so it lifts whole inside `NDRE`), and the pick
   `let x ←ᵖ s`. The `for all` productions are **retired** (2026-08-23, resolving the parked
   review): the order-free loops are written as the sets they build (`biUnion`, the
   set-builder), and a genuinely order-sensitive loop would use `Nondet.lean`'s `for` over a
@@ -3893,7 +3902,7 @@ this list when a new call lands.
   recursion patterns like a `for`-range bound are the tolerated shape. **Absence is tested
   `x ≠ ⊥`, never `.isSome`** (Roberto, 2026-08-23), and in a raising body extraction is
   the lift: `let y ← x` binds the value or raises, via the scoped
-  `MonadLift Option ResultOrExcept` in `Raise.lean` (Roberto, 2026-08-24, "do that, also
+  `MonadLift Option DRE` in `Raise.lean` (Roberto, 2026-08-24, "do that, also
   wherever applicable"; probe `scratch/OptionLiftProbe.lean`). Behind a plain
   `if x ≠ ⊥` the raise is unreachable; the accepted cost, stated at the instance, is
   that dropping the test leaves compiling code that raises where a rule meant to fall

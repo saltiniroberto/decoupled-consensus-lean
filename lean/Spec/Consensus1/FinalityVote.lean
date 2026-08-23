@@ -101,7 +101,7 @@ structure SigningResult (Validator : Type) [Roots] (α : Type) where
     empty target. A case that signs something new writes the record in the store it
     returns; a repeat returns the store untouched. -/
 def Store.heightVote (S : Store Validator) :
-    ResultOrExcept (SigningResult Validator (HeightPair Validator)) := do
+    DRE (SigningResult Validator (HeightPair Validator)) := do
   let mut S := S
   let C := S.liveConfirmed
   let σC ← S.σ[C]
@@ -157,7 +157,7 @@ def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
     and `hasJC` stay explicit — see the module header. The head is carried, not
     derived. -/
 def Store.fgVote (i : Validator) (S : Store Validator) (head : Option (Block Validator))
-    (hasJC : Bool) : ResultOrExcept (DutyResult Validator) := do
+    (hasJC : Bool) : DRE (DutyResult Validator) := do
   let fin := S.finalityVote hasJC                   -- first the finality pair
   let ht ← fin.state.heightVote                     -- then the current-height pair
   let a := Attestation.mk (validator := i) (round := round S.s) (head := head)

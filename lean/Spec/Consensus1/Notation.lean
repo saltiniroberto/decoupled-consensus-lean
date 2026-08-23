@@ -108,7 +108,7 @@ macro_rules
     `s.filterM (fun x => do return p)`, and a `(← …)` inside `p` lifts into that inner `do`
     `ᴹ` says monadic. The spelling is distinct from the pure builder's on purpose:
     overloading `∈` would make every pure filter ambiguous. The expansion pins the filter's
-    monad to `ResultOrExcept` — this is the *raising* builder — so that inside an `NDRE`
+    monad to `DRE` — this is the *raising* builder — so that inside an `NDRE`
     block the filter still runs at the raising monad and lifts whole, rather than demanding
     fold instances the stack rightly lacks (a pick with no outcomes does not commute with an
     error; measured 2026-08-23).
@@ -129,10 +129,10 @@ scoped syntax (name := filterMBindMut) (priority := high)
 macro_rules
   | `(doElem| let $y:ident ← {$x:ident ∈ᴹ $s | $p}) =>
       `(doElem| let $y:ident ←
-          (Finset.filterM (fun $x => do return $p) $s : ResultOrExcept _))
+          (Finset.filterM (fun $x => do return $p) $s : DRE _))
   | `(doElem| let mut $y:ident ← {$x:ident ∈ᴹ $s | $p}) =>
       `(doElem| let mut $y:ident ←
-          (Finset.filterM (fun $x => do return $p) $s : ResultOrExcept _))
+          (Finset.filterM (fun $x => do return $p) $s : DRE _))
 
 /-- `|s|` for `Finset.card s`, as the draft writes it: `|equivocators| + |supporters|`
     (Figure 1, line 4). Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so

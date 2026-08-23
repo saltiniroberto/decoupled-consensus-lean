@@ -24,9 +24,9 @@ abbrev NDRE (α : Type) := ExceptT Error Set α      -- choices and raising read
 ```
 
 In plain words: an `NDR α` value *is* the set of possible answers. An `NDRE α` value,
-unwrapped with `.run`, is definitionally a `Set (ResultOrExcept α)` — each element either
-an answer or the failure, an error path cut short exactly as a plain `ResultOrExcept`
-computation would cut it. (`ResultOrExcept α` is `Except Error α`, from `Raise.lean`: the
+unwrapped with `.run`, is definitionally a `Set (DRE α)` — each element either
+an answer or the failure, an error path cut short exactly as a plain `DRE`
+computation would cut it. (`DRE α` is `Except Error α`, from `Raise.lean`: the
 type of a computation that may raise instead of answering, used for reads like `S.σ[B]`
 where the key may be absent.)
 
@@ -40,14 +40,14 @@ A routine takes the weakest type that fits what it does:
 | It…                        | Return type        | Examples |
 | -------------------------- | ------------------ | -------- |
 | neither raises nor chooses | plain value        | `Store.processGoldfishVote`, `Store.sgVote` |
-| raises, never chooses      | `ResultOrExcept α` | `Store.viable`, `Store.processBlock` |
+| raises, never chooses      | `DRE α` | `Store.viable`, `Store.processBlock` |
 | chooses, never raises      | `NDR α`            | `bestChild` |
 | both                       | `NDRE α`           | `ghost`, `Store.getHead`, the duties, `Store.onTick` |
 
 Inside a `do` block at a higher tier, a call at any lower tier binds with the ordinary `←`.
 The lifts do the plumbing invisibly: core lifts `Set` into `NDRE`, and `Nondet.lean` adds
 the one lift core does not ship, a bare `Except` value into `ExceptT` — so a raising read
-spells the same in an `NDRE` routine as in a `ResultOrExcept` one.
+spells the same in an `NDRE` routine as in a `DRE` one.
 
 ## The pick, `let x ←ᵖ s`
 
@@ -103,7 +103,7 @@ motion (git history has each):
 - the `for all` macros — the two order-free loops are written as the sets they build
   (a `biUnion` for the view merge, a set-builder for `sg_support`);
 - the rendering's one named deviation — `ghost`'s condition parameter is
-  `Block Validator → ResultOrExcept Bool`, so Figure 7's raising `goldfish_eligible`
+  `Block Validator → DRE Bool`, so Figure 7's raising `goldfish_eligible`
   passes to it directly at line 29, and the pure layers offer their conditions with `pure`.
 
 ## Traps
@@ -111,11 +111,11 @@ motion (git history has each):
 Three measured traps, recorded in full in `Nondet.lean`'s header and at each site:
 
 1. A `do` block's result type must **name the stack** (`NDR`/`NDRE`). Declared as bare
-   `Set (ResultOrExcept …)`, the elaborator picks the `Set` monad and every bind means the
+   `Set (DRE …)`, the elaborator picks the `Set` monad and every bind means the
    wrong thing.
-2. A `filterM` inside an `NDRE` block must be ascribed to `ResultOrExcept` and lifted
+2. A `filterM` inside an `NDRE` block must be ascribed to `DRE` and lifted
    whole. Elaborated at the stack itself, its fold needs a commutativity that is *false*
    there: a pick with no outcomes annihilates where an error survives. The `∈ᴹ`
    set-builder's expansion pins the monad for this reason.
 3. A macro quotation's global names resolve when the macro is *declared*, not where it is
-   used — `Notation.lean` imports `Raise.lean` so its expansions can name `ResultOrExcept`.
+   used — `Notation.lean` imports `Raise.lean` so its expansions can name `DRE`.

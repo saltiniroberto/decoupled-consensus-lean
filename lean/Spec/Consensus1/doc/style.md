@@ -19,7 +19,7 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 - `|s|` is `Finset.card`. Cost: the `abs` bars are shadowed inside the namespace.
 - `let y ← {x ∈ᴹ s | p}` is the raising set-builder — a filter whose condition may raise.
   It is a `doElem` macro, necessarily: a term-macro form loses the inner `←` to the outer
-  `do` before the macro expands. Its expansion pins `ResultOrExcept`, so it lifts whole
+  `do` before the macro expands. Its expansion pins `DRE`, so it lifts whole
   inside `NDRE`.
 - `let x ←ᵖ s` is the nondeterministic pick (see [nondeterminism.md](nondeterminism.md)).
 
@@ -30,7 +30,7 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
   shape (`ghost`'s loop).
 - **Absence is tested `x ≠ ⊥`, never `.isSome`**, and in a raising body the branch
   extracts by the lift: `let y ← x`, value or raise (the scoped
-  `MonadLift Option ResultOrExcept`, `Raise.lean`) — behind the `≠ ⊥` test the raise is
+  `MonadLift Option DRE`, `Raise.lean`) — behind the `≠ ⊥` test the raise is
   unreachable. The store's map machinery keeps `.isSome` internally; the rule is about
   spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
   `OldDefs.lean`.)

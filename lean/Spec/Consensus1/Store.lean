@@ -60,8 +60,8 @@ The two vote tables are **total**: every index has a set, empty if nothing was p
 `trivial`, and a read owes nothing.
 
 The state map is not total, and `Σ.σ[B]` **raises**: it returns
-`ResultOrExcept (ChainState Validator)`, so `let σB ← Σ.σ[B]` propagates a block the map does
-not record, and a routine that reads the map carries `ResultOrExcept`. `B ∈ Σ.σ` is the
+`DRE (ChainState Validator)`, so `let σB ← Σ.σ[B]` propagates a block the map does
+not record, and a routine that reads the map carries `DRE`. `B ∈ Σ.σ` is the
 membership — definitionally `(Σ.σ B).isSome` — and it is what "is it recorded?" is spelled
 with, `= none` being unavailable on a raising read. The raw `Option` stays reachable by
 application, `Σ.σ B`, because the map *is* a function; its one reader is the walk predicate
@@ -121,7 +121,7 @@ def TimeMap (α : Type) := α → Option Int
 /-- `times[x]`, the raising read: when `x` was processed, or the failure if it was not.
     The raw `Option` stays reachable by application, the map being a function. -/
 scoped instance timeMapGetElem {α : Type} :
-    GetElem (TimeMap α) α (ResultOrExcept Int) (fun _ _ => True) where
+    GetElem (TimeMap α) α (DRE Int) (fun _ _ => True) where
   getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
 
 /-- The block-state map of Section 5.1. Named for the same reason as `VoteTable`. -/
@@ -137,11 +137,11 @@ scoped instance (σ : StateMap Validator) (B : Block Validator) : Decidable (B �
   inferInstanceAs (Decidable ((σ B).isSome = true))
 
 /-- `σ[B]`, the raising read: the state recorded for `B`, or the failure. In a `do` block
-    over `ResultOrExcept`, `let σB ← S.σ[B]` propagates a block the map does not record. The
+    over `DRE`, `let σB ← S.σ[B]` propagates a block the map does not record. The
     raw `Option` stays reachable by application, `S.σ B`. -/
 scoped instance stateMapGetElem :
     GetElem (StateMap Validator) (Block Validator)
-      (ResultOrExcept (ChainState Validator)) (fun _ _ => True) where
+      (DRE (ChainState Validator)) (fun _ _ => True) where
   getElem σ B _ := if h : B ∈ σ then .ok ((σ B).get h) else .error .error
 
 /-- The store (Definition 1 of the draft, with the fields Sections 3.2 and 5.1 add).

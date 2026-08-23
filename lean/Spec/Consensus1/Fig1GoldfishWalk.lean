@@ -37,10 +37,10 @@ not depend on the tie" is a provable singleton statement, not a precondition.
 ## The walk is `NDRE`
 
 The tie-break picks and the eligibility condition may raise — Figure 7's reads `Σ.σ[B].h` —
-so the walk carries `NDRE`, and its `eligible` parameter is `Block → ResultOrExcept Bool`:
+so the walk carries `NDRE`, and its `eligible` parameter is `Block → DRE Bool`:
 the raising layer passes its condition directly (the deviation this closed is recorded in
 `CONTEXT.md`), and the pure layers offer theirs with `pure`. Line 8 filters the children
-through `Finset.filterM` at `ResultOrExcept`, whose fold instances exist; a per-child
+through `Finset.filterM` at `DRE`, whose fold instances exist; a per-child
 condition in `NDRE` itself would not commute (a pick with no outcomes annihilates where an
 error survives), which is why the parameter type is the raising monad, not the full stack.
 One notation cost, measured: the figure's `H ← arg max` cannot use the plain arrow, which
@@ -113,19 +113,19 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
 /-- `ghost(anchor, tree, score, eligible)` (Figure 1, lines 5–11): descend from `anchor`
     through eligible children in `tree`, taking the highest score at each step, and stop
     where no child is eligible. The tie at each step is a pick; the eligibility condition
-    may raise. See the module header on both, and on why `eligible` is `ResultOrExcept`
+    may raise. See the module header on both, and on why `eligible` is `DRE`
     rather than the full stack.
 
     The figure's `loop` is bounded by `|tree|`. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
-    (score : Block Validator → Nat) (eligible : Block Validator → ResultOrExcept Bool) :
+    (score : Block Validator → Nat) (eligible : Block Validator → DRE Bool) :
     NDRE (Block Validator) := do
   let mut H := anchor                                          -- line 6
   for _ in [:|tree|] do                                        -- line 7: `loop`, bounded
     -- line 8: the eligible children of the block we stand on; the filter runs at
-    -- `ResultOrExcept` — the ascription keeps the stack out of it — and lifts whole
+    -- `DRE` — the ascription keeps the stack out of it — and lifts whole
     let children ← (({B ∈ tree | B.parent = ↑H}).filterM eligible :
-      ResultOrExcept (Finset (Block Validator)))
+      DRE (Finset (Block Validator)))
     if children = ∅ then                                       -- line 9
       return H                                                 -- line 10
     -- line 11: `H ← arg max score`; the plain arrow is the assignment macro's, so the

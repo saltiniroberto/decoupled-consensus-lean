@@ -14,10 +14,10 @@ adopting (Roberto, 2026-08-23), measured first in `scratch/SetMonadProbe.lean` a
 * `NDR α := Set α` — picks only. A value is the **set of outcomes**, one per combination of
   picks; Mathlib's `Set.monad` (opt-in, activated scoped here) makes `do` its language.
 * `NDRE α := ExceptT Error Set α` — picks and raising reads. Under `.run` it is
-  definitionally `Set (ResultOrExcept α)`: each outcome an answer or the failure, an error
-  path cut short exactly as `ResultOrExcept` alone would cut it.
+  definitionally `Set (DRE α)`: each outcome an answer or the failure, an error
+  path cut short exactly as `DRE` alone would cut it.
 
-A routine that raises but never picks keeps plain `ResultOrExcept`; one that does neither
+A routine that raises but never picks keeps plain `DRE`; one that does neither
 stays pure. The lifts below let the four kinds compose in one `do` with no visible plumbing:
 core lifts `Set` into `NDRE`, and this file adds the bare `Except` value.
 
@@ -48,7 +48,7 @@ failure is never among them, the outcome set is a singleton — are `Analysis/` 
 ## Measured traps, from the probes
 
 * A `do` block's **result type must name the stack** (`NDR`/`NDRE`, reducible `abbrev`s):
-  declared as bare `Set (ResultOrExcept …)`, the elaborator picks the `Set` monad and every
+  declared as bare `Set (DRE …)`, the elaborator picks the `Set` monad and every
   bind means the wrong thing.
 * Membership proofs through several binds normalize with `ExceptT.run_bind` before the
   `Set` reasoning; the smallest cases are `Set.mem_singleton`/`Set.mem_biUnion`.
@@ -63,12 +63,12 @@ attribute [scoped instance] Set.monad
 /-- Nondeterminism alone: the value is the set of outcomes, one per combination of picks. -/
 abbrev NDR (α : Type) := Set α
 
-/-- Nondeterminism and raising: definitionally `Set (ResultOrExcept α)` under `.run` — each
+/-- Nondeterminism and raising: definitionally `Set (DRE α)` under `.run` — each
     outcome an answer or the failure. -/
 abbrev NDRE (α : Type) := ExceptT Error Set α
 
 /-- The lift core does not ship: a bare `Except` value into `ExceptT ε m`, so a raising
-    read — `let σB ← S.σ[B]` — binds in `NDRE` with the same spelling `ResultOrExcept`
+    read — `let σB ← S.σ[B]` — binds in `NDRE` with the same spelling `DRE`
     routines use. -/
 scoped instance {ε : Type} {m : Type → Type} [Monad m] :
     MonadLift (Except ε) (ExceptT ε m) := ⟨fun e => ExceptT.mk (pure e)⟩

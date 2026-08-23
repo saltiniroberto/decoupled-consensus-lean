@@ -230,7 +230,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
     already said the two coincide.
 
-    `ResultOrExcept` because all three actions are. -/
+    `DRE` because all three actions are. -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
   let mut S := S

@@ -2,7 +2,7 @@ import Spec.Consensus1.Model
 import Spec.Consensus1.FinsetM
 
 /-!
-# Failure: one `Error`, and `ResultOrExcept`
+# Failure: one `Error`, and `DRE`
 
 **This file is not a specification.** It holds no protocol content — nothing here renders a
 definition or a figure of the draft. It is the failure vocabulary the whole rendering shares,
@@ -36,9 +36,10 @@ last one decisive:
   consumers (2026-08-22, Roberto's call — a first form read the map through the raw `Option`
   inside the set-builders, which answered silently where this raises).
 
-`ResultOrExcept α` is `Except Error α`, and the long name is deliberate: `Result` is too
-common a word to take — `EStateM.Result` is in core, and a bare `Result` inside this namespace
-would shadow it silently.
+`DRE α` is `Except Error α` — a *deterministic* result or exception, named as the
+deterministic partner of `Nondet.lean`'s `NDRE` (Roberto, 2026-08-24; it was
+`ResultOrExcept` until then, a long name chosen so as not to take `Result`, which
+`EStateM.Result` in core would silently shadow — an avoidance `DRE` keeps).
 -/
 
 set_option autoImplicit false
@@ -60,21 +61,21 @@ inductive Error where
     holds no theorems — and it is what the two instances below cannot exist without. -/
 instance : Subsingleton Error := ⟨fun e e' => by cases e; cases e'; rfl⟩
 
-/-- `ResultOrExcept α` is an `α` or the failure: the result type of every routine that can
+/-- `DRE α` is an `α` or the failure: the result type of every routine that can
     raise, so no signature repeats the error type.
 
     **`abbrev`, not `def`** — measured 2026-08-21. It has to be reducible: instance synthesis
     does not unfold a plain `def`, so with one the `Monad` and `MonadExcept` instances are
     not found, `do` and `←` fail, and even `throw .error` cannot resolve its constructor. As
     an `abbrev` everything applies through it — `do`, `throw`, `←`, and `Except.toOption` and
-    friends — while signatures and `#check` output read `ResultOrExcept α`. -/
-abbrev ResultOrExcept (α : Type) := Except Error α
+    friends — while signatures and `#check` output read `DRE α`. -/
+abbrev DRE (α : Type) := Except Error α
 
-/-- `Finset.unionM` at `ResultOrExcept` is commutative — **and only because the failure
+/-- `Finset.unionM` at `DRE` is commutative — **and only because the failure
     carries no payload**. The failure-failure case needs the two failures to be equal, which
     is `Subsingleton Error`. -/
 instance {α : Type} [DecidableEq α] :
-    Std.Commutative (Finset.unionM (α := α) (m := ResultOrExcept)) where
+    Std.Commutative (Finset.unionM (α := α) (m := DRE)) where
   comm x y := by
     cases x <;> cases y
     all_goals simp only [Finset.unionM, Except.bind, bind, pure]
@@ -85,7 +86,7 @@ instance {α : Type} [DecidableEq α] :
 
 /-- And associative, for the same reason. -/
 instance {α : Type} [DecidableEq α] :
-    Std.Associative (Finset.unionM (α := α) (m := ResultOrExcept)) where
+    Std.Associative (Finset.unionM (α := α) (m := DRE)) where
   assoc x y z := by
     cases x <;> cases y <;> cases z <;>
       simp only [Finset.unionM, Except.bind, bind, pure] <;>
@@ -104,7 +105,7 @@ instance {α : Type} [DecidableEq α] :
     is not checked at the site — dropping the test leaves compiling code that raises
     where a rule meant to fall through. The autoparam extraction that did check,
     `Option.value`, is parked in `OldDefs.lean`. -/
-scoped instance : MonadLift Option ResultOrExcept :=
+scoped instance : MonadLift Option DRE :=
   ⟨fun x => x.elim (.error .error) .ok⟩
 
 end Consensus1
