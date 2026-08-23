@@ -75,7 +75,8 @@ kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `non
 
 The draft writes `⊥` for an absent block or height: the empty target, the empty head, the
 absent latest round. That is `Option.none` here, given the `⊥` spelling by a scoped `Bot`
-instance.
+instance. Spec bodies test absence as the draft writes it — `x ≠ ⊥`, never `.isSome` — and
+extract with `x.value` (Roberto, 2026-08-23); both are defined below.
 -/
 
 set_option autoImplicit false

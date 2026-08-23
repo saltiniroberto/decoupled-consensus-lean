@@ -26,9 +26,12 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 ## Spec bodies
 
 - **No `match` and no `|` alternatives.** The dependent `if` idiom instead, binding `_`
-  unless the hypothesis's name is used: `if _ : …` is enough to discharge an autoparam,
-  while `if hp : (B.parent).isSome` feeds `(B.parent).get hp`. A `for`-range bound is the
-  tolerated recursion shape (`ghost`'s loop).
+  unless the hypothesis's name is used. A `for`-range bound is the tolerated recursion
+  shape (`ghost`'s loop).
+- **Absence is tested `x ≠ ⊥`, never `.isSome`**, and the branch extracts with
+  `x.value` — its `x ≠ ⊥` hypothesis is an autoparam the dependent `if _ :` discharges
+  (`Option.value`, `Model.lean`). The store's map machinery keeps `.isSome` internally;
+  the rule is about spec bodies.
 - **No `∣` (divides)**: write `% … = 0`.
 - **What the pdf writes inline stays inline.** `voters_count` and the equivocator set are
   `let`s at each use site, because the pdf makes them locals, not definitions.
