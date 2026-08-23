@@ -1,0 +1,2841 @@
+% This file compiles standalone (full version) and is also \input by
+% height_filter_and_timeouts_lite.tex with \litemode defined (lite version).
+% The guard below skips \documentclass when the lite wrapper has already
+% invoked it -- otherwise TeX would error on duplicate \documentclass.
+\ifx\litemode\undefined\documentclass{article}\fi
+\usepackage[margin=3cm]{geometry}
+
+\usepackage{graphicx}
+
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\definecolor{xlightgray}{HTML}{D1DBE4}
+\definecolor{xgreen}{HTML}{B9C89F}
+\definecolor{xred}{HTML}{F19F9E}
+\definecolor{xyellow}{HTML}{F6DA71}
+\definecolor{xblue}{HTML}{ACE7EF}
+\definecolor{xpurple}{HTML}{C3A4E7}
+\usepackage{todonotes}
+\usepackage{booktabs,tabularx,makecell,hyperref}
+\definecolor{rowgray}{RGB}{246,246,246}
+
+\usepackage{pdflscape}
+\usepackage{environ}
+\usepackage{enumitem}
+
+\usetikzlibrary{arrows.meta,positioning,fit,calc,decorations.pathmorphing}
+
+% Math
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{xspace}
+
+% Algorithmic
+\usepackage[noend]{algpseudocode}
+\usepackage{amsthm}
+\usepackage{cleveref}
+\crefname{property}{property}{properties}
+\Crefname{property}{Property}{Properties}
+\crefname{assumption}{assumption}{assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+
+\usepackage{float}
+\floatstyle{ruled}
+\newfloat{algo}{htbp}{algo}
+\floatname{algo}{Algorithm}
+
+% --- Custom commands ---
+\newcommand{\genesis}{\ensuremath{B_{\mathrm{gen}}}}
+\newcommand{\T}[0]{\ensuremath{\mathcal{T}}}
+\newcommand{\V}[0]{\ensuremath{\mathcal{V}}}
+\newcommand{\slot}[0]{\ensuremath{\operatorname{\mathrm{slot}}}}
+
+\newcommand{\target}{\mathsf{target}}
+\newcommand{\height}{\mathsf{height}}
+\newcommand{\validator}{\mathsf{validator}}
+\newcommand{\parent}{\mathsf{parent}}
+
+% Vote fields and state variables
+\newcommand{\finalizeHeight}{\mathsf{finalize\_height}}
+\newcommand{\finalizeTarget}{\mathsf{finalize\_target}}
+\newcommand{\targets}{\mathsf{targets}}
+\newcommand{\timeouts}{\mathsf{timeouts}}
+\newcommand{\penalties}{\mathsf{penalties}}
+\newcommand{\fresh}{\mathsf{fresh}}
+\newcommand{\hash}{\mathsf{hash}}
+\newcommand{\hmax}{\ensuremath{h_{\max}}\xspace}
+\newcommand{\viableTree}{\ensuremath{\mathcal{T}'}}
+\newcommand{\uviable}{ultimately-viable\xspace}
+
+% Procedure names
+\newcommand{\stateTransition}{\textsf{stateTransition}\xspace}
+\newcommand{\processSlot}{\textsf{processSlot}\xspace}
+\newcommand{\processBlock}{\textsf{processBlock}\xspace}
+\newcommand{\processHeight}{\textsf{processHeight}\xspace}
+\newcommand{\processHeightEvents}{\textsf{processHeightEvents}\xspace}
+\newcommand{\processVote}{\textsf{processVote}\xspace}
+\newcommand{\processInactivityPenalties}{\textsf{processInactivityPenalties}\xspace}
+\newcommand{\finalizeConflict}{\textsf{finalizeConflict}\xspace}
+\newcommand{\isSlashable}{\textsf{isSlashable}\xspace}
+\newcommand{\updateJFromVotes}{\textsf{updateJFromVotes}\xspace}
+\newcommand{\start}{\ensuremath{\mathsf{start}}}
+\newcommand{\vote}{\ensuremath{\mathsf{vote}}}
+\newcommand{\freeze}{\ensuremath{\mathsf{freeze}}}
+\newcommand{\GST}{\ensuremath{\mathrm{GST}}\xspace}
+\newcommand{\comm}[1]{\ensuremath{\widetilde{#1}}}
+\newcommand{\syncer}{\textsf{syncer}\xspace}
+\newcommand{\getBaseVote}{\textsf{getBaseVote}\xspace}
+\newcommand{\getFinalVote}{\textsf{getFinalVote}\xspace}
+\newcommand{\rememberVote}{\textsf{rememberVote}\xspace}
+\newcommand{\onBlock}{\textsf{onBlock}\xspace}
+\newcommand{\onViewMerge}{\textsf{onViewMerge}\xspace}
+\newcommand{\getSyncerVote}{\textsf{getSyncerVote}\xspace}
+\newcommand{\getPostSyncerVote}{\textsf{getPostSyncerVote}\xspace}
+\newcommand{\onVotingTime}{\textsf{onVotingTime}\xspace}
+\newcommand{\proposer}{\textsf{proposer}\xspace}
+\newcommand{\updateJustified}{\textsf{updateJustified}\xspace}
+\newcommand{\updateFinalized}{\textsf{updateFinalized}\xspace}
+\newcommand{\getConfirmed}{\textsf{getConfirmed}\xspace}
+% --- Latest head votes / stabilization gadget (SG), Section \ref{sec:headvotes} ---
+\newcommand{\Supp}{\ensuremath{S}}          % latest-head-vote support S(\cdot)
+\newcommand{\Dvote}{\ensuremath{D}}         % total live latest-head-vote weight
+\newcommand{\Credit}{\ensuremath{\mathsf{Credit}}} % credited previous-round support
+\newcommand{\Wvote}{\ensuremath{W}}         % latest-head-vote expiry window
+\newcommand{\headf}{\mathsf{head}}          % attestation head field = SG latest message
+% --- Height classes, Section \ref{sec:heightclasses} ---
+\newcommand{\Knj}{\ensuremath{K}}                      % nonjustifiable-height spacing
+\newcommand{\Ddebt}{\ensuremath{D_{\mathrm{debt}}}}    % finality-debt threshold
+% --- Grades, Section \ref{sec:grades} ---
+\newcommand{\Gzero}{\ensuremath{G_{0}}}
+\newcommand{\Gone}{\ensuremath{G_{1}}}
+% --- Vote construction, Section \ref{sec:voteconstruction} ---
+\newcommand{\rzero}{\ensuremath{r_{0}}}                 % round's first slot
+\newcommand{\emptyckpt}{\ensuremath{\mathsf{Checkpoint}()}} % empty checkpoint
+% --- Procedure names ---
+\newcommand{\cascadeRoot}{\textsf{cascadeRoot}\xspace}
+\newcommand{\walk}{\textsf{walk}\xspace}
+\newcommand{\latestConfirmed}{\textsf{latest\_confirmed\_head}\xspace}
+
+% Algorithmic event environment
+\algdef{SE}[EVENT]{Event}{EndEvent}[1]{\textbf{at}\ #1\ \algorithmicdo}{\algorithmicend\ \textbf{event}}
+\algtext*{EndEvent}
+
+% Define a colored-footnote macro: \newcolorfn{\name}{color}
+% produces a one-arg macro that renders a footnote whose mark and text
+% are both typeset in the given color.
+\newcommand{\newcolorfn}[2]{%
+  \newcommand{#1}[1]{%
+    \begingroup
+    \renewcommand{\thefootnote}{\textcolor{#2}{\arabic{footnote}}}%
+    \footnote{\textcolor{#2}{##1}}%
+    \endgroup
+  }%
+}
+
+\newcolorfn{\RSfn}{red}
+
+\pagestyle{plain}
+
+\renewcommand{\paragraph}[1]{\vspace{7pt}\noindent\textbf{#1}}
+
+\algrenewcommand\textproc{}
+
+\usepackage{boxedminipage}
+
+% Theorem environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem*{theorem*}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{property}[theorem]{Property}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{assumption}[theorem]{Assumption}
+
+\IfFileExists{lite_full_setup.tex}{\input{lite_full_setup.tex}}{\input{full/lite_full_setup.tex}}
+
+\title{Fresh Simplex with Height Filter and Timeouts}
+
+\begin{document}
+\maketitle
+\section{Model and definitions}\label{sec:model}
+
+We consider a system of~$n$ validators of which at most~$f$ are adversarial, where $n \geq 3f + 1$.
+A \emph{quorum} is any set of at least $2n/3$ validators.
+Any two quorums overlap in at least $n/3 + 1 > f$ validators, so their intersection contains at least one honest validator.
+
+\begin{definition}[Height]\label{def:height}
+\emph{Height} is the finality-gadget counter, separate from slot.
+The genesis state-height is~$1$ (with $\genesis$ treated as pre-justified and pre-finalized at height~$0$); height advances by exactly~$1$ via fixed-target justification (Definition~\ref{def:justification}) or a timeout (Definition~\ref{def:timeout}).
+\end{definition}
+
+\begin{definition}[Block]\label{def:block}
+A \emph{block} has a \emph{parent} block, a \emph{slot} field, and a set of votes (Definition~\ref{def:vote}).
+The \emph{genesis block}~$\genesis$ has no parent and slot~$0$.
+Slots strictly increase along parent links: $B.\slot > B.\parent.\slot$ for every non-genesis~$B$.
+\end{definition}
+
+\begin{definition}[Chain]\label{def:chain}
+A \emph{chain} is a path from~$\genesis$ to some block~$B$ via parent links.
+Chains are in bijection with their tips, and we identify the two.
+Blocks form a tree rooted at~$\genesis$; we write $B \preceq B'$ when $B$ is an ancestor of~$B'$ (or $B = B'$), $B \prec B'$ for strict ancestry, and $B \sim B'$ (\emph{compatible}) when $B \preceq B'$ or $B' \preceq B$.
+Two chains \emph{conflict} when their tips are not compatible.
+\end{definition}
+
+\begin{definition}[Vote]\label{def:vote}
+A \emph{vote} is a signed tuple
+\[
+  (\validator,\; \height,\; \target,\; \finalizeHeight,\; \finalizeTarget),
+\]
+where $\validator$ is the signer, $\height$ is a height or~$\bot$, and $\target \in \{\bot\} \cup \mathrm{Blocks}$.
+A vote with $\target \neq \bot$ (necessarily carrying a height) is a \emph{justification vote}; a vote with $\target = \bot$ and a height is a \emph{timeout vote}; a vote with an \emph{empty voted checkpoint}, $\target = \bot$ \emph{and} $\height = \bot$ (the empty $\mathsf{Checkpoint}()$, written~$\emptyckpt$), is an \emph{empty vote} (Definition~\ref{def:empty-target}), which makes no claim about any height and so contributes to neither a justification (Definition~\ref{def:justification}) nor a timeout (Definition~\ref{def:timeout}); it acts only through its head field and its finalize commitment.
+The pair $(\finalizeHeight,\, \finalizeTarget)$ is either both~$\bot$ or a commitment to finalize a block at a height.
+A vote included on a chain must reference a target (and finalize target, when present) that already exists on that chain when non-$\bot$; in particular, a block cannot include a vote that names the block itself, since naming it requires its hash.
+An FG attestation additionally carries a \emph{head field}~$v.\headf \in \mathrm{Blocks}$ (the SG latest message of Section~\ref{sec:forkchoice}); the head field is ignored by every state transition of this section and enters fork choice immediately when the attestation is received and validated (Definition~\ref{def:head-vote}).
+\end{definition}
+
+\paragraph{State.}
+The \emph{state after block~$B$}, written $\sigma[B]$, is the tuple
+\[
+  (L,\; s,\; h,\; s_h,\; \targets,\; \timeouts,\; J,\; h_j,\; F,\; P),
+\]
+with components:
+\begin{itemize}
+  \item $L$: the \emph{chain head} ($L = B$ after processing~$B$).
+  \item $s$: the \emph{current slot}, incremented once per slot by \processSlot (Figure~\ref{alg:state-machine}).
+  \item $h$: the \emph{current height}.
+  \item $s_h$: the slot of the block whose processing last advanced~$h$ on this chain ($0$ if no advance has occurred).
+  \item $\targets[1..n]$: for each validator~$i$, the target of~$i$'s justification vote at the current height ($\bot$ if none processed).
+  \item $\timeouts[1..n]$: for each~$i$, a boolean that is \texttt{true} iff~$i$'s vote at the current height set the timeout marker --- either a timeout vote ($\target = \bot$ with $\height = \sigma.h$) or a height-fresh justification vote on this chain.  An empty vote ($\target = \bot$, $\height = \bot$; Definition~\ref{def:empty-target}) sets no marker, since it is not a vote at the current height.
+  \item $J$, $h_j$: the most recently justified block and its height.
+  \item $F$: the most recently finalized block.
+  \item $P \subseteq \{1, \ldots, n\}$: validators who have cast a vote with $\finalizeHeight = h_j$ and $\finalizeTarget = J$.
+\end{itemize}
+The genesis state is
+\[
+  \sigma_{\mathrm{gen}} \coloneqq (\genesis,\; 0,\; 1,\; 0,\; \bot^n,\; \mathtt{false}^n,\; \genesis,\; 0,\; \genesis,\; \emptyset),
+\]
+with $\sigma[\genesis] \coloneqq \sigma_{\mathrm{gen}}$: $\genesis$ is treated as pre-justified and pre-finalized at height~$0$, so the genesis state-height is~$1$ and $h_j = 0$ denotes the genesis justification.
+When unambiguous we drop the chain prefix and write $L$, $s$, $h$, etc.\ for the components of $\sigma[L]$.
+
+\begin{definition}[State-height]\label{def:sheight}
+The \emph{state-height} of a block~$B$ is $\sigma[B].h$: the height after processing~$B$ on its own chain.
+\end{definition}
+
+\paragraph{Height freshness.}
+A justification vote~$v$ (i.e., $v.\target = T \neq \bot$) is \emph{fresh} on a chain with head state $\sigma[L]$ iff
+\[
+  \sigma[L].h = v.\height \;\wedge\; T \prec L \;\wedge\; T.\slot \geq \sigma[L].s_h:
+\]
+the chain is at~$v$'s height, $T$ is a strict ancestor on this chain, and $T$'s slot is no earlier than where the chain's current height began.
+A timeout vote ($v.\target = \bot$) is fresh on the chain iff $\sigma[L].h = v.\height$.
+Intuitively, a fresh justification vote attests that its signer saw~$T$ as a chain of height~$v.\height$.
+
+\begin{remark}[Freshness via $T$'s own chain]
+For a justification vote with target $T \prec L$, the constraint $T.\slot \geq \sigma[L].s_h$ says that~$T$ lies in the current state-height interval of~$L$.
+Equivalently, it means $\sigma[T].h = \sigma[L].h$; this equivalence is proved as Lemma~\ref{lem:fresh-equiv}.
+\end{remark}
+
+Freshness ensures that every justification at height~$h$ is witnessed by targets whose own chains reached state-height~$h$, and pins both timeout and justification contributions to the chain's current height.
+
+\begin{definition}[Fixed-target justification]\label{def:justification}
+A block~$T$ is \emph{justified at height~$h$} on a chain with state $\sigma[L]$ with $\sigma[L].h = h$ iff
+\[
+  \bigl|\{i \,:\, \targets[i] = T\}\bigr| \;\geq\; 2n/3.
+\]
+Only votes with target exactly~$T$ contribute.
+\end{definition}
+
+\begin{definition}[Timeout]\label{def:timeout}
+On a chain with head state $\sigma[L]$ at height~$h$, a \emph{timeout} fires iff
+\[
+  \bigl|\{i : \timeouts[i] = \mathtt{true}\}\bigr| \;\geq\; 2n/3.
+\]
+A timeout has no associated target block.
+Both timeout votes and height-fresh justification votes (with target $\prec L$ at the chain's current height) set $\timeouts[i] = \mathtt{true}$, so a justification quorum implies a timeout quorum.
+The two height-advance branches are checked in order, justification first (Figure~\ref{alg:state-machine}).
+\end{definition}
+
+\begin{definition}[Finality]\label{def:finality}
+The justified block~$J$ is \emph{finalized at height~$h_j$} once $|P| \geq 2n/3$.
+\end{definition}
+
+\begin{definition}[Slashing, rule E1]\label{def:slashing}
+A validator is \emph{slashable} if it signed two votes~$a, b$ (possibly $a = b$) with
+\[
+  b.\finalizeTarget \neq \bot \;\wedge\; a.\height = b.\finalizeHeight \;\wedge\; a.\target \neq b.\finalizeTarget.
+\]
+That is, a validator committing $(\finalizeHeight,\, \finalizeTarget) = (h_f, T_f)$ must not sign any vote at height~$h_f$ with target $\neq T_f$.
+Note that timeout votes ($a.\target = \bot$) are themselves in conflict with any commitment $b.\finalizeTarget \neq \bot$ at the same height, since $\bot \neq b.\finalizeTarget$.
+\end{definition}
+
+Two justification votes (or two timeout votes) at the same height are not by themselves slashable; per-height uniqueness of honest justification votes is imposed behaviorally (Section~\ref{sec:store}).
+A validator who never sets $\finalizeTarget \neq \bot$ trivially avoids slashing.
+
+\paragraph{State transitions.}
+The state machine (Figure~\ref{alg:state-machine}) exposes one per-block entry point, \stateTransition, plus the per-slot, per-block, per-height, and per-vote routines it invokes.
+
+\stateTransition first advances the slot counter from the parent state up to $B.\slot$ by iterating \processSlot, then folds~$B$'s votes with \processBlock, and finally calls \processHeight on the post-vote state.
+Thus any cert event enabled by~$B$'s own votes fires in~$B$'s stored post-state, while any cert event enabled during a slot with no block fires from \processSlot.
+After \stateTransition{} returns, $\sigma.s = B.\slot$ and $\sigma.L = B$.
+
+\processSlot is the only routine that increments~$s$.
+It calls \processHeight before incrementing only when the current slot has no block on this chain ($\sigma.L.\slot < \sigma.s$); when $\sigma.L.\slot = \sigma.s$, the block at the current slot was already closed by \stateTransition, so \processSlot only advances the counter.
+\processHeight runs the height-closing logic for the current slot or post-block state by invoking \processHeightEvents, whose branches are checked in order: (i) finality, $F \gets J$ if $|P| \geq 2n/3$; (ii) justification, if some~$T$ has $\geq 2n/3$ entries in $\targets$; (iii) timeout cert, if $\geq 2n/3$ entries of $\timeouts$ are \texttt{true}.
+Branches (ii) and (iii) both advance height and reset $\targets, \timeouts$, so at most one height-advance fires per invocation of \processHeightEvents.
+
+\processBlock assumes its caller has brought $\sigma$ to slot $B.\slot$; it then sets $L \gets B$ and feeds each vote~$v$ in~$B$ through \processVote.
+A timeout vote ($v.\target = \bot$) at the current height sets $\timeouts[i] \gets \mathtt{true}$.
+A height-fresh justification vote sets both $\targets[i] \gets v.\target$ and $\timeouts[i] \gets \mathtt{true}$.
+The $P$-gate adds~$i$ to~$P$ iff $v.\finalizeHeight = \sigma.h_j$ and $v.\finalizeTarget = \sigma.J$; this is independent of freshness.
+
+\begin{figure}[H]
+\caption{State machine}\label{alg:state-machine}
+\begin{center}
+\begin{boxedminipage}{\textwidth}
+\begin{algorithmic}[1]
+
+\Function{\stateTransition}{$\sigma,\; B$} \Comment{Per-block entry point}
+  \While{$\sigma.s < B.\slot$} \Comment{Advance through intervening slots}
+    \State $\sigma \gets \processSlot(\sigma)$
+  \EndWhile
+  \State $\sigma \gets \processBlock(\sigma,\; B)$
+  \State $\sigma \gets \processHeight(\sigma)$ \Comment{Close events enabled by $B$'s votes}
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\processSlot}{$\sigma$}
+  \If{$\sigma.L.\slot < \sigma.s$} \Comment{The current slot is empty on this chain}
+    \State $\sigma \gets \processHeight(\sigma)$
+  \EndIf
+  \State $\sigma.s \gets \sigma.s + 1$
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\processBlock}{$\sigma,\; B$}
+  \State \textbf{assert} $\sigma.s = B.\slot$ \Comment{Precondition: caller advanced $\sigma.s$}
+  \State $\sigma.L \gets B$
+  \For{each vote $v$ in $B$} $\sigma \gets \processVote(\sigma,\, v)$ \EndFor
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\processVote}{$\sigma,\; v$}
+  \State $i \gets v.\validator$
+  \If{$v.\target = \bot$} \Comment{Timeout vote}
+    \If{$v.\height = \sigma.h$}
+      \State $\sigma.\timeouts[i] \gets \mathtt{true}$
+    \EndIf
+  \Else \Comment{Justification vote: apply height freshness}
+    \State $\fresh \gets (v.\height = \sigma.h) \land (v.\target \prec \sigma.L) \land (v.\target.\slot \geq \sigma.s_h)$
+    \If{$\fresh$}
+      \State $\sigma.\targets[i] \gets v.\target$
+      \State $\sigma.\timeouts[i] \gets \mathtt{true}$
+    \EndIf
+  \EndIf
+  \If{$v.\finalizeHeight = \sigma.h_j$ \textbf{and} $v.\finalizeTarget = \sigma.J$}
+    \State $\sigma.P \gets \sigma.P \cup \{i\}$
+  \EndIf
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\processHeight}{$\sigma$}
+  \State $\sigma \gets \processHeightEvents(\sigma)$
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\processHeightEvents}{$\sigma$}
+  \If{$|\sigma.P| \geq 2n/3$} \Comment{Finality}
+    \State $\sigma.F \gets \sigma.J$
+  \EndIf
+  \State $T \gets \arg\max_{T' \in \{\sigma.\targets[i] \,:\, \sigma.\targets[i] \neq \bot\}} |\{i : \sigma.\targets[i] = T'\}|$ \Comment{$T \gets \bot$ if the set is empty}
+  \If{$T \neq \bot$ \textbf{and} $|\{i : \sigma.\targets[i] = T\}| \geq 2n/3$} \Comment{Justification}
+    \State $\sigma.J \gets T$, \; $\sigma.h_j \gets \sigma.h$, \; $\sigma.P \gets \emptyset$
+    \State $\sigma.h \gets \sigma.h + 1$, \; $\sigma.s_h \gets \sigma.s$
+    \State reset $\targets, \timeouts$
+    \State \Return $\sigma$
+  \EndIf
+  \If{$|\{i : \sigma.\timeouts[i] = \mathtt{true}\}| \geq 2n/3$} \Comment{Timeout}
+    \State $\sigma.h \gets \sigma.h + 1$, \; $\sigma.s_h \gets \sigma.s$
+    \State reset $\targets, \timeouts$
+  \EndIf
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\finalizeConflict}{$v_1, v_2$} \Comment{Does $v_1$ conflict with $v_2$'s finalize commitment?}
+  \State \Return $v_2.\finalizeTarget \neq \bot \;\wedge\; v_1.\height = v_2.\finalizeHeight \;\wedge\; v_1.\target \neq v_2.\finalizeTarget$
+\EndFunction
+\vspace{3pt}
+
+\Function{\isSlashable}{$v_1, v_2$}
+  \State \Return $v_1.\validator = v_2.\validator$
+  \Statex \hspace{3em}$\land \;(\finalizeConflict(v_1, v_2) \lor \finalizeConflict(v_2, v_1))$
+\EndFunction
+
+\end{algorithmic}
+\end{boxedminipage}
+\end{center}
+\end{figure}
+
+\section{Accountable safety}\label{sec:safety}
+
+\begin{lemma}[Height progression]\label{lem:heightprog}
+\processHeight increments~$h$ by at most~$1$ per invocation, and each increment is gated by a $\geq 2n/3$ justification or timeout quorum.
+\end{lemma}
+
+\begin{proof}
+The only assignments to~$h$ are $h \gets h + 1$ in the justification and timeout-cert branches of \processHeightEvents, each guarded by its $\geq 2n/3$ quorum and followed by a return or function exit, so at most one fires per call.
+\end{proof}
+
+\begin{lemma}[Freshness via target state-height]\label{lem:fresh-equiv}
+For any chain head~$L$ and ancestor $T \preceq L$,
+\[
+  T.\slot \geq \sigma[L].s_h
+  \qquad\Longleftrightarrow\qquad
+  \sigma[T].h = \sigma[L].h .
+\]
+\end{lemma}
+
+\begin{proof}
+Let $h \coloneqq \sigma[L].h$.
+Along a chain, state-height only increases, and whenever a height-advance fires, \processHeightEvents sets $s_h$ to the slot boundary at which that advance fires.
+Thus $\sigma[L].s_h$ is exactly the boundary where $L$'s chain entered state-height~$h$.
+Any ancestor of~$L$ with slot before that boundary has state-height $< h$, while any ancestor at or after that boundary has state-height~$h$.
+Applying this to $T \preceq L$ gives the equivalence.
+\end{proof}
+
+\begin{lemma}[Checkpoint monotonicity]\label{lem:slotmono}
+On any chain, the fields $s$, $h$, $h_j$, $s_h$, $F$, $J$ are non-decreasing along~$\preceq$, with $F \preceq J$ at all times.
+$J$ and $h_j$ advance only on justification events, and $s_h$ only on height-advances, with $s_h$ set to the slot boundary where the height advance fires.
+\end{lemma}
+
+\begin{proof}
+Reading off Figure~\ref{alg:state-machine}: $s$ only increases (in \processSlot); $h$ only increases, by~$1$, in the height-advance branches of \processHeightEvents, which also set $h_j \gets h$ on the justification branch and $s_h \gets \sigma.s$ on either branch.
+Slots strictly increase along~$\preceq$ (Definition~\ref{def:block}), so $s_h$ is non-decreasing.
+$F$ updates only via $F \gets J$, so $F \preceq J$ reduces to $J$-monotonicity.
+
+\emph{Block field $J$.}
+At a justification advance on chain~$Y$ firing at target~$T$ with pre-state height~$h$, freshness forces $T.\slot \geq s_h$, since every contributing justification vote has target~$T$ and was processed only when fresh.
+By Lemma~\ref{lem:fresh-equiv}, $\sigma[T].h = h$, so the previous justified block $J_{\mathrm{old}}$ with $\sigma[J_{\mathrm{old}}].h \leq h-1$ and $J_{\mathrm{old}} \preceq Y$ satisfies $T \succ J_{\mathrm{old}}$ by state-height monotonicity.
+Hence $J$ strictly advances along~$\preceq$ at every justification event.
+\end{proof}
+
+\begin{lemma}[Any chain past a finalized height contains the finalized block]\label{lem:mainsafety}
+Unless $\geq n/3$ validators are slashable: if~$C$ is finalized at height~$h$, then $C \preceq B$ for every block~$B$ with $\sigma[B].h > h$.
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{lem:heightprog}, some $B^* \preceq B$ advanced height from~$h$ to~$h+1$ via a quorum~$Q$ at height~$h$ on~$B^*$'s chain (justification or timeout cert).
+Finality of~$C$ at~$h$ gives a quorum~$Q_F$ each signing a finalize-bearing vote~$b$ with $b.\finalizeHeight = h$ and $b.\finalizeTarget = C$.
+Quorum intersection gives $|Q \cap Q_F| \geq n/3$; pick $v \in Q \cap Q_F$ not slashable, with~$b \in Q_F$ its finalize-bearing vote and~$a$ its contribution to~$Q$ at height~$h$ on~$B^*$'s chain.
+Non-slashability rules out $\finalizeConflict(a, b)$, so $a.\target \neq \bot$ and $a.\target = C$ (since $a.\height = h = b.\finalizeHeight$ and $b.\finalizeTarget = C \neq \bot$).
+Hence~$a$ is a fresh justification vote (timeouts have $a.\target = \bot$) processed on~$B^*$'s chain at state-height~$h$, and freshness gives $C = a.\target \preceq B^* \preceq B$.
+\end{proof}
+
+\begin{lemma}[Finalized blocks form a chain]\label{lem:finchain}
+Unless $\geq n/3$ validators are slashable: any two finalized checkpoints $(C, h), (C', h')$ are compatible, with $C \preceq C'$ whenever $h \leq h'$.
+\end{lemma}
+
+\begin{proof}
+\emph{Case $h = h'$.}
+Finality of~$C$ gives a quorum~$Q_F$ with $\finalizeHeight = h$, $\finalizeTarget = C$.
+Finality of~$C'$ requires justification of~$C'$, giving a justification quorum~$Q'$ at height~$h$ with target~$C'$.
+By quorum intersection, $|Q_F \cap Q'| \geq n/3$; pick $v \in Q_F \cap Q'$ not slashable.
+E1 (Definition~\ref{def:slashing}) applied to $v$'s votes in~$Q_F, Q'$ forces $C = C'$.
+
+\emph{Case $h < h'$.}
+Let~$Z$ be the chain on which~$C'$ was finalized, at the post-state where the finalize-quorum closed; then $\sigma[Z].h \geq h' > h$, $C' \preceq Z$, and $\sigma[C'].h = h'$ (Lemma~\ref{lem:fresh-equiv}).
+Lemma~\ref{lem:mainsafety} at~$Z$ gives $C \preceq Z$; Lemma~\ref{lem:fresh-equiv} on~$C$'s own finalizing chain gives $\sigma[C].h = h$.
+Both~$C, C'$ lie on~$Z$, so comparable; with $\sigma[C].h = h < h' = \sigma[C'].h$, state-height monotonicity (Lemma~\ref{lem:slotmono}) forces $C \prec C'$.
+\end{proof}
+
+\begin{theorem}[Accountable safety]\label{thm:safety}
+Unless $\geq n/3$ validators are slashable, no two conflicting blocks can be finalized.
+\end{theorem}
+
+\begin{proof}
+Immediate from Lemma~\ref{lem:finchain}: any two finalized blocks are compatible.
+\end{proof}
+\section{Fork-choice store}\label{sec:store}
+
+A node may track multiple chains simultaneously; the \emph{store} is the node-local data structure that mediates which chain the node follows.
+It maintains a single \emph{root block}~$J$ --- the block of the highest-key justification ever observed --- together with that justification's height~$h_j$.
+Each justification firing is compared against $(h_j, \hash(J))$ in lex order, and $(J, h_j)$ is updated whenever a new justification strictly dominates.
+Because timeouts replace every prefix-notarization mechanism, the comparison uses the lexicographic pair $(h, \hash(C))$ associated with each justification firing $(C, h)$: height first, hash tiebreak; under $f < n/3$ the tiebreak is rarely needed and exists for robustness only.
+
+\begin{definition}[Store]\label{def:store}
+A node maintains a \emph{store}
+\[
+  \Sigma \;=\; (\sigma,\; \T,\; F,\; J,\; h_j,\; \hmax),
+\]
+where:
+\begin{itemize}
+  \item $\sigma$ is the \emph{state map}, assigning each accepted block its per-chain post-state (Section~\ref{sec:model});
+  \item $\T$ is the \emph{block tree}, the set of accepted blocks;
+  \item $F$ is the \emph{store-finalized block};
+  \item $J$ is the \emph{store root}: the block of the highest-key justification ever observed;
+  \item $h_j$ is the height component of that justification key;
+  \item $\hmax \in \mathbb{N}$ is the maximum state-height $\sigma[B].h$ over $B \in \T$.
+\end{itemize}
+The genesis store has $\T = \{\genesis\}$, $F = J = \genesis$, $h_j = 0$, $\hmax = 1$ (matching $\sigma[\genesis].h = 1$ from Definition~\ref{def:height}).
+Section~\ref{sec:forkchoice} specifies the concrete fork-choice walk (latest head votes, the fresh-quorum anchor with the grade-1 fallback, and the Goldfish layer) that instantiates the auxiliary~\(\Omega\); the base store invariants below are unchanged.
+\end{definition}
+
+The capital~$\Sigma$ distinguishes the store from the per-chain state~$\sigma$.
+We write $\Sigma.\sigma$, $\Sigma.\T$, $\Sigma.F$, $\Sigma.J$, $\Sigma.h_j$, $\Sigma.\hmax$ for field access.
+The store key associated with the root is $(\Sigma.h_j,\, \hash(\Sigma.J))$.
+
+\paragraph{Viable subtree.}
+The store also defines a \emph{viable subtree} $\viableTree(\Sigma) \subseteq \Sigma.\T$, gating which blocks $\getConfirmed$ may return.
+
+\begin{definition}[Viable subtree]\label{def:viable}
+A \emph{leaf} of $\Sigma.\T$ is a block with no proper descendant in $\Sigma.\T$.
+Define \emph{viability} recursively:
+\begin{itemize}
+  \item a leaf~$B$ is \emph{viable} iff $\sigma[B].h \geq \Sigma.\hmax - 1$;
+  \item an internal block~$B$ is viable iff some descendant of~$B$ in $\Sigma.\T$ is viable.
+\end{itemize}
+The \emph{viable subtree} is $\viableTree(\Sigma) \coloneqq \{B \in \Sigma.\T : B \text{ is viable}\}$.
+Equivalently, $B \in \viableTree(\Sigma)$ iff some leaf $L \succeq B$ has $\sigma[L].h \geq \Sigma.\hmax - 1$.
+\end{definition}
+
+The viability filter discards branches whose tip lags the most recently advanced chain by more than one height.
+For a block~$F$ finalized at height~$h_f$, Lemma~\ref{lem:mainsafety} under $f < n/3$ forces every block at $\sigma$-height strictly greater than~$h_f$ to descend from~$F$, so when $\hmax > h_f$ any block at $\sigma$-height~$\hmax$ descends from~$F$ (and when $\hmax = h_f$, $F$ itself satisfies $\sigma[F].h = \hmax \geq \hmax - 1$); either way the filter is automatic for finalized blocks.
+Blocks at $\sigma$-height $\hmax - 1$ may still conflict with~$F$, since mainsafety constrains only strictly higher heights --- this is why $\Sigma.J$ remains the primary walk-from block in the cascade whenever it has not slipped behind the frontier.
+$\Sigma.F$ itself is always viable (Lemma~\ref{lem:F-viable} below): the \onBlock assertion $\Sigma.F \preceq B$ makes every newly admitted block a descendant of $\Sigma.F$, so the block driving any $\Sigma.\hmax$ bump is itself a viable witness for $\Sigma.F$.
+
+\paragraph{Store mutators.}
+The acceptance routine \onBlock (Figure~\ref{alg:store}) admits~$B$ only if $B.\parent \in \Sigma.\T$ and $\Sigma.F \preceq B$.
+It invokes $\stateTransition(\Sigma.\sigma[B.\parent],\; B)$ (Figure~\ref{alg:state-machine}), which advances through intervening slots, folds in~$B$'s votes, and closes height events enabled by the resulting post-vote state; the resulting post-state $\sigma'$ becomes $\Sigma.\sigma[B]$.
+The post-state then offers the justified checkpoint $(\sigma'.J,\, \sigma'.h_j)$ to \updateJustified and the finalized block $\sigma'.F$ to \updateFinalized; $\hmax$ is bumped to $\max(\Sigma.\hmax,\, \sigma'.h)$ before either guard is evaluated, so the viability filter sees the new maximum.
+
+$\updateJustified(\Sigma, J', h')$ first filters out any candidate~$J'$ with $J' \not\succeq \Sigma.F$ and then updates $(\Sigma.J,\, \Sigma.h_j)$ iff the candidate's justification key strictly exceeds $(\Sigma.h_j,\, \hash(\Sigma.J))$ in lex order; this maintains $J$ incrementally as the lex-max justification ever observed on a chain extending the current~$F$, never recomputed.
+$\updateFinalized(\Sigma, F')$ sets $\Sigma.F \gets F'$ iff $F' \succ \Sigma.F$, $F' \preceq \Sigma.J$, \emph{and} $F' \in \viableTree(\Sigma)$; the final clause is the \emph{viability guard}, which prevents $\Sigma.F$ from settling at a block the height filter has rendered unreachable from $\getConfirmed$.
+
+$\getConfirmed(\Sigma, \Omega)$ returns a block on the available chain that, under synchrony, is safe in the sense that it will not be reverted as long as more than half of the online validators are honest.
+Here $\Omega$ represents the state of the available chain --- whatever extra information the validator uses to disambiguate among viable descendants of the walk-from block.
+The protocol fixes the walk-from rule via a two-way cascade: walk from $\Sigma.J$ when $\Sigma.\hmax = \Sigma.h_j + 1$, and otherwise walk from $\Sigma.F$ (always viable, Lemma~\ref{lem:F-viable}).
+A justification at height~$h$ on a processed chain forces that chain's state-height to~$h + 1$, so $\Sigma.\hmax \geq \Sigma.h_j + 1$ always; the gate therefore holds precisely when no timeout has advanced any chain's state-height further past $\Sigma.J$'s height.
+When the gate holds, $\sigma[\Sigma.J].h = \Sigma.h_j = \Sigma.\hmax - 1$ meets the leaf-viability bound and $\Sigma.J \in \viableTree(\Sigma)$.
+When it fails, $\Sigma.J$ is ``stale'' --- some chain has advanced past $\Sigma.J$'s height via timeout cert --- and the adversary cannot force canonical to track such a justification even if its key dominates by lex.
+The choice among admissible descendants is left to~$\Omega$.
+Different validators may pass different~$\Omega$, and a single validator may pass different~$\Omega$ at different call sites.
+Section~\ref{sec:forkchoice} instantiates this~\(\Omega\) and the walk-from cascade concretely: \(\Omega\) is the Goldfish available-chain state, the descent among viable descendants first fixes an anchor (a locally accepted fresh-root pointer, or the latest-head-vote grade-1 descent as fallback) and then follows Goldfish and the viability descent (Definition~\ref{def:walk}), and Lemma~\ref{lem:walk-total} shows the instantiation meets Corollary~\ref{cor:getConfirmed-total}, so every store result of this section is preserved unchanged.
+
+\begin{figure}[H]
+\caption{Store and fork-choice root}\label{alg:store}
+\begin{center}
+\begin{boxedminipage}{\textwidth}
+\begin{algorithmic}[1]
+
+\State \textbf{Genesis store} $\Sigma$:\ $\Sigma.\T \gets \{\genesis\},\ \Sigma.F \gets \genesis,\ \Sigma.J \gets \genesis,\ \Sigma.h_j \gets 0,\ \Sigma.\hmax \gets 1,$
+\State \hspace{8.1em}$\Sigma.\sigma[\genesis] \gets \sigma_{\mathrm{gen}}$
+\vspace{3pt}
+
+\Function{\onBlock}{$\Sigma,\; B$}
+  \State \textbf{assert} $B.\parent \in \Sigma.\T$
+  \State \textbf{assert} $\Sigma.F \preceq B$
+  \State $\Sigma.\T \gets \Sigma.\T \cup \{B\}$
+  \State $\sigma' \gets \stateTransition(\Sigma.\sigma[B.\parent],\; B)$
+  \State $\Sigma.\sigma[B] \gets \sigma'$
+  \State $\Sigma.\hmax \gets \max(\Sigma.\hmax,\; \sigma'.h)$
+  \State $\Sigma \gets \updateJustified(\Sigma,\; \sigma'.J,\; \sigma'.h_j)$
+  \State $\Sigma \gets \updateFinalized(\Sigma,\; \sigma'.F)$
+  \State \Return $\Sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\updateJustified}{$\Sigma,\; J',\; h'$} \Comment{$F$-filter, then running max}
+  \If{$\Sigma.F \preceq J'$ \textbf{and} $(h',\, \hash(J')) > (\Sigma.h_j,\, \hash(\Sigma.J))$}
+    \State $\Sigma.J \gets J'$; \;\; $\Sigma.h_j \gets h'$
+  \EndIf
+  \State \Return $\Sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\updateFinalized}{$\Sigma,\; F'$}
+  \If{$F' \succ \Sigma.F$ \textbf{and} $F' \preceq \Sigma.J$ \textbf{and} $F' \in \viableTree(\Sigma)$}
+    \State $\Sigma.F \gets F'$
+  \EndIf
+  \State \Return $\Sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\getConfirmed}{$\Sigma,\; \Omega$}
+  \State $R \gets \Sigma.J$ \textbf{if} $\Sigma.\hmax = \Sigma.h_j + 1$ \textbf{else} $\Sigma.F$ \Comment{$\Sigma.J$ is at the frontier}
+  \State \Return $B \in \viableTree(\Sigma)$ with $B \succeq R$ and $\sigma[B].h \geq \Sigma.\hmax - 1$, depending on~$\Omega$
+\EndFunction
+
+\end{algorithmic}
+\end{boxedminipage}
+\end{center}
+\end{figure}
+
+The $F$-filter in \updateJustified never discards a key-dominant event: Theorem~\ref{thm:fleqr} below shows that $F$ advances only to blocks $\preceq J$, so every justification whose key could beat the current root remains on the $F$-chain.
+
+\subsection{Store invariants and safety}
+
+\subsubsection*{Unconditional invariants}
+
+\begin{lemma}[$h_j$ monotonicity]\label{lem:Rs-key-monotone}
+$\Sigma.h_j$ is non-decreasing over time, and the justification key $(\Sigma.h_j,\, \hash(\Sigma.J))$ is non-decreasing in lex order.
+\end{lemma}
+
+\begin{proof}
+Both $\Sigma.J$ and $\Sigma.h_j$ change only inside \updateJustified, whose guard enforces that the new key strictly exceeds the old in lex order; in particular the height coordinate $h_j$ is the leading component, so it is non-decreasing.
+\end{proof}
+
+\begin{theorem}[Local irreversibility of finality]\label{thm:finperm}
+Once a node sets $\Sigma.F = F$, $\Sigma.F$ descends from~$F$ at all future times.
+\end{theorem}
+
+\begin{proof}
+$\Sigma.F$ is updated only by \updateFinalized, whose guard $F' \succ \Sigma.F$ forces strict extension along~$\preceq$.
+\end{proof}
+
+\begin{theorem}[$F \preceq J$]\label{thm:fleqr}
+The store maintains $\Sigma.F \preceq \Sigma.J$ at all times.
+\end{theorem}
+
+\begin{proof}
+By induction on store operations.
+At genesis, $F = J = \genesis$, so $F \preceq J$.
+Assume the invariant before a call to either mutator in Figure~\ref{alg:store}.
+
+\emph{\updateJustified.}
+$F$ is untouched, and $J$ either stays or is replaced by a candidate~$J'$ that passed the $J' \succeq \Sigma.F$ filter; either way $J \succeq F$.
+
+\emph{\updateFinalized.}
+$J$ is untouched, and the guard $F' \preceq \Sigma.J$ ensures $F \gets F' \preceq J$.
+\end{proof}
+
+\begin{remark}[Store-finalized invariant]\label{rem:fs-invariant}
+At all times $\Sigma.F$ is either $\genesis$ or a block that was finalized on some chain; moreover, whenever a justification with target~$J^\star$ has fired at height~$h^\star$ on some chain processed by the node, the justification $(J^\star,\, h^\star)$ was offered to \updateJustified once $J^\star \succeq \Sigma.F$ at the moment of offering.
+$\Sigma.F$ only advances via \updateFinalized to $F' = \sigma[B].F$, and $\sigma[B].F \neq \genesis$ requires the finality branch of \processHeightEvents to have fired on~$B$'s chain, so $F'$ is a block finalized on that chain.
+\end{remark}
+
+\begin{remark}[$\viableTree$ shrinks only when $\Sigma.\hmax$ grows]\label{rem:viable-monotone}
+Adding a block to $\Sigma.\T$ never removes any block from $\viableTree(\Sigma)$ unless the addition also increases $\Sigma.\hmax$.
+The viability threshold $\Sigma.\hmax - 1$ depends only on $\Sigma.\hmax$; while it is fixed, every previously viable leaf remains viable and every previously viable internal block retains its viable leaf witness, so $\viableTree(\Sigma)$ can only grow.
+Only an $\Sigma.\hmax$ bump can disqualify leaves whose $\sigma$-height falls below the new threshold.
+\end{remark}
+
+\begin{lemma}[$\Sigma.F$ is always viable]\label{lem:F-viable}
+$\Sigma.F \in \viableTree(\Sigma)$ at all times.
+\end{lemma}
+
+\begin{proof}
+At genesis, $\Sigma.F = \genesis$ and $\Sigma.\hmax = 1 = \sigma[\genesis].h \geq \Sigma.\hmax - 1$, so $\genesis$ is a viable leaf.
+Inductively, $\Sigma.F$ changes only via \updateFinalized, whose viability guard ensures the new value is viable.
+Block additions that do not bump $\Sigma.\hmax$ preserve $\Sigma.F$'s viability by Remark~\ref{rem:viable-monotone}.
+The remaining case is an $\Sigma.\hmax$ bump in \onBlock with new block~$B$ satisfying $\sigma[B].h > \Sigma.\hmax$; after the bump $\Sigma.\hmax = \sigma[B].h$, and the assertion $\Sigma.F \preceq B$ makes~$B$ --- a leaf at the moment of addition with $\sigma[B].h$ equal to the new $\Sigma.\hmax$ --- a viable leaf descendant of~$\Sigma.F$, witnessing $\Sigma.F \in \viableTree(\Sigma)$.
+\end{proof}
+
+\begin{corollary}[\getConfirmed is total]\label{cor:getConfirmed-total}
+For every store~$\Sigma$ and auxiliary~$\Omega$, $\getConfirmed(\Sigma, \Omega)$ returns a block in $\viableTree(\Sigma)$ at $\sigma$-height $\geq \Sigma.\hmax - 1$.
+\end{corollary}
+
+\begin{proof}
+If the cascade gate $\Sigma.\hmax = \Sigma.h_j + 1$ holds, $R = \Sigma.J$ with $\sigma[\Sigma.J].h = \Sigma.h_j = \Sigma.\hmax - 1$ (Lemma~\ref{lem:fresh-equiv}); state-height monotonicity along $\preceq$ (Lemma~\ref{lem:slotmono}) gives every descendant of~$\Sigma.J$ in $\Sigma.\T$ a $\sigma$-height $\geq \Sigma.\hmax - 1$, so any leaf of $\Sigma.\T$ above $\Sigma.J$ is a viable leaf and witnesses $\Sigma.J \in \viableTree(\Sigma)$.
+Otherwise $R = \Sigma.F$, and Lemma~\ref{lem:F-viable} gives a viable leaf descending from~$\Sigma.F$ in $\Sigma.\T$.
+\end{proof}
+
+\begin{theorem}[Fork-choice consistency]\label{thm:fcconsistency}
+Once a node sets $\Sigma.F = F$, $\getConfirmed(\Sigma, \Omega)$ returns a block descending from~$F$ at all future times, for every $\Omega$.
+\end{theorem}
+
+\begin{proof}
+By Theorems~\ref{thm:finperm} and~\ref{thm:fleqr}, $F \preceq \Sigma.F \preceq \Sigma.J$ at all future times.
+Both branches of $\getConfirmed$ return a descendant of $\Sigma.J$ or $\Sigma.F$ (Corollary~\ref{cor:getConfirmed-total}); either descends from~$F$.
+\end{proof}
+
+\subsubsection*{Further properties under fewer than $n/3$ slashable validators}
+
+\begin{lemma}[Justification chain]\label{lem:certchain}
+Unless $\geq n/3$ validators are slashable: if~$F$ is finalized at height~$h_f$ and a justification $(C,\, h)$ has fired on any chain processed by the node with $h \geq h_f$, then $F$ and~$C$ are compatible, with $F \prec C$ when $h > h_f$.
+\end{lemma}
+
+\begin{proof}
+If $h_f = 0$ then $F = \genesis$ and compatibility is trivial; assume $h_f \geq 1$.
+The justification fired at the post-state of some processed block~$B$ whose \onBlock call triggered the justification branch of \processHeightEvents with $(\sigma[B].J,\, \sigma[B].h_j) = (C,\, h)$, so $C \preceq B$ and $\sigma[B].h \geq h + 1$ (justification advances height).
+Lemma~\ref{lem:mainsafety} at $\sigma[B].h > h_f$ gives $F \preceq B$, and with $C \preceq B$ this yields $F \sim C$.
+For $h > h_f$: $\sigma[F].h = h_f < h = \sigma[C].h$ by Lemma~\ref{lem:fresh-equiv}, and state-height monotonicity along $\preceq$ (Lemma~\ref{lem:slotmono}) forces $F \prec C$ on the comparable pair.
+\end{proof}
+
+\begin{lemma}[Upgrade property]\label{lem:upgrade}
+Unless $\geq n/3$ validators are slashable: if~$F$ is finalized at height~$h_f$ and some block~$B$ with $\sigma[B].J = F$ and $\sigma[B].h_j = h_f$ has been processed by the node, then $\Sigma.J \succeq F$ at all future times.
+\end{lemma}
+
+\begin{proof}
+Let $F^0 \coloneqq \Sigma.F$ at the moment $\onBlock(B)$ offered $(F, h_f)$ to \updateJustified.
+Both $F^0$ and $F$ are genesis or finalized (Remark~\ref{rem:fs-invariant}), so Lemma~\ref{lem:finchain} makes them comparable.
+If $F \preceq F^0$, Theorem~\ref{thm:fleqr} gives $\Sigma.J \succeq \Sigma.F \succeq F^0 \succeq F$ at that moment, and Theorems~\ref{thm:finperm} and~\ref{thm:fleqr} preserve $\Sigma.J \succeq \Sigma.F \succeq F$ thereafter.
+Otherwise $F^0 \prec F$ strictly: the $F$-filter $\Sigma.F \preceq F$ passes, so the call brings $(\Sigma.h_j, \hash(\Sigma.J)) \geq (h_f, \hash(F))$ in lex order, preserved by Lemma~\ref{lem:Rs-key-monotone}.
+At any later moment, $\Sigma.h_j \geq h_f$, and the current $\Sigma.J$ is justified at some $h' \geq h_f$ on a processed chain: if $h' > h_f$, Lemma~\ref{lem:certchain} gives $F \prec \Sigma.J$; if $h' = h_f$, the justification quorum~$Q'$ for $\Sigma.J$ at $h_f$ and the finality quorum~$Q_F$ for~$F$ at $h_f$ intersect in $\geq n/3$, and a non-slashable $v \in Q' \cap Q_F$ forces $\Sigma.J = F$ by E1.
+Either way $\Sigma.J \succeq F$.
+\end{proof}
+
+\begin{lemma}[Finalized blocks are viable]\label{lem:viable-finalized}
+Unless $\geq n/3$ validators are slashable: if~$F$ is finalized at height~$h_f$ and some block~$B$ with $\sigma[B].J = F$ and $\sigma[B].h_j = h_f$ has been processed by the node, then $F \in \viableTree(\Sigma)$ at all future times.
+\end{lemma}
+
+\begin{proof}
+Processing of~$B$ with $\sigma[B].h_j = h_f$ means the justification branch of \processHeightEvents fired with target~$F$ at pre-state height~$h_f$ on~$B$'s chain, advancing~$\sigma$ to $\sigma[B].h \geq h_f + 1$; hence $\Sigma.\hmax \geq h_f + 1 > h_f$ at all future times.
+Pick any leaf $L \in \Sigma.\T$ with $\sigma[L].h = \Sigma.\hmax$ (some block achieves~$\Sigma.\hmax$ by definition, and any leaf descendant preserves the maximum by state-height monotonicity).
+Then $L$ is viable, and Lemma~\ref{lem:mainsafety} gives $F \preceq L$, so $L$ witnesses $F \in \viableTree(\Sigma)$.
+\end{proof}
+
+\begin{theorem}[Local acceptance of finality updates]\label{thm:finlive}
+Unless $\geq n/3$ validators are slashable: if a block~$B$ is processed by \onBlock and $\sigma[B].F = F'$, then after processing $\Sigma.F \succeq F'$.
+\end{theorem}
+
+\begin{proof}
+If $\Sigma.F \succeq F'$ already, processing~$B$ preserves the bound by monotonicity of~$\Sigma.F$ (Theorem~\ref{thm:finperm}).
+Otherwise $\Sigma.F$ is genesis or finalized (Remark~\ref{rem:fs-invariant}), so Lemma~\ref{lem:finchain} gives $\Sigma.F \sim F'$ and hence $\Sigma.F \prec F'$.
+$\sigma[B].F = F'$ requires some ancestor~$B' \preceq B$ with $\sigma[B'].J = F'$ and $\sigma[B'].h_j = h_{F'}$; $B'$ was processed before~$B$ (parent-first), so Lemma~\ref{lem:upgrade} gives $\Sigma.J \succeq F'$, hence the $F' \preceq \Sigma.J$ guard passes.
+For the viability guard, Lemma~\ref{lem:viable-finalized} gives $F' \in \viableTree(\Sigma)$.
+All three guards pass, so $\Sigma.F \gets F'$.
+\end{proof}
+
+\begin{theorem}[Lock-in]\label{thm:lockin}
+Unless $\geq n/3$ validators are slashable: if block~$F$ is finalized at height~$h_f$ on any chain, and some block~$B$ with $\sigma[B].J = F$ and $\sigma[B].h_j = h_f$ has been processed by the node, then $\Sigma.J \succeq F$ at all future times, $F \in \viableTree(\Sigma)$ at all future times, and $\getConfirmed(\Sigma, \Omega)$ always returns a descendant of~$F$, for every $\Omega$.
+\end{theorem}
+
+\begin{proof}
+$\Sigma.J \succeq F$ by Lemma~\ref{lem:upgrade}, so $\sigma[\Sigma.J].h = \Sigma.h_j \geq h_f$ by state-height monotonicity along $F \preceq \Sigma.J$ (using $\sigma[F].h = h_f$ from Lemma~\ref{lem:fresh-equiv}); $F \in \viableTree(\Sigma)$ by Lemma~\ref{lem:viable-finalized}.
+If $\Sigma.\hmax = \Sigma.h_j + 1$, $\getConfirmed$'s first branch fires and returns a descendant of $\Sigma.J \succeq F$.
+Otherwise $\Sigma.\hmax \geq \Sigma.h_j + 2 \geq h_f + 2$, and \getConfirmed's second branch returns a block~$T$ with $\sigma[T].h \geq \Sigma.\hmax - 1 \geq h_f + 1 > h_f$, so Lemma~\ref{lem:mainsafety} gives $F \preceq T$.
+\end{proof}
+
+\begin{theorem}[Order independence]\label{thm:orderindep}
+Unless $\geq n/3$ validators are slashable: the observable store view after folding the same available set of blocks through \onBlock in any parent-first order depends only on that set, not on the order.
+In particular, two nodes with the same available blocks agree on $(F,\,J,\,h_j,\,\hmax)$, on the accepted subtree rooted at~$F$, and hence on the possible outputs of~\getConfirmed.
+They need not agree on blocks outside the subtree of~$F$: a block conflicting with the final~$F$ may have been accepted before finality moved at one node, while another node that first moved~$F$ would reject it.
+\end{theorem}
+
+\begin{proof}
+Fix a common input set~$\mathcal B$ and consider any parent-first processing order.
+For every block whose ancestors are in~$\mathcal B$, its post-state is a deterministic function of itself and its parent's post-state; write this state as~$\sigma[B]$.
+
+\emph{$F$.} By Lemma~\ref{lem:finchain}, $\{\sigma[B].F : B \in \mathcal B\}$ is a chain with maximum $F_{\max}$, attained at some~$B^\ast \in \mathcal B$.
+At all times, $\Sigma.F \preceq F_{\max}$.
+When $B^\ast$ is processed, Theorem~\ref{thm:finlive} gives $\Sigma.F \succeq F_{\max}$; monotonicity of~$\Sigma.F$ then gives final value $\Sigma.F=F_{\max}$ in every order.
+
+\emph{$\hmax$.} Let $B_{\max}$ maximize $\sigma[B].h$ over~$\mathcal B$.
+If $\sigma[B_{\max}].h > h_{F_{\max}}$, Lemma~\ref{lem:mainsafety} gives $F_{\max} \preceq B_{\max}$.
+If $\sigma[B_{\max}].h = h_{F_{\max}}$, then $F_{\max}$ itself attains the same maximum height.
+Thus some maximum-height block descends from~$F_{\max}$.
+Since every intermediate finalized root is below~$F_{\max}$, the \onBlock finality-ancestor assertion accepts such a maximum-height block whenever it is reached in a parent-first order.
+Thus $\Sigma.\hmax$ reaches the maximum $\sigma$-height over~$\mathcal B$, and no processed block can raise it further.
+
+\emph{$J$.} For determining the final justified root, only cert descriptors with height at least~$h_{F_{\max}}$ can matter.
+Such descriptors are deterministic from~$\mathcal B$: if a block's descriptor is $(C,h)$ with $h\geq h_{F_{\max}}$, then the argument below shows $F_{\max}\preceq C$, and since $C$ is an ancestor of the block producing the descriptor, that block lies in the live subtree and is accepted in every order.
+Let~$D$ be this deterministic high-descriptor multiset.
+Write $K_{\max} \coloneqq (h_{F_{\max}},\, \hash(F_{\max}))$.
+For any $(C, h) \in D$ with $h \geq h_{F_{\max}}$: if $h > h_{F_{\max}}$, Lemma~\ref{lem:certchain} gives $C \succ F_{\max}$; if $h = h_{F_{\max}}$, finality of $F_{\max}$ at $h_{F_{\max}}$ provides a finality quorum~$Q_F$ of size $\geq 2n/3$ with $\finalizeHeight = h_{F_{\max}}$ and $\finalizeTarget = F_{\max}$, while the descriptor's existence gives a justification quorum~$Q'$ at height~$h_{F_{\max}}$ targeting~$C$; quorum intersection picks a non-slashable $v \in Q' \cap Q_F$, and E1 (as in Lemma~\ref{lem:upgrade}) forces $C = F_{\max}$.
+Descriptors with $h < h_{F_{\max}}$ have key strictly below $K_{\max}$ on the leading coordinate, so once $\Sigma.h_j \geq h_{F_{\max}}$ holds they are dominated.
+Hence $\Sigma.J$'s final value is the lex-max over $\{(C, h) \in D : h \geq h_{F_{\max}}\}$, a deterministic function of the processed set.
+
+\emph{Live subtree and outputs.} If $B \in \mathcal B$ and $F_{\max} \preceq B$, then every ancestor of~$B$ above~$F_{\max}$ also descends from every intermediate~$\Sigma.F$.
+Thus $B$ is accepted in every parent-first order.
+Conversely, blocks outside the subtree of~$F_{\max}$ may differ across nodes, but \getConfirmed only returns descendants of the confirmation root, which is either~$F_{\max}$ or~$J \succeq F_{\max}$, and applies the same height threshold~$\hmax-1$.
+Therefore the possible outputs of~\getConfirmed are order-independent.
+\end{proof}
+
+\begin{lemma}[Justifications stay at or below~$\Sigma.h_j$]\label{lem:no-high-just}
+Unless $\geq n/3$ validators are slashable, every justification $(C, h)$ that has fired on any chain processed by the node satisfies $h \leq \Sigma.h_j$ at all subsequent times.
+\end{lemma}
+
+\begin{proof}
+The justification fires inside an \onBlock call on some processed block~$B$, at which point Remark~\ref{rem:fs-invariant} gives the descriptor $(C, h)$ offered to \updateJustified.
+$C$ lies on $B$'s chain (it is the justified target), and so does $\Sigma.F$ (by $\Sigma.F \preceq B$), so $\Sigma.F$ and~$C$ are comparable.
+If $\Sigma.F \not\preceq C$, then $\Sigma.F \succ C$, so $h_f = \sigma[\Sigma.F].h \geq \sigma[C].h = h$ by state-height monotonicity (Lemma~\ref{lem:slotmono}, applied along $C \prec \Sigma.F$, using $\sigma[C].h = h$ from Lemma~\ref{lem:fresh-equiv}).
+Combining $\Sigma.F \preceq \Sigma.J$ (Theorem~\ref{thm:fleqr}) with $\sigma[\Sigma.J].h = \Sigma.h_j$ (Lemma~\ref{lem:fresh-equiv}) and the same state-height monotonicity along $\Sigma.F \preceq \Sigma.J$ gives $\Sigma.h_j \geq h_f \geq h$.
+Otherwise the $F$-filter passes and \updateJustified's lex test forces $\Sigma.h_j \geq h$ after the call.
+Lemma~\ref{lem:Rs-key-monotone} preserves the bound at all later times.
+\end{proof}
+
+\section{Inactivity leak}\label{sec:leak}
+
+This section extends the per-chain state machine of Section~\ref{sec:model} with a penalty counter and a new transition function \processInactivityPenalties, invoked by an extended \processHeight (Figure~\ref{alg:leak-processslot}); \processSlot and \stateTransition pick up the extension transparently through their calls to \processHeight, while \processBlock, \processHeightEvents, and \processVote are unchanged.
+Write $T = \getConfirmed(\Sigma, \Omega)$ for the \emph{canonical chain}, with $\Omega$ the validator's auxiliary state.
+
+Two results follow.
+Theorem~\ref{thm:tightness} is purely state-logic: on any fixed chain, the total penalty increment over a non-finality period is at least $(T-1) \cdot n/3$, with no hypothesis on synchrony, honesty, or the slashable set.
+Theorem~\ref{thm:fairness} is local to a single honest~$i$: the vote~$i$ produces per Definition~\ref{def:voting-rule}, once included on any extension of~$i$'s canonical chain still at the same state-height, exempts~$i$ from Layer~1 penalties at that state-height.
+Layer~2 exemption is out of scope: it depends on quorum formation on a common target, not on any local property of~$i$.
+
+\subsection{Penalty units}
+
+Augment the per-chain state tuple with one non-negative counter $\sigma.\penalties[1..n]$, initialized to~$0$ at genesis; no other field is added or modified.
+Figure~\ref{alg:leak-processslot} replaces \processHeight from Section~\ref{sec:model} with a version that snapshots the pre-advance state and invokes \processInactivityPenalties after \processHeightEvents.
+The store of Section~\ref{sec:store} invokes the extended routine through the same \stateTransition entry point.
+
+\begin{figure}[H]
+\caption{Penalty-tracking state extension (leak section)}\label{alg:leak-processslot}
+\begin{center}
+\begin{boxedminipage}{\textwidth}
+\begin{algorithmic}[1]
+
+\Function{\processHeight}{$\sigma$} \Comment{extended: tracks penalties}
+  \State $\sigma_{\mathrm{pre}} \gets \sigma$ \Comment{snapshot of pre-advance state}
+  \State $\sigma \gets \processHeightEvents(\sigma)$
+  \State $\sigma \gets \processInactivityPenalties(\sigma_{\mathrm{pre}},\; \sigma)$
+  \State \Return $\sigma$
+\EndFunction
+\vspace{3pt}
+
+\Function{\processInactivityPenalties}{$\sigma_{\mathrm{pre}},\; \sigma_{\mathrm{post}}$}
+  \If{$\sigma_{\mathrm{pre}}.h = \sigma_{\mathrm{post}}.h$} \Comment{Layer~1: stall}
+    \For{each $i \in \{1, \ldots, n\}$}
+      \If{$\sigma_{\mathrm{post}}.\timeouts[i] = \mathtt{false}$}
+        \State $\sigma_{\mathrm{post}}.\penalties[i] \gets \sigma_{\mathrm{post}}.\penalties[i] + 1$
+      \EndIf
+    \EndFor
+  \EndIf
+  \If{$\sigma_{\mathrm{pre}}.J = \sigma_{\mathrm{post}}.J$} \Comment{Layer~2 target: justification did \emph{not} advance}
+    \State $T^* \gets \arg\max_{T' \in \{\sigma_{\mathrm{pre}}.\targets[i] \,:\, \sigma_{\mathrm{pre}}.\targets[i] \neq \bot\}} |\{i : \sigma_{\mathrm{pre}}.\targets[i] = T'\}|$
+    \For{each $i \in \{1, \ldots, n\}$}
+      \If{$\sigma_{\mathrm{pre}}.\targets[i] \neq T^*$ \textbf{or} $\sigma_{\mathrm{pre}}.\targets[i] = \bot$}
+        \State $\sigma_{\mathrm{post}}.\penalties[i] \gets \sigma_{\mathrm{post}}.\penalties[i] + 1$
+      \EndIf
+    \EndFor
+  \EndIf
+  \If{$\sigma_{\mathrm{pre}}.F = \sigma_{\mathrm{post}}.F$ \textbf{and} $\sigma_{\mathrm{pre}}.F \prec \sigma_{\mathrm{pre}}.J$} \Comment{Layer~2 finalize}
+    \For{each $i \in \{1, \ldots, n\}$}
+      \If{$i \notin \sigma_{\mathrm{pre}}.P$}
+        \State $\sigma_{\mathrm{post}}.\penalties[i] \gets \sigma_{\mathrm{post}}.\penalties[i] + 1$
+      \EndIf
+    \EndFor
+  \EndIf
+  \State \Return $\sigma_{\mathrm{post}}$
+\EndFunction
+
+\end{algorithmic}
+\end{boxedminipage}
+\end{center}
+\end{figure}
+
+\paragraph{Reading Figure~\ref{alg:leak-processslot}.}
+\processInactivityPenalties checks three independent guards; any subset may fire at a given slot.
+
+\emph{Layer~1 (stall).} Fires when the slot did not advance height.
+Every~$i$ with $\sigma_{\mathrm{post}}.\timeouts[i] = \mathtt{false}$ is bumped, i.e.\ every validator that failed to cast a vote setting the timeout marker at the current height ($\timeouts$ is not reset at a stall).
+The marker is set by either a timeout vote (target~$\bot$) at the current height or a height-fresh justification vote with target on this chain (Section~\ref{sec:model}).
+
+\emph{Layer~2 target.} Fires when the justification branch of \processHeightEvents did not fire (else $J$ would strictly advance by Lemma~\ref{lem:slotmono}).
+$T^*$ is the plurality target across $\sigma_{\mathrm{pre}}.\targets$ (deterministic tiebreak), or $\bot$ if no justification votes have been registered; the second disjunct of the guard bumps non-voters when $T^* = \bot$ (in which case all~$n$ validators are bumped).
+Since no $2n/3$-quorum on a single target formed, the plurality count is $< 2n/3$, so $|\{i : \sigma_{\mathrm{pre}}.\targets[i] \neq T^* \vee \sigma_{\mathrm{pre}}.\targets[i] = \bot\}| > n/3$.
+
+\emph{Layer~2 finalize.} Fires when a pending-finality gap is open at the start of the slot ($\sigma_{\mathrm{pre}}.F \prec \sigma_{\mathrm{pre}}.J$) and $F$ did not advance; every $i \notin \sigma_{\mathrm{pre}}.P$ is bumped.
+The finality branch of \processHeightEvents, when it fires, sets $\sigma_{\mathrm{post}}.F = \sigma_{\mathrm{pre}}.J \succ \sigma_{\mathrm{pre}}.F$, so this guard is skipped automatically.
+
+\begin{remark}[The empty vote and the Layer-1 guard]\label{rem:empty-vote-leak}
+An honest validator gate-blocked from \emph{both} a target and a timeout vote at a height (Definition~\ref{def:conf-gate}) --- its safe-confirmed head has not reached the voted interval --- emits the empty vote~$\emptyckpt$ (Definition~\ref{def:empty-target}): a vote with an empty voted checkpoint ($\target = \bot$, $\height = \bot$) carrying a populated head field.
+Because it makes no current-height claim it leaves $\timeouts[i] = \mathtt{false}$, so the Layer~1 guard above \emph{does} bump~$i$: unlike a timeout vote, an empty vote is not Layer-1-exempt.
+Its head field still carries~$i$'s SG latest message (Section~\ref{sec:headvotes}) and its finalize fields still feed~$P$, so it remains neutral for the Layer-2 finalize guard; only the Layer-1 stall guard sees it as a non-participant.
+This is deliberate: it keeps the empty vote out of the timeout certificate, so that reaching~$H+2$ from a justifiable height always certifies a safe confirmation (Lemma~\ref{lem:safe-confirm-cert}).
+Since the empty vote is now cast at \emph{every} gated-out height (Definition~\ref{def:empty-target}), the exposure applies uniformly, not only during recovery.
+The resulting Layer-1 exposure is negligible under the healing dynamics --- gate-blocked silence is sub-epoch while the leak accrues per epoch --- and a leak-neutral per-validator presence-field variant is listed as an alternative; see Remark~\ref{rem:empty-vote-marker}.
+See the gate (Definition~\ref{def:conf-gate}) and Theorem~\ref{thm:healing-liveness}(a) for how gate-blocking and the empty vote interact during healing.
+\end{remark}
+
+\subsection{Leak tightness}
+
+\begin{definition}[Non-finality period]\label{def:non-finality-period}
+Fix a chain and write $\sigma_{\mathrm{pre}}^{(t)}, \sigma_{\mathrm{post}}^{(t)}$ for its pre/post-\processHeight snapshots at slot~$t$.
+A \emph{non-finality period} is a maximal interval $[t_1, t_T]$ of consecutive slots on which $F$ is stuck, i.e., $\sigma_{\mathrm{post}}^{(t)}.F = \sigma_{\mathrm{pre}}^{(t)}.F$ throughout.
+Each such slot falls into exactly one category:
+\begin{itemize}
+  \item \emph{pending-stuck}: $\sigma_{\mathrm{pre}}^{(t)}.F \prec \sigma_{\mathrm{pre}}^{(t)}.J$ (pending-finality gap open at the start);
+  \item \emph{stable-stuck}: $\sigma_{\mathrm{pre}}^{(t)}.F = \sigma_{\mathrm{pre}}^{(t)}.J$ and $J$ does not advance at~$t$;
+  \item \emph{transition}: $\sigma_{\mathrm{pre}}^{(t)}.F = \sigma_{\mathrm{pre}}^{(t)}.J$ and the justification branch fires at~$t$ (opening a gap by slot's end).
+\end{itemize}
+\end{definition}
+
+\begin{theorem}[Non-finality period penalty bound]\label{thm:tightness}
+Over any non-finality period of length $T \geq 1$ on any chain, the total penalty increment across all validators assessed by \processInactivityPenalties on that chain is at least $(T - 1) \cdot n/3$.
+\end{theorem}
+
+\begin{proof}
+Fix a non-finality period $[t_1, t_T]$.
+We show (i) at most one slot is transition, and (ii) every pending-stuck or stable-stuck slot contributes $> n/3$ to the total penalty increment.
+
+\emph{(i) At most one transition slot.}
+After a transition at~$t$, $\sigma_{\mathrm{post}}^{(t)}.J \succ \sigma_{\mathrm{pre}}^{(t)}.F$; since $F$ does not advance in the period and $J$ is monotone across slots, $\sigma_{\mathrm{pre}}^{(t')}.F \prec \sigma_{\mathrm{pre}}^{(t')}.J$ at every later $t' > t$, making every such $t'$ pending-stuck.
+
+\emph{(ii) Per-slot charge $> n/3$.}
+
+\emph{Pending-stuck.} The Layer~2 finalize guard fires at~$t$.
+The finality branch of \processHeightEvents did not fire (else $F$ would advance), so $|\sigma_{\mathrm{pre}}^{(t)}.P| < 2n/3$ and $|\{i : i \notin \sigma_{\mathrm{pre}}^{(t)}.P\}| > n/3$.
+
+\emph{Stable-stuck.} The Layer~2 target guard fires at~$t$.
+The justification branch did not fire, so the plurality count on $\sigma_{\mathrm{pre}}^{(t)}.\targets$ is $< 2n/3$ (counting $T^* = \bot$ as~$0$); hence the bumped set has size $> n/3$.
+
+At most one slot is transition, so at least $T - 1$ slots are pending-stuck or stable-stuck; each contributes $> n/3$ by~(ii), and Layer~1 adds only non-negative charges.
+Summing gives total increment $\geq (T-1) \cdot n/3$.
+\end{proof}
+
+\subsection{Honest voting rule}
+
+We state the honest rule explicitly, as it underpins the leak fairness proof.
+The rule consumes three pieces of validator-local state: the store~$\Sigma$ (drives fork-choice), the auxiliary~$\Omega$ (disambiguates among admissible \getConfirmed outputs), and the validator's \emph{local signing history}~$\Delta$ (a private summary of its own past signatures, used to avoid slashing).
+
+\begin{definition}[Local signing history]\label{def:signinghistory}
+The local signing history~$\Delta$ associates to each height~$h$ a triple $(\Delta.T(h),\, \Delta.\tau(h),\, \Delta.\lambda(h)) \in (\mathrm{Block} \cup \{\bot\}) \times \mathtt{bool} \times \mathtt{bool}$, initialized to $(\bot,\, \mathtt{false},\, \mathtt{false})$:
+$\Delta.T(h)$ is~$\bot$ until~$i$'s first non-$\bot$ vote at~$h$, after which it pins the target of that vote; $\Delta.\tau(h)$ is true once~$i$ has voted timeout at~$h$; and $\Delta.\lambda(h)$ is true once~$i$ has voted to finalize~$\Delta.T(h)$ at height~$h$ (i.e.\ has cast a finalize-bearing vote with $\finalizeHeight = h$ and $\finalizeTarget = \Delta.T(h)$).
+$\Delta$ is updated only by \rememberVote (Figure~\ref{alg:voting-rule}), invoked once per signed vote.
+The honest reachable per-height configurations are $(\bot, \mathtt{false}, \mathtt{false})$, $(T, \mathtt{false}, \mathtt{false})$, $(T, \mathtt{false}, \mathtt{true})$, and $(T, \mathtt{true}, \mathtt{false})$; the configuration $(T, \mathtt{true}, \mathtt{true})$ is the slashable trace (a finalize-bearing vote at~$h$ alongside a timeout vote at~$h$).
+
+\smallskip
+\noindent\emph{Implementation.}
+$\Delta$ may safely drop entries at heights below $\Sigma.\hmax - 1$; \getFinalVote then conservatively clears the finalize commitment at older heights (because the gate $\Delta.T(h_f) = T_f$ fails on a missing entry), but every emitted vote remains E1-safe (Lemma~\ref{lem:honest-e1-safety}).
+$\Delta$ is the entire state needed for safe vote signing on the validator-client side, depending only on~$\Delta$, separated from fork-choice on the beacon-client side (depending on $\Sigma$ and~$\Omega$).
+\end{definition}
+
+\begin{definition}[Honest voting rule]\label{def:voting-rule}
+At each voting opportunity, $i$ produces its vote by $\getFinalVote(\Delta,\, \getBaseVote(\Sigma, \Omega))$ (Figure~\ref{alg:voting-rule}) and signs the result.
+$\getBaseVote$ reads fork-choice state to assemble an unconstrained candidate; $\getFinalVote$ adjusts it to respect~$\Delta$'s prior commitments and folds the new vote back into~$\Delta$ via \rememberVote.
+\end{definition}
+
+\begin{figure}[H]
+\caption{Honest voting rule}\label{alg:voting-rule}
+\begin{center}
+\begin{boxedminipage}{\textwidth}
+\begin{algorithmic}[1]
+
+\Function{\getBaseVote}{$\Sigma,\; \Omega$} \Comment{the unconstrained vote}
+  \State $T \gets \getConfirmed(\Sigma,\; \Omega)$
+  \State $h_c \gets \sigma[T].h$; \;\; $h_f \gets \sigma[T].h_j$; \;\; $T_f \gets \sigma[T].J$
+  \State \Return $(i,\; h_c,\; T,\; h_f,\; T_f)$
+\EndFunction
+\vspace{3pt}
+
+\Function{\getFinalVote}{$\Delta,\; v$}
+  \State $(i,\; h_c,\; T,\; h_f,\; T_f) \gets v$
+  \State \textbf{assert} $h_c > h_f$ \Comment{vote-height strictly above the finalize-commitment height}
+  \vspace{3pt}
+  \If{$\Delta.\lambda(h_c) = \mathtt{true}$} \Comment{lock at $h_c$: re-submit lock target}
+    \State $T \gets \Delta.T(h_c)$
+  \ElsIf{$\Delta.T(h_c) \neq \bot$} \Comment{voted at $h_c$ before, not locked: timeout}
+    \State $T \gets \bot$
+  \EndIf
+  \vspace{3pt}
+  \If{$\Delta.T(h_f) \neq T_f$ \textbf{or} $\Delta.\tau(h_f) = \mathtt{true}$} \Comment{cannot E1-safely commit to finalize}
+    \State $(h_f,\, T_f) \gets (\bot,\, \bot)$
+  \EndIf
+  \vspace{3pt}
+  \State $v' \gets (i,\; h_c,\; T,\; h_f,\; T_f)$
+  \State $\rememberVote(\Delta,\; v')$
+  \State \Return $v'$
+\EndFunction
+\vspace{3pt}
+
+\Function{\rememberVote}{$\Delta,\; v$}
+  \State $h \gets v.\height$; \;\; $h_f \gets v.\finalizeHeight$
+  \If{$v.\target \neq \bot$ \textbf{and} $\Delta.T(h) = \bot$}
+    \State $\Delta.T(h) \gets v.\target$
+  \ElsIf{$v.\target = \bot$}
+    \State $\Delta.\tau(h) \gets \mathtt{true}$
+  \EndIf
+  \If{$v.\finalizeTarget \neq \bot$}
+    \State $\Delta.\lambda(h_f) \gets \mathtt{true}$
+  \EndIf
+\EndFunction
+
+\end{algorithmic}
+\end{boxedminipage}
+\end{center}
+\end{figure}
+
+The target adjustment in \getFinalVote produces the lock target when~$i$ is locked at~$h_c$; a timeout when~$i$ has voted at~$h_c$ without locking (so a second non-$\bot$ vote at~$h_c$ would violate per-height target consistency); or the unconstrained~$T$ otherwise (first vote at~$h_c$).
+The finalize fields are kept iff the gate $\Delta.T(h_f) = T_f \wedge \Delta.\tau(h_f) = \mathtt{false}$ holds (so~$i$ previously voted~$T_f$ at~$h_f$ and has not voted timeout there); the assert $h_c > h_f$ rules out the degenerate case where the vote and the commitment would land at the same height (which would be E1-self-slashable when $T \neq T_f$).
+The gate is the same in all three target branches, so locks attach finalize symmetrically with first-votes whenever the gate passes.
+
+\begin{lemma}[Honest E1 safety]\label{lem:honest-e1-safety}
+If validator~$i$ follows Definition~\ref{def:voting-rule}, then $i$ never produces a vote-pair $(v_1, v_2)$ with $v_2.\finalizeTarget \neq \bot$, $v_1.\height = v_2.\finalizeHeight$, and $v_1.\target \neq v_2.\finalizeTarget$.
+\end{lemma}
+
+\begin{proof}
+Write $h_\ast \coloneqq v_2.\finalizeHeight$ and $T_\ast \coloneqq v_2.\finalizeTarget \neq \bot$.
+$v_2$ retained finalize fields, so the gate inside \getFinalVote held at $v_2$'s firing: $\Delta.T(h_\ast) = T_\ast \neq \bot$, $\Delta.\tau(h_\ast) = \mathtt{false}$, and $v_2.\target \neq \bot$; the subsequent \rememberVote then set $\Delta.\lambda(h_\ast) \gets \mathtt{true}$.
+Since $v_2.\target \neq \bot$, the target-adjustment in \getFinalVote did not enter its timeout branch, so $v_2.\target = T$ (first-vote) or $v_2.\target = \Delta.T(h_c)$ (lock); either way $v_2.\target \neq \bot$ at $h_c = v_2.\height$, while $\Delta.T(h_\ast) = T_\ast \neq \bot$ at $h_\ast = v_2.\finalizeHeight$.
+
+If $v_1.\height = h_\ast$ and $v_1$ was cast before~$v_2$: $\Delta.\tau$-monotonicity and $\Delta.\tau(h_\ast) = \mathtt{false}$ at $v_2$'s firing rule out $v_1$ being a timeout at~$h_\ast$, so $v_1.\target \neq \bot$.
+$\Delta.T(h_\ast)$ is set once at~$i$'s first non-$\bot$ vote at~$h_\ast$ and pinned thereafter, and the target adjustment in \getFinalVote forces every subsequent non-$\bot$ vote of~$i$ at~$h_\ast$ to equal $\Delta.T(h_\ast)$ (lock branch returns $\Delta.T(h_\ast)$; first-vote branch is unreachable once $\Delta.T(h_\ast) \neq \bot$).
+Hence $v_1.\target = \Delta.T(h_\ast) = T_\ast$.
+
+If $v_1.\height = h_\ast$ and $v_1$ was cast after~$v_2$: at $v_1$'s firing $\Delta.\lambda(h_\ast) = \mathtt{true}$ (set by~$v_2$), so the lock branch fires and $v_1.\target = \Delta.T(h_\ast) = T_\ast$ ($\Delta.T(h_\ast)$ is fixed after~$v_2$'s firing).
+
+If $v_1 = v_2$: $v_1.\height = v_2.\height = h_c$, so the hypothesis $v_1.\height = v_2.\finalizeHeight$ requires $h_c = h_\ast$.
+At genesis ($h_c = h_j = 0$) this collapses with $J = \genesis$: $v_2.\target = \genesis$ in either the first-vote or lock branch ($\Delta.T(0)$ is either~$\bot$, in which case the unconstrained $T = \genesis$, or already $\genesis$, the only block at~$\sigma$-height~$0$); hence $v_1.\target = v_2.\target = \genesis = T_\ast$.
+Post-genesis, every height advance sets $h_j \gets h$ before $h \gets h+1$, giving $h_c \geq h_j + 1 > h_\ast$ at any state where $v_2$ could fire, so $h_c = h_\ast$ does not occur.
+\end{proof}
+
+\begin{lemma}[Per-height justification uniqueness]\label{lem:just-unique-height}
+If $f < n/3$ and all honest validators follow Definition~\ref{def:voting-rule}: for any two blocks $C_1, C_2$ justified at the same height~$h$ on any chains processed by the node, $C_1 = C_2$.
+\end{lemma}
+
+\begin{proof}
+For $h = 0$, the only ``justification'' is the genesis pre-justification convention ($\sigma[\genesis].J = \genesis$, $h_j = 0$), which is unique by construction; the rest of the proof handles $h \geq 1$, where a $\geq 2n/3$ quorum is required.
+
+Each justification at height~$h$ on a chain yields a quorum $Q_k$ of size $\geq 2n/3$; quorum intersection picks an honest~$v \in Q_1 \cap Q_2$ contributing a non-$\bot$-target vote at height~$h$ to each.
+Per Definition~\ref{def:signinghistory} and the target adjustment in \getFinalVote, every non-$\bot$-target vote of~$v$ at height~$h$ has target equal to $\Delta.T(h)$ (set once at $v$'s first such vote and pinned thereafter; subsequent non-$\bot$ votes at~$h$ come from the lock branch, which returns $\Delta.T(h)$).
+Hence both contributions have the same target, $C_1 = C_2$.
+\end{proof}
+
+\subsection{Leak fairness}
+
+Fairness is local to a single honest validator~$i$: we fix~$i$, its local store~$\Sigma$, its auxiliary state~$\Omega$, and the canonical chain $T = \getConfirmed(\Sigma, \Omega)$.
+The claim is that the vote~$v$ produced by Definition~\ref{def:voting-rule}, once included on any extension of~$T$ still at the same state-height, exempts~$i$ from Layer~1 penalties at that state-height.
+Height advances reset $\targets$ and $\timeouts$ (Section~\ref{sec:model}), so Layer~2 state at the next height is independent of~$i$'s prior votes and no ``lock'' issue propagates.
+
+The proof rests on two facts about the canonical chain.
+First, $T = \getConfirmed(\Sigma,\Omega)$ has $\sigma$-height $\geq \Sigma.\hmax - 1$ by the algorithm spec, so $h_c = \sigma[T].h \in \{\Sigma.\hmax - 1,\, \Sigma.\hmax\}$.
+Second, every locally observed justification at height~$h$ is witnessed by some processed block whose post-state advanced to $\sigma$-height~$h+1$, so $h \leq \Sigma.\hmax - 1$.
+Together: at $h_c = \Sigma.\hmax$ this node has not observed a justification at~$h_c$, so the lock branch is unreachable; at $h_c = \Sigma.\hmax - 1$ the lock branch forces the lock target to coincide with~$\Sigma.J$ via Lemma~\ref{lem:just-unique-height}, and $\Sigma.J$ is itself viable (its witnessing block sits at $\sigma$-height~$\Sigma.\hmax$ as a descendant of~$\Sigma.J$).
+
+\begin{lemma}[Honest vote sets the timeout marker]\label{lem:honest-vote-sets-timeout}
+Assume $f < n/3$ and all honest validators follow Definition~\ref{def:voting-rule}.
+Let~$i$ be honest with local store~$\Sigma$ and auxiliary state~$\Omega$, $T = \getConfirmed(\Sigma, \Omega)$, and $h_c = \sigma[T].h$.
+Let~$v$ be the vote~$i$ produces at the current slot.
+Then either $v.\target = \bot$ with $v.\height = h_c$, or $v.\target \preceq T$ with $\sigma[v.\target].h = h_c$.
+\end{lemma}
+
+\begin{proof}
+By Definition~\ref{def:voting-rule}, $v.\height = h_c$ in every branch.
+The elif-timeout branch ($\Delta.T(h_c) \neq \bot$ with $\Delta.\lambda(h_c) = \mathtt{false}$) emits $v.\target = \bot$, satisfying the first disjunct.
+The first-vote-at-$h_c$ branch sets $v.\target = T$ with $\sigma[T].h = h_c$ and $T \preceq T$, satisfying the second disjunct.
+
+The remaining branch is the lock branch.
+Let $k \coloneqq v_0.\finalizeHeight$ for the earlier finalize-bearing vote~$v_0$ of~$i$ whose \rememberVote call set $\Delta.\lambda(k) \gets \mathtt{true}$; the lock-branch firing condition $\Delta.\lambda(h_c) = \mathtt{true}$ at the current slot requires $k = h_c$, so the current vote's $h_c$ equals $v_0$'s finalize-height.
+Write $T_{\mathrm{lock}} \coloneqq v_0.\finalizeTarget$.
+For $v_0$ to retain its finalize fields, the gate inside \getFinalVote had to hold at $v_0$'s firing: $\Delta.T(k) = v_0.\finalizeTarget = T_{\mathrm{lock}}$ (with $\Delta.\tau(k) = \mathtt{false}$).
+Since $\Delta.T(k)$ is pinned once set (cf.\ the target adjustment in \getFinalVote), it remains $T_{\mathrm{lock}}$ at $v$'s firing, and the lock branch returns $v.\target = \Delta.T(h_c) = T_{\mathrm{lock}}$.
+Since $v_0$ is finalize-bearing, \getBaseVote populated its finalize fields from $i$'s then-canonical state, giving $(v_0.\finalizeHeight, v_0.\finalizeTarget) = (k, T_{\mathrm{lock}}) = (\sigma[T^0].h_j, \sigma[T^0].J)$ at $v_0$'s firing, where~$T^0$ is~$i$'s canonical chain at that earlier time.
+The justification branch of \processHeightEvents thus fired with target $T_{\mathrm{lock}}$ at pre-state height~$k$ inside some \onBlock call on a processed block~$B^\star$, whose post-state has $\sigma[B^\star].h \geq k + 1$ (height-advance).
+Hence $\Sigma.\hmax \geq k + 1 = h_c + 1$, i.e., $h_c \leq \Sigma.\hmax - 1$.
+
+Since $T = \getConfirmed(\Sigma, \Omega)$ has $\sigma[T].h \geq \Sigma.\hmax - 1$ (algorithm spec), combining with the previous inequality yields $h_c = \sigma[T].h = \Sigma.\hmax - 1$ and $\sigma[B^\star].h = \Sigma.\hmax$.
+The same height-advance argument applied to $\Sigma.J$'s own justification (its witnessing block has $\sigma$-height $\geq \Sigma.h_j + 1$, and that $\sigma$-height is $\leq \Sigma.\hmax$ by definition of~$\hmax$) gives $\Sigma.h_j \leq \Sigma.\hmax - 1 = h_c$, while Lemma~\ref{lem:no-high-just} applied to $T_{\mathrm{lock}}$'s justification at~$h_c$ gives $h_c \leq \Sigma.h_j$.
+Hence $\Sigma.h_j = h_c$, and Lemma~\ref{lem:just-unique-height} forces $\Sigma.J = T_{\mathrm{lock}}$.
+
+$\Sigma.h_j = h_c = \Sigma.\hmax - 1$ gives $\Sigma.\hmax = \Sigma.h_j + 1$, satisfying the cascade gate, so \getConfirmed{} walks from~$\Sigma.J$.
+The return descends from~$\Sigma.J = T_{\mathrm{lock}}$ (existence: $B^\star \succeq \Sigma.J$ with $\sigma[B^\star].h = \Sigma.\hmax$ provides the required witness in $\viableTree(\Sigma)$ at $\sigma$-height~$\Sigma.\hmax$, since any leaf $L \succeq B^\star$ inherits $\sigma[L].h = \Sigma.\hmax$ by state-height monotonicity).
+Hence $T \succeq \Sigma.J = T_{\mathrm{lock}}$, with $\sigma[T_{\mathrm{lock}}].h = h_c$ by Lemma~\ref{lem:fresh-equiv} on the chain witnessing $T_{\mathrm{lock}}$'s justification.
+\end{proof}
+
+\begin{theorem}[Layer~1 leak fairness]\label{thm:fairness}
+Assume $f < n/3$ and all honest validators follow Definition~\ref{def:voting-rule}.
+Let~$i$ be an honest validator, $\Sigma$ its local store, $\Omega$ its auxiliary state, $T = \getConfirmed(\Sigma, \Omega)$ its canonical chain, and $h_c = \sigma[T].h$ the current canonical state-height.
+Let $v$ be the vote~$i$ produces at the current slot.
+Let $\Sigma'$ be any store obtained by processing additional blocks and votes on top of~$\Sigma$, with auxiliary state $\Omega'$, such that $T' = \getConfirmed(\Sigma', \Omega')$ is an extension of~$T$ with $\Sigma'.\sigma[T'].h = h_c$, and suppose~$v$ is included on~$T'$.
+Then for every slot processed on~$T'$ from that point onward, while canonical continues to extend~$T'$ and canonical state-height stays at~$h_c$, the Layer~1 increment to $\sigma.\penalties[i]$ on canonical is zero.
+\end{theorem}
+
+\begin{proof}
+We show that processing~$v$ on~$T'$ sets $\timeouts[i] = \mathtt{true}$ in $\sigma[T']$.
+By Section~\ref{sec:model}, $\timeouts[i]$ is set at processing time iff either (a)~$v$ is a timeout vote at the current state-height ($v.\target = \bot$ and $v.\height = \sigma[T'].h = h_c$), or (b)~$v$'s target is height-fresh on~$T'$ ($v.\target \preceq T'$ with $\sigma[v.\target].h = h_c$, equivalently $v.\target.\slot \geq \sigma[T'].s_h$ via Lemma~\ref{lem:fresh-equiv}).
+
+Lemma~\ref{lem:honest-vote-sets-timeout} gives the dichotomy.
+In the timeout sub-case, $v = (i, h_c, \bot, \bot, \bot)$ with $\sigma[T'].h = h_c$ satisfies (a) directly.
+In the non-timeout sub-case, $v.\target \preceq T \preceq T'$ with $\sigma[v.\target].h = h_c$, so~$v$ is height-fresh on~$T'$ and (b) holds.
+
+Either way, $\timeouts[i] = \mathtt{true}$ in $\sigma[T']$.
+$\timeouts$ is per-state and resets only at a height advance; on any canonical chain extending~$T'$, $\sigma$ at $T'$'s descendants inherits $\timeouts[i] = \mathtt{true}$ from $\sigma[T']$, and no height advance fires while canonical state-height stays at~$h_c$, so $\timeouts[i] = \mathtt{true}$ persists on canonical and Layer~1 does not bump~$i$.
+\end{proof}
+
+\section{Fork-choice specification}\label{sec:forkchoice}
+
+The store of Section~\ref{sec:store} fixes a two-way cascade root and a
+viability filter, but leaves the choice among viable descendants of that
+root to an abstract auxiliary~$\Omega$ (the argument of \getConfirmed).
+This section instantiates~$\Omega$ concretely.  Fork choice is organized
+in three layers, all consumed by a single procedure~\walk:
+\begin{itemize}
+  \item \textbf{L1 --- finality gadget (FG).}  The Simplex-style height
+    machine of Sections~\ref{sec:model}--\ref{sec:store}: heights advance
+    by fixed-target justification or by timeout, $\Sigma.J/\Sigma.F$ are
+    maintained with the lex-max rule and the $F$-filter, and the cascade
+    root is $\Sigma.J$ when $\Sigma.\hmax = \Sigma.h_j + 1$ and $\Sigma.F$
+    otherwise (\cascadeRoot, Section~\ref{sec:walk}).  E1
+    (Definition~\ref{def:slashing}) remains the only slashing condition.
+  \item \textbf{L2 --- stabilization gadget (SG), latest messages.}  The
+    SG reads the head fields of all valid FG attestations received from the
+    network, latest-per-validator with expiry (Section~\ref{sec:headvotes});
+    block inclusion is neither required nor privileged.  The SG fixes the
+    walk's \emph{anchor} in one of two
+    ways (Section~\ref{sec:walk}): a round's first-slot proposal may
+    point to a block root; at voting time each validator accepts the root
+    only if its previous-round direct support plus equivocation credit reaches
+    \(\tfrac23\) of total stake.  Absent an accepted pointed root, the anchor is the deepest block
+    with latest-head-vote support $\geq \tfrac23\Dvote$ reached by descent
+    from the cascade root.  There is a single grade-1 threshold,
+    $\tfrac23\Dvote$, at
+    every height.
+  \item \textbf{L3 --- Goldfish (available chain).}  The per-slot
+    available-committee protocol, unchanged from its specification, which
+    supplies the confirmation rule \latestConfirmed
+    (Section~\ref{sec:goldfish}).  Its duty is never gated by FG state.
+\end{itemize}
+The walk (Section~\ref{sec:walk}) chains these: it fixes the anchor above
+(accepted fresh root, or the grade-1 descent as fallback), follows Goldfish
+from the anchor within the viable subtree, then applies the viability
+descent to restore the height bound at the seam.
+Section~\ref{sec:voteconstruction} specifies how an honest validator turns
+the walk output into an FG attestation (round-atomic construction, target
+rule, uniform confirmation and grade gates, and the empty vote), and
+Section~\ref{sec:timing} fixes the timing model and the named standing
+hypotheses used throughout Sections~\ref{sec:forkchoice}
+and~\ref{sec:healing}.
+
+\subsection{Latest head votes}\label{sec:headvotes}
+
+Every FG attestation carries, in addition to the Section~\ref{sec:model}
+vote fields, a \emph{head field}~$v.\headf \in \mathrm{Blocks}$: the block
+the signer's walk (Section~\ref{sec:walk}) output at construction time.
+The head field is the signer's SG latest message.  It does \emph{not} enter
+the per-chain state transition of Section~\ref{sec:model} (which reads only
+$\height$, $\target$, $\finalizeHeight$, $\finalizeTarget$); fork choice
+consumes it immediately after the attestation is received and validated.
+
+\begin{definition}[Live latest head vote]\label{def:head-vote}
+Fix a validator's fork-choice store~$\Sigma$ at current slot~$s$.
+Every valid FG attestation received over the network contributes its signed
+head field immediately; learning the same attestation from a block is merely
+another delivery path and creates no distinct object.  For protocol expiry
+parameter~$\Wvote>0$, the attestation is \emph{live} while
+$v.\slot + \Wvote > s$.
+For each validator~$i$, its live latest head vote is the head field of its
+greatest-slot live attestation.  A later-slot attestation supersedes the
+earlier one whether or not either is ever included in a block.  A validator
+known to have equivocated contributes no live latest head vote; otherwise it
+contributes to at most one child subtree in each local view.
+\end{definition}
+
+\begin{definition}[Latest-head-vote weight]\label{def:head-vote-weight}
+Let $\mathcal{L}(\Sigma) \subseteq \{1,\dots,n\}$ be the set of active,
+unslashed, non-equivocating validators holding a live latest head vote
+in~$\Sigma$, and
+for $i \in \mathcal{L}(\Sigma)$ write $\headf_i$ for~$i$'s latest head
+and $w_i$ for its effective balance (stake weight).
+The \emph{live latest-head-vote weight} is
+\[
+  \Dvote(\Sigma) \;\coloneqq\; \sum_{i \in \mathcal{L}(\Sigma)} w_i,
+\]
+and, for a block~$c$, its \emph{latest-head-vote support} is the subtree-counted
+weight
+\[
+  \Supp(c) \;\coloneqq\; \sum_{\{\, i \in \mathcal{L}(\Sigma) \,:\, c \preceq \headf_i \,\}} w_i .
+\]
+Known equivocators are excluded from both~$\Supp$ (numerator) and~$\Dvote$
+(denominator), as are inactive and slashed validators.  We write~$\Dvote$ for
+$\Dvote(\Sigma)$ when~$\Sigma$ is clear.
+\end{definition}
+
+$\Supp$ is monotone under~$\preceq$: $c \preceq c'$ implies
+$\Supp(c) \geq \Supp(c')$, and $\Supp(\genesis) = \Dvote$.  Because a validator
+contributes to at most one child of any block (its live head lies in at
+most one child subtree), for a fixed block the head-vote supports of its
+children sum to at most~$\Dvote$; hence, when $\Dvote>0$, at most one child can carry
+$\Supp \geq \tfrac23\Dvote$, so the grade-1 descent below has a unique next
+step whenever it steps at all.
+The grades are not inclusion-defined: $\mathcal{L}$ and~$\Supp$ are local
+network views.  Post-\GST{} delivery and the fixed freeze discipline
+relate honest views (Section~\ref{sec:grades}); no proof waits for a proposer
+to include these votes.
+
+\subsection{Fresh-root syncing, anchors, and the walk}\label{sec:walk}
+
+\begin{definition}[Cascade root]\label{def:cascade-root}
+The \emph{cascade root} of a store~$\Sigma$ is
+\[
+  \cascadeRoot(\Sigma) \;\coloneqq\;
+  \begin{cases}
+    \Sigma.J & \text{if } \Sigma.\hmax = \Sigma.h_j + 1,\\
+    \Sigma.F & \text{otherwise.}
+  \end{cases}
+\]
+This is exactly the walk-from block of \getConfirmed
+(Figure~\ref{alg:store}, Section~\ref{sec:store}): $\Sigma.J$ when it sits
+at the frontier, and the always-viable $\Sigma.F$ (Lemma~\ref{lem:F-viable})
+when a timeout has advanced some chain past~$\Sigma.J$'s height.
+\end{definition}
+
+\subsubsection*{Fresh-root syncing}
+
+The walk's starting point below the cascade root is an \emph{anchor}.  The
+first proposer of a round points to a root; validators decide locally whether
+that root has an absolute quorum in the immediately preceding round.  The
+proposal carries no votes or aggregate.
+
+\begin{definition}[Credited support and a fresh root]\label{def:fresh-quorum}
+Fix a validator~$u$, a round~$r$, and a block~$B$.  Let
+\(V_u^r(B)\) be the validators from which~$u$ has received a valid round-$r$
+FG attestation whose head descends from~$B$.  Let~\(E_u^r\) be the validators
+from which~$u$ has received two distinct valid round-$r$ FG attestations.  The
+\emph{credited support} of~$B$ in~$u$'s view is
+\[
+  \Credit_u^r(B) \;\coloneqq\; w\!\left(V_u^r(B) \cup E_u^r\right),
+\]
+where each validator's effective balance is counted once.  Thus a validator
+that~$u$ has seen equivocating is credited to~$B$ even if none of the copies
+seen by~$u$ supports~$B$.
+
+The block~$B$ is a \emph{fresh root} in~$u$'s view for round~$r+1$ iff
+\(\Credit_u^r(B) \geq \tfrac23 n\), where~$n$ is the total active stake in
+the proposal's state.  This is an absolute, view-independent denominator.
+``Fresh'' refers only to use of the immediately preceding round; it is
+unrelated to the height freshness of an FG justification vote.
+\end{definition}
+
+The equivocation term is deliberately generous to the proposer.  If the
+proposer saw validator~$i$ vote for a descendant of~$B$, while another
+validator saw two conflicting copies from~$i$ but not the proposer's copy,
+that validator still counts~$i$ for~$B$.  This is the second half of
+time-shifted quorum (TSQ): synchrony ensures that a vote used by an honest
+proposer is either visible to a validator by its voting action or that
+validator has evidence that the signer equivocated.  Because the denominator
+is fixed and the local numerator only grows, no TSQ freeze is needed.
+
+\begin{lemma}[Fresh-root intersection]\label{lem:quorum-intersection-sg}
+If honest validators~$u$ and~$v$ accept conflicting fresh roots~$B$ and~$B'$ for
+the same preceding round, then at least~$n/3$ stake actually equivocated in
+that round.  Hence, with less than~$n/3$ equivocating stake, all accepted fresh
+roots of a round are compatible.
+\end{lemma}
+
+\begin{proof}
+Let \(S=V_u^r(B)\cup E_u^r\) and
+\(S'=V_v^r(B')\cup E_v^r\).  Both have weight at least~$2n/3$, so
+\(w(S\cap S')\geq n/3\).  Fix~$i\in S\cap S'$.  If~$i$ lies in either
+equivocation set, its two valid round-$r$ attestations witness an actual
+equivocation.  Otherwise one valid attestation from~$i$ supports~$B$ and one
+supports~$B'$.  Since the roots conflict, those attestations are distinct, so
+$i$ again equivocated.  Thus every validator in the intersection actually
+equivocated, irrespective of which copies either verifier received.
+\end{proof}
+
+\begin{lemma}[Fresh-root synchronization]\label{lem:honest-fresh-quorum}
+Fix consecutive rounds~$r,r+1$ after \GST{} under the standing assumptions and
+let an honest first-slot proposer of round~$r+1$ point to a block~$B$ for which
+it saw direct round-$r$ support of weight at least~$2n/3$.  At every honest
+validator's round-$r+1$ voting action,~$B$ is a fresh root in that validator's
+view.  In particular, when~$\beta<1/3$, the highest common ancestor of the
+honest round-$r$ heads has direct support greater than~$2n/3$ and is available
+to an honest proposer.
+\end{lemma}
+
+\begin{proof}
+Consider each signer~$i$ in the proposer's direct-support set.  The honest
+proposer re-gossips the supporting attestation.  By the delivery-before-action
+discipline, every honest validator~$u$ has received that attestation by its
+voting action unless its relay path already stopped because~$u$ had retained
+two distinct round-$r$ attestations from~$i$; in that case~$i\in E_u^r$.
+Consequently
+\(V_p^r(B)\subseteq V_u^r(B)\cup E_u^r\), and~$u$'s credited numerator is at
+least the proposer's direct numerator, hence at least~$2n/3$.
+
+For existence, honest validators hold more than~$2n/3$ stake and each emits
+one round-$r$ attestation.  Their highest common ancestor lies on every honest
+head, so every honest attestation directly supports it; after delivery an
+honest proposer sees all of that support.
+\end{proof}
+
+\paragraph{Pointing.}
+A round's first-slot ($\rzero$) proposer may put one block root~$B$ in its
+proposal.  An honest proposer does so only after seeing at least~$2n/3$ direct
+support for~$B$ in the preceding round; it does not use equivocation credit to
+construct the pointer, and it re-gossips the valid attestations it counted.
+The normal relay rule forwards a newly received valid round attestation unless
+the receiver has already retained enough conflicting data to mark that signer
+as a round equivocator.  A validator gives the proposer the benefit of the
+doubt and accepts~$B$ exactly when its own credited support reaches~$2n/3$ at
+the validator's voting action.  Otherwise it ignores the pointer and uses the
+grade-1 fallback.  For fixed~$B$, each signer's contribution is monotone:
+receiving a supporting vote adds the signer, and receiving a conflicting copy
+can only turn the signer into equivocation credit.  There is therefore no
+freeze and no carried certificate.  Roots carry no cross-round state.
+
+\begin{remark}[Optional per-branch anchor monotonicity]\label{rem:anchor-monotone}
+One may optionally harden pointing with a \emph{chain-data} validity rule: a
+proposal's pointed anchor must extend the most recent pointed anchor among the
+proposal's own ancestors, so that the anchor sequence is monotone along every
+branch.  This is a predicate on block content, checkable by any verifier, and
+introduces no validator state and no cross-round \emph{store} field; it is
+\emph{not} load-bearing for any theorem below and is listed only as optional
+hardening (Section~\ref{sec:open-items}).
+\end{remark}
+
+\subsubsection*{The grade-1 anchor and the two grades}
+
+Absent an accepted pointed root, the anchor is fixed by a latest-head-vote
+descent under a single $\tfrac23$ threshold.  The two grade thresholds --- the
+$\tfrac23$ anchor and the $\tfrac13$ conflict veto --- are the only SG
+fork-choice objects, uniform at every height.
+
+\begin{definition}[Grade-1 anchor $\Gone$]\label{def:g1}
+The \emph{grade-1 anchor} $\Gone(\Sigma)$ is the latest-head-vote descent
+output under the $\tfrac23$ threshold.  If $\Dvote=0$, return
+$\cascadeRoot(\Sigma)$ without descending.  Otherwise start at
+$\cascadeRoot(\Sigma)$ and, while some child~$c$
+in~$\viableTree(\Sigma)$ has $\Supp(c) \geq \tfrac23\Dvote$, step into it (the
+unique such child, by the sum bound of Section~\ref{sec:headvotes}); stop at the
+$\geq\tfrac23$-crossed frontier.  This is the walk's \emph{fallback} anchor,
+used when the round's $\rzero$ proposal does not point to an accepted fresh root
+(Definition~\ref{def:walk}).
+\end{definition}
+
+\begin{definition}[$\Gzero$-clearance]\label{def:g0clear}
+A block~$T$ is \emph{$\Gzero$-clear} in a store~$\Sigma$ iff no block~$B$
+conflicting with~$T$ ($B \nsim T$) has latest-head-vote support
+$\Supp(B) \geq \tfrac13\Dvote$.  Equivalently, every block with
+$\Supp \geq \tfrac13\Dvote$ is compatible with~$T$.  There is no unique
+``$\Gzero$ output'': several blocks may simultaneously hold
+$\Supp \geq \tfrac13\Dvote$, and the veto form handles this directly.  When
+$\Dvote=0$, every block is $\Gzero$-clear by convention.
+\end{definition}
+
+\subsubsection*{The walk}
+
+\begin{definition}[The walk]\label{def:walk}
+$\walk(\Sigma, \Omega)$ returns a block, computed in three phases
+(Figure~\ref{alg:walk}).
+\begin{enumerate}
+  \item \emph{Anchor.}  If the current round's $\rzero$ proposal points to a
+    block~$P$ that is a fresh root in the validator's local view at its voting
+    action (Definition~\ref{def:fresh-quorum}), and
+    $\cascadeRoot(\Sigma) \preceq P$ with
+    $P \in \viableTree(\Sigma)$, set the anchor $A \gets P$.
+    (If the pointed root is not a descendant of the cascade root --- shallower
+    than it, or on a conflicting branch --- or if it has slipped behind the
+    viability frontier, ignore it.)  Otherwise set
+    $A \gets \Gone(\Sigma)$, the grade-1 anchor (Definition~\ref{def:g1}).  Either
+    way $A \in \viableTree(\Sigma)$: the grade-1 anchor descends only into viable
+    children from the always-viable cascade root, and the pointed root is
+    adopted only when viable.
+  \item \emph{Goldfish.}  From the anchor~$A$, follow the available chain
+    \emph{within the viable subtree}: $B \gets \textsf{goldfishHead}(A, \Omega)$
+    (Definition~\ref{def:goldfish-confirm}), the Goldfish walk anchored at~$A$
+    within~$\Omega$, stepping only into children in~$\viableTree(\Sigma)$.
+  \item \emph{Viability descent.}  Apply Definition~\ref{def:viability-descent}
+    --- the phase-2 descent continued without its majority threshold ---
+    so the returned block sits at~$\sigma$-height $\geq \Sigma.\hmax - 1$.
+\end{enumerate}
+$\walk(\Sigma, \Omega)$ is the block after phase~3.  All consumers ---
+proposals, Goldfish votes, FG vote construction
+(Section~\ref{sec:voteconstruction}), and confirmations --- read the same
+\walk.
+\end{definition}
+
+\begin{definition}[Viability descent]\label{def:viability-descent}
+Let~$B$ be the block after phase~2 of \walk.  The \emph{viability descent}
+is the phase~2 Goldfish descent continued without its majority threshold: while
+$\sigma[B].h < \Sigma.\hmax - 1$, replace~$B$ by the viable child of~$B$
+in~$\viableTree(\Sigma)$ whose subtree carries the greatest previous-slot
+\emph{participating} vote weight (subtree-counted, over the same vote set
+read by the phase~2 descent); ties, including the all-zero case, are broken
+deterministically.  Halt as soon as $\sigma[B].h \geq \Sigma.\hmax - 1$.  A
+viable child always exists until the bound is met, because a viable block has
+a viable leaf descendant (Definition~\ref{def:viable}) and any child lying
+under such a leaf is itself viable; the descent is \emph{viability-gated}
+and resolves the one-height lag that Definition~\ref{def:viable} tolerates.
+We do \emph{not} claim the viable child is unique: below the frontier the
+viable subtree may branch --- one child may carry its viable leaf at
+$\Sigma.\hmax - 1$ and another at~$\Sigma.\hmax$, so both are viable --- but
+the choice at such a seam is pinned by vote plurality over the same
+previous-slot vote set as phase~2, hence is a deterministic function of the
+view~$\Omega$ rather than a free parameter.  Thus all honest validators
+reading a common (merged) view make the same choice; only the postcondition
+of Lemma~\ref{lem:walk-total} --- a viable block at $\sigma$-height
+$\geq \Sigma.\hmax - 1$ --- is required downstream, and every viable branch
+meets it.
+\end{definition}
+
+\begin{figure}[H]
+\caption{The walk}\label{alg:walk}
+\begin{center}
+\begin{boxedminipage}{\textwidth}
+\begin{algorithmic}[1]
+
+\Function{\cascadeRoot}{$\Sigma$}
+  \State \Return $\Sigma.J$ \textbf{if} $\Sigma.\hmax = \Sigma.h_j + 1$ \textbf{else} $\Sigma.F$
+\EndFunction
+\vspace{3pt}
+
+\Function{\walk}{$\Sigma,\; \Omega$}
+  \State $R \gets \cascadeRoot(\Sigma)$
+  \If{the current round's $\rzero$ proposal points to $P$, \ $\Credit^{r-1}(P) \geq \tfrac23 n$, \ $R \preceq P$, \ \textbf{and} $P \in \viableTree(\Sigma)$}
+    \State $A \gets P$ \Comment{locally accepted fresh root (Def.~\ref{def:fresh-quorum})}
+  \Else
+    \State $A \gets \Gone(\Sigma)$ \Comment{fallback: latest-head-vote descent, $\geq\tfrac23\Dvote$ from $R$ (Def.~\ref{def:g1})}
+  \EndIf
+  \State $B \gets \textsf{goldfishHead}(A,\; \Omega)$ \Comment{Goldfish from the anchor, within $\viableTree(\Sigma)$}
+  \While{$\sigma[B].h < \Sigma.\hmax - 1$} \Comment{viability descent: phase-2 descent, majority gate dropped}
+    \State $B \gets$ viable child of $B$ with maximal previous-slot participating vote weight, subtree-counted \Comment{deterministic tiebreak}
+  \EndWhile
+  \State \Return $B$
+\EndFunction
+\vspace{3pt}
+
+\Function{\getConfirmed}{$\Sigma,\; \Omega$} \Comment{instantiation of Figure~\ref{alg:store}: the walk output is the fork-choice head}
+  \State \Return $\walk(\Sigma,\; \Omega)$
+\EndFunction
+
+\end{algorithmic}
+\end{boxedminipage}
+\end{center}
+\end{figure}
+
+The walk instantiates the abstract \getConfirmed of Section~\ref{sec:store}:
+$\Omega$ is exactly the Goldfish available-chain state, and the descent
+among viable descendants of the cascade root is the anchor selection followed
+by the Goldfish-then-viability descent above.  We keep two distinct notions:
+$\getConfirmed(\Sigma,\Omega) = \walk(\Sigma,\Omega)$ is the fork-choice
+\emph{head} (the block votes and proposals build on), whereas the Goldfish
+\emph{confirmed} head $\latestConfirmed(\Sigma,\Omega)$
+(Definition~\ref{def:goldfish-confirm}) is in general an ancestor of it and
+is the object read by the confirmation gate
+(Definition~\ref{def:conf-gate}) and by users.  We verify that this
+concrete instantiation meets the postcondition on which all store theorems
+rest.
+
+\begin{lemma}[The walk meets the \getConfirmed{} postcondition]\label{lem:walk-total}
+For every store~$\Sigma$ and auxiliary~$\Omega$, $\walk(\Sigma, \Omega)$
+returns a block in~$\viableTree(\Sigma)$ at $\sigma$-height
+$\geq \Sigma.\hmax - 1$; consequently \getConfirmed{} instantiated by
+\walk{} satisfies Corollary~\ref{cor:getConfirmed-total}, and all store
+results of Section~\ref{sec:store}
+(Theorems~\ref{thm:fcconsistency}, \ref{thm:lockin},
+\ref{thm:orderindep}) carry over unchanged.
+\end{lemma}
+
+\begin{proof}
+The cascade root $\cascadeRoot(\Sigma)$ lies in~$\viableTree(\Sigma)$: if the
+cascade gate holds then it is $\Sigma.J$ with
+$\sigma[\Sigma.J].h = \Sigma.h_j = \Sigma.\hmax - 1$
+(Lemma~\ref{lem:fresh-equiv}), a viable leaf-witness by the argument of
+Corollary~\ref{cor:getConfirmed-total}; otherwise it is $\Sigma.F$, viable by
+Lemma~\ref{lem:F-viable}.  Phase~1 fixes an anchor $A \in \viableTree(\Sigma)$:
+the grade-1 fallback $\Gone(\Sigma)$ descends only into viable children
+from the (viable) cascade root and so stays in~$\viableTree(\Sigma)$
+(Definition~\ref{def:g1}), and the pointed anchor is adopted only when
+$P \in \viableTree(\Sigma)$ (Definition~\ref{def:walk}).  Phase~2 then
+only ever steps from a block to a child that is itself in~$\viableTree(\Sigma)$
+(Goldfish descends the accepted tree and, restricted to~$\viableTree(\Sigma)$,
+every block it can reach past~$A$ retains a viable leaf descendant --- a block
+leaves~$\viableTree$ only when it has no viable leaf above it, and then it has
+no children in~$\viableTree$ to step into).  Thus after phase~2,
+$B \in \viableTree(\Sigma)$, so~$B$ has a viable leaf descendant~$L$ with
+$\sigma[L].h \geq \Sigma.\hmax - 1$
+(Definition~\ref{def:viable}).  If already $\sigma[B].h \geq \Sigma.\hmax-1$
+the while-loop of phase~3 is skipped; otherwise each iteration steps into a
+viable child (one always exists while $\sigma[B].h < \Sigma.\hmax - 1$,
+since a viable block has a viable leaf descendant above the threshold),
+strictly increasing $\sigma[B].h$ (slots and hence state-height increase
+along~$\preceq$, Lemma~\ref{lem:slotmono}) until the bound is met.  The loop
+terminates at a viable leaf at the latest, regardless of which viable child
+is chosen at any branching seam --- the viability descent pins that choice by
+previous-slot vote plurality (Definition~\ref{def:viability-descent}), but the
+termination argument does not depend on the pinning.  Hence the return lies
+in~$\viableTree(\Sigma)$ at
+$\sigma$-height $\geq \Sigma.\hmax - 1$, which is precisely the
+postcondition asserted (and proved abstractly) in
+Corollary~\ref{cor:getConfirmed-total}; every downstream store theorem uses
+only that postcondition.
+\end{proof}
+
+\subsection{Goldfish layer and confirmation}\label{sec:goldfish}
+
+The available chain is the Goldfish protocol, taken as a black box and
+unchanged from its specification.  We restate only its interface and its
+confirmation rule, both of which the walk consumes.
+
+\begin{definition}[Goldfish available chain and confirmation]\label{def:goldfish-confirm}
+Each slot~$s$ has a pseudorandomly sampled \emph{available committee} of
+$512$ validators and one \emph{available proposer}.  At the slot start the
+proposer publishes its beacon block carrying the \emph{merged view}
+(Definition~\ref{def:slots}), the merge taken over the view frozen at the
+previous slot's view-merge freeze; committee members then vote for a head at
+the attestation deadline.
+The merge covers \emph{blocks and votes only}, exactly as in base Goldfish;
+latest FG head votes are ordinary network votes and need no additional carrier
+or inclusion path.  The fresh-root pointer in a round's $\rzero$ proposal
+(Definition~\ref{def:fresh-quorum}) is only a root; validators test it against
+their live previous-round FG view at voting time, with equivocations credited
+to the root.
+The Goldfish walk $\textsf{goldfishHead}(B, \Omega)$ from an anchor~$B$
+descends by \emph{previous-slot participant majority}: at each block it
+steps into the child whose subtree holds a majority of the previous slot's
+\emph{participating} committee votes (subtree-counted), with same-slot
+proposals passing through.
+
+Two confirmation rules read the committee attestations.
+\emph{(a) Fast confirmation} outputs, immediately at~$t+2\Delta$, a block
+confirmed by a $75\%$ \emph{absolute} quorum of the slot's committee (a
+fraction of the full committee, not of the participants).  It is included
+mainly for confirmation latency in the deployed protocol; the healing arguments
+of this document do \emph{not} use it.
+\emph{(b) Available confirmation} is the rule this document uses everywhere:
+$\latestConfirmed(\Sigma, \Omega)$ is the deepest block confirmed by the
+Goldfish rule under a $50\%$ \emph{relative} quorum of the participating
+committee, evaluated with one slot of delay through a \emph{time-shifted
+quorum} --- the participating vote set is \emph{frozen} at slot~$n$'s
+$t+2\Delta$ and the quorum is evaluated at slot~$n+1$'s $t+2\Delta$
+(Definition~\ref{def:slots}).  The rule is \emph{floorless}: it imposes no
+minimum participation and no FG-derived floor.  Under $f < \tfrac12$ of each
+participating committee it is safe and live within a slot.
+
+\emph{Structural confirmation consistency.}  By the delivery-before-action
+discipline (Lemma~\ref{lem:delivery-before-action}), every honest attestation
+cast at its $t+\Delta$ deadline is delivered by~$t+2\Delta$ and so lies in
+\emph{every} honest validator's frozen set; honest frozen sets therefore differ
+only by adversarially-timed stragglers, and all honest validators evaluate the
+\emph{same} $50\%$ relative quorum at slot~$n+1$'s $t+2\Delta$.  The time shift
+thus turns confirmation consistency from a timing \emph{assumption} into a
+property of the construction, with the residual straggler analysis deferred to
+the $\latestConfirmed$ interface item (Remark~\ref{rem:open-items}(2)).
+This time-shifted quorum is the \emph{tip} confirmation rule's relative quorum
+--- the sacrificial available layer, where relative counting is unavoidable ---
+and is unrelated to the SG grade thresholds over latest FG head votes.
+
+The available-vote duty and $\latestConfirmed$ are \emph{never} gated by FG
+state (see the gate-scoping remark, Remark~\ref{rem:gate-scoping}).
+\end{definition}
+
+We keep two confirmation notions separate.
+
+\begin{definition}[Safe confirmation]\label{def:safe-confirm}
+A validator \emph{safe-confirms} a block~$B$ in its store~$\Sigma$ iff~$B$ is
+available-confirmed ($B \preceq \latestConfirmed(\Sigma, \Omega)$,
+Definition~\ref{def:goldfish-confirm}) \emph{and}~$B$ is $\Gzero$-clear in its
+view (Definition~\ref{def:g0clear}) --- no block conflicting with~$B$ has
+latest-head-vote support $\geq \tfrac13\Dvote$.  The \emph{safe-confirmed head}~$C$ is the
+deepest safe-confirmed block --- the deepest $\Gzero$-clear ancestor of
+$\latestConfirmed(\Sigma, \Omega)$ --- and it is the confirmed head read by the
+FG gates (Section~\ref{sec:voteconstruction}) and by the healing argument
+(Section~\ref{sec:healing}).  Safe confirmation is an \emph{internal} protocol
+notion; the user-facing available confirmation
+(Definition~\ref{def:goldfish-confirm}) is untouched by it and is never gated
+by SG grades or FG state (Remark~\ref{rem:gate-scoping}).
+\end{definition}
+
+Because $\Gzero$-clearance is monotone along a chain --- a block conflicting
+with~$B$ also conflicts with every ancestor of~$B$ --- the safe-confirmed head
+is a well-defined ancestor of $\latestConfirmed(\Sigma, \Omega)$: if~$B$ is
+$\Gzero$-clear and $B' \preceq B$, then~$B'$ is $\Gzero$-clear.
+
+\subsection{Nonjustifiable heights}\label{sec:heightclasses}
+
+There is a single height class that changes the FG rule, and it exists only
+under sustained non-finality.  It is a deterministic predicate on chain state
+and introduces no message, trigger, or protocol phase.  Fix protocol
+parameters $\Knj \geq 1$ (\emph{nonjustifiable-height spacing}) and
+$\Ddebt \geq 1$ (\emph{finality-debt threshold}).
+
+\begin{definition}[Nonjustifiable height]\label{def:nonjustifiable-height}
+On a chain with state~$\sigma$, the system is in \emph{finality debt} at
+height~$h$ when $h - \sigma.h_j^{F} > \Ddebt$, where $\sigma.h_j^{F}$ is the
+height of the most recently finalized block~$\sigma.F$ (equivalently
+$h - \height(\Sigma.F) > \Ddebt$ in the store).  A height~$h$ is
+\emph{nonjustifiable} iff the system is in finality debt at~$h$ and
+$\Knj \mid h$ (every $\Knj$-th height under debt).  At a nonjustifiable height
+the height-closing logic \emph{never produces a justification}: the
+justified-checkpoint computation of \processHeightEvents returns empty (no~$T$
+is treated as justifiable), so height~$h$ can advance only by the timeout
+branch, and honest validators cast no target vote at~$h$ --- only timeout
+votes, or the empty vote when gated out (Section~\ref{sec:voteconstruction}).
+Every height that is not nonjustifiable is an ordinary \emph{justifiable}
+height.
+\end{definition}
+
+The grade thresholds and the FG gates are \emph{uniform} at every height:
+there is no separate recovery-height class and no grade-activation predicate.
+The grade-1 anchor $\Gone$ (Definition~\ref{def:g1}) uses the $\tfrac23\Dvote$
+threshold and $\Gzero$-clearance (Definition~\ref{def:g0clear}) the
+$\tfrac13\Dvote$ conflict veto at all heights; the only effect of a
+nonjustifiable height is to disable the FG justification branch there, forcing
+the height to advance by timeout.  A height may also end
+\emph{justification-free in fact} --- advancing by timeout with no
+justification firing --- and such a height is then \emph{sealed}
+(Lemma~\ref{lem:regeneration}, condition~(ii)); unlike a nonjustifiable
+height, this is a fact used inside proofs, never a class predicate.  Under
+continued finality debt nonjustifiable heights recur every~$\Knj$ heights
+(Definition~\ref{def:nonjustifiable-height}), so the next such height is always
+at most~$\Knj$ heights away.
+
+\subsection{FG vote construction}\label{sec:voteconstruction}
+
+An honest validator turns the walk output into an FG attestation.  The
+construction \emph{refines the target selection of} \getBaseVote
+(Definition~\ref{def:voting-rule}) and then composes the \emph{unchanged}
+\getFinalVote{} on top of it, so the E1 layer
+(Lemma~\ref{lem:honest-e1-safety}) and per-height justification uniqueness
+(Lemma~\ref{lem:just-unique-height}) are preserved verbatim: what follows
+only fixes \emph{which} target is fed to \getFinalVote, and when it is
+replaced by a timeout vote or an empty vote (the latter carrying an empty
+voted checkpoint and only \getFinalVote{}'s finalize gate).  The gates below
+are \emph{uniform at every height} --- there is no recovery-height class ---
+and read the \emph{safe-confirmed head}~$C$ (Definition~\ref{def:safe-confirm})
+rather than the raw Goldfish-confirmed head.
+
+\begin{definition}[Round-atomic construction]\label{def:round-atomic}
+FG time is grouped into \emph{rounds} of $32$ consecutive slots
+(Section~\ref{sec:timing}); $\rzero$ denotes a round's first slot.  For this
+document all FG/SG voting happens \emph{at once} at~$\rzero$: all
+FG/SG vote \emph{content} of a validator's round attestation --- its walk
+output (head field), target, vote height, and finalize piggyback --- is
+fixed at~$\rzero$'s freeze from the validator's view at that instant, and the
+attestation is \emph{emitted} at~$\rzero$.  (Distributing emission over the
+round's later slots is a deployment option, deliberately not modeled here.)
+Each validator emits \emph{one} FG attestation per round.  A validator that has
+cast a (non-$\bot$ target) vote at a height never casts a \emph{fresh} target
+at that height (\emph{no-retarget}); this is exactly the lock/timeout
+adjustment of \getFinalVote{} and is load-bearing for accountable safety
+(Lemma~\ref{lem:honest-e1-safety}).
+\end{definition}
+
+\begin{definition}[Interval-first target rule and protected repeat]\label{def:target-rule}
+Let $W = \walk(\Sigma, \Omega)$ be the round's walk output and
+$h_c = \sigma[W].h$ its state-height.  The \emph{target} is the
+\emph{interval-first block}: the earliest block on~$W$'s chain with slot
+$\geq \sigma[W].s_h$, i.e.\ the block that opened height~$h_c$ on that
+chain (equivalently, the~$\preceq$-least ancestor~$T \preceq W$ with
+$\sigma[T].h = h_c$).  The vote height is~$h_c$.  This~$T$ is the target
+passed to \getBaseVote/\getFinalVote{} in place of the raw \getConfirmed{}
+block.
+
+\emph{Protected repeat} (imported from the source healing draft).  An honest
+validator that has already cast a target vote at height~$h_c$
+($\Delta.T(h_c) \neq \bot$) \emph{never casts a timeout vote at~$h_c$}.  At a
+repeat opportunity at~$h_c$: if the current round's interval-first target still
+equals its saved target ($T = \Delta.T(h_c)$) and the target gate
+(Definition~\ref{def:conf-gate}(a)) holds, it re-emits $(\Delta.T(h_c), h_c)$
+--- a re-emission of the \emph{same} target, not a fresh retarget, and hence
+E1-safe (Lemma~\ref{lem:honest-e1-safety}); otherwise it casts the empty vote
+(Definition~\ref{def:empty-target}).  Either way it does \emph{not} set
+$\Delta.\tau(h_c)$, so a later finalize piggyback at~$h_c$ can still pass the
+$\Delta.\tau(h_c) = \mathtt{false}$ gate of \getFinalVote{}
+(Definition~\ref{def:voting-rule}).  When the validator is \emph{locked}
+at~$h_c$ ($\Delta.\lambda(h_c) = \mathtt{true}$) this is exactly the lock branch
+of \getFinalVote{}, which re-submits $\Delta.T(h_c)$; the protected repeat
+extends the same no-timeout discipline to the not-yet-locked case, replacing
+the base spec's re-emission rule.
+\end{definition}
+
+\begin{definition}[Uniform confirmation and grade gate]\label{def:conf-gate}
+Let $T$ be the interval-first target of the current round
+(Definition~\ref{def:target-rule}), at height~$h_c$, and write~$C$ for the
+validator's \emph{safe-confirmed head} (Definition~\ref{def:safe-confirm}).
+The gate reads two thresholds on~$C$: the \emph{caught-up} condition
+$\sigma[C].h \geq \Sigma.\hmax - 1$ (the safe-confirmed head has reached the
+frontier interval) and the stricter \emph{into-the-interval} condition
+$\sigma[C].h \geq h_c$ (it has reached the very height being voted).  The gate
+is the same at every height, with the single difference that a
+\emph{nonjustifiable} height (Definition~\ref{def:nonjustifiable-height})
+admits no target vote.
+\begin{itemize}
+  \item \emph{Nonjustifiable height~$h_c$.}  The validator casts a timeout vote
+    $(\bot, h_c)$ iff it is caught up ($\sigma[C].h \geq \Sigma.\hmax - 1$);
+    otherwise it casts the empty vote (Definition~\ref{def:empty-target}).  No
+    target vote is ever cast at a nonjustifiable height.
+  \item \emph{Justifiable height~$h_c$.}  In order:
+    \begin{enumerate}[label=(\alph*)]
+      \item \emph{target vote} $(T, h_c)$ iff \emph{both} $C \succeq T$
+        (the safe-confirmed head is~$T$ or a descendant) \emph{and}~$T$ is
+        $\Gzero$-clear in its view (Definition~\ref{def:g0clear});
+      \item else \emph{timeout vote} $(\bot, h_c)$ iff the safe-confirmed head
+        is into the interval, $\sigma[C].h \geq h_c$ --- the validator confirmed
+        into the interval but its interval-first target is not a target case
+        (either $C \nsucceq T$, or~$T$ fails $\Gzero$-clearance);
+      \item else the \emph{empty vote}~$\emptyckpt$
+        (Definition~\ref{def:empty-target}): the safe-confirmed head has not
+        reached the interval, $\sigma[C].h < h_c$.
+    \end{enumerate}
+    Subject to the \emph{protected repeat} (Definition~\ref{def:target-rule}):
+    if $\Delta.T(h_c) \neq \bot$, branch~(b)'s timeout is replaced by
+    re-emitting $\Delta.T(h_c)$ (when it is still the interval-first target and
+    case~(a) holds) or by the empty vote, never a timeout at an
+    already-targeted height.
+\end{itemize}
+Every FG vote requires the safe-confirmed head to reach the voted interval,
+and a target vote requires in addition that the specific interval-first~$T$ be
+confirmed ($C \succeq T$) and conflict-free in latest head votes ($\Gzero$-clear).
+Case~(a) implies case~(b)'s condition, since $C \succeq T$ gives
+$\sigma[C].h \geq \sigma[T].h = h_c$; and because~$C$ is $\Gzero$-clear
+(Definition~\ref{def:safe-confirm}), $C \succeq T$ already forces~$T$
+$\Gzero$-clear (any block conflicting with~$T$ conflicts with~$C$), so~(a)'s
+$\Gzero$ condition is automatic --- we keep it stated for emphasis.
+\emph{Timeout votes are confirmation-gated but not $\Gzero$-gated:} a validator
+confirmed into the interval times the height out even when its interval-first
+target is $\Gzero$-vetoed.  This is deliberate and preserves liveness --- once
+any interval block is safe-confirmed the frontier can always advance, and is
+never held hostage by a conflicting latest-head-vote configuration holding
+$\geq \tfrac13\Dvote$; the empty vote, which advances nothing, fires only for a
+validator that has \emph{not} confirmed into the interval.  Whichever branch
+fires, the target~$T$ (when non-$\bot$) is passed through \getFinalVote{}
+unchanged, so E1-safety holds (Lemma~\ref{lem:honest-e1-safety}).
+\end{definition}
+
+\begin{definition}[Empty vote]\label{def:empty-target}
+When the gate of Definition~\ref{def:conf-gate} admits neither a target nor a
+timeout vote --- the caster's safe-confirmed head has not reached the voted
+interval, or the protected repeat blocks a timeout at an already-targeted
+height --- the validator does \emph{not} suppress its attestation.  It emits the
+\emph{empty vote}~$\emptyckpt$: a vote (Definition~\ref{def:vote}; no new
+message type) with an \emph{empty voted checkpoint}, $\target = \bot$
+\emph{and} $\height = \bot$ (the empty $\mathsf{Checkpoint}()$), whose head
+field~$\headf$ is nonetheless \emph{populated} with the walk output~$W$ (its SG
+latest message) and which carries its \getFinalVote{} finalize piggyback
+independently.  Its \processVote{} effect (Figure~\ref{alg:state-machine}) is:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+field & empty-vote effect & rationale \\
+\midrule
+$\timeouts[i]$ & \emph{unchanged} ($\height = \bot \neq \sigma.h$) & no timeout-cert contribution \\
+$\targets[i]$  & unchanged ($\target = \bot$) & no justification contribution \\
+$P$            & add~$i$ iff its finalize gate passes & finality piggyback, per \getFinalVote \\
+$v.\headf$     & received as~$i$'s latest head vote & SG presence maintained \\
+\bottomrule
+\end{tabular}
+\end{center}
+Both coordinates of the voted checkpoint are empty, so the empty vote is
+invisible to the height machine: it contributes to neither a justification
+quorum (Definition~\ref{def:justification}, which counts only non-$\bot$
+targets) nor a timeout certificate (Definition~\ref{def:timeout}, which
+counts only current-height timeout markers).  It advances nothing.  Only its
+head field enters the latest-message store (Definition~\ref{def:head-vote}) and
+its finalize fields the finality tally, so a validator keeps its SG head vote
+(and any finality piggyback) flowing while abstaining, without confirmation,
+from the height's FG decision.
+The empty vote replaces the base spec's whole-vote abstention: at a gated-out
+height an honest validator emits it \emph{everywhere} (justifiable and
+nonjustifiable heights alike), so head fields --- the fresh-quorum material ---
+keep flowing at all heights.  In particular the empty vote is neutral for the
+safe-confirmation certificate of Section~\ref{sec:healing}
+(Lemma~\ref{lem:safe-confirm-cert}): it can never help justify or time out
+a height.  Unlike a timeout vote, however, it does \emph{not} set~$\timeouts[i]$
+and so does \emph{not} exempt~$i$ from the Layer~1 stall penalty
+(Figure~\ref{alg:leak-processslot}, Section~\ref{sec:leak}); this leak exposure
+now applies at \emph{all} gated-out heights and is discussed in
+Remark~\ref{rem:empty-vote-marker}.  Its finalize fields follow the
+\getFinalVote{} gate independently, so no $P$-entry is created that a plain
+finalize-bearing timeout vote would not also have created.
+\end{definition}
+
+\begin{remark}[The empty vote sets no marker; the certificate property and leak exposure]\label{rem:empty-vote-marker}
+The empty vote must not set the timeout marker, and with an empty voted
+checkpoint (Definition~\ref{def:empty-target}) it sets none.  Were it to
+set~$\timeouts[i]$, a height could cross the timeout threshold on a quorum of
+gate-blocked empty votes, which witness no confirmation.  With the empty vote
+excluded, a height advances by timeout only on a $2n/3$ quorum of
+\emph{genuine}, confirmation-gated timeout or target votes
+(Definition~\ref{def:conf-gate}), each of whose honest casters safe-confirmed
+into the voted interval.  This is what lets reaching~$h+2$ from a justifiable
+height~$h+1$ certify a safe confirmation into~$h+1$'s interval on \emph{every}
+advance path, with no justify-versus-timeout dichotomy
+(Lemma~\ref{lem:safe-confirm-cert}).  Because the empty vote never sets a
+marker, and every marker-setter safe-confirmed into the interval, the
+certificate is a property of the construction rather than a fact about a
+particular advance schedule.
+
+The price is a Layer~1 leak exposure.  Because a gate-blocked honest validator
+no longer sets~$\timeouts[i]$, the Layer~1 stall guard
+(Figure~\ref{alg:leak-processslot}, Section~\ref{sec:leak}) bumps it while it
+emits empty votes --- in principle a fairness leak against an honest validator
+that the gate has silenced, now possible at any gated-out height.  We argue it
+is negligible under the healing dynamics.  Leak units accrue at \emph{epoch}
+granularity (Section~\ref{sec:leak}), whereas gate-blocked silence lasts only
+the sub-epoch interval between an honest-proposer round and the ensuing Goldfish
+confirmation (Theorem~\ref{thm:healing-liveness}); sub-epoch silence is
+invisible to an epoch-granularity leak.  Even a pathological transient in which
+the gate persists across a full epoch costs a single validator on the order of
+one epoch's leak increment --- of order $10^{-7}$ of effective balance under the
+deployment leak parameters (Section~\ref{sec:leak}, Theorem~\ref{thm:tightness})
+--- and does not compound while finality is not being denied.  If exact Layer~1
+neutrality is wanted, the listed alternative is a per-validator
+\emph{presence field} that exempts the empty vote from the Layer~1 guard
+\emph{without} counting it toward the timeout certificate
+(Remark~\ref{rem:open-items}, Section~\ref{sec:open-items}); it is leak-neutral
+without relying on the epoch-granularity argument, at the cost of one extra
+state field.
+\end{remark}
+
+\begin{figure}[H]
+\caption{Uniform FG vote construction (refines \getBaseVote{} of
+Figure~\ref{alg:voting-rule})}\label{alg:fgvote}
+\begin{center}
+\begin{boxedminipage}{\textwidth}
+\begin{algorithmic}[1]
+
+\Function{getFGVote}{$\Sigma,\; \Omega,\; \Delta$} \Comment{called once per round, content frozen at $\rzero$}
+  \State $W \gets \walk(\Sigma,\; \Omega)$; \quad $h_c \gets \sigma[W].h$
+  \State $T \gets$ earliest block on $W$'s chain with slot $\geq \sigma[W].s_h$ \Comment{interval-first, Def.~\ref{def:target-rule}}
+  \State $C \gets$ safe-confirmed head of $(\Sigma, \Omega)$ \Comment{deepest $\Gzero$-clear confirmed block, Def.~\ref{def:safe-confirm}}
+  \State $h_f \gets \sigma[W].h_j$; \quad $T_f \gets \sigma[W].J$ \Comment{finalize piggyback}
+  \If{$h_c$ is nonjustifiable} \Comment{no target ever, Def.~\ref{def:nonjustifiable-height}}
+    \If{$\sigma[C].h \geq \Sigma.\hmax - 1$ \textbf{and} $\Delta.T(h_c) = \bot$} \Comment{caught up; protected repeat, Def.~\ref{def:target-rule}}
+      \State $v \gets \getFinalVote(\Delta,\; (i,\; h_c,\; \bot,\; h_f,\; T_f))$ \Comment{timeout vote}
+    \Else
+      \State $v \gets \textsc{emptyVote}(\Delta,\; h_f,\; T_f)$ \Comment{empty vote (incl.\ at an already-targeted height), Def.~\ref{def:empty-target}}
+    \EndIf
+  \Else \Comment{justifiable height: uniform gate, Def.~\ref{def:conf-gate}}
+    \State $\mathit{targetCase} \gets (C \succeq T) \ \textbf{and}\ (T \text{ is } \Gzero\text{-clear})$ \Comment{Def.~\ref{def:g0clear}}
+    \If{$\Delta.T(h_c) \neq \bot$ \textbf{and} $\Delta.\lambda(h_c) = \mathtt{false}$} \Comment{protected repeat, Def.~\ref{def:target-rule}}
+      \If{$\mathit{targetCase}$ \textbf{and} $T = \Delta.T(h_c)$}
+        \State $(h_f, T_f) \gets \textsc{finalizeGate}(\Delta, h_f, T_f)$; \ \ $v \gets (i,\; h_c,\; \Delta.T(h_c),\; h_f,\; T_f)$; \ \ $\rememberVote(\Delta, v)$ \Comment{re-emit}
+      \Else
+        \State $v \gets \textsc{emptyVote}(\Delta,\; h_f,\; T_f)$ \Comment{never a timeout at an already-targeted height}
+      \EndIf
+    \ElsIf{$\mathit{targetCase}$} \Comment{(a) target vote (first vote / lock)}
+      \State $v \gets \getFinalVote(\Delta,\; (i,\; h_c,\; T,\; h_f,\; T_f))$ \Comment{E1 layer, unchanged}
+    \ElsIf{$\sigma[C].h \geq h_c$} \Comment{(b) into the interval, $\Gzero$-vetoed / off-chain: time out}
+      \State $v \gets \getFinalVote(\Delta,\; (i,\; h_c,\; \bot,\; h_f,\; T_f))$ \Comment{genuine timeout vote (sets $\timeouts[i]$)}
+    \Else \Comment{(c) not into the interval}
+      \State $v \gets \textsc{emptyVote}(\Delta,\; h_f,\; T_f)$
+    \EndIf
+  \EndIf
+  \State $v.\headf \gets W$ \Comment{head field always populated (SG latest message)}
+  \State \Return $v$
+\EndFunction
+\vspace{3pt}
+
+\Function{\textsc{emptyVote}}{$\Delta,\; h_f,\; T_f$} \Comment{empty voted checkpoint + E1-safe finalize piggyback}
+  \State $(h_f, T_f) \gets \textsc{finalizeGate}(\Delta, h_f, T_f)$
+  \State $v \gets (i,\; \bot,\; \bot,\; h_f,\; T_f)$ \Comment{empty voted checkpoint $\Rightarrow$ no timeout marker}
+  \State $\rememberVote(\Delta, v)$; \quad \Return $v$
+\EndFunction
+\vspace{3pt}
+
+\Function{\textsc{finalizeGate}}{$\Delta,\; h_f,\; T_f$} \Comment{same finalize gate as \getFinalVote}
+  \If{$\Delta.T(h_f) = T_f$ \textbf{and} $\Delta.\tau(h_f) = \mathtt{false}$ \textbf{and} $T_f \neq \bot$}
+    \State \Return $(h_f, T_f)$
+  \Else
+    \State \Return $(\bot, \bot)$
+  \EndIf
+\EndFunction
+
+\end{algorithmic}
+\end{boxedminipage}
+\end{center}
+\end{figure}
+
+\begin{remark}[Gate scoping: gates never touch user confirmations]\label{rem:gate-scoping}
+The $\Gzero$-clearance and confirmation gates of
+Definition~\ref{def:conf-gate} constrain \emph{FG target votes} (and, through
+the safe-confirmed head, the ``safe'' labelling of confirmations that the
+healing argument uses, Section~\ref{sec:healing}) \emph{only}.  They never gate
+the floorless user-facing available confirmation rule $\latestConfirmed$
+(Definition~\ref{def:goldfish-confirm}).  At low participation the $\Gzero$ veto
+silences FG target votes --- heights stall, which is correct, since finality
+requires a $2n/3$ quorum in any case --- while available-chain confirmations
+keep flowing at $f < \tfrac12$ of each participating committee, unchanged.
+Gating the user-facing confirmation on SG grades would let an adversary holding
+$\geq\tfrac13\Dvote$ veto available-chain liveness, violating the
+$f<\tfrac12$ guarantee; the scoping above avoids this.
+\end{remark}
+
+\subsection{Timing model and standing assumptions}\label{sec:timing}
+
+We fix one timing model for the whole document: an available-chain slot
+grid, over which FG rounds are built, with FG attestation content frozen at
+each round's first slot.  The liveness argument of
+Section~\ref{sec:healing} references only round-level quantities.
+
+\begin{definition}[Slots, rounds, and voting time]\label{def:slots}
+Physical time is partitioned into discrete \emph{slots} indexed by
+$k \in \mathbb{N}$, with start time $\start(k)$ and
+$\start(k+1) = \start(k) + 4\Delta$ for the network delay bound~$\Delta$: a
+slot spans $4\Delta$, with \emph{phase deadlines} at $\Delta$ intervals from
+the slot start $t \coloneqq \start(k)$.  Writing
+$\vote(k) \coloneqq t + \Delta$ for the slot's \emph{attestation (voting)
+time}, the phases are:
+\begin{itemize}
+  \item \emph{$t$ --- beacon block.}  The slot's proposer publishes its
+    \emph{beacon block}: a light object carrying the merged view
+    (Definition~\ref{def:goldfish-confirm}), the merge taken over the view
+    frozen at the previous slot's view-merge freeze (below).  Under ePBS the
+    execution \emph{payload} is revealed by the builder on a parallel track at
+    ${\approx}\,t+\Delta$; payload propagation --- the heavy object --- overlaps
+    the later phases and costs no additional phase.
+  \item \emph{$t+\Delta$ --- attestation deadline.}  The available committee
+    casts its attestations on the beacon block.
+  \item \emph{$t+2\Delta$ --- evaluation point.}  Four things happen at once:
+    (i)~\emph{PTC votes} are due, cast having seen the payload during
+    $[t+\Delta,\, t+2\Delta]$; (ii)~\emph{fast confirmation} --- an immediate
+    confirmation by a $75\%$ absolute quorum of the slot's committee
+    attestations (Definition~\ref{def:goldfish-confirm}); (iii)~\emph{available
+    confirmation of the previous slot} --- evaluate the $50\%$ relative quorum
+    over the vote set \emph{frozen} at the previous slot's $t+2\Delta$ (the
+    time-shifted quorum, Definition~\ref{def:goldfish-confirm}); and
+    (iv)~\emph{freeze} the vote set that the \emph{next} slot's
+    available-confirmation evaluation will use.
+  \item \emph{$t+3\Delta$ --- view-merge freeze.}  The view, both attestations
+    and PTC votes, is frozen for the next slot's proposer to merge; the
+    view-merge window is $[t+3\Delta,\, t+4\Delta]$.
+  \item \emph{$t+4\Delta = \start(k+1)$:} the next slot begins.
+\end{itemize}
+Three observations.  The schedule is $4\Delta$ \emph{even with ePBS} --- the
+same as Goldfish-with-fast-confirmation without ePBS --- because payload
+propagation parallelizes with the attestation and PTC phases and the first
+$\Delta$ is only beacon-block propagation.  Fast confirmation is obtained
+\emph{for free}: it sits between the attestation deadline and the freeze in any
+case.  The one genuine cost of the structure is the final view-merge~$\Delta$.
+
+Slots carry the available-chain (Goldfish) committees and proposers of
+Definition~\ref{def:goldfish-confirm}.  FG time is grouped into \emph{rounds}
+of $32$ consecutive slots; $\rzero$ denotes the first slot of a round and
+$\freeze$ its \emph{freeze instant} --- the view-merge freeze at $\rzero$'s
+$t+3\Delta$.  Each honest validator invokes the uniform FG construction
+(Figure~\ref{alg:fgvote}) once per round, fixing its attestation content
+at~$\rzero$'s freeze from the merged view it then holds, and produces \emph{at
+most one} FG attestation per round (Definition~\ref{def:round-atomic}).
+\end{definition}
+
+\begin{lemma}[Delivery before action]\label{lem:delivery-before-action}
+Fix the slot schedule of Definition~\ref{def:slots} and work after \GST, so
+message delay is at most~\(\Delta\).  Every object an honest validator publishes
+at its phase deadline --- a beacon block at the slot start~\(t\), an attestation
+(carrying its SG latest head vote) at~\(t+\Delta\), a PTC vote at~\(t+2\Delta\)
+--- is received by every honest validator by the next phase deadline, hence
+before any honest action that reads it (each such action sits at least~\(\Delta\)
+after the publication it consumes).  Consequently the \emph{honest-published}
+component of cross-view latest-message disagreement at any honest action point
+is zero: at any freeze, every honest head vote published at a strictly earlier
+phase deadline is common to all honest views; only
+adversary-published objects, whose publication time the schedule does not
+constrain, can be delivered to some honest validators before a freeze and to
+others after it.
+\end{lemma}
+
+\begin{proof}
+The phases of Definition~\ref{def:slots} are spaced by exactly~\(\Delta\) and
+delay is \(\leq\Delta\), so each publication clears before the next deadline ---
+one line per phase:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+published & delivered by & first consuming action \\
+\midrule
+beacon block \((t)\)       & \(t+\Delta\)  & attestation deadline \((t+\Delta)\) \\
+attestation \((t+\Delta)\) & \(t+2\Delta\) & \(t+2\Delta\) evaluations / electorate freeze \\
+PTC vote \((t+2\Delta)\)   & \(t+3\Delta\) & view-merge freeze \((t+3\Delta)\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+Each consuming action lies at or after the ``delivered by'' time, so the object
+is in hand; and any freeze of a \emph{later} slot lies a further multiple
+of~\(\Delta\) on.  Thus every honestly-published head vote is common to all
+honest views at that action and at every later freeze,
+leaving zero honest-published contribution to the cross-view disagreement; only
+adversary-published objects, whose publication time the schedule does not
+constrain, can reach some honest validators before a freeze and others after
+it.
+\end{proof}
+
+\begin{definition}[Time-dependent dishonest count]\label{def:f-t}
+For each time~$t$, $f^t$ denotes the number of validators that are
+dishonest at time~$t$.  We assume $f^t$ is monotonically non-decreasing
+in~$t$: once a validator is dishonest, it remains so.  We write~$\beta$ for
+the corresponding fraction of total stake, $\beta \coloneqq f^t/n$ at the
+time of reference.
+\end{definition}
+
+\begin{definition}[Standing assumptions for round~$r$]\label{def:standing}
+A round~$r$ (with first slot~$\rzero$) satisfies the \emph{standing
+assumptions} when (a)~$\start(\rzero) - \Delta \geq \GST$ (synchrony),
+(b)~more than half of the validators online at~$\rzero$'s freeze are honest
+(\emph{online-honest majority}, per participating available committee),
+(c)~every honest validator is online at~$\rzero$'s freeze
+(\emph{all-honest-awake}), and (d)~every FG attestation cast by an honest
+validator in round~$r$ is gossiped to every honest validator within~$\Delta$
+and is eventually received by an honest available-chain proposer that includes
+it before the end of round~$r$ (\emph{honest-relay}).  The gossip clause drives
+SG grades; the inclusion clause is used only to close FG certificates.
+\end{definition}
+
+\paragraph{Fixed proposer sequence.}
+The proposer sequence is \emph{fixed and exogenous}: this document does not
+model RANDAO or seed manipulation, so the identity of each slot's proposer ---
+in particular each round's first-slot proposer at~$\rzero$ --- is given in
+advance and independent of chain content.  Proposer-sequence manipulation
+(grinding of first-slot positions, seed biasing) is therefore deliberately out
+of scope (Section~\ref{sec:open-items}); the honest-proposer waits of the
+liveness leg (Theorem~\ref{thm:healing-liveness}) are read off this fixed
+sequence.
+
+For an honest validator~$v$ and time~$t$, write $\Sigma_v^t, \Omega_v^t$ for
+$v$'s store and auxiliary state at~$t$, and $C_v^t \coloneqq
+\latestConfirmed(\Sigma_v^t, \Omega_v^t)$ for its Goldfish-confirmed head
+(distinct from the fork-choice head $\getConfirmed(\Sigma_v^t, \Omega_v^t) =
+\walk(\Sigma_v^t, \Omega_v^t)$, of which it is in general an ancestor).
+
+\paragraph{Named hypotheses.}
+The timing and threshold hypotheses used by reference throughout
+Sections~\ref{sec:forkchoice} and~\ref{sec:healing} --- the synchrony gap
+and slot-phase spacing (with confirmation consistency structural via the
+time-shifted quorum, Definition~\ref{def:goldfish-confirm}), the FG
+supermajority (\(\beta < 1/3\)), the Goldfish committee-majority bound
+(\(f < 1/2\) per participating committee), and data commonality, which together
+underwrite the single-step graded-delivery bound of
+Section~\ref{sec:grades} --- are collected once, as the standing hypotheses of
+the healing argument (Assumptions~\ref{ass:heal-delta}--\ref{ass:heal-prop},
+Section~\ref{sec:healing-theorem}), and are used by reference from here on.
+
+\section{Healing from asynchrony}\label{sec:healing}
+
+After a period of asynchrony the finality gadget may be stuck: heights have
+advanced by timeout, no recent justification anchors the frontier, and the
+adversary may selectively deliver equivocal latest messages once the network
+heals.
+This section shows that the graded fork choice of
+Section~\ref{sec:forkchoice} lets finality \emph{heal} after a stall.  Accountable
+safety (Theorem~\ref{thm:safety}) is never at risk --- it holds unconditionally at
+\(<n/3\) slashable and is not re-proved here.  What must be shown is that finality
+\emph{resumes}: that the frontier advances and the safe-confirmed head converges to
+a common, canonical block.  That is the participation-conditional content, and it
+rests on one small unconditional fact.
+
+The one unconditional healing-specific fact is the \emph{safe-confirmation
+certificate} (Lemma~\ref{lem:safe-confirm-cert}): because the empty vote sets no
+timeout marker, every advance of a height to \(h+2\) witnesses that some honest
+validator safe-confirmed a block in~\(h+1\)'s interval.  It invokes no proposer
+sequence, no timing, no participation, and no grade-delivery assumption --- only the gate, the
+empty-vote marker semantics, and the threshold \(2/3-\beta>1/3\).  FG
+non-interference during~\(h+1\) --- no height-\(h\) justification can re-enter the
+fork choice --- is the equally unconditional seal (Lemma~\ref{lem:regeneration}),
+also cited, not restated.
+The \emph{healing theorem} (Theorem~\ref{thm:healing-safety}) turns that per-caster
+certificate into a \emph{common}, \emph{canonical} safe confirmation with no
+conflicting honest anchor, and re-establishes finality by induction.  This is
+\emph{conditional} on at least \(2/3\) of the stake being honest and online, and it
+is closed once honest latest messages have crossed one post-\GST{} delivery
+boundary: it consumes the graded delivery of Section~\ref{sec:grades}, anchor
+intersection, and latest-message concentration.  Inclusion is needed later to
+register FG quorums, but no longer to stabilize the grades.
+The \emph{liveness leg} (Theorem~\ref{thm:healing-liveness}) carries the timing
+conditions and shows the frontier advances, supplying the healing theorem's
+hypotheses --- in particular the delivery/freeze event; healing then completes
+(Theorem~\ref{thm:healing-main}).
+
+\subsection{Regeneration}\label{sec:regeneration}
+
+Recall from Section~\ref{sec:heightclasses} that a \emph{nonjustifiable height}
+(Definition~\ref{def:nonjustifiable-height}) is one at which, under finality
+debt, the state transition's justified-checkpoint computation returns empty, so
+honest validators cast no target votes there.  A height may also end
+justification-free \emph{in fact} --- advancing by timeout with no justification
+firing.  Either way the height is \emph{sealed}, and its seal is the structural
+fact on which FG non-interference in the healing argument rests: it removes any
+height-\(H\) justification from the fork choice throughout the tenure of the
+next height.
+
+\begin{definition}[Sealed height]\label{def:sealed}
+A height~\(H\) is \emph{sealed} for a node if no justification at height~\(H\)
+can ever fire on any chain the node processes; equivalently, no block ever
+attains a \(2n/3\) justification quorum (Definition~\ref{def:justification}) at
+height~\(H\).
+\end{definition}
+
+\begin{lemma}[Regeneration]\label{lem:regeneration}
+Suppose height~\(H\) is sealed (Definition~\ref{def:sealed}).
+Then throughout the tenure of height~\(H+1\) --- every store state with
+\(\Sigma.\hmax = H+1\) --- the cascade gate \(\Sigma.\hmax = \Sigma.h_j + 1\)
+fails, so \(\getConfirmed\) walks from~\(\Sigma.F\) (Figure~\ref{alg:store});
+in particular no height-\(H\) justification can ever be the fork-choice root.
+Two sufficient conditions for~\(H\) to be sealed:
+\begin{enumerate}[label=(\roman*)]
+  \item \emph{by construction} --- \(H\) is nonjustifiable
+    (Definition~\ref{def:nonjustifiable-height}): the justification branch is
+    disabled at~\(H\) and honest validators cast no target votes there, so no
+    block collects a \(2n/3\) quorum;
+  \item \emph{in fact} --- the honest target votes at~\(H\) are
+    \emph{sub-completable at all times}: at no time does any block receive
+    height-\(H\) target votes from a \(2/3 - \beta\) fraction of the total
+    stake, so no block ever reaches~\(2n/3\) even with all \(\leq \beta n\)
+    adversarial target votes.  (Honest target votes at~\(H\) are pinned by
+    no-retarget (Definition~\ref{def:round-atomic}), so this is a well-defined
+    all-time hypothesis on the final honest tally, not a snapshot.)
+\end{enumerate}
+Under continued finality debt nonjustifiable heights recur
+every~\(\Knj\) heights (Definition~\ref{def:nonjustifiable-height}), so the next
+one sealed \emph{by construction} is always at most~\(\Knj\) heights away.
+The \emph{seal} does \emph{not} propagate under a bare timeout advance: a height
+may advance by timeout while remaining completable.  With the empty vote out of
+the timeout certificate (Definition~\ref{def:empty-target}), the \(2n/3\)
+timeout markers come only from confirmation-gated votes --- genuine timeout
+votes and the height-fresh target votes, which also set the marker
+(Definition~\ref{def:timeout}).  If some honest validators cast a target vote
+\((T, H+1)\) that does not by itself reach \(2n/3\) while the height times out on
+the combined markers, then~\(T\) still carries \(\geq (2/3 - \beta)n\) honest
+weight, and the adversary may later reveal its \(\leq \beta n\) withheld target
+votes on a chain still at height~\(H+1\) to complete \(J(H+1) = T\).  That case
+is not a seal but a pending justification of a safe-confirmed block:~\(T\) was
+safe-confirmed by its honest casters (the gate cast \((T,H+1)\) only with
+\(C \succeq T\), Definition~\ref{def:conf-gate}(a)), so by per-height
+justification uniqueness (Lemma~\ref{lem:just-unique-height}) any \(J(H+1)\) that
+later fires is of that block, which heals rather than threatens safety
+(Theorem~\ref{thm:healing-safety}).
+\end{lemma}
+
+\begin{proof}
+\emph{Gate failure.}
+Any chain that reaches state-height~\(H+1\) did so by a height advance from~\(H\)
+(Lemma~\ref{lem:heightprog}).
+Since no justification at~\(H\) can fire, that advance is a timeout cert
+(Definition~\ref{def:timeout}), which leaves \(h_j\) unchanged
+(Lemma~\ref{lem:slotmono}); so on that chain the last justified height is at
+most~\(H-1\).
+More generally, while \(\Sigma.\hmax = H+1\), a justification at height~\(h'\)
+forces some chain to state-height \(h'+1 \leq \Sigma.\hmax = H+1\), hence
+\(h' \leq H\); as \(h' = H\) is excluded by the seal, every fired justification
+has height at most~\(H-1\), so \(\Sigma.h_j \leq H-1\).
+Thus \(\Sigma.\hmax = H+1 \geq \Sigma.h_j + 2\), the cascade gate
+\(\Sigma.\hmax = \Sigma.h_j + 1\) fails, and \(\getConfirmed\) walks
+from~\(\Sigma.F\) (Figure~\ref{alg:store}).
+Because a height-\(H\) justification would carry key \((H,\cdot)\) and the gate
+selects~\(\Sigma.J\) only when \(\Sigma.h_j = \Sigma.\hmax - 1 = H\), and that
+never occurs during the tenure, no height-\(H\) justification is ever the
+walk-from block.
+
+\emph{(i) Nonjustifiable.}
+At a nonjustifiable height the justified-checkpoint computation returns empty
+(Definition~\ref{def:nonjustifiable-height}), so the justification branch of
+\processHeightEvents never fires at~\(H\); and honest validators cast no target
+votes at~\(H\), so any block's height-\(H\) target support is at most
+\(\beta n < n/3 < 2n/3\).  No \(2n/3\) quorum can form, so~\(H\) is sealed.
+
+\emph{(ii) Sub-completable.}
+Suppose at no time does any block~\(T\) have height-\(H\) target votes from a
+\(2/3 - \beta\) fraction of the total.
+A justification quorum for~\(T\) needs \(2n/3\) target votes for~\(T\);
+adversarial validators supply at most~\(\beta n\), so honest validators would
+have to supply at least \((2/3 - \beta)n\) --- contradiction with the all-time
+hypothesis.  No block is ever justifiable at~\(H\), so~\(H\) is sealed.
+
+\emph{Cadence and non-propagation.}
+A nonjustifiable height~\(H\) is sealed by construction (condition~(i)); under
+continued finality debt such heights recur every~\(\Knj\) heights
+(Definition~\ref{def:nonjustifiable-height}), so the next guaranteed seal is at
+most~\(\Knj\) heights away.  Whether \(H+1\) is in turn sealed is settled by
+conditions~(i)--(ii) applied to~\(H+1\).  A bare timeout advance does
+\emph{not} seal: the empty vote no longer sets the timeout marker
+(Definition~\ref{def:empty-target}), but the height-fresh target votes do
+(Definition~\ref{def:timeout}), so \(H+1\) can cross the \(2n/3\) timeout
+threshold on confirmation-gated timeout and target votes while some target~\(T\)
+still holds \(\geq (2/3 - \beta)n\) honest votes that did not by themselves reach
+justification; then \(T\) remains completable, and a later reveal of the
+adversary's \(\leq \beta n\) withheld target votes can fire \(J(H+1) = T\) on a
+chain still at height~\(H+1\).  That is a pending justification of a
+safe-confirmed block, handled by the healing theorem
+(Theorem~\ref{thm:healing-safety}), not by the seal.
+\end{proof}
+
+\begin{remark}[The seal is not a protocol phase]\label{rem:seal-deterministic}
+Sealedness is a predicate on chain state, not a protocol phase: condition~(i) is
+the deterministic nonjustifiable-height predicate
+(Definition~\ref{def:nonjustifiable-height}), and condition~(ii) is decided by
+the height's own target tally.  No message, trigger, or ceremony is introduced.
+\end{remark}
+
+\subsection{Graded delivery}\label{sec:grades}
+
+The grades are computed over live latest head votes --- the head field
+\(v.\headf\) of every valid FG attestation received from the network,
+latest-per-validator, in-window~\(\Wvote\), with known equivocators excluded
+(Definition~\ref{def:head-vote}).  Write \(\Supp_u(B)\) for the
+latest-head-vote support of block~\(B\) and \(\Dvote_u\) for the total live
+latest-head-vote weight in validator~\(u\)'s view
+(Definition~\ref{def:head-vote-weight}).  Recall (Definition~\ref{def:g1}) that
+the grade-1 anchor \(\Gone = B\) means
+\(\Supp(B) \geq \tfrac{2}{3}\Dvote\), and (Definition~\ref{def:g0clear}) that a
+target~\(T\) is \(\Gzero\)-\emph{clear} iff no block conflicting with~\(T\) has
+latest-head-vote support \(\geq \tfrac{1}{3}\Dvote\).
+
+The healing theorem needs one cross-view fact about grade-1 anchors: a block
+that one honest validator sees with $\geq\tfrac23$ support is seen by every
+honest validator with $\geq\tfrac13$ support at the next action boundary.  We
+first note that the walk's \emph{fallback} grade-1 anchor is such a block in its
+holder's own view,
+then prove the cross-view step with per-view denominators.  A \emph{pointed}
+root is \emph{not} covered by this step --- its credited previous-round support
+is a different tally from the live latest-message grade --- and is protected
+separately by fresh-root intersection (Lemma~\ref{lem:quorum-intersection-sg}), as
+Corollary~\ref{cor:anchor-vs-safe} makes precise.
+
+\begin{lemma}[Fallback anchor grade-1 support]\label{lem:anchor-support}
+Let~\(A = \Gone(\Sigma_u)\) be the \emph{fallback grade-1 anchor} an honest
+validator~\(u\) adopts in a round when its round's \(\rzero\) proposal does not
+point to a locally accepted fresh root (Definition~\ref{def:walk}), evaluated at~\(u\)'s
+round freeze after \GST.  Then either \(A = \cascadeRoot(\Sigma_u)\), or
+\(\Supp_u(A) \geq \tfrac{2}{3}\Dvote_u\) in~\(u\)'s own view.  A \emph{pointed}
+root~\(A=P\) carries \emph{no} such latest-head-vote-support guarantee:
+\(\Supp_u(P) \geq \tfrac{2}{3}\Dvote_u\) need not hold.
+\end{lemma}
+
+\begin{proof}
+When the pointed branch is not taken, \(A = \Gone(\Sigma_u)\): the grade-1 descent
+of Definition~\ref{def:g1} either does not step, leaving
+\(A = \cascadeRoot(\Sigma_u)\), or steps into a child with
+\(\Supp_u \geq \tfrac{2}{3}\Dvote_u\), the last such child being~\(A\).
+The pointed case carries no latest-head-vote-support guarantee: its local
+acceptance reads the credited previous-round tally
+(Definition~\ref{def:fresh-quorum}), which neither carries votes in the
+proposal nor writes to the receiver's latest-message store
+(Definition~\ref{def:head-vote}).  Hence no lower bound on
+\(\Supp_u(P)\) follows --- before the honest head votes have
+concentrated, \(P\) may have support well below
+\(\tfrac23\Dvote_u\), or below \(\tfrac13\Dvote_u\).  Pointed anchors are therefore
+protected not by local grade support but by fresh-root intersection
+(Lemma~\ref{lem:quorum-intersection-sg}); see Corollary~\ref{cor:anchor-vs-safe}.
+\end{proof}
+
+\begin{lemma}[Single-step graded delivery]\label{lem:graded-delivery}
+Assume \(\beta < 1/3\) (Assumption~\ref{ass:heal-beta}), data commonality
+(Assumption~\ref{ass:heal-prop}), and delivery before action
+(Lemma~\ref{lem:delivery-before-action}).  Assume the honest validators are
+online and have published a live head vote, so their common live weight is at
+least a \((1-\beta)\) fraction of total stake.  For any block~\(X\) and any two
+honest validators \(u, v\) evaluating grades at the same action boundary after
+the \(\Delta\)-delivery boundary following those honest publications (or once
+head votes have concentrated, Lemma~\ref{lem:vote-concentration}): if
+\(\Supp_u(X) \geq \tfrac{2}{3}\Dvote_u\)
+in~\(u\)'s view, then \(\Supp_v(X) \geq \tfrac{1}{3}\Dvote_v\) in~\(v\)'s view.
+Because the live-honest-vote hypothesis is participation-dependent, this lemma
+and its corollary (Corollary~\ref{cor:anchor-vs-safe}) belong to the dependency
+set of the conditional healing theorem (Theorem~\ref{thm:healing-safety}), not of
+the unconditional safe-confirmation certificate (Lemma~\ref{lem:safe-confirm-cert}).
+\end{lemma}
+
+\begin{proof}
+By delivery before action (Lemma~\ref{lem:delivery-before-action}), every live
+honest head vote published before the preceding phase boundary is common to all
+honest views at the action boundary.  Write \(w_H\) for their common weight and
+\(H_X\) for their common weight supporting~\(X\).  The remaining,
+view-dependent latest messages are adversarially published; write \(a_u, a_v\)
+for their live weight
+present in the two views, and \(a_u^X \leq a_u\) for the part supporting~\(X\)
+in~\(u\).  The adversary holds at most a \(\beta\) fraction of the stake while
+the common honest live messages carry at least a \(1-\beta\)
+fraction, so the per-view adversary weight is capped by
+\[
+  a_u,\, a_v \;\leq\; \rho\, w_H, \qquad \rho \coloneqq \frac{\beta}{1-\beta} \;<\; \tfrac12
+  \quad(\text{since } \beta < \tfrac13).
+\]
+From \(\Supp_u(X) = H_X + a_u^X \geq \tfrac23\Dvote_u = \tfrac23(w_H + a_u)\) and
+\(a_u^X \leq a_u\),
+\[
+  H_X \;\geq\; \tfrac23(w_H + a_u) - a_u \;=\; \tfrac23 w_H - \tfrac13 a_u
+  \;\geq\; \tfrac23 w_H - \tfrac13 \rho\, w_H \;=\; \tfrac{2-\rho}{3}\, w_H .
+\]
+In~\(v\)'s view \(\Supp_v(X) \geq H_X\) and \(\Dvote_v = w_H + a_v \leq (1+\rho)w_H\),
+so
+\[
+  \Supp_v(X) - \tfrac13\Dvote_v \;\geq\; \tfrac{2-\rho}{3}\,w_H - \tfrac{1+\rho}{3}\,w_H
+  \;=\; \tfrac{1-2\rho}{3}\,w_H \;>\; 0,
+\]
+using \(\rho < \tfrac12\).  Hence \(\Supp_v(X) \geq \tfrac13\Dvote_v\).
+\end{proof}
+
+\begin{corollary}[No honest anchor conflicts with a safe confirmation]\label{cor:anchor-vs-safe}
+Suppose an honest validator~\(v\) safe-confirms a block~\(C\)
+(Definition~\ref{def:safe-confirm}) and every honest anchor descends from a common
+cascade root~\(R \preceq C\).  Assume moreover the standing hypotheses and that
+honest head votes lie on~\(C\)'s chain, so that the honest round-\(r\)
+attestations give~\(C\) direct fresh support greater than~\(2n/3\)
+(Lemma~\ref{lem:honest-fresh-quorum} once concentration has placed honest heads
+on~\(C\)'s chain, Lemma~\ref{lem:vote-concentration}).  Then no
+honest validator's adopted anchor conflicts with~\(C\).  The two anchor kinds are
+handled by two routes, both \emph{conditional} on participation: the fallback
+grade-1 anchor by graded delivery, the pointed root by fresh-root intersection.
+\end{corollary}
+
+\begin{proof}
+Let~\(A\) be an honest~\(u\)'s adopted anchor (Definition~\ref{def:walk}).
+
+\emph{Fallback grade-1 anchor \(A = \Gone(\Sigma_u)\).}  By
+Lemma~\ref{lem:anchor-support}, either \(A = \cascadeRoot(\Sigma_u) = R \preceq C\),
+which does not conflict with~\(C\), or \(\Supp_u(A) \geq \tfrac23\Dvote_u\).  In the
+latter case, if~\(A\) conflicted with~\(C\), single-step graded delivery
+(Lemma~\ref{lem:graded-delivery}, using its live-honest-vote hypothesis) would
+give \(\Supp_v(A) \geq \tfrac13\Dvote_v\) in~\(v\)'s view --- a block conflicting
+with~\(C\) holding \(\geq\tfrac13\Dvote_v\) head-vote support, contradicting the
+\(\Gzero\)-clearance of~\(C\) in~\(v\)'s safe confirmation
+(Definition~\ref{def:g0clear}).
+
+\emph{Pointed anchor \(A=P\).}  Here~\(P\) has at least~\(2n/3\) credited
+previous-round support in~\(u\)'s view but need not carry grade-1 support
+(Lemma~\ref{lem:anchor-support}), so the graded-delivery route does not apply.
+Instead use~\(C\) itself: the honest round-$r$ attestations give it direct
+support greater than~\(2n/3\), so it is a fresh root in every honest view after
+delivery.  If~\(P\) conflicted with~\(C\), these would be two conflicting
+accepted fresh roots, forcing at least~\(n/3\) of the stake to have equivocated
+(Lemma~\ref{lem:quorum-intersection-sg}) --- impossible under the standing
+assumption.
+
+Either way~\(A\) does not conflict with~\(C\).  The pointed-anchor route consumes
+the participation-dependent premise that~\(C\) has greater than~\(2n/3\) direct
+fresh support (honest heads
+on~\(C\)'s chain); this is why the corollary, like
+Lemma~\ref{lem:graded-delivery}, is a dependency of the conditional healing theorem
+(Theorem~\ref{thm:healing-safety}) rather than of the unconditional
+safe-confirmation certificate (Lemma~\ref{lem:safe-confirm-cert}).
+\end{proof}
+
+The liveness leg needs the complementary fact that, once honest head votes
+concentrate, no conflicting branch can hold \(\geq\tfrac13\Dvote\).  This is a
+consequence of latest-message supersession, not of any move-counting.
+
+\begin{lemma}[Latest-message concentration]\label{lem:vote-concentration}
+After \GST, suppose the honest validators are online and publish their next head
+votes on the current chain.  Within~\(\Delta\), latest-per-validator
+supersession (Definition~\ref{def:head-vote}) places every honest validator's
+live latest head vote on that chain in every honest view.  Every conflicting
+branch then has support below~\(\tfrac13\Dvote\), and this persists while honest
+head votes remain on the chain.  No block inclusion is required.  A stale head
+vote from a validator that remains offline expires after~\(\Wvote\) slots.
+\end{lemma}
+
+\begin{proof}
+The new honest messages supersede the same validators' older messages as soon
+as they are received; delivery before action makes them common within
+\(\Delta\).  Fix an honest view and write~\(w_H\) for its common honest live
+weight and~\(a\) for its adversarial live weight.  Any conflicting branch has
+support at most~\(a\), while \(\Dvote=w_H+a\).  The standing hypotheses give
+\(w_H\geq1-\beta\) and \(a\leq\beta\) as fractions of total stake, hence
+\(2a<w_H\) for \(\beta<1/3\).  Therefore
+\(a<\tfrac13(w_H+a)=\tfrac13\Dvote\).  Further honest messages remain on the
+current chain and can only supersede same-validator stale votes; an offline
+validator's unsuperseded message ceases to be live after~\(\Wvote\) slots.
+\end{proof}
+
+\subsection{The healing theorem}\label{sec:healing-theorem}
+
+\paragraph{Standing hypotheses.}
+The two legs draw on the following named hypotheses, collected once here as the
+canonical timing and threshold assumptions of the whole document and used by
+reference throughout; the timing model of Section~\ref{sec:timing} points here
+rather than restating them.
+Their quantification is revisited in Section~\ref{sec:open-items}.
+
+\begin{assumption}[Network delay and phase spacing]\label{ass:heal-delta}
+After \GST{} the message delay is bounded by~\(\Delta\), and each slot phase
+spans~\(\Delta\) (Definition~\ref{def:slots}), so an object published at one
+phase deadline is in every honest view by the next.  Confirmation consistency is
+then \emph{structural}, not a separate timing hypothesis: the available
+confirmation is evaluated over a vote set frozen one phase before the view-merge
+freeze (the time-shifted quorum, Definition~\ref{def:goldfish-confirm}), so a
+block an honest validator confirms is seen by every honest validator before the
+freeze at which it fixes its vote content.
+\end{assumption}
+
+\begin{assumption}[Honest supermajority]\label{ass:heal-honest}
+Honest validators hold at least \(2/3\) of the total active stake.
+\end{assumption}
+
+\begin{assumption}[Goldfish committees]\label{ass:heal-goldfish}
+In each per-slot available committee the adversarial fraction is \(f < 1/2\) of
+the participating members.
+\end{assumption}
+
+\begin{assumption}[FG adversary bound]\label{ass:heal-beta}
+The adversarial FG stake is \(\beta < 1/3\) of the total.
+\end{assumption}
+
+\begin{assumption}[Data and vote commonality]\label{ass:heal-prop}
+After \GST, honest blocks and valid honest FG attestations propagate within
+\(\Delta\).  Thus any two honest validators' block sets differ by at most one
+\(\Delta\)-window of in-flight blocks, and every honest head vote published
+before the preceding phase boundary is present in both latest-message stores.
+No inclusion or backfill premise is imposed on grade inputs.
+\end{assumption}
+
+The uniform confirmation-and-\(\Gzero\) gate of
+Section~\ref{sec:voteconstruction} makes every honest target vote a vote for a
+safe-confirmed block: by Definition~\ref{def:conf-gate}(a) an honest validator
+casts \((T, h)\) only when \(C \succeq T\) for its safe-confirmed head~\(C\), so
+\(T\) is safe-confirmed in the caster's view (Definition~\ref{def:safe-confirm});
+otherwise it casts a confirmation-gated timeout vote (if it confirmed into the
+interval) or the empty vote (if it did not, Definition~\ref{def:empty-target}).
+
+\begin{lemma}[Safe-confirmation certificate]\label{lem:safe-confirm-cert}
+Assume fewer than \(n/3\) of the stake is slashable and \(\beta < 1/3\)
+(Assumption~\ref{ass:heal-beta}, the adversary bound --- not a participation
+hypothesis).  On any advance of a justifiable height~\(h+1\) to~\(h+2\), some
+honest validator safe-confirmed a block in~\(h+1\)'s interval.  This is the
+unconditional fact that the empty-vote-sets-no-marker design buys
+(Remark~\ref{rem:empty-vote-marker}); its proof uses no cross-view graded
+delivery, fresh-quorum relation, latest-message concentration, or honest
+participation --- only the
+gate, the empty-vote marker semantics, and the threshold arithmetic
+\(2/3-\beta>1/3\).
+\end{lemma}
+
+\begin{proof}
+An advance of~\(h+1\) is a \(2n/3\) quorum of votes setting the timeout marker
+(Definition~\ref{def:timeout}).  The empty vote sets no marker
+(Definition~\ref{def:empty-target}), so it is never in the quorum; every marker is
+a target vote (case~(a) of Definition~\ref{def:conf-gate}) or a timeout vote
+(case~(b)), and more than \((2/3-\beta)n > n/3\) are honest
+(Assumption~\ref{ass:heal-beta}).  Each such honest caster had its safe-confirmed
+head~\(C_i\) into the interval at its freeze, \(\sigma[C_i].h \geq h+1\): case~(a)
+requires \(C_i \succeq T\) so \(\sigma[C_i].h \geq \sigma[T].h = h+1\), and case~(b)
+requires \(\sigma[C_i].h \geq h+1\) outright.  So each such honest caster
+safe-confirmed a block in~\(h+1\)'s interval; taking any one gives the claim.  The
+argument reads only the gate (Definition~\ref{def:conf-gate}), the empty-vote
+marker semantics (Definition~\ref{def:empty-target}), and \(2/3-\beta>1/3\); it
+consumes no cross-view graded delivery, anchor relation, or participation.
+\end{proof}
+
+The certificate is unconditional but it is only a \emph{per-caster} witness ---
+\emph{some} honest validator safe-confirmed \emph{some} block in the interval.
+Turning it into a \emph{common}, \emph{canonical} safe confirmation that resumes
+finality is what healing adds, and it is conditional on honest participation.
+Accountable safety (Theorem~\ref{thm:safety}) is untouched throughout and is not
+re-proved here; per-height justification uniqueness
+(Lemma~\ref{lem:just-unique-height}) and the seal / cascade gate
+(Lemma~\ref{lem:regeneration}) --- the FG non-interference facts --- are likewise
+cited unconditionally, not restated.
+
+\begin{theorem}[Finality heals]\label{thm:healing-safety}
+Assume fewer than \(n/3\) of the stake is slashable and, as the \emph{healing
+hypothesis}, that \emph{at least \(2/3\) of the total stake is honest and online}
+--- equivalently \(\beta < 1/3\) (Assumption~\ref{ass:heal-beta}) with full honest
+participation (Assumption~\ref{ass:heal-honest} together with the
+all-honest-online clause of the standing assumptions,
+Definition~\ref{def:standing}) --- with post-\GST{} operation and the slot schedule
+(Assumptions~\ref{ass:heal-delta},~\ref{ass:heal-prop}) and \(f<1/2\) per
+participating available committee (Assumption~\ref{ass:heal-goldfish}).  Suppose
+height~\(h\) finalizes a block~\(B\), and let~\(C\) be a deepest block
+safe-confirmed by an honest validator in~\(h+1\)'s interval on an advance
+to~\(h+2\) (Lemma~\ref{lem:safe-confirm-cert}).  Then, once honest validators
+have published their next head votes on the safe-confirmed chain and one
+post-\GST{} \(\Delta\)-delivery boundary has passed
+(Lemmas~\ref{lem:vote-concentration} and~\ref{lem:graded-delivery}):
+\begin{enumerate}[label=(\arabic*)]
+  \item \emph{(Common, canonical safe confirmation.)}  \(C\) is common to all
+    honest validators, no honest validator's adopted anchor conflicts with~\(C\)
+    (Corollary~\ref{cor:anchor-vs-safe}), and with \(f<1/2\) per committee~\(C\)
+    is and remains canonical for every honest validator.  Every honest fork-choice
+    root during~\(h+1\)'s tenure descends from~\(B\) (Lock-in,
+    Theorem~\ref{thm:lockin}), so~\(B\) lies on every honest anchor and
+    \(B \preceq C\).
+  \item \emph{(Finality resumes; induction.)}  Every honest canonical chain is at
+    state-height \(\geq h+1\) and contains~\(C\); any \(J(h+1)\) that fires is the
+    unique justification (Lemma~\ref{lem:just-unique-height}) of a safe-confirmed
+    block on~\(C\)'s chain; latest-head-vote support concentrates on~\(C\)'s chain
+    (Lemma~\ref{lem:vote-concentration}), so no future anchor conflicts with~\(C\).
+    Finality re-establishes at~\(h+1\): the finalize piggyback finalizes the
+    justified block on the next advance, and the protected repeat
+    (Definition~\ref{def:target-rule}) keeps honest finalize gates open, so the
+    hypotheses recur at height~\(h+1\).
+\end{enumerate}
+Accountable safety is untouched independently of the healing hypothesis: no block
+conflicting with~\(B\) is ever finalized (Theorem~\ref{thm:safety}), at
+\(<n/3\) slashable and with no timing or participation assumption.
+\end{theorem}
+
+\begin{proof}
+The proof is a chain of gates and impossibilities; no case tree over adversarial
+schedules appears.  Throughout, the safe-confirmation certificate
+(Lemma~\ref{lem:safe-confirm-cert}) is the unconditional starting point, and the
+healing hypothesis enters only to make the certified confirmation common and
+canonical, closed by network delivery of the next honest head votes.
+
+\emph{(1) The fork-choice root descends from~\(B\).}  For any honest node that has
+processed a block~\(B'\) with \(\sigma[B'].J = B\) and \(\sigma[B'].h_j = h\),
+Lock-in (Theorem~\ref{thm:lockin}) makes every \(\getConfirmed\) return a
+descendant of~\(B\) at all future times, so its walk output, anchor, and cascade
+root descend from~\(B\).  A node still lagging --- at \(\Sigma.\hmax = h+1\) with
+\(\Sigma.h_j \leq h-1\), so \(\cascadeRoot(\Sigma) = \Sigma.F \preceq B\)
+(Definition~\ref{def:cascade-root}) --- has not yet locked onto~\(B\); but under
+the standing hypotheses viability together with latest-message concentration
+(Lemma~\ref{lem:vote-concentration}) bring its walk onto~\(B\)'s chain within a round.
+(The nonjustifiable corollary routes exactly this step through
+\(\cascadeRoot = \Sigma.F\) unconditionally, and is the cleaner template;
+Corollary~\ref{cor:nonjustifiable-heal}.)  Fix the deepest block~\(R\) finalized in
+every honest view; \(R \preceq \Sigma.F \preceq\) every honest cascade root and
+every honest anchor (Lemma~\ref{lem:finchain}), and \(R \preceq B\).
+
+\emph{(1) A deepest common safe confirmation.}  By the safe-confirmation
+certificate (Lemma~\ref{lem:safe-confirm-cert}) some honest validator
+safe-confirmed a block in~\(h+1\)'s interval.  All honest safe-confirmed blocks are
+available-confirmed,
+hence pairwise compatible by Goldfish safety (\(f<1/2\),
+Assumption~\ref{ass:heal-goldfish}); they lie on one chain, and we take~\(C\) to be
+a deepest one, safe-confirmed by some honest~\(v\) with \(\Gzero\)-clearance
+in~\(v\)'s view (Definition~\ref{def:safe-confirm}).  Then \(R \preceq B \preceq C\)
+(\(C\) is in~\(h+1\)'s interval, above~\(B\)), so every honest anchor descends
+from the common root~\(R \preceq C\).  Under the standing hypotheses honest
+available votes concentrate on~\(C\)'s chain (Goldfish majority, \(f<1/2\)), so an
+honest bloc of head votes lands on~\(C\)'s chain and the honest round-\(r\)
+attestations give~\(C\) direct fresh support greater than~\(2n/3\)
+(Lemmas~\ref{lem:honest-fresh-quorum},~\ref{lem:vote-concentration}).
+Corollary~\ref{cor:anchor-vs-safe} then applies by both its routes --- fallback
+grade-1 anchors by graded delivery, pointed roots by fresh-root intersection --- and
+no honest anchor conflicts with~\(C\).  (This is the single cross-view inference of
+the argument, read at the round freeze; its full freeze-alignment
+formalization --- that \(v\)'s \(\Gzero\)-evaluation and each anchor-holder's
+evaluation are related by Lemma~\ref{lem:graded-delivery} at the next action
+boundary after honest head-vote delivery --- is Open Item~1,
+Remark~\ref{rem:open-items}.)
+
+\emph{(1) Canonical and permanent.}  \(C\) is Goldfish-confirmed by an honest
+validator; with \(f<1/2\) per committee the Goldfish majority reaches~\(C\) and
+honest available votes keep it canonical (Definition~\ref{def:goldfish-confirm}),
+so~\(C\) is common to all honest validators.
+Once honest head votes on~\(C\)'s chain have propagated, latest-message
+concentration (Lemma~\ref{lem:vote-concentration}) leaves every branch conflicting
+with~\(C\) below \(\tfrac13\Dvote\) in every honest view, so no future grade-1
+anchor \(\Gone\) conflicts with~\(C\); and an accepted fresh root conflicting
+with~\(C\) would require at least~\(n/3\) equivocating stake
+(Lemma~\ref{lem:quorum-intersection-sg}).  Hence~\(C\) remains canonical.
+
+\emph{(2) No reorg and induction.}  By~(1) every honest canonical chain is at
+state-height \(\geq h+1\) (any block at the frontier descends from~\(B\), and the
+height filter never reverts below it) and contains~\(C\) (by~(1), \(C\) is
+canonical).  Any \(J(h+1)\) that fires has a target~\(T'\) that its honest
+contributors safe-confirmed (the gate cast \((T',h+1)\) only with \(C_i \succeq T'\),
+Definition~\ref{def:conf-gate}(a)); \(T'\) is compatible with~\(C\) (both
+safe-confirmed, hence available-confirmed and compatible by Goldfish safety), so
+\(T'\) is on~\(C\)'s chain, and per-height uniqueness
+(Lemma~\ref{lem:just-unique-height}) makes it the unique justifiable block
+at~\(h+1\).  No conflicting safe confirmation and no conflicting \(J(h+1)\) can
+form.  Finally, finality re-establishes at~\(h+1\): once \(T'\) is justified
+at~\(h+1\), honest validators that cast \((T', h+1)\) carry the finalize piggyback
+\((\finalizeHeight, \finalizeTarget) = (h+1, T')\), and the protected repeat
+(Definition~\ref{def:target-rule}) keeps \(\Delta.\tau(h+1) = \mathtt{false}\) so
+their finalize gate stays open (Definition~\ref{def:voting-rule}); when \(2n/3\)
+such finalize-bearing votes accumulate, \(T'\) finalizes at~\(h+1\).  The
+hypotheses of the theorem then hold at height~\(h+1\) with \(B \gets T'\), and the
+argument recurs.
+\end{proof}
+
+\begin{corollary}[Nonjustifiable heights heal]\label{cor:nonjustifiable-heal}
+Suppose height~\(H\) is nonjustifiable (Definition~\ref{def:nonjustifiable-height}),
+hence sealed (Lemma~\ref{lem:regeneration}(i)).  Then the seal supplies, with no
+prior finalization to bootstrap, both FG non-interference at~\(H\) (in place of a
+height-\(H\) finalization) and the healing theorem's common-root premise
+at~\(H+1\): no \(J(H)\) exists, and throughout~\(H+1\)'s tenure the cascade gate
+fails, so
+every honest fork-choice root is that node's own~\(\Sigma.F\) and no
+height-\(H\) justification is ever the root (Lemma~\ref{lem:regeneration}).  Write
+\(B\) for the \emph{deepest block finalized in every honest view} --- the nodes'
+own~\(\Sigma.F\) may differ but all descend from~\(B\) (Lemma~\ref{lem:finchain}).
+Every honest node has finalized~\(B\), so Lock-in (Theorem~\ref{thm:lockin}) makes
+every honest anchor descend from~\(B\).  The per-caster certificate
+(Lemma~\ref{lem:safe-confirm-cert}) then holds at~\(H+1\), and with~\(B\) below
+~\(H+1\)'s interval the healing theorem (Theorem~\ref{thm:healing-safety})
+applies: reaching~\(H+2\) certifies a common safe confirmation~\(C\) in~\(H+1\)'s
+interval, no honest anchor conflicts with~\(C\), and finalizing at~\(H+1\) heals.
+Since nonjustifiable heights recur every~\(\Knj\) heights under finality debt
+(Definition~\ref{def:nonjustifiable-height}), a fully-sealed healing attempt
+occurs on that cadence, requiring no prior finalization to bootstrap.
+\end{corollary}
+
+\begin{proof}
+Sealedness of~\(H\) is Lemma~\ref{lem:regeneration}(i); its conclusion (cascade
+gate fails throughout~\(H+1\)'s tenure; \(\getConfirmed\) walks from~\(\Sigma.F\);
+no height-\(H\) justification is ever the root) is FG non-interference at~\(H\),
+the seal standing in for a height-\(H\) finalization.  Because every honest node
+has finalized the common
+block~\(B\), Lock-in (Theorem~\ref{thm:lockin}) applied with \(F \coloneqq B\)
+gives \(B \preceq \Sigma.F \preceq\) every honest cascade root and anchor, so the
+common root~\(R = B\) of the healing theorem's step~(1) is available
+\emph{without} the lagging-node concentration argument --- this is the cleaner,
+fully-sealed template.  The per-caster certificate
+(Lemma~\ref{lem:safe-confirm-cert}) and both steps of the healing theorem
+(Theorem~\ref{thm:healing-safety}) then apply verbatim at~\(H+1\).  The
+recurrence of nonjustifiable heights is
+Definition~\ref{def:nonjustifiable-height}.
+\end{proof}
+
+\begin{remark}[What is already unconditional, and what healing adds]\label{rem:safety-unconditional}
+\emph{Accountable safety is unconditional and already established.}  No block
+conflicting with a finalized~\(B\) is ever finalized (Theorem~\ref{thm:safety}), at
+\(<n/3\) slashable, with no timing, participation, or honesty-online hypothesis.
+Healing neither touches this nor re-proves it; the healing argument only cites it.
+The other unconditional facts it leans on are equally pre-existing: FG
+non-interference during~\(h+1\) is the seal (Lemma~\ref{lem:regeneration}), and
+per-height justification uniqueness is Lemma~\ref{lem:just-unique-height}.
+
+The one \emph{healing-specific} unconditional fact is the safe-confirmation
+certificate (Lemma~\ref{lem:safe-confirm-cert}): reaching~\(h+2\) witnesses that
+\emph{some} honest validator safe-confirmed a block in~\(h+1\)'s interval.  It
+invokes no honest-proposer round, no slot deadline, no participation, and no
+graded-delivery premise --- only the uniform gate (Definition~\ref{def:conf-gate}), the empty-vote
+marker semantics (Definition~\ref{def:empty-target}), and the threshold arithmetic
+\(2/3-\beta>1/3\).  But it is a \emph{per-caster witness}, not canonicality.
+
+What \emph{healing adds} --- that the certified~\(C\) is \emph{common} to all
+honest validators, that \emph{no honest anchor conflicts} with it, that it
+\emph{stays canonical}, and hence that finality \emph{resumes} --- is
+\emph{conditional} on at least \(2/3\) of the stake being honest and online
+(Theorem~\ref{thm:healing-safety}), and is closed after honest head votes cross
+one post-\GST{} delivery boundary.  Commonality comes from Goldfish canonicality
+(\(f<1/2\)), no-anchor-conflict from graded delivery (fallback anchors) and anchor
+intersection (pointed anchors, Corollary~\ref{cor:anchor-vs-safe}), and permanence
+from latest-message concentration (Lemma~\ref{lem:vote-concentration}) --- or
+\(\Wvote\)-window turnover for offline validators.  We therefore do \emph{not} bill
+canonical convergence or no-anchor-conflict as pure state-and-threshold, and do not
+claim canonicality before the delivery-aligned action boundary.
+\end{remark}
+
+\begin{remark}[Timeouts are confirmation-gated, not \(\Gzero\)-gated]\label{rem:timeout-not-g0}
+The per-caster certificate (Lemma~\ref{lem:safe-confirm-cert}) rests on a
+deliberate scoping choice in the gate (Definition~\ref{def:conf-gate}): a timeout
+vote requires only that the caster have safe-confirmed into the interval,
+\emph{not} an additional \(\Gzero\) condition beyond the one already folded into
+safe confirmation.  Gating timeouts more strongly would stall the frontier exactly
+when some conflicting branch holds \(\geq \tfrac13\Dvote\), contradicting the
+requirement that timeouts flow once any interval block is safe-confirmed.  We
+therefore recover the safety of a pure-timeout advance not from a target's
+cast-time clearance but from the common safe confirmation~\(C\) together with
+latest-message concentration (Lemma~\ref{lem:vote-concentration}) --- the same forward-in-time
+machinery that underwrites permanence in the healing theorem
+(Theorem~\ref{thm:healing-safety}).  This keeps the user-facing confirmation rule
+ungated (Remark~\ref{rem:gate-scoping}): the added condition is on the \emph{vote},
+not on \(\latestConfirmed\).
+\end{remark}
+
+\begin{theorem}[Healing --- liveness leg]\label{thm:healing-liveness}
+Assume the standing hypotheses \ref{ass:heal-delta}--\ref{ass:heal-prop}, honest
+participation of at least \(2/3\) of the total, and the fixed proposer sequence
+of Section~\ref{sec:timing}, with future honest first-slot proposers and future
+honest ordinary proposers.  Assume the ordinary Simplex frontier-liveness
+property under those conditions: at every post-\GST{} current height, the
+height-fresh target votes and current-height timeout votes processed on the
+canonical chain eventually set timeout markers for at least~\(2/3\) of the
+total stake.  This is the base protocol's general liveness obligation, not an
+additional healing or nonjustifiable-height premise.  Starting after \GST{} at
+a nonjustifiable height~\(H\) (Definition~\ref{def:nonjustifiable-height}), the
+frontier eventually makes both required advances,
+\[
+  H \longrightarrow H+1 \longrightarrow H+2 .
+\]
+The first is a timeout advance (the justification branch is disabled at~\(H\));
+the second is an ordinary justification or timeout advance at height~\(H+1\).
+The second advance carries the safe-confirmation certificate
+(Lemma~\ref{lem:safe-confirm-cert}), and by then the honest head votes have
+become common by network delivery.  Thus the healing theorem
+(Theorem~\ref{thm:healing-safety}, via
+Corollary~\ref{cor:nonjustifiable-heal}) applies.
+
+Each common-anchor opportunity waits for an honest first-slot proposer
+(geometric expectation \(1/(1-\beta)\) rounds under an independent typical
+sequence); each FG height transition separately waits for an honest proposer
+to include the ordinary attestations forming its certificate.  Network delivery
+closes the grade input within~\(\Delta\) and adds no inclusion wait of its own.
+This theorem claims eventual liveness under those proposer-fairness conditions,
+not that both height transitions fit inside one first-slot-proposer wait.
+\end{theorem}
+
+\begin{proof}
+Fix either current height~\(K \in \{H,H+1\}\).  Gated-out honest validators
+cast the empty vote (Definition~\ref{def:empty-target}) rather than abstaining,
+so their head fields keep flowing and remain fresh-quorum material.  When a
+round's first slot~\(\rzero\) has an honest proposer, it points to the highest
+root with at least~\(2n/3\) direct support in the previous round
+(Lemma~\ref{lem:honest-fresh-quorum}).  By the voting action, every honest
+validator sees each supporting vote or an equivocation by its signer, so its
+credited numerator is no lower than the proposer's and it accepts the same
+root (Definition~\ref{def:fresh-quorum}).  Above the common anchor,
+the per-slot Goldfish vote view-merge makes the walk common at honest-proposer
+slots.  Available votes concentrate on the common chain and the time-shifted
+quorum available-confirms an interval block one slot later
+(Definition~\ref{def:goldfish-confirm}).  Once honest validators publish their
+next head votes there, network delivery supersedes their stale messages
+within~\(\Delta\), putting every conflicting branch below~\(\tfrac13\Dvote\)
+(Lemma~\ref{lem:vote-concentration}); that interval block is therefore
+safe-confirmed (Definition~\ref{def:safe-confirm}).  No block inclusion or
+\(\Wvote\)-window turnover is needed for online honest validators'
+concentration; \(\Wvote\) only bounds an offline validator's stale message.
+
+At~\(K=H\), the height is nonjustifiable, so the target branch is disabled.
+The marker accounting does not discard validators that already voted at~\(H\):
+a processed height-fresh target vote set~\(\timeouts[i]\) when it was processed,
+and a later empty vote neither clears nor replaces that bit.  In particular,
+votes for the unique lock target supplied by justification uniqueness
+(Lemma~\ref{lem:just-unique-height}) remain part of the marker quorum on the
+canonical chain containing that lock.  Once the common safe-confirmed head
+reaches~\(H\)'s interval, the remaining honest validators admitted by the gate
+emit current-height timeout votes (Definition~\ref{def:conf-gate}).  Ordinary
+Simplex frontier liveness and future honest-proposer inclusion therefore supply
+the~\(2/3\) marker quorum.  Since justification is disabled at~\(H\), the timeout
+branch advances the frontier to~\(H+1\).
+
+Repeat the same convergence argument at~\(K=H+1\).  The walk reaches a block at
+state-height~\(H+1\), and the common safe-confirmed head~\(C\) reaches the
+interval-first target~\(T\).  Latest-message concentration makes~\(T\)
+\(\Gzero\)-clear, so the target gate opens for fresh validators.  Existing
+height-fresh target votes already contribute markers; newly cast target and
+timeout votes contribute markers when a future honest proposer includes them.
+Ordinary Simplex frontier liveness supplies a~\(2/3\) marker quorum.  If one
+target also has~\(2/3\), the justification branch advances first; otherwise the
+timeout branch advances.  Either path reaches~\(H+2\).
+
+The second advance has a \(2n/3\) timeout-marker quorum and excludes empty votes,
+so Lemma~\ref{lem:safe-confirm-cert} supplies its per-caster safe-confirmation
+certificate.  Corollary~\ref{cor:nonjustifiable-heal} and
+Theorem~\ref{thm:healing-safety} upgrade it to a common, canonical safe
+confirmation.  The grade steps used only network delivery;
+the two inclusion waits above are exactly the remaining FG liveness obligation.
+After convergence, eventual justification and finalization are supplied by the
+same ordinary Simplex liveness argument, resuming finality on the common chain;
+nonjustifiable heights introduce no separate signing-history release
+requirement.
+\end{proof}
+
+\begin{remark}[Below \(2/3\) participation]\label{rem:sub-two-thirds}
+When participation drops below \(2/3\) of the total, no quorum of any kind forms
+and no height advances; the system runs on available-chain confirmations only,
+which continue to flow at \(f < 1/2\) because the \(\Gzero\)-veto gates FG target
+votes and the safe-confirmation label \emph{only}, never the floorless user-facing
+confirmation rule (Remark~\ref{rem:gate-scoping}).  Stabilization beyond Goldfish
+requires \(2/3\) support in any case --- an accepted design decision
+(Section~\ref{sec:open-items}).  The inactivity leak (Section~\ref{sec:leak}) then
+grinds FG-silent stake: its guards read only FG participation fields
+(Figure~\ref{alg:leak-processslot}), so a validator denying finality is pivotal
+every epoch, and the leak drives restoration over days to weeks
+(Theorem~\ref{thm:tightness}).  This is the status quo under non-finality; it
+introduces no new mechanism.
+\end{remark}
+
+\begin{theorem}[Healing]\label{thm:healing-main}
+Assume the standing hypotheses \ref{ass:heal-delta}--\ref{ass:heal-prop} and
+honest participation of at least \(2/3\) of the total, together with the
+ordinary Simplex frontier-liveness property of
+Theorem~\ref{thm:healing-liveness}.  After \GST, starting from a nonjustifiable
+height~\(H\) (Definition~\ref{def:nonjustifiable-height}), the protocol heals:
+the frontier reaches height~\(H+2\)
+(Theorem~\ref{thm:healing-liveness}), and every justification that can ever fire
+at~\(H+1\) is a justification of a common safe-confirmed block that is and stays
+canonical on every honest chain (Theorem~\ref{thm:healing-safety} via
+Corollary~\ref{cor:nonjustifiable-heal}).  The regime recurs on the
+nonjustifiable-height cadence (Lemma~\ref{lem:regeneration}): if~\(H+1\) ends
+sub-completable it is sealed \emph{in fact} and no justification can ever fire
+there, and the next guaranteed-sealed attempt is the next nonjustifiable height,
+at most~\(\Knj\) heights on; if instead \(H+1\) times out while a completable
+safe-confirmed target remains, that target's justification --- whenever it fires
+--- is safe: accountable safety (Theorem~\ref{thm:safety}) is untouched and
+per-height uniqueness (Lemma~\ref{lem:just-unique-height}) pins it to the
+safe-confirmed block, as re-established at~\(H+1\) by the healing induction
+(Theorem~\ref{thm:healing-safety}(2)).  Either way no honest chain is ever
+reorganized.  The assumed ordinary frontier-liveness property subsequently
+supplies justification and finalization on that common chain.
+\end{theorem}
+
+\begin{proof}
+Immediate from the safe-confirmation certificate
+(Lemma~\ref{lem:safe-confirm-cert}), the healing theorem
+(Theorem~\ref{thm:healing-safety}), the liveness leg
+(Theorem~\ref{thm:healing-liveness}), Corollary~\ref{cor:nonjustifiable-heal}, and
+the cadence clause of Lemma~\ref{lem:regeneration}.
+\end{proof}
+
+\subsection{Open items}\label{sec:open-items}
+
+The following points remain to be pinned down.
+
+\begin{remark}[Open items]\label{rem:open-items}
+\leavevmode
+\begin{enumerate}[label=(\arabic*)]
+  \item \emph{Base-protocol frontier liveness.}
+    The healing liveness leg invokes the ordinary Simplex argument that, under
+    synchrony, \(2/3\) online participation, and honest-proposer inclusion,
+    current-height markers eventually reach~\(2/3\) on one canonical chain.
+    Both height-fresh target votes and timeout votes set the marker.  A later
+    empty vote does not erase a previously set bit; in particular, votes from
+    validators committed to the unique lock target still count on the canonical
+    chain containing that lock.  Therefore nonjustifiable heights require no
+    special vote-history release or alignment premise.  What remains to cite or
+    prove separately is the protocol's general frontier-liveness theorem,
+    including vote inclusion on the canonical chain.
+  \item \emph{The single-step freshness discipline.}
+    The whole cross-view inference of the healing theorem is a single step: anchor
+    adoption, grade evaluation, and safe confirmation are all read at the same round
+    freeze, and Lemma~\ref{lem:graded-delivery} relates one honest evaluation to
+    another at that freeze.  What remains is a bookkeeping audit that every
+    latest-head-vote-consuming action point (each vote construction and freeze
+    evaluation) sits at least~\(\Delta\) after the publication of the messages it reads, so
+    that delivery before action (Lemma~\ref{lem:delivery-before-action}) applies,
+    together with a full formalization of the time-shifted quorum's residual
+    straggler analysis (Definition~\ref{def:goldfish-confirm}): adversary-published
+    objects whose delivery is split across a freeze are the only cross-view
+    residual, and the per-view adversarial-message cap that absorbs them
+    (Lemma~\ref{lem:graded-delivery}) should be tied precisely to the schedule.
+  \item \emph{Behavior for \(\beta \in (1/3, 1/2)\).}
+    Above \(\beta = 1/3\) honest stake alone cannot give a root
+    \(\tfrac23\)-absolute direct fresh support, and the single-step graded-delivery
+    guarantee no longer holds (\(\beta/(1-\beta) \geq 1/2\)).  A local grade-1
+    anchor may still form, but it no longer has the cross-view grade-0 relation
+    required by healing.  The protocol then runs on the available chain,
+    \(F/J\), and the inactivity leak alone.  This is an accepted design decision:
+    stabilization beyond Goldfish requires \(2/3\) support in any case
+    (Remark~\ref{rem:sub-two-thirds}), and finality-restoration in this regime is
+    left to the leak (Theorem~\ref{thm:tightness}).
+  \item \emph{Pointer equivocation by the \(\rzero\) proposer.}
+    A first-slot proposer that points to two conflicting roots in
+    conflicting proposals is equivocating on its proposal --- the existing
+    proposal-equivocation handling applies, and the fault is confined to a single
+    round.  Each honest validator evaluates the root of whichever proposal it
+    processes against its own credited previous-round support.  Fresh-root
+    intersection (Lemma~\ref{lem:quorum-intersection-sg}) guarantees that two
+    roots cannot both be accepted and conflict without at least~\(n/3\)
+    equivocating stake, so healing safety is unaffected.
+  \item \emph{Layer-1 exposure of the empty vote.}
+    The empty vote does not set~\(\timeouts[i]\)
+    (Definition~\ref{def:empty-target}), so a gate-blocked honest validator is
+    exposed to the Layer-1 stall leak while it emits empty votes, now at
+    \emph{any} gated-out height (Remark~\ref{rem:empty-vote-marker}).  The
+    exposure is negligible under the healing dynamics --- gate-blocked silence is
+    sub-epoch while the leak accrues per epoch --- but exact neutrality is not
+    forced by the mechanism alone.  The listed leak-neutral alternative is a
+    per-validator \emph{presence field} that exempts the empty vote from the
+    Layer-1 guard without counting it toward the timeout certificate; it adds one
+    state field.  A precise bound for the sub-epoch exposure should be stated.
+  \item \emph{The optional per-branch anchor-monotonicity rule.}
+    Pointing carries no cross-round validator state.  The optional hardening of
+    Remark~\ref{rem:anchor-monotone} --- a proposal's pointed anchor must extend
+    the most recent pointed anchor among its own ancestors --- is a chain-data
+    validity predicate, not load-bearing for any theorem here; its interaction
+    with liveness (does it ever reject an honest proposal?) and its exact
+    encoding are left open.
+  \item \emph{The \(\latestConfirmed\) interface to FG and SG.}
+    \(\mathrm{latest\_confirmed\_head}\) is a recently added, still underexplored
+    part of the spec.  The priority question is its \emph{interface} to safe
+    confirmation (Definition~\ref{def:safe-confirm}): the times at which the
+    available-confirmation rule is run and the way its result is stored must be
+    compatible with the freeze at which the gates read the safe-confirmed
+    head~\(C\) (Definition~\ref{def:conf-gate}).  Under the phase schedule
+    (Definition~\ref{def:slots}) confirmation consistency is structural via the
+    time-shifted quorum (Definition~\ref{def:goldfish-confirm}); the residual is
+    that~\(\Delta\) bounds real delay within each phase
+    (Assumption~\ref{ass:heal-delta}).  The interface to \emph{user}
+    confirmation is important but secondary here.
+  \item \emph{RANDAO branch-relativity of committees.}
+    Available committees are branch-relative through RANDAO; identity-keyed vote
+    stores (equivocation keyed on validator, slot, and data, not on a
+    per-position seat) are a spec-side prerequisite for the Goldfish layer to
+    attribute votes correctly across branch families.  The fixed-and-exogenous
+    proposer sequence of Section~\ref{sec:timing} is a modeling choice and does
+    not discharge this prerequisite.  Proposer-sequence manipulation (RANDAO
+    grinding, seed biasing of first-slot positions) is correspondingly out of
+    scope.
+\end{enumerate}
+\end{remark}
+
+\end{document}
