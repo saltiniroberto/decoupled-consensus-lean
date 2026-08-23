@@ -3775,7 +3775,14 @@ definitions, in place; (2) a script that extracts, out of the Lean files, a docu
 similar to the source `consensus-1.pdf`. Stream 2 works against `extract/Consensus1-frozen/`,
 a plain copy of `lean/Spec/Consensus1/` (frozen at `909b4f6`), so the live spec can keep
 moving under stream 1; `extract/README.md` carries the rules (nothing imports the copy, no
-build target reads it, refresh only on instruction). The script itself is not started.
+build target reads it, refresh only on instruction). Roberto chose the target: LaTeX
+compiled to PDF, figures plus prose. `extract/extract.py` is the v1 pipeline
+(`python3 extract/extract.py`, output in the gitignored `extract/out/`): module headers →
+section prose, docstring `(Figure N, lines a–b)` citations → figure membership and order,
+`-- line n` comments → the pdf's line numbers, docstrings → note paragraphs; LuaLaTeX with
+a DejaVu fallback carries the unicode, so there is no symbol-translation table. The open
+part is the Lean-to-pseudocode rewriting: v1 prints lightly cleaned Lean, and the rewrite
+rules are meant to accumulate in `clean_code_line`.
 
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
