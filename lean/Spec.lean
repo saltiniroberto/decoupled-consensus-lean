@@ -24,6 +24,7 @@ import Spec.Consensus1.Notation
 import Spec.Consensus1.FinsetM
 import Spec.Consensus1.Raise
 import Spec.Consensus1.Nondet
+import Spec.Consensus1.OldDefs
 import Spec.Consensus1.Fig6StateTransition
 import Spec.Consensus1.Store
 import Spec.Consensus1.Fig1GoldfishWalk
@@ -89,13 +90,14 @@ can replace a reading and Lean cannot. So the superseded layers' routines sit in
 Figure 7's, written `S.getHead`. `ghost`, which all the layers instantiate, sits in
 `Consensus1` itself.
 
-Five of its files render no figure: `Model.lean` (Section 1's substrate and the wire objects),
+Its non-figure files: `Model.lean` (Section 1's substrate and the wire objects),
 `Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add), its own copies of
-`Notation.lean` and `Raise.lean`, and `FinsetM.lean` — the monadic image, which *imports* the
+`Notation.lean` and `Raise.lean`, `FinsetM.lean` — the monadic image, which *imports* the
 second rendering's `FinsetM.lean` instead of copying it, a root-namespace declaration being
-uncopyable. The import order is dependency order rather than figure
-order: Figure 6's chain state is what the store's `Σ.σ[·]` maps into, and Figure 3's
-confirmation is what Figure 2's `on_tick` calls.
+uncopyable — `Nondet.lean`, the nondeterminism vocabulary the 2026-08-23 adoption rests on,
+and `OldDefs.lean`, parked definitions kept compiling. The import order is dependency order
+rather than figure order: Figure 6's chain state is what the store's `Σ.σ[·]` maps into, and
+Figure 3's confirmation is what Figure 2's `on_tick` calls.
 
 Present from the old source: healing's Figures 1 (`alg:state-replay`) and 2 (`alg:attestation-processing`),
 the companion's Figure 2 (`hft:alg:store`), and the vocabulary those three need. Healing's

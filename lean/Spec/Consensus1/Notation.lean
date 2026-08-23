@@ -102,27 +102,6 @@ macro_rules
         `(doElem| $v:ident :=
             { $v with $f:ident := Function.update (($v).$f:ident) $i $e })
 
-/-- `σ.arr[i][j] ← e`, a doubly indexed write to a map-of-maps field, and `x[i][j] ← e` to
-    a map-of-maps local. `Σ.head[r][i] ← (α.head, Σ.t)` is the case Figure 6 needs. Not in
-    the old notation layer, which never met a two-level map. -/
-scoped syntax (name := idx2Assign) (priority := high)
-  ident noWs "[" term "]" noWs "[" term "]" " ← " term : doElem
-
-macro_rules
-  | `(doElem| $x:ident[$i][$j] ← $e) => do
-      let n := x.getId
-      let pre := n.getPrefix
-      if pre.isAnonymous then
-        `(doElem| $x:ident :=
-            Function.update $x:ident $i (Function.update ($x:ident $i) $j $e))
-      else
-        let v := mkIdent pre
-        let f := mkIdent (Name.mkSimple n.getString!)
-        `(doElem| $v:ident :=
-            { $v with $f:ident :=
-                (Function.update (($v).$f:ident) $i
-                  (Function.update ((($v).$f:ident) $i) $j $e)) })
-
 /-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in the
     draft's own clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads
     a store map with the raising bracket has no monad to fail into; this form expands to

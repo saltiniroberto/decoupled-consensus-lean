@@ -29,14 +29,13 @@ right: a `Set`, or a `Finset` read as its members, so set-builders, bracket read
 store fields pick directly. A pick from the empty set has **no outcomes** — the empty set of
 results, not a raise.
 
-## The loop over a `Finset`, at last
+## `listings`, and the loop that moved out
 
-The monad carries nondeterminism, so the loop no pure monad can have is definable: iterate
-in *some* order — a pick from `listings s`, the set of duplicate-free orderings — with every
-order among the outcomes. No `Classical.choice`, no commutativity demand: an order-free body
-gives a (provably) singleton outcome set, an order-sensitive one honestly widens it rather
-than getting a silently chosen order. `listings` is a predicate, not an enumeration: no list
-is ever built, so none is ever chosen.
+`listings s` is the set of duplicate-free orderings of `s` — a predicate, not an
+enumeration: no list is ever built, so none is ever chosen. `propose_block` picks one for
+the block's carried votes. The `ForIn` over `Finset` it once powered — pick a listing, loop
+the list, every visitation order among the outcomes — lost its last consumer in the
+2026-08-23 migration and is parked in `OldDefs.lean`.
 
 ## Consuming a stack
 
@@ -97,13 +96,5 @@ macro_rules
 /-- Every duplicate-free listing of `s` — a predicate, never an enumeration. -/
 def listings {α : Type} [DecidableEq α] (s : Finset α) : Set (List α) :=
   { l | l.Nodup ∧ l.toFinset = s }
-
-/-- `for x in (s : Finset α) do …`, in any monad `Set` lifts into: pick a listing, loop the
-    list. See the module header on what the outcome set means. -/
-scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [DecidableEq α] :
-    ForIn m (Finset α) α where
-  forIn s init body := do
-    let l ← liftM (listings s)
-    forIn l init body
 
 end Consensus1
