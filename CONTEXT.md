@@ -3730,6 +3730,16 @@ annihilating where an error survives (the `∈ᴹ` builder's expansion now pins 
 this reason); and a quotation's global names resolve at macro declaration, so `Notation.lean`
 had to import `Raise.lean` before its expansion could name `ResultOrExcept`.
 
+### `Spec/Consensus1/doc/` — reader-facing pages for the design — 2026-08-23
+
+On Roberto's word ("perhaps in a doc folder under consensus-1 for now"): four markdown
+pages under `lean/Spec/Consensus1/doc/` — `README.md` (index), `nondeterminism.md`
+(`NDR`/`NDRE`, the pick, consumption as `res ∈ (…).run`), `naming.md` (the full-name
+scheme, the `Fig<n>` table), `style.md` (the remaining rulings, one line each). They state
+the decisions for a reader of the subtree; the decision trails stay here. **This file is
+the record**: when a ruling changes, update the entry here and then the page. The "for
+now" is Roberto's — the folder may move.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
