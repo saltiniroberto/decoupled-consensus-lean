@@ -164,9 +164,9 @@ def Store.finalityVote (S : Store Validator) :
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     DRE (DutyResult Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair
-  let { pair := ht, state := S } ← S.heightVote     -- then the current-height pair
+  let { pair := hp, state := S } ← S.heightVote     -- then the current-height pair
   let a := Attestation.mk (validator := S.i) (round := round S.s) (head := head)
-    (heightPair := ht) (finalityPair := fp)
+    (heightPair := hp) (finalityPair := fp)
   return { state := S, send := {Message.attestation a} }
 
 end Consensus1

@@ -110,11 +110,10 @@ def Store.sgVote (i : Validator) (S : Store Validator)
     there is `∅`. -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
-  let res : DutyResult Validator ← Fig2.onTick i S t isProposer
+  let { state := S, send := send } ← Fig2.onTick i S t isProposer
   -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
-  if _ : res.state.t = SGSchedule.a (round res.state.s) then
-    let sg := res.state.sgVote i
-    return { state := sg.state, send := res.send ∪ sg.send }
-  return res
+  if _ : S.t = SGSchedule.a (round S.s) then
+    return (S.sgVote i).withSend send
+  return { state := S, send := send }
 
 end Consensus1

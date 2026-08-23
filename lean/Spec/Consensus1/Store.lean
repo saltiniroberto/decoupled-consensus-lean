@@ -262,4 +262,11 @@ structure DutyResult (Validator : Type) [Roots] where
   /-- The messages broadcast, for the network to deliver. -/
   send : Finset (Message Validator)
 
+/-- `d.withSend prior`: `d` with an earlier duty's broadcasts unioned into its own — for a
+    caller that ran `d`'s duty on that earlier result's store and owes both sends
+    (Roberto, 2026-08-24; `Store.onTick`'s composition is the consumer). -/
+def DutyResult.withSend (d : DutyResult Validator)
+    (prior : Finset (Message Validator)) : DutyResult Validator :=
+  { d with send := prior ∪ d.send }
+
 end Consensus1
