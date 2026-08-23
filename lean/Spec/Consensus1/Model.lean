@@ -75,8 +75,9 @@ kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `non
 
 The draft writes `⊥` for an absent block or height: the empty target, the empty head, the
 absent latest round. That is `Option.none` here, given the `⊥` spelling by a scoped `Bot`
-instance. Spec bodies test absence as the draft writes it — `x ≠ ⊥`, never `.isSome` — and
-extract with `x.value` (Roberto, 2026-08-23); both are defined below.
+instance. Spec bodies test absence as the draft writes it — `x ≠ ⊥`, never `.isSome`
+(Roberto, 2026-08-23) — and a raising body extracts by the lift in `Raise.lean`,
+`let y ← x` (Roberto, 2026-08-24).
 -/
 
 set_option autoImplicit false
@@ -86,17 +87,6 @@ namespace Consensus1
 /-- `⊥` for an absent block, height or head, as the draft writes it. Scoped, so it cannot
     leak into a file that means something else by `⊥`. -/
 scoped instance {α : Type} : Bot (Option α) := ⟨none⟩
-
-/-- The value of an option already tested against `⊥`: the hypothesis `x ≠ ⊥` — the
-    draft's own spelling of the test, which this subtree prescribes over `.isSome` — is
-    an autoparam, so a dependent `if _ : x ≠ ⊥` discharges it invisibly and the branch
-    writes `x.value`, no named hypothesis and no proof term. (A coercion cannot do this:
-    coercion resolution sees types only, and a hypothesis in context is invisible to it.)
-    The tactic is the instants' own, so a test buried in a conjunction still
-    discharges. -/
-def _root_.Option.value {α : Type} (x : Option α)
-    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
-  x.get (Option.ne_none_iff_isSome.mp h)
 
 /-! ## Validators and weights -/
 

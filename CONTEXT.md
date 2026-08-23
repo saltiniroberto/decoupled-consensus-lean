@@ -3884,17 +3884,18 @@ this list when a new call lands.
   `Finset`. The `all` token is freed with them.
 - **No `match` and no `|` alternatives in spec bodies** — the dependent-`if` idiom;
   recursion patterns like a `for`-range bound are the tolerated shape. **Absence is tested
-  `x ≠ ⊥`, never `.isSome`** (Roberto, 2026-08-23), and extraction is `x.value` —
-  `Option.value` in `Model.lean`, whose `x ≠ ⊥` hypothesis is an autoparam the dependent
-  `if _ :` discharges, so no named hypothesis and no proof term appear. It is declared
-  `_root_.Option.value`: dot notation resolves fields in the type's own namespace only, so
-  a `Consensus1.Option.value` is invisible to `x.value` (measured). The store's map
+  `x ≠ ⊥`, never `.isSome`** (Roberto, 2026-08-23), and in a raising body extraction is
+  the lift: `let y ← x` binds the value or raises, via the scoped
+  `MonadLift Option ResultOrExcept` in `Raise.lean` (Roberto, 2026-08-24, "do that, also
+  wherever applicable"; probe `scratch/OptionLiftProbe.lean`). Behind a plain
+  `if x ≠ ⊥` the raise is unreachable; the accepted cost, stated at the instance, is
+  that dropping the test leaves compiling code that raises where a rule meant to fall
+  through. The autoparam extraction that did check at the site, `Option.value`, lost its
+  three consumers to the lift the same day and is parked in `OldDefs.lean` (revived by a
+  *pure* body that must extract; its measured trap travels with it — dot notation
+  resolves fields in the type's own namespace only, hence `_root_.`). The store's map
   machinery (`GetElem` instances, the `StateMap` membership) keeps `.isSome` internally —
-  the rule is about spec bodies. Since 2026-08-24 (Roberto, "let's see how it goes") a
-  scoped `MonadLift Option ResultOrExcept` in `Raise.lean` also makes `let y ← x` bind an
-  `Option` in any raising block — value or raise; probe `scratch/OptionLiftProbe.lean`.
-  Its docstring reserves it for reads where absence marks an incoherent store: where
-  absence is a normal branch, the `≠ ⊥` test stays. **No `∣` (divides)**: write
+  the rule is about spec bodies. **No `∣` (divides)**: write
   `% … = 0`.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
   likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form

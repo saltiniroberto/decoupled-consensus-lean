@@ -96,11 +96,11 @@ def Store.heightVote (S : Store Validator) :
   let h := σC.h
   if S.H.signedEmptyTarget h then                   -- case 1: repeat the empty target
     return (.emptyTarget h, S)
-  if _ : S.H.firstLock h ≠ ⊥ then                   -- case 2: repeat the lock
-    let lock := (S.H.firstLock h).value
+  if S.H.firstLock h ≠ ⊥ then                       -- case 2: repeat the lock
+    let lock ← S.H.firstLock h
     if lock ⪯ C then return (.target h lock, S) else return (.empty, S)
-  if _ : S.H.firstTarget h ≠ ⊥ then                 -- case 3: repeat the named target
-    let target := (S.H.firstTarget h).value
+  if S.H.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
+    let target ← S.H.firstTarget h
     if target ⪯ C then return (.target h target, S)
     S.H ← S.H.saveEmptyTarget h
     return (.emptyTarget h, S)

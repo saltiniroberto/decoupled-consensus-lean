@@ -38,6 +38,17 @@ macro_rules
                 (Function.update (($v).$f:ident) $i
                   (Function.update ((($v).$f:ident) $i) $j $e)) })
 
+/-- The autoparam extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis
+    discharged from a dependent `if _ : x ≠ ⊥` by the instants' own tactic. From
+    `Model.lean`, superseded 2026-08-24 by the raising lift in `Raise.lean` —
+    `let y ← x` behind a plain `≠ ⊥` test — which took its three consumers. Revived by a
+    *pure* body that must extract, where no lift can fire. The measured trap it carries:
+    dot notation resolves fields in the type's own namespace only, hence the `_root_.`
+    (a `Consensus1.Option.value` is invisible to `x.value`). -/
+def _root_.Option.value {α : Type} (x : Option α)
+    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
+  x.get (Option.ne_none_iff_isSome.mp h)
+
 /-- `for x in (s : Finset α) do …`, in any monad `Set` lifts into: pick a listing, loop the
     list — every visitation order among the outcomes. From `Nondet.lean`; after the
     2026-08-23 migration no spec routine loops over a `Finset` (`ghost` loops a range, the

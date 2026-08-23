@@ -28,12 +28,12 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 - **No `match` and no `|` alternatives.** The dependent `if` idiom instead, binding `_`
   unless the hypothesis's name is used. A `for`-range bound is the tolerated recursion
   shape (`ghost`'s loop).
-- **Absence is tested `x ≠ ⊥`, never `.isSome`**, and the branch extracts with
-  `x.value` — its `x ≠ ⊥` hypothesis is an autoparam the dependent `if _ :` discharges
-  (`Option.value`, `Model.lean`). The store's map machinery keeps `.isSome` internally;
-  the rule is about spec bodies. A raising read out of an `Option` — `let y ← x` in a
-  raising block, value or raise — is the scoped `MonadLift Option ResultOrExcept` in
-  `Raise.lean`, reserved for reads where absence marks an incoherent store.
+- **Absence is tested `x ≠ ⊥`, never `.isSome`**, and in a raising body the branch
+  extracts by the lift: `let y ← x`, value or raise (the scoped
+  `MonadLift Option ResultOrExcept`, `Raise.lean`) — behind the `≠ ⊥` test the raise is
+  unreachable. The store's map machinery keeps `.isSome` internally; the rule is about
+  spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
+  `OldDefs.lean`.)
 - **No `∣` (divides)**: write `% … = 0`.
 - **What the pdf writes inline stays inline.** `voters_count` and the equivocator set are
   `let`s at each use site, because the pdf makes them locals, not definitions.

@@ -126,8 +126,8 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
   if B.slot > S.s then                                         -- line 2
     return S                                                   -- line 3
   -- line 4: `Σ.σ[B] ← state_transition(Σ.σ[B.parent], B)` — new at this layer
-  if _ : B.parent ≠ ⊥ then
-    let σp ← S.σ[(B.parent).value]
+  if B.parent ≠ ⊥ then
+    let σp ← S.σ[(← B.parent)]
     S.σ[B] ← some (stateTransition σp B)
   else
     return S
