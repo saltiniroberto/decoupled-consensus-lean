@@ -3861,9 +3861,13 @@ collapses fell out of store access, both on the crossing list: the ceiling alway
 (`live_confirmed` is a block from genesis on, so the first rendering's nothing-confirmed
 case is unrepresentable), and the two heights are the same state's (`hC = k`), so the
 `hC ≥ k` conditions hold outright and are unwritten. The explicit-`H` threading and the
-qualified-call trap are history from the first pass. The rules' results are a named
-structure, not a pair (Roberto, 2026-08-24, the `DutyResult` move): `SigningResult`
-(`signed`, `state`), at all three rules.
+qualified-call trap are history from the first pass. The pair rules return a named
+structure, not a product (Roberto, 2026-08-24, the `DutyResult` move): `SigningResult`
+(`pair`, `state`; the field was `signed` for a day). `Store.fgVote` itself returns a
+`DutyResult` like every duty (Roberto, same day): the attestation travels as
+`Message.attestation` — a constructor the draft does not have, the wire decision recorded
+on it (the draft never says how attestations reach a proposer; the first specification's
+attestation is a wire message, and the import keeps that answer).
 
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 

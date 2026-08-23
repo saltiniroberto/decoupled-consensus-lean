@@ -515,11 +515,17 @@ instance : DecidableEq (SGVote Validator) := fun a b =>
   decidable_of_iff (a.validator = b.validator ∧ a.round = b.round ∧ a.head = b.head)
     (by cases a; cases b; simp)
 
-/-- A wire message: what a duty broadcasts. The draft's three wire objects as one type — the
+/-- A wire message: what a duty broadcasts. The draft's wire objects as one type — the
     shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
     can name what it sends (Roberto, 2026-08-23). The equality instance is derived, sitting
     below the hand-written ones it needs; its first consumer is `Store.onTick`'s send union
-    (same day). -/
+    (same day).
+
+    The `attestation` constructor is **not the draft's** (Roberto, 2026-08-24): the draft's
+    blocks carry attestations but it never says how one travels from signer to proposer,
+    because it never defines the signing layer at all. The first specification's
+    attestation is a wire message, and `FinalityVote.lean` imports that answer with the
+    rest of the strategy, so `Store.fgVote` can be a duty. -/
 inductive Message (Validator : Type) [Roots] where
   /-- A proposed block. -/
   | block (B : Block Validator)
@@ -527,6 +533,8 @@ inductive Message (Validator : Type) [Roots] where
   | gfVote (v : GoldfishVote Validator)
   /-- An SG vote. -/
   | sgVote (v : SGVote Validator)
+  /-- An attestation — not one of the draft's messages; see above. -/
+  | attestation (a : Attestation Validator)
 deriving DecidableEq
 
 

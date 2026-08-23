@@ -74,13 +74,13 @@ namespace Consensus1
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
 
-/-- What a signing rule produces: the signed thing — a pair, or the whole attestation —
-    and the store afterwards, its `Σ.H` already carrying the rule's record write. The
-    `DutyResult` move, for the same reason: a named structure where a bare pair would
-    make the caller remember which component is which. -/
+/-- What a pair rule produces: the height or finality pair it signed, and the store
+    afterwards, its `Σ.H` already carrying the rule's record write. The `DutyResult` move,
+    for the same reason: a named structure where a bare product would make the caller
+    remember which component is which. -/
 structure SigningResult (Validator : Type) [Roots] (α : Type) where
-  /-- What the rule signed. -/
-  signed : α
+  /-- The pair the rule signed. -/
+  pair : α
   /-- The store afterwards. -/
   state : Store Validator
 
@@ -107,25 +107,27 @@ def Store.heightVote (S : Store Validator) :
   let σC ← S.σ[C]
   let h := σC.h
   if S.H.signedEmptyTarget h then                   -- case 1: repeat the empty target
-    return { signed := .emptyTarget h, state := S }
+    return { pair := .emptyTarget h, state := S }
   if S.H.finalityTarget h ≠ ⊥ then                  -- case 2: repeat the finality target
     let finalityTarget ← S.H.finalityTarget h
-    if finalityTarget ⪯ C then return { signed := .target h finalityTarget, state := S }
-    return { signed := .empty, state := S }
+    if finalityTarget ⪯ C then
+      return { pair := .target h finalityTarget, state := S }
+    return { pair := .empty, state := S }
   if S.H.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
     let target ← S.H.firstTarget h
-    if target ⪯ C then return { signed := .target h target, state := S }
+    if target ⪯ C then
+      return { pair := .target h target, state := S }
     S.H ← S.H.saveEmptyTarget h
-    return { signed := .emptyTarget h, state := S }
+    return { pair := .emptyTarget h, state := S }
   if σC.nj then                                     -- case 4: no record, nonjustifiable
     S.H ← S.H.saveEmptyTarget h
-    return { signed := .emptyTarget h, state := S }
+    return { pair := .emptyTarget h, state := S }
   let T := σC.T_h                                   -- case 5: no record, sign the state's
   if T ⪯ C then                                     --   target when it sits below `C`
     S.H ← S.H.saveTarget h T
-    return { signed := .target h T, state := S }
+    return { pair := .target h T, state := S }
   S.H ← S.H.saveEmptyTarget h
-  return { signed := .emptyTarget h, state := S }
+  return { pair := .emptyTarget h, state := S }
 
 /-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
     height and the finalization from the store — exactly when it is ahead of the
@@ -137,24 +139,29 @@ def Store.heightVote (S : Store Validator) :
 def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
-  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.firstTarget S.h_j = some S.J ∧
+  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.firstTarget S.h_j = S.J ∧
       ¬ S.H.signedEmptyTarget S.h_j ∧
-      (S.H.finalityTarget S.h_j = ⊥ ∨ S.H.finalityTarget S.h_j = some S.J) then
+      (S.H.finalityTarget S.h_j = ⊥ ∨ S.H.finalityTarget S.h_j = S.J) then
     S.H ← S.H.saveFinalityTarget S.h_j S.J
-    return { signed := .pair S.h_j S.J, state := S }
-  return { signed := .empty, state := S }
+    return { pair := .pair S.h_j S.J, state := S }
+  return { pair := .empty, state := S }
 
-/-- The combined attestation: the two pair rules evaluated **in order** — first the
-    finality pair, whose record write rides the store the current-height rule then reads.
-    That ordering is what keeps the two pairs of one attestation from contradicting each
-    other; the claim itself is `Analysis/` matter. The round is `round(Σ.s)`; `head` and
-    `hasJC` stay explicit — see the module header. The head is carried, not derived. -/
+/-- The FG duty: the two pair rules evaluated **in order** — first the finality pair,
+    whose record write rides the store the current-height rule then reads. That ordering
+    is what keeps the two pairs of one attestation from contradicting each other; the
+    claim itself is `Analysis/` matter.
+
+    A `DutyResult`, as every duty (Roberto, 2026-08-24): the attestation travels as the
+    broadcast — `Message.attestation`, the wire decision recorded on that constructor —
+    and the returned store carries both record writes. The round is `round(Σ.s)`; `head`
+    and `hasJC` stay explicit — see the module header. The head is carried, not
+    derived. -/
 def Store.fgVote (i : Validator) (S : Store Validator) (head : Option (Block Validator))
-    (hasJC : Bool) : ResultOrExcept (SigningResult Validator (Attestation Validator)) := do
+    (hasJC : Bool) : ResultOrExcept (DutyResult Validator) := do
   let fin := S.finalityVote hasJC                   -- first the finality pair
   let ht ← fin.state.heightVote                     -- then the current-height pair
-  return { signed := Attestation.mk (validator := i) (round := round S.s) (head := head)
-             (heightPair := ht.signed) (finalityPair := fin.signed),
-           state := ht.state }
+  let a := Attestation.mk (validator := i) (round := round S.s) (head := head)
+    (heightPair := ht.pair) (finalityPair := fin.pair)
+  return { state := ht.state, send := {Message.attestation a} }
 
 end Consensus1
