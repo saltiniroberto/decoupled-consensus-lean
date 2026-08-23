@@ -643,7 +643,7 @@ class Rewriter:
                     i += 1
                     continue
                 if x == "←" and i + 1 < n:
-                    out.extend(sp_sym("←"))
+                    out.extend([("space", " "), ("sym", "←"), ("space", " ")])
                     i += 1
                     continue
                 if x in ("∧", "∨") :
@@ -813,6 +813,9 @@ class Rewriter:
         # Lean/Mathlib generics applied prefix-style: max a b -> max(a, b)
         if spans is None and qname in self.BUILTINS:
             args, j = self.collect_atoms(tree, i)
+            if len(args) == 1 and len(args[0]) == 1 and is_group(args[0][0], "(") \
+                    and any(x == "," for x in args[0][0]["items"]):
+                args = split_top(args[0][0]["items"], ",")
             if args:
                 name = snake(qname.split(".")[-1])
                 vals = [self.render_atom(a) for a in args]
@@ -848,8 +851,9 @@ class Rewriter:
         # otherwise: a variable and its fields
         if spans is None:
             spans = self.field_chain(self.render_var(parts[0]), parts[1:])
-            # a bare name written with its own parens — `w({…})` — keeps them tight
-            if len(parts) == 1 and i < n and is_group(tree[i], "("):
+            # a name written with its own parens — `w({…})`, `Σ.timestamp(x)` — keeps
+            # them tight
+            if i < n and is_group(tree[i], "("):
                 spans = spans + [("sym", "(")] + \
                     self.expr(tree[i]["items"], depth + 1) + [("sym", ")")]
                 i += 1
@@ -906,8 +910,9 @@ class Rewriter:
         if snake(name) != name:
             self.miss = True
         elif len(name) > 1 and name[0].isupper() and not is_greek(name) \
-                and not SUBSCRIPT_ID.match(name) \
+                and not is_greek(name[0]) and not SUBSCRIPT_ID.match(name) \
                 and (any(c.islower() for c in name[1:]) or name.isupper()):
+            # greek-initial names (`Δs`, `ηSG`) are paper vocabulary, not Lean types
             self.miss = True
         return [("id", snake(name))]
 
@@ -1037,6 +1042,11 @@ class Rewriter:
     def render_call(self, target, recv_spans, tree, i):
         """Render a routine/def application. tree[i] is the first argument token."""
         args, i = self.collect_atoms(tree, i)
+        # a prose span writes the call in paper form — `ghost(anchor, tree, …)` — so a
+        # single parenthesized comma tuple is the argument list, not one argument
+        if len(args) == 1 and len(args[0]) == 1 and is_group(args[0][0], "(") \
+                and any(x == "," for x in args[0][0]["items"]):
+            args = split_top(args[0][0]["items"], ",")
         if isinstance(target, Routine):
             spans = self.routine_call(target, recv_spans, args)
             return spans, i
