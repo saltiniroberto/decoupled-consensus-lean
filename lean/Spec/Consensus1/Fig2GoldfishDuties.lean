@@ -1,6 +1,5 @@
 import Mathlib.Data.Finset.Union
 import Spec.Consensus1.Fig3AvailableConfirmation
-import Spec.Consensus1.Fig5SGDuty
 
 /-!
 # Figure 2 — the Goldfish duties and store handlers
@@ -14,9 +13,8 @@ The `-- line n` comments use Figure 2's own line numbering, in the draft as of 2
 The routines appear callee-first; the figure's order is `on_tick`, `process_block`,
 `process_goldfish_vote`, `propose_block`, `goldfish_vote`.
 
-**Figures 3, 4 and 5 come first in the import order** although they are the later figures:
-`on_tick` line 8 calls `update_confirmation`, and Section 3.4's added line calls `sg_vote`.
-The file names keep the draft's numbers.
+**Figure 3 comes first in the import order** although it is the later figure: `on_tick`
+line 8 calls `update_confirmation`. The file names keep the draft's numbers.
 
 ## `ℓ` is `i`, and the proposer test is a parameter
 
@@ -60,11 +58,14 @@ deletes. The alternative all forms declined, holding the store's votes as lists,
 "at most two distinct votes per validator" a property of a list and put a `toFinset` at
 every counting site.
 
-## `process_block` here is Figure 2's
+## `process_block` and `on_tick` here are Figure 2's
 
-Figure 7 extends it with two lines: the post-state and `update_finality`. That reading,
-`S.processBlock`, is the protocol's; this one is what Section 2 defines — hence
-`Fig2.processBlock`. See `Fig1GoldfishWalk.lean` on the figure-named readings.
+Figure 7 extends `process_block` with two lines: the post-state and `update_finality`. That
+reading, `S.processBlock`, is the protocol's; this one is what Section 2 defines — hence
+`Fig2.processBlock`. Likewise `on_tick`: Section 3.4 extends it with one line — at
+`t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`Fig5SGDuty.lean`), is the
+protocol's; this one is the figure's, hence `Fig2.onTick`. See `Fig1GoldfishWalk.lean` on
+the figure-named readings.
 -/
 
 set_option autoImplicit false
@@ -82,7 +83,7 @@ class RootComputation (Validator : Type) [Roots] where
   compute : Block Validator → Nat → Root
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [RootComputation Validator] [SGSchedule]
+  [RootComputation Validator]
 
 open Params
 
@@ -190,6 +191,9 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
 /-- `on_tick(Σ, t)` (Figure 2, lines 1–8): set the clock and the slot, then run whichever of
     the slot's actions this instant is.
 
+    This is the figure's reading. Section 3.4 extends it with one line — at `t = a_r`, run
+    `sg_vote` — and that reading, `S.onTick` (`Fig5SGDuty.lean`), is the protocol's.
+
     `isProposer` is the parameter of line 3; see the module header. The three actions are
     exclusive because the draft's instants are distinct: a proposal at `t_s`, a vote at
     `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
@@ -205,13 +209,10 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     duties' autoparam tactic projects the instant out of the branch's conjunction, so no
     branch restates anything. Line 7 writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal
     whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
-    already said the two coincide. Section 3.4's SG line dispatches on the assumed
-    `SGSchedule`; the draft fixes no relation between `a_r` and the Goldfish instants, so on
-    a schedule that collided, branch order would decide — the draft's instants are taken as
-    distinct.
+    already said the two coincide.
 
     `ResultOrExcept` because all three actions are. -/
-def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
+def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
@@ -225,9 +226,6 @@ def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
   if h : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
     let S' ← S.updateConfirmation (s - 1)                      -- line 8
     return { state := S', send := ∅ }
-  -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
-  if h : t = SGSchedule.a (round s) then
-    return S.sgVote i
   return { state := S, send := ∅ }
 
 end Consensus1

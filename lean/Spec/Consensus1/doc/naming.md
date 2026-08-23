@@ -24,15 +24,20 @@ prefix is spelled in the name: `goldfishScore`, not `score`.
 
 ## The incrementally-redefined routines
 
-The draft defines three routines more than once, each later figure extending or replacing
-the earlier reading. The rule: **the last reading is the protocol's, and it bears the plain
-`Store` name**; the superseded readings are figure-named.
+The draft defines four routines more than once, a later figure or section extending or
+replacing the earlier reading. The rule: **the last reading is the protocol's, and it bears
+the plain `Store` name**; the superseded readings are figure-named.
 
-| pdf routine         | superseded readings          | the protocol's (Figure 7) |
-| ------------------- | ---------------------------- | ------------------------- |
-| `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `Store.getHead`         |
-| `process_block`     | `Fig2.processBlock`          | `Store.processBlock`      |
-| `goldfish_eligible` | `Fig1.goldfishEligible`      | `Store.goldfishEligible`  |
+| pdf routine         | superseded readings            | the protocol's                      |
+| ------------------- | ------------------------------ | ----------------------------------- |
+| `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `Store.getHead` (Figure 7)          |
+| `process_block`     | `Fig2.processBlock`            | `Store.processBlock` (Figure 7)     |
+| `goldfish_eligible` | `Fig1.goldfishEligible`        | `Store.goldfishEligible` (Figure 7) |
+| `on_tick`           | `Fig2.onTick`                  | `Store.onTick` (Section 3.4)        |
+
+`on_tick` is the one whose extension is rendered as a call rather than a rewrite: Section
+3.4 says "`on_tick` gains one line", and `Store.onTick` is exactly that — it runs
+`Fig2.onTick`, then the one line at `t = a_r`.
 
 So a caller who writes `S.getHead` gets the protocol's fork choice without thinking about
 layers, and a reader who sees `Fig2.processBlock` inside `Store.proposeBlock` knows that

@@ -1,9 +1,11 @@
 import Spec.Consensus1.Fig4SGForkChoice
+import Spec.Consensus1.Fig2GoldfishDuties
 
 /-!
 # Figure 5 — the SG duty and store handler
 
-`sg_vote`, run at the round's vote time `a_r`, and `process_sg_vote`.
+`sg_vote`, run at the round's vote time `a_r`, and `process_sg_vote` — and the protocol's
+`on_tick`, Section 3.4's extension of Figure 2's.
 
 The `-- line n` comments use Figure 5's own line numbering, in the draft as of 2026-08-22.
 
@@ -13,12 +15,14 @@ The `-- line n` comments use Figure 5's own line numbering, in the draft as of 2
 and voter of Figure 2 call the `get_head` of Figure 4; nothing else in their duties changes.
 Available confirmation is unchanged."
 
-The extra `on_tick` line **is** rendered, in Figure 2's `on_tick`: Section 5 never touches
-`on_tick`, so Figure 2's tick plus this line is the protocol's (a first reading claimed
-`Fig7FGStore.lean` carried a final `on_tick`; it carries none — corrected 2026-08-23). The
-redirected `get_head` is not: Section 5 redefines it again, and that version, `Store.getHead`,
-is the protocol's. What this file holds is the two routines Figure 5 itself introduces —
-which Section 5 does not touch.
+The extra `on_tick` line **is** rendered, as this file's `Store.onTick`: run Figure 2's
+reading, `Fig2.onTick`, and then the one line. Section 5 never touches `on_tick`, so that
+composition is the protocol's tick (a first reading claimed `Fig7FGStore.lean` carried a
+final `on_tick` — it carries none; a second inlined the line into Figure 2's `on_tick` —
+both corrected 2026-08-23). The redirected `get_head` is not rendered: Section 5 redefines
+it again, and that version, `Store.getHead`, is the protocol's. So this file holds the two
+routines Figure 5 itself introduces — which Section 5 does not touch — and the protocol's
+`on_tick`.
 
 `a_r` is "a public parameter in this intermediate protocol", not a formula the draft fixes —
 which is the `SGSchedule` class in `Model.lean`, the `Committees` move: assumed, so `on_tick`
@@ -36,7 +40,8 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Params] [SGSchedule]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
+  [RootComputation Validator] [SGSchedule]
 
 /-- `process_sg_vote(Σ, vote)` (Figure 5, lines 5–10): record a round-`r` SG vote with its
     processing time, unless it is from a future round, already held, or a third vote by a
@@ -75,6 +80,26 @@ def Store.sgVote (i : Validator) (S : Store Validator)
   -- line 4: `broadcast vote; process_sg_vote(Σ, vote)`
   return { state := S.processSGVote vote, send := {Message.sgVote vote} }
 
+/-- `on_tick(Σ, t)`, the protocol's reading. Section 3.4: "`on_tick` gains one line: at
+    `t = a_r` for the current round `r`, run `sg_vote`." Rendered as the extension it is:
+    Figure 2's `on_tick`, then the one line. Section 5 never touches `on_tick`, so no later
+    reading exists.
 
+    `Fig2.onTick` has already written the clock, so `S.t` is `t` and `S.s` its slot, and
+    the dependent `if` hands `sg_vote` its instant precondition, exactly as Figure 2's own
+    branches do.
+
+    The draft fixes no relation between `a_r` and the Goldfish instants, and its instants
+    are taken as distinct (`Fig2.onTick`'s docstring). On a schedule where `a_r` collided
+    with a Goldfish instant, this shape would run `sg_vote` on that duty's post-state and
+    drop the duty's messages; no tick the draft describes does so. -/
+def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
+    (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
+  let res ← Fig2.onTick i S t isProposer
+  let S := res.state
+  -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
+  if h : S.t = SGSchedule.a (round S.s) then
+    return S.sgVote i
+  return res
 
 end Consensus1

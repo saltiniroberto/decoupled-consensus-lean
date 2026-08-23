@@ -3534,8 +3534,10 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   adoption, the raising tie-break) and closed when `ghost`'s slot became
   `Block → ResultOrExcept Bool` — line 29 now passes `goldfish_eligible` itself.
 - Absent for want of a consumer: Section 5.1's `E_F(Σ)`, Section 4.1's E1/E2 slashing
-  conditions, Section 3.4's intermediate `on_tick` line and `get_head` redirection — Section 5
-  changes the same two places and its version is the protocol's.
+  conditions, and Section 3.4's `get_head` redirection — Section 5 redefines `get_head`
+  again and its version is the protocol's. Section 3.4's `on_tick` line first sat in this
+  list too, wrongly: Section 5 never touches `on_tick`, so the line is rendered — since
+  2026-08-23 as its own reading, `Store.onTick` (entry below).
 
 #### `Validator.lean` is untouched, and everything builds
 
@@ -3603,14 +3605,14 @@ otherwise. `sg_vote` requires `S.t = SGSchedule.a (round
 S.s)` (added 2026-08-23, second pass): its `a_r` is "a public parameter in this intermediate
 protocol", which is exactly an ambient class — `SGSchedule` in `Model.lean`, the `Committees`
 move — so the instant is stateable with no formula fixed. `on_tick` gained Section 3.4's
-line, dispatching on it. Two more
-facts from the same pass: Figure 2 now imports Figure 5 (`on_tick` calls `sg_vote`, the same
-inversion as Figure 3), and Fig5's header claim that Fig7 carried a final `on_tick` was
-wrong — Section 5 never touches `on_tick`, so Figure 2's tick plus the Section 3.4 line is
-the protocol's.
+line, dispatching on it — inlined at first; later the same day the line became its own
+reading, `Store.onTick` in `Fig5SGDuty.lean` (entry below), and the Figure 2 → Figure 5
+import the inlining had forced flipped back. A correction from the same pass: Fig5's header
+claim that Fig7 carried a final `on_tick` was wrong — Section 5 never touches `on_tick`.
 
-`on_tick` discharges all three from its own tests: each `if` became dependent, and a `have`
-restates the tested instant in the action's terms — the clock was written just above the
+`on_tick` discharges all three from its own tests: each `if` became dependent, and the
+autoparam projects the tested instant out of the branch's conjunction, no `have` (the first
+pass had one per branch) — the clock was written just above the
 tests, so `S.t` reduces to `t` whatever the base, the join-point trick recorded on
 2026-08-21. One line moved to make the third discharge a projection rather than a proof:
 line 7 tests the figure's `t_s + 2Δ` in the form `t_{s−1} + 6Δ`, equal whenever `s > 0` —
@@ -3740,6 +3742,25 @@ the decisions for a reader of the subtree; the decision trails stay here. **This
 the record**: when a ruling changes, update the entry here and then the page. The "for
 now" is Roberto's — the folder may move.
 
+### `on_tick` splits into readings: `Fig2.onTick` and `Store.onTick` — 2026-08-23
+
+Roberto: a general `on_tick` calling the sub-ticks, so Figure 2's looks like the paper.
+`Fig2.onTick` is now exactly the figure's lines 1–8. `Store.onTick`, the protocol's, lives
+in `Fig5SGDuty.lean` (whose header discusses Section 3.4) and renders "`on_tick` gains one
+line" as the extension it states: run `Fig2.onTick`, then, at `t = a_r`, `sg_vote` on the
+result's state — the clock is already written, so the dependent `if` hands `sg_vote` its
+instant autoparam as Figure 2's own branches do. The fourth incrementally-redefined routine
+under the naming scheme, and the only one whose extension is a call rather than a rewrite.
+
+The import between Figures 2 and 5 flipped back with it: the Section 3.4 line was the only
+thing Figure 2 took from Figure 5, so `Fig2GoldfishDuties.lean` dropped that import (and
+its `[SGSchedule]` binder) and `Fig5SGDuty.lean` imports it instead.
+
+One semantic edge, stated in `Store.onTick`'s docstring: on a schedule where `a_r` collided
+with a Goldfish instant, the composed form runs `sg_vote` on that duty's post-state and
+drops the duty's messages, where the inlined form skipped `sg_vote`. The draft's instants
+are taken as distinct, so no tick the draft describes distinguishes the two.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
@@ -3770,8 +3791,9 @@ this list when a new call lands.
   layer namespaces `Goldfish`/`SG`/`FG` preceded it, git history has them). `Store.…` for
   whatever a store flows into, so dot notation works; `Fig<n>.…` for a superseded reading of
   an incrementally-redefined routine (`Fig1.getHead`, `Fig4.getHead`, `Fig2.processBlock`,
-  `Fig1.goldfishEligible` — the last reading of each is the protocol's and bears the plain
-  `Store` name); a bare name for everything defined once (`ghost`, `goldfishScore`, its
+  `Fig1.goldfishEligible`, `Fig2.onTick` — the last reading of each is the protocol's and
+  bears the plain `Store` name; `on_tick`'s is Section 3.4's, rendered as a call — entry
+  above); a bare name for everything defined once (`ghost`, `goldfishScore`, its
   prefix spelled since no namespace carries it). `voters_count` is a `let` at each of its
   three sites, being a local in the pdf, like the equivocator set.
 - **Scheduled routines carry their instant as an anonymous autoparam**
