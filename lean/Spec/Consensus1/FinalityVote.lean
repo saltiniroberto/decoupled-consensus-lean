@@ -73,6 +73,16 @@ namespace Consensus1
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
 
+/-- What a signing rule produces: the signed thing — a pair, or the whole attestation —
+    and the store afterwards, its `Σ.H` already carrying the rule's record write. The
+    `DutyResult` move, for the same reason: a named structure where a bare pair would
+    make the caller remember which component is which. -/
+structure SigningResult (Validator : Type) [Roots] (α : Type) where
+  /-- What the rule signed. -/
+  signed : α
+  /-- The store afterwards. -/
+  state : Store Validator
+
 /-- The current-height signing rule: which height pair to sign, in five cases tried in
     order, the record having precedence over anything new.
 
@@ -89,30 +99,31 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
     empty target. A case that signs something new writes the record in the store it
     returns; a repeat returns the store untouched. -/
 def Store.heightVote (S : Store Validator) :
-    ResultOrExcept (HeightPair Validator × Store Validator) := do
+    ResultOrExcept (SigningResult Validator (HeightPair Validator)) := do
   let mut S := S
   let C := S.liveConfirmed
   let σC ← S.σ[C]
   let h := σC.h
   if S.H.signedEmptyTarget h then                   -- case 1: repeat the empty target
-    return (.emptyTarget h, S)
+    return { signed := .emptyTarget h, state := S }
   if S.H.firstLock h ≠ ⊥ then                       -- case 2: repeat the lock
     let lock ← S.H.firstLock h
-    if lock ⪯ C then return (.target h lock, S) else return (.empty, S)
+    if lock ⪯ C then return { signed := .target h lock, state := S }
+    return { signed := .empty, state := S }
   if S.H.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
     let target ← S.H.firstTarget h
-    if target ⪯ C then return (.target h target, S)
+    if target ⪯ C then return { signed := .target h target, state := S }
     S.H ← S.H.saveEmptyTarget h
-    return (.emptyTarget h, S)
+    return { signed := .emptyTarget h, state := S }
   if σC.nj then                                     -- case 4: no record, nonjustifiable
     S.H ← S.H.saveEmptyTarget h
-    return (.emptyTarget h, S)
+    return { signed := .emptyTarget h, state := S }
   let T := σC.T_h                                   -- case 5: no record, sign the state's
   if T ⪯ C then                                     --   target when it sits below `C`
     S.H ← S.H.saveTarget h T
-    return (.target h T, S)
+    return { signed := .target h T, state := S }
   S.H ← S.H.saveEmptyTarget h
-  return (.emptyTarget h, S)
+  return { signed := .emptyTarget h, state := S }
 
 /-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
     height and the finalization from the store — exactly when it is ahead of the
@@ -121,14 +132,14 @@ def Store.heightVote (S : Store Validator) :
     signed no empty target there, and locked nothing else there. The lock is written into
     the returned store on first release; the rule is total — every branch returns. -/
 def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
-    FinalityPair Validator × Store Validator := Id.run do
+    SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
   if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.firstTarget S.h_j = some S.J ∧
       ¬ S.H.signedEmptyTarget S.h_j ∧
       (S.H.firstLock S.h_j = ⊥ ∨ S.H.firstLock S.h_j = some S.J) then
     S.H ← S.H.saveLock S.h_j S.J
-    return (.pair S.h_j S.J, S)
-  return (.empty, S)
+    return { signed := .pair S.h_j S.J, state := S }
+  return { signed := .empty, state := S }
 
 /-- The combined attestation: the two pair rules evaluated **in order** — first the
     finality pair, whose lock write rides the store the current-height rule then reads.
@@ -136,10 +147,11 @@ def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
     other; the claim itself is `Analysis/` matter. The round is `round(Σ.s)`; `head` and
     `hasJC` stay explicit — see the module header. The head is carried, not derived. -/
 def Store.fgVote (i : Validator) (S : Store Validator) (head : Option (Block Validator))
-    (hasJC : Bool) : ResultOrExcept (Attestation Validator × Store Validator) := do
-  let (fp, S') := S.finalityVote hasJC              -- first the finality pair
-  let (hp, S'') ← S'.heightVote                     -- then the current-height pair
-  return (Attestation.mk (validator := i) (round := round S.s) (head := head)
-    (heightPair := hp) (finalityPair := fp), S'')
+    (hasJC : Bool) : ResultOrExcept (SigningResult Validator (Attestation Validator)) := do
+  let fin := S.finalityVote hasJC                   -- first the finality pair
+  let ht ← fin.state.heightVote                     -- then the current-height pair
+  return { signed := Attestation.mk (validator := i) (round := round S.s) (head := head)
+             (heightPair := ht.signed) (finalityPair := fin.signed),
+           state := ht.state }
 
 end Consensus1

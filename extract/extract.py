@@ -585,9 +585,11 @@ COMMA = [("sym", ","), ("space", " ")]
 # ---------------------------------------------------------------- the rewriter
 
 KEYWORDS = {"if", "then", "else", "return", "for", "do", "in", "fun", "let", "mut",
-            "match", "with", "true", "false"}
+            "match", "with", "true", "false",
+            # spelled-out connectives, for prose spans quoting figure lines
+            "and", "or", "not", "mod"}
 
-INFIX = set("=≠<>≤≥+-*/%∧∨∈∉∪∩\\⪯≺∼←↦") | {":=", "=>", "←ᵖ", "∈ᴹ", "→"}
+INFIX = set("=≠<>≤≥+-*/%∧∨∈∉∪∩\\⪯≺∼←↦∣") | {":=", "=>", "←ᵖ", "∈ᴹ", "→"}
 
 
 class Rewriter:
@@ -801,6 +803,12 @@ class Rewriter:
         qname = ".".join(parts)
         spans = None
         last_fld = parts[-1]
+
+        # `t_{s−1}`: a trailing-underscore name with a braced subscript, prose spelling
+        if len(parts) == 1 and parts[0].endswith("_") and len(parts[0]) > 1 \
+                and i < n and is_group(tree[i], "{"):
+            return [("id", parts[0][:-1]),
+                    ("sub", self.expr(tree[i]["items"]))], i + 1
 
         # Lean/Mathlib generics applied prefix-style: max a b -> max(a, b)
         if spans is None and qname in self.BUILTINS:

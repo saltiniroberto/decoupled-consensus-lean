@@ -3860,7 +3860,9 @@ collapses fell out of store access, both on the crossing list: the ceiling alway
 (`live_confirmed` is a block from genesis on, so the first rendering's nothing-confirmed
 case is unrepresentable), and the two heights are the same state's (`hC = k`), so the
 `hC ≥ k` conditions hold outright and are unwritten. The explicit-`H` threading and the
-qualified-call trap are history from the first pass.
+qualified-call trap are history from the first pass. The rules' results are a named
+structure, not a pair (Roberto, 2026-08-24, the `DutyResult` move): `SigningResult`
+(`signed`, `state`), at all three rules.
 
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
