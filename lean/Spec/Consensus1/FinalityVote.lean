@@ -163,10 +163,10 @@ def Store.finalityVote (S : Store Validator) :
     `head` stays explicit — see the module header. The head is carried, not derived. -/
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     DRE (DutyResult Validator) := do
-  let fin := S.finalityVote                         -- first the finality pair
-  let ht ← fin.state.heightVote                     -- then the current-height pair
+  let { pair := fp, state := S } := S.finalityVote  -- first the finality pair
+  let { pair := ht, state := S } ← S.heightVote     -- then the current-height pair
   let a := Attestation.mk (validator := S.i) (round := round S.s) (head := head)
-    (heightPair := ht.pair) (finalityPair := fin.pair)
-  return { state := ht.state, send := {Message.attestation a} }
+    (heightPair := ht) (finalityPair := fp)
+  return { state := S, send := {Message.attestation a} }
 
 end Consensus1
