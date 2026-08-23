@@ -14,6 +14,7 @@ So there is one `Store` here, with each field's docstring naming the layer it ar
       + sg_votes[·]                                                             § 3.2
       + σ[·], F, h_F, J, h_j, h_max                                             § 5.1
       + H                                       not the draft's — see `FinalityVote.lean`
+      + i                                       not the draft's — the node's own validator
 
 ## The draft's `Σ` is written `S`
 
@@ -193,6 +194,11 @@ structure Store (Validator : Type) where
       `SigningHistory.lean` and `FinalityVote.lean`. Written only by that strategy's
       rules. -/
   H : SigningHistory Validator
+  /-- `Σ.i`, the validator running this node — the draft's `ℓ`, which its figures treat
+      as ambient and **its store does not list**. A field here, so a duty can read its
+      own identity instead of taking it as a parameter (Roberto, 2026-08-24, for
+      `fgVote`). Written by nothing: fixed at `gen`. -/
+  i : Validator
 
 /-- The initial store: `Σ.T = {B_gen}`, `Σ.live_confirmed = Σ.latest_confirmed = B_gen`,
     "other fields are empty".
@@ -204,8 +210,10 @@ structure Store (Validator : Type) where
     "is justified and finalized at height 0, and every chain starts at height 1".
 
     Genesis has no timestamp: the draft's `−∞` and this `none` agree, nothing reading a
-    block's timestamp. -/
-def Store.gen : Store Validator where
+    block's timestamp.
+
+    Takes the one thing "empty" cannot supply: whose node this store is. -/
+def Store.gen (i : Validator) : Store Validator where
   t := -1
   s := 0
   T := {.genesis}
@@ -223,6 +231,7 @@ def Store.gen : Store Validator where
   h_j := 0
   h_max := 1
   H := SigningHistory.gen
+  i := i
 
 /-! ## The live tree
 

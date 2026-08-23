@@ -3867,7 +3867,14 @@ structure, not a product (Roberto, 2026-08-24, the `DutyResult` move): `SigningR
 `DutyResult` like every duty (Roberto, same day): the attestation travels as
 `Message.attestation` — a constructor the draft does not have, the wire decision recorded
 on it (the draft never says how attestations reach a proposer; the first specification's
-attestation is a wire message, and the import keeps that answer).
+attestation is a wire message, and the import keeps that answer). Two removals later on
+2026-08-24, both Roberto's: `hasJC` is gone — in this draft justification is an on-chain
+fact, the store's replayed chain being the evidence, so there is no separate
+certificate-knowledge to model (the crossing bullet records it) — and `fgVote` takes no
+identity parameter: the store carries its node's validator as the new field `Σ.i`
+(not the draft's; the draft's `ℓ` is ambient in its figures), fixed at `Store.gen`,
+which now takes it. The other duties still take `i`; whether they switch to `Σ.i` is
+open.
 
 ### `ResultOrExcept` is `DRE` — 2026-08-24
 

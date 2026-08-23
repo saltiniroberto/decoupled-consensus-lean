@@ -19,7 +19,7 @@ returns its pair **and the updated store** — the record write rides the return
 no signature is released before its record is durable:
 
 * `Store.finalityVote` signs `(h_j, J)` — the latest justification — exactly when it is
-  ahead of the finalization, on its chain, certified, and consistent with the record: the
+  ahead of the finalization, on its chain, and consistent with the record: the
   validator already signed `J` as its target at `h_j`, signed no empty target there, and
   its recorded finality target there is empty or `J` itself — written on first release.
 * `Store.heightVote` signs the current-height pair under the ceiling `Σ.live_confirmed`,
@@ -62,10 +62,14 @@ Each of these is a decision this file makes, listed so it can be revisited:
   height, so its `hC ≥ k` conditions hold outright and are not written.
 * **The round is the store's.** `r = round(Σ.s)`, as the SG duty derives it; the first
   rendering took `r` as an argument.
-* **Two inputs stay explicit, as they were.** `head`: the rule producing the SG head is a
-  separate concern (this subtree's confirmation rule), so the head the attestation carries
-  is passed in. `hasJC`: whether the validator knows a justification certificate for
-  `(h_j, J)` is knowledge of evidence, which nothing here models; it enters as a `Bool`.
+* **One input stays explicit, and one condition is dropped.** `head` stays: the rule
+  producing the SG head is a separate concern (this subtree's confirmation rule), so the
+  head the attestation carries is passed in. The first rendering's `hasJC` — "it knows
+  the justification certificate `JC(h_j, J)`", a `Bool` input there and briefly here —
+  is removed (Roberto, 2026-08-24): in this draft justification is an on-chain fact,
+  `Σ.J` and `Σ.h_j` read off replayed states whose justifying attestations sit inside
+  blocks the validator has processed, so a coherent store's own chain is the evidence
+  and there is no separate knowledge to model.
 -/
 
 set_option autoImplicit false
@@ -131,15 +135,16 @@ def Store.heightVote (S : Store Validator) :
 
 /-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
     height and the finalization from the store — exactly when it is ahead of the
-    finalization (`h_F < h_j`), on its chain (`F ⪯ J`), certified (`hasJC`), and
-    consistent with the record: the validator already signed `J` as its target at `h_j`,
-    signed no empty target there, and its recorded finality target there is empty or `J`
-    itself. That record is written into the returned store on first release; the rule is
-    total — every branch returns. -/
-def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
+    finalization (`h_F < h_j`), on its chain (`F ⪯ J`), and consistent with the record:
+    the validator already signed `J` as its target at `h_j`, signed no empty target
+    there, and its recorded finality target there is empty or `J` itself. That record is
+    written into the returned store on first release; the rule is total — every branch
+    returns. The first rendering's certificate-knowledge condition is gone — see the
+    module header. -/
+def Store.finalityVote (S : Store Validator) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
-  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.firstTarget S.h_j = S.J ∧
+  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ S.H.firstTarget S.h_j = S.J ∧
       ¬ S.H.signedEmptyTarget S.h_j ∧
       (S.H.finalityTarget S.h_j = ⊥ ∨ S.H.finalityTarget S.h_j = S.J) then
     S.H ← S.H.saveFinalityTarget S.h_j S.J
@@ -153,14 +158,14 @@ def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
 
     A `DutyResult`, as every duty (Roberto, 2026-08-24): the attestation travels as the
     broadcast — `Message.attestation`, the wire decision recorded on that constructor —
-    and the returned store carries both record writes. The round is `round(Σ.s)`; `head`
-    and `hasJC` stay explicit — see the module header. The head is carried, not
-    derived. -/
-def Store.fgVote (i : Validator) (S : Store Validator) (head : Option (Block Validator))
-    (hasJC : Bool) : DRE (DutyResult Validator) := do
-  let fin := S.finalityVote hasJC                   -- first the finality pair
+    and the returned store carries both record writes. The signer is the store's own
+    `Σ.i` (Roberto, 2026-08-24 — no identity parameter); the round is `round(Σ.s)`;
+    `head` stays explicit — see the module header. The head is carried, not derived. -/
+def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
+    DRE (DutyResult Validator) := do
+  let fin := S.finalityVote                         -- first the finality pair
   let ht ← fin.state.heightVote                     -- then the current-height pair
-  let a := Attestation.mk (validator := i) (round := round S.s) (head := head)
+  let a := Attestation.mk (validator := S.i) (round := round S.s) (head := head)
     (heightPair := ht.pair) (finalityPair := fin.pair)
   return { state := ht.state, send := {Message.attestation a} }
 
