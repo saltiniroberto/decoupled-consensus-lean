@@ -44,8 +44,6 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-namespace Store
-
 /-- `update_confirmation(Σ, s)` (Figure 3, lines 1–10), run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
 
@@ -60,7 +58,7 @@ namespace Store
 
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the Figure 2
     duties' instants are. -/
-def updateConfirmation (S : Store Validator) (s : Nat)
+def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
@@ -73,14 +71,13 @@ def updateConfirmation (S : Store Validator) (s : Nat)
   -- line 5: the denominator is `late`'s participants
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
   -- line 6: the majority gate, with no current-slot escape — see the module header
-  let eligible := fun B => 2 * Goldfish.score votes s B > votersCount
-  let H ← ghost .genesis S.T (Goldfish.score votes s) (fun B => pure (eligible B))  -- line 7
+  let eligible := fun B => 2 * goldfishScore votes s B > votersCount
+  let H ← ghost .genesis S.T (goldfishScore votes s) (fun B => pure (eligible B))  -- line 7
   S.liveConfirmed ← H                                           -- line 8
   if S.latestConfirmed ⪯ H then                                 -- line 9
     S.latestConfirmed ← H                                       -- line 10
   return S
 
-end Store
 
 
 end Consensus1

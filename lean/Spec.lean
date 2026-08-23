@@ -82,13 +82,15 @@ per-slot committees, block-carried Goldfish votes as the only relay channel, tim
 every object, and a relative-majority SG fork choice. Gone from it are the candidate tree, the
 grades, the round roots, and five of the older store's fields.
 
-**Its three layers are three namespaces.** Sections 2, 3 and 5 of that draft each redefine
-`get_head`, and Section 5 redefines `process_block` and `goldfish_eligible` as well; a draft
-can replace a reading and Lean cannot. So the superseded layers' routines sit in
-`Consensus1.Goldfish`, `Consensus1.SG` and `Consensus1.FG`, the store-taking routines sit in
-`Consensus1.Store` for dot notation, and the protocol's fork choice is `Store.getHead` —
-Figure 7's, written `S.getHead`. `ghost`, which all the layers instantiate, sits in
-`Consensus1` itself.
+**The draft defines incrementally, and the old readings are figure-named.** Sections 2, 3
+and 5 each redefine `get_head`, and Section 5 redefines `process_block` and
+`goldfish_eligible` as well; a draft can replace a reading and Lean cannot. The last reading
+of each is the protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
+`S.goldfishEligible`); each superseded reading is named by its figure — `Fig1.getHead`,
+`Fig4.getHead`, `Fig2.processBlock`, `Fig1.goldfishEligible`. Store-taking routines sit in
+`Consensus1.Store` for dot notation; everything defined once is bare (`ghost`,
+`goldfishScore`); there are no namespace blocks, every definition carrying its full name at
+its own `def`.
 
 Its non-figure files: `Model.lean` (Section 1's substrate and the wire objects),
 `Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add), its own copies of

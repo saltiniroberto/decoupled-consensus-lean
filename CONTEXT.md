@@ -3756,13 +3756,14 @@ this list when a new call lands.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
   likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form
   `{ state := …, send := ∅ }`; `match` patterns untouched.
-- **Store-taking routines live in `namespace Store`** for dot notation, and a moved name
-  whose draft prefix the layer namespace carried spells it itself (`Store.sgSupport`,
-  `Store.goldfishForkChoice` — the second corrected 2026-08-23 after Figure 1 was missed).
-  The one forced exception: names *two* layers claim — `get_head` ×3, `process_block` ×2,
-  `goldfish_eligible` ×2 — cannot share one namespace, so the protocol's readings bear the
-  `Store` names (`S.getHead`, `S.goldfishEligible`, Figure 7's) and the superseded readings
-  keep `Goldfish`/`SG`/`FG`.
+- **Full names at each `def`, no namespace blocks** (Roberto, 2026-08-23, third pass —
+  layer namespaces `Goldfish`/`SG`/`FG` preceded it, git history has them). `Store.…` for
+  whatever a store flows into, so dot notation works; `Fig<n>.…` for a superseded reading of
+  an incrementally-redefined routine (`Fig1.getHead`, `Fig4.getHead`, `Fig2.processBlock`,
+  `Fig1.goldfishEligible` — the last reading of each is the protocol's and bears the plain
+  `Store` name); a bare name for everything defined once (`ghost`, `goldfishScore`, its
+  prefix spelled since no namespace carries it). `voters_count` is a `let` at each of its
+  three sites, being a local in the pdf, like the equivocator set.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by assumption`); `on_tick` discharges them with dependent `if`s and a `have`.
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`

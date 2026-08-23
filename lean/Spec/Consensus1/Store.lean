@@ -63,7 +63,7 @@ not record, and a routine that reads the map carries `ResultOrExcept`. `B ∈ Σ
 membership — definitionally `(Σ.σ B).isSome` — and it is what "is it recorded?" is spelled
 with, `= none` being unavailable on a raising read. The raw `Option` stays reachable by
 application, `Σ.σ B`, because the map *is* a function; its one reader is the walk predicate
-inside `FG.getHead`, which cannot carry the monad — set-builders raise instead, through the
+inside `S.getHead`, which cannot carry the monad — set-builders raise instead, through the
 `FinsetM` fold machinery.
 
 All of this is the arrangement the previous rendering arrived at over 2026-08-21 and -22;

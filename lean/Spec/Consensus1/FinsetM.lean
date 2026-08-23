@@ -8,7 +8,7 @@ anything from the draft. It is general Lean machinery in the root `Finset` names
 `Spec/Consensus/FinsetM.lean` is.
 
 `Finset.image` is pure, so a function that can fail has nowhere to put the failure. `imageM`
-is the version that does. `FG.updateFinality` (Figure 7) is the caller: line 15's
+is the version that does. `Store.updateFinality` (Figure 7) is the caller: line 15's
 `max{Σ.σ[B].h : B ∈ T_F(Σ)}` reads the state map per live block, and a missing entry has to
 reach whoever asked.
 

@@ -60,11 +60,11 @@ deletes. The alternative all forms declined, holding the store's votes as lists,
 "at most two distinct votes per validator" a property of a list and put a `toFinset` at
 every counting site.
 
-## `process_block` here is the Goldfish layer's
+## `process_block` here is Figure 2's
 
-Figure 7 extends it with two lines: the post-state and `update_finality`. That version is
-`FG.processBlock`, and it is the protocol's; this one is what Section 2 defines. See
-`Fig1GoldfishWalk.lean` on why the layers are namespaces.
+Figure 7 extends it with two lines: the post-state and `update_finality`. That reading,
+`S.processBlock`, is the protocol's; this one is what Section 2 defines — hence
+`Fig2.processBlock`. See `Fig1GoldfishWalk.lean` on the figure-named readings.
 -/
 
 set_option autoImplicit false
@@ -86,15 +86,13 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-namespace Store
-
 /-- `process_goldfish_vote(Σ, vote)` (Figure 2, lines 15–20): record a slot-`k` vote with its
     processing time, unless it is from the future, already held, or a third vote by a
     validator already seen equivocating.
 
     Line 18 is where the draft's "at most two distinct votes per validator" is maintained:
     "two witness the equivocation; nothing reads a third". -/
-def processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
+def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
   let mut S := S
   -- line 16
@@ -108,17 +106,14 @@ def processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
   S.gfVoteTime[vote] ← some S.t
   return S
 
-end Store
-
-namespace Goldfish
-
 /-- `process_block(Σ, B)` (Figure 2, lines 9–14): accept a block whose slot has started,
     stamp it, and fold in every Goldfish vote it carries.
 
     A block from the future is dropped and nothing else is checked: the draft's admission at
     this layer is the slot test alone. The carried votes go through
     `process_goldfish_vote`, so each is subject to that routine's own three tests. -/
-def processBlock (S : Store Validator) (B : Block Validator) : Store Validator := Id.run do
+def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Validator :=
+    Id.run do
   let mut S := S
   if B.slot > S.s then                                         -- line 10
     return S                                                   -- line 11
@@ -127,10 +122,6 @@ def processBlock (S : Store Validator) (B : Block Validator) : Store Validator :
   for vote in B.gfVotes do                                     -- line 13
     S ← S.processGoldfishVote vote                             -- line 14
   return S
-
-end Goldfish
-
-namespace Store
 
 /-- `propose_block(Σ)` (Figure 2, lines 21–26), run at `t_s`: take every held slot-`(s−1)`
     vote, run the fork choice on it, and build a block on the head carrying **all** of those
@@ -154,18 +145,18 @@ namespace Store
     than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
     `have` (Roberto, 2026-08-23, second pass). -/
-def proposeBlock (i : Validator) (S : Store Validator)
+def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDRE (DutyResult Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
-  let H ← Goldfish.getHead S votes (s - 1)                     -- line 24
+  let H ← Fig1.getHead S votes (s - 1)                         -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings votes
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := gfList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
-  return { state := Goldfish.processBlock S B, send := {Message.block B} }
+  return { state := Fig2.processBlock S B, send := {Message.block B} }
 
 /-- `goldfish_vote(Σ)` (Figure 2, lines 27–34), run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
@@ -180,7 +171,7 @@ def proposeBlock (i : Validator) (S : Store Validator)
 
     "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
     same conjunction-projecting tactic. -/
-def goldfishVote (i : Validator) (S : Store Validator)
+def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
@@ -189,7 +180,7 @@ def goldfishVote (i : Validator) (S : Store Validator)
     (← S.gfVoteTime[vote]) < slotStart (s - 1) + 3 * (Δ : Int)}
   -- lines 30–31, the view merge: the loop is an order-free union — see the module header
   votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
-  let H ← Goldfish.getHead S votes (s - 1)                     -- line 32
+  let H ← Fig1.getHead S votes (s - 1)                         -- line 32
   if i ∈ Committees.K s then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
@@ -220,7 +211,7 @@ def goldfishVote (i : Validator) (S : Store Validator)
     distinct.
 
     `ResultOrExcept` because all three actions are. -/
-def onTick (i : Validator) (S : Store Validator) (t : Int)
+def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
@@ -238,8 +229,5 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
   if h : t = SGSchedule.a (round s) then
     return S.sgVote i
   return { state := S, send := ∅ }
-
-end Store
-
 
 end Consensus1

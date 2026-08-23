@@ -7,11 +7,11 @@ import Spec.Consensus1.Fig2GoldfishDuties
 Definition 5 and Figure 7: `process_block` extended, `update_finality`, `fork_choice_root`,
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
-**This is the protocol.** Where a routine here has the same name as one in an earlier layer,
-this is the one a caller wants: `FG.processBlock`, and — bearing plain `Store` names, their
-bare spellings unique to this layer — `S.goldfishEligible` and the fork choice `S.getHead`;
-the superseded readings keep `Goldfish`/`SG` (Roberto, 2026-08-23). See
-`Fig1GoldfishWalk.lean` on why the layers are namespaces.
+**This is the protocol.** Where a routine here shares a draft name with an earlier figure,
+this is the reading a caller wants, and it bears the plain `Store` name: `S.processBlock`,
+`S.goldfishEligible`, and the fork choice `S.getHead`. The superseded readings are
+figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`
+(Roberto, 2026-08-23). See `Fig1GoldfishWalk.lean` on the scheme.
 
 The `-- line n` comments use Figure 7's own line numbering, in the draft as of 2026-08-22.
 
@@ -58,8 +58,6 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
 
 open Params
 
-namespace Store
-
 /-! ## Definition 5 — viability -/
 
 /-- `V(Σ) = {B ∈ T_F(Σ) : ∃W ∈ T_F(Σ), B ⪯ W, Σ.σ[W].h ≥ Σ.h_max − 1}` (Definition 5): a
@@ -70,7 +68,7 @@ namespace Store
     `Σ.h_max − 1` — and the set-builder then asks for a descendant among them. The collection
     reads `Σ.σ[W]` per live block through `Finset.filterM`, so a live block the map does not
     record raises rather than silently failing to witness. -/
-def viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator)) := do
+def Store.viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator)) := do
   let witnesses ← {W ∈ᴹ S.liveTree | (← S.σ[W]).h ≥ S.h_max - 1}
   return {B ∈ S.liveTree | ∃ W ∈ witnesses, B ⪯ W}
 
@@ -95,7 +93,7 @@ def viable (S : Store Validator) : ResultOrExcept (Finset (Block Validator)) := 
 
     Line 15's maximum is over the recorded heights of the *new* live tree, so it can go down;
     line 10's cannot. -/
-def updateFinality (S : Store Validator) (σ : ChainState Validator) :
+def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     ResultOrExcept (Store Validator) := do
   let mut S := S
   S.h_max ← max S.h_max σ.h                                    -- line 10
@@ -110,10 +108,6 @@ def updateFinality (S : Store Validator) (σ : ChainState Validator) :
     S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
 
-end Store
-
-namespace FG
-
 /-- `process_block(Σ, B)` (Figure 7, lines 1–8): Figure 2's handler with the two lines this
     layer adds — the post-state at line 4, and `update_finality` at line 8.
 
@@ -126,7 +120,7 @@ namespace FG
     A parentless block — genesis — has no parent state to read, and the figure does not cover
     it: genesis is in `Σ.T` from the start and is never processed. This rendering rejects it,
     leaving the store unchanged, which is the same thing every other admission failure does. -/
-def processBlock (S : Store Validator) (B : Block Validator) :
+def Store.processBlock (S : Store Validator) (B : Block Validator) :
     ResultOrExcept (Store Validator) := do
   let mut S := S
   if B.slot > S.s then                                         -- line 2
@@ -144,16 +138,12 @@ def processBlock (S : Store Validator) (B : Block Validator) :
   -- line 8: `update_finality(Σ, Σ.σ[B])` — new at this layer
   return ← S.updateFinality (← S.σ[B])
 
-end FG
-
-namespace Store
-
 /-! ## The two derived views, and the redefined fork choice -/
 
 /-- `fork_choice_root(Σ)` (Figure 7, lines 16–19): `Σ.J` while the justified pair sits one
     height under the store's frontier, and `Σ.F` otherwise. The only routine of this layer
     that reads no state map, and so the only one that does not raise. -/
-def forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
+def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
   if S.h_max = S.h_j + 1 then                                  -- line 17
     return S.J                                                 -- line 18
   return S.F                                                   -- line 19
@@ -164,7 +154,7 @@ def forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     "Goldfish starts at the root even if the root is not in the filtered tree" — so this set
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
     separately at line 27. It raises exactly where `viable` does. -/
-def getFilteredBlockTree (S : Store Validator) :
+def Store.getFilteredBlockTree (S : Store Validator) :
     ResultOrExcept (Finset (Block Validator)) := do
   let root := S.forkChoiceRoot                                 -- line 21
   return {B ∈ (← S.viable) | root ⪯ B}                         -- line 22
@@ -179,12 +169,15 @@ def getFilteredBlockTree (S : Store Validator) :
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
     none — and it is what line 29 hands the walk, `ghost`'s condition slot being
     `ResultOrExcept`. In `Store` for dot notation, its bare name unique to this layer. -/
-def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat)
-    (B : Block Validator) : ResultOrExcept Bool := do
+def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
+    (s : Nat) (B : Block Validator) : ResultOrExcept Bool := do
   let σB ← S.σ[B]
+  -- line 24: `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
+  -- figure writes it
+  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
   -- line 25
   return σB.h < S.h_max - 1 ∨
-    2 * Goldfish.score votes s B > Goldfish.votersCount votes s ∨ B.slot = S.s
+    2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
 /-- `get_head(Σ, votes, k)` (Figure 7, lines 26–29): the protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
@@ -196,15 +189,12 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
     2026-08-23; the history is in `CONTEXT.md`).
 
     It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
-    caller wants; the superseded ones keep `Goldfish`/`SG` (Roberto, 2026-08-23). -/
-def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
+    caller wants; the superseded ones are `Fig1.getHead` and `Fig4.getHead`. -/
+def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
   let root := S.forkChoiceRoot                                 -- line 27
   let tree ← S.getFilteredBlockTree
   let anchor ← S.majorityForkChoice root tree (round S.s)      -- line 28
-  ghost anchor tree (Goldfish.score votes k) (S.goldfishEligible votes k)  -- line 29
-
-end Store
-
+  ghost anchor tree (goldfishScore votes k) (S.goldfishEligible votes k)  -- line 29
 
 end Consensus1

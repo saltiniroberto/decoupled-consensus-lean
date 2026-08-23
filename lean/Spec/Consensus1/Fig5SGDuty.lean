@@ -38,8 +38,6 @@ namespace Consensus1
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Params] [SGSchedule]
 
-namespace Store
-
 /-- `process_sg_vote(Σ, vote)` (Figure 5, lines 5–10): record a round-`r` SG vote with its
     processing time, unless it is from a future round, already held, or a third vote by a
     validator already seen equivocating.
@@ -47,7 +45,7 @@ namespace Store
     `process_goldfish_vote`'s shape exactly, one field over: the round test is against
     `round(Σ.s)` rather than `Σ.s`, and line 8 is where "at most two distinct votes per
     validator" is maintained — "two witness the equivocation; nothing reads a third". -/
-def processSGVote (S : Store Validator) (vote : SGVote Validator) :
+def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     Store Validator := Id.run do
   let mut S := S
   -- line 6
@@ -68,7 +66,7 @@ def processSGVote (S : Store Validator) (vote : SGVote Validator) :
     the broadcast is a returned message rather than a send. Total: this duty runs no walk.
     "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants are, over the
     assumed `SGSchedule`. -/
-def sgVote (i : Validator) (S : Store Validator)
+def Store.sgVote (i : Validator) (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
     DutyResult Validator := Id.run do
   let r := round S.s                                           -- line 2
@@ -77,7 +75,6 @@ def sgVote (i : Validator) (S : Store Validator)
   -- line 4: `broadcast vote; process_sg_vote(Σ, vote)`
   return { state := S.processSGVote vote, send := {Message.sgVote vote} }
 
-end Store
 
 
 end Consensus1

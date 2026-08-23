@@ -47,13 +47,11 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
 
 open Params
 
-namespace Store
-
 /-- `latest(Σ, v, r)` (Figure 4, lines 1–5): the greatest round in
     `[max{0, r − ηSG}, r)` whose SG votes hold one by `v`, or `⊥` when there is none.
 
     The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on". -/
-def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
+def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
   -- lines 2-5: the greatest eligible round; `Finset.max` answers `⊥` when there is none
   let eligible := ({k ∈ Finset.range r |
     max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
@@ -69,7 +67,7 @@ def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     the loop spelling is in git history). Line 9's `k ← latest(Σ, v, r)` binds out of an
     `Option` the line-8 test has vouched for; the `∃ k, … = some k` form says it without a
     dependent `if`. -/
-def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
+def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
   -- lines 7–12, as the set the loop builds
   w({v ∈ Electorate.V |
       ∃ k, S.latest v r = some k ∧
@@ -79,29 +77,20 @@ def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
 
 /-- `majority_fork_choice(Σ, anchor, tree, r)` (Figure 4, lines 13–16): the shared walk with
     the SG support as its score, gated on a strict majority of the represented weight. -/
-def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
+def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})       -- line 14
   let eligible := fun B => 2 * S.sgSupport r B > total         -- line 15
   -- line 16; the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
 
-end Store
-
-namespace SG
-
 /-- `get_head(Σ, votes, s)` (Figure 4, lines 17–19): the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
-
-    This is the SG layer's head. Figure 7 redefines it again, over the filtered tree and from
-    the fork-choice root; that one is the protocol's. -/
-    -- (in `SG`, not `Store`: three layers define a `get_head`, and a namespace holds one)
-def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+    Figure 7 redefines it again, over the filtered tree and from the fork-choice root — that
+    reading, `S.getHead`, is the protocol's, and this one is Figure 4's. -/
+def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
   S.goldfishForkChoice anchor S.T votes s                       -- line 19
-
-end SG
-
 
 end Consensus1

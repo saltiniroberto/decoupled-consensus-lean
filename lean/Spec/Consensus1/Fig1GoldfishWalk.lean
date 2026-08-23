@@ -11,25 +11,19 @@ walk with a different score and gate.
 
 The `-- line n` comments use Figure 1's own line numbering, in the draft as of 2026-08-22.
 
-## The layers rename nothing, so the layers are namespaces
+## The draft defines incrementally; the old readings are figure-named
 
-Figure 4 and Figure 7 each redefine `get_head`, and Figure 7 redefines `goldfish_eligible`
-and `process_block`. The draft can do that because each section *replaces* the previous
-reading; Lean cannot, so each layer's routine sits in its own namespace —
-`Consensus1.Goldfish`, `Consensus1.SG`, `Consensus1.FG` — and the protocol is the last one. A
-reader comparing against the draft reads one namespace at a time; a caller wanting "the" fork
-choice wants `FG.getHead`.
+Later figures redefine three routines — `get_head` (Figures 1, 4, 7), `process_block`
+(Figures 2, 7), `goldfish_eligible` (Figures 1, 7). The last reading of each is the
+protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
+`S.goldfishEligible`, all Figure 7's); each superseded reading is named by the figure that
+defined it — `Fig1.getHead`, `Fig1.goldfishEligible`, `Fig4.getHead`, `Fig2.processBlock` —
+so a call to an old reading says so in the draft's own coordinates (Roberto, 2026-08-23;
+layer namespaces `Goldfish`/`SG`/`FG` preceded this, git history has them).
 
-`ghost` itself is not in a layer namespace: it is the shared building block, and no section
-redefines it.
-
-Everything that takes a store sits in `namespace Store`, and a name whose draft prefix the
-layer namespace carried spells it itself there (`S.goldfishForkChoice`, `S.sgSupport`) —
-so a caller writes `S.updateConfirmation k`, `S.goldfishForkChoice …`, `S.viable` (Roberto,
-2026-08-23). The one exception is forced: names *two* layers claim — `get_head` (three),
-`process_block` (two), `goldfish_eligible` (two) — cannot share one namespace, so the
-protocol's readings bear the `Store` names (`S.getHead`, `S.goldfishEligible` are
-Figure 7's) and the superseded readings keep `Goldfish`/`SG`.
+There are no namespace blocks: every definition carries its full name at its own `def` —
+`Store.…` for whatever a store flows into, so dot notation works; `Fig<n>.…` for a
+superseded reading; a bare name for everything defined once (`ghost`, `goldfishScore`).
 
 ## The arg-max step: the tie is a pick
 
@@ -117,10 +111,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     H := (← bestChild children score)
   return H  -- the bound is reached: not a figure line, see the module header
 
-
-namespace Goldfish
-
-/-! ## The Goldfish score and gate -/
+/-! ## The Goldfish score and eligibility -/
 
 /-- `goldfish_score(votes, s, B)` (Figure 1, lines 1–4): every equivocator, plus every
     non-equivocating participant whose target descends from `B`. The equivocator set is a
@@ -128,7 +119,8 @@ namespace Goldfish
     2026-08-23; a named `equivocators` def preceded this, git history has it).
 
     An equivocator is counted without its target being read — see the module header. -/
-def score (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) : Nat :=
+def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :
+    Nat :=
   -- line 2: `{v ∈ K_s : votes holds two distinct votes by v}`
   let equivocators : Finset Validator := {v ∈ Committees.K s |
     ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
@@ -137,48 +129,37 @@ def score (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validat
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
   |equivocators| + |supporters|                                -- line 4
 
-/-- `voters_count = |{v ∈ K_s : votes holds a vote by v}|`: the participants `N_s(votes)` of
-    Definition 2, as a count. Line 13 of `goldfish_eligible`, and line 5 of Figure 3's
-    confirmation, which counts a *different* vote set against the same shape. -/
-def votersCount (votes : Finset (GoldfishVote Validator)) (s : Nat) : Nat :=
-  |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
-
 /-- `goldfish_eligible(Σ, votes, s, B)` (Figure 1, lines 12–14): a strict majority of the
-    participants support `B`, or `B` is a block of the current slot.
+    participants support `B`, or `B` is a block of the current slot. Figure 7 redefines it
+    with a height clause; that reading, `S.goldfishEligible`, is the protocol's, and this one
+    is Figure 1's — hence the name.
+
+    Line 13's `voters_count` is a `let`, as the figure writes it — the draft defines no such
+    function, only this local and its Figure 3 and Figure 7 analogues over their own vote
+    sets.
 
     The second disjunct is why a fresh proposal can be walked onto at all: "it only does not
     apply to proposals from the current slot, which cannot yet have votes". -/
-def eligible (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat)
-    (B : Block Validator) : Bool :=
-  2 * score votes s B > votersCount votes s ∨ B.slot = S.s   -- line 14
-
-end Goldfish
-
-namespace Store
+def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
+    (s : Nat) (B : Block Validator) : Bool :=
+  -- line 13: `voters_count ← |{v ∈ K_s : votes holds a vote by v}|`
+  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
+  2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s   -- line 14
 
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)` (Figure 1, lines 15–16): the shared
-    walk, instantiated with the Goldfish score and eligibility condition. In `Store` with
-    the draft's own prefix — the layer namespace no longer carries it. -/
-def goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
+    walk, instantiated with the Goldfish score and eligibility condition. -/
+def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   -- line 16; the pure condition offered to the walk's raising slot with `pure`
-  ghost anchor tree (Goldfish.score votes s) (fun B => pure (Goldfish.eligible S votes s B))
-
-end Store
-
-namespace Goldfish
+  ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
 /-- `get_head(Σ, votes, s)` (Figure 1, lines 17–18): the walk from genesis over the whole
-    processed tree.
-
-    This is the Goldfish layer's head. Figure 4 redefines it to start from the SG root, and
-    Figure 7 again to start from the fork-choice root over the filtered tree; see the module
-    header on the namespaces. -/
-def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+    processed tree. Figure 4 redefines it to start from the SG root, and Figure 7 again to
+    start from the fork-choice root over the filtered tree — that reading, `S.getHead`, is
+    the protocol's, and this one is Figure 1's. -/
+def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   S.goldfishForkChoice .genesis S.T votes s                    -- line 18
-
-end Goldfish
 
 end Consensus1
