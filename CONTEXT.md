@@ -3784,6 +3784,27 @@ a DejaVu fallback carries the unicode, so there is no symbol-translation table. 
 part is the Lean-to-pseudocode rewriting: v1 prints lightly cleaned Lean, and the rewrite
 rules are meant to accumulate in `clean_code_line`.
 
+### `FinalityVote.lean`: the attestation-filling rules, imported from the first rendering — 2026-08-23
+
+Roberto: the protocol determining finality votes, written by importing the logic from the
+initial spec (`latex-specs` and the root `Spec` folder). `consensus-1.pdf` shapes the
+attestation but never says how its pairs are filled; `lean/Spec/Consensus1/FinalityVote.lean`
+carries the first rendering's voting strategy (`Spec/Defs/Voting.lean`) over:
+`SigningHistory` (τ/T/lock per height, writes returned with the pair), `heightVote` (the
+five-case current-height rule under the confirmed ceiling), `finalityVote` (sign
+`(h_j, J)` when ahead, chained, certified, record-consistent; lock on first release),
+`fgVote` (finality first, so the lock write is visible to the height rule's read), and
+`Store.fgVote` (the wiring). The module header lists every crossing decision for review:
+subtree pair encodings (`.timeout` → `emptyTarget`, `.commit` → `pair`); all four
+fork-choice fields from the store (`h_F` no longer explicit); `C = Σ.live_confirmed`;
+context read raising off `Σ.σ[live_confirmed]` (the first rendering degraded to an empty
+pair; no `process_slots` exists here so the stored state is read as is); `T = some σ.T_h`
+(never `⊥` here, the fallback vanished); `r = round Σ.s`; `head` and `hasJC` still
+explicit. One trap hit: inside `def Store.fgVote` the bare name `fgVote` resolves to the
+def itself, so the pure rule is called as `Consensus1.fgVote`. No citations, per the
+2026-08-19 pivot — the docstrings are self-contained and name `Spec/Defs/Voting.lean` as
+the working source.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries

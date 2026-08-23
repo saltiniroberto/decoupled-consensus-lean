@@ -33,6 +33,7 @@ import Spec.Consensus1.Fig2GoldfishDuties
 import Spec.Consensus1.Fig4SGForkChoice
 import Spec.Consensus1.Fig5SGDuty
 import Spec.Consensus1.Fig7FGStore
+import Spec.Consensus1.FinalityVote
 
 /-!
 # The specification
