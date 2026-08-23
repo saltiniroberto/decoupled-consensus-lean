@@ -27,9 +27,11 @@ its record is durable:
   target when the height is nonjustifiable, else the context's target when that target
   sits at or below `C`.
 
-`fgVote` composes them, finality first, so the lock written by the finality rule is
-visible to the height rule's record read within the same attestation. `Store.fgVote` wires
-the rules over this subtree's store.
+`Store.fgVote` composes them over the store, finality first, so the lock written by the
+finality rule is visible to the height rule's record read within the same attestation.
+(The first rendering had a store-free composition layer between the pair rules and the
+wiring; it added nothing but a name, and Roberto folded it — the composition is the
+wiring's own body.)
 
 ## What changed in the crossing, from `Spec/Defs/Voting.lean` to here
 
@@ -157,44 +159,28 @@ def finalityVote (J : Block Validator) (h_j : Nat) (F : Block Validator) (h_F : 
     (.pair h_j J, H.saveLock h_j J)
   else (.empty, H)
 
-/-- The combined attestation: the two pair rules evaluated **in order** — first the
-    finality pair, whose lock write is visible to the current-height rule's record read.
-    That ordering is what keeps the two pairs of one attestation from contradicting each
-    other; the claim itself is `Analysis/` matter. The head is carried, not derived. -/
-def fgVote (i : Validator) (r : Nat) (head : Option (Block Validator))
-    (J : Block Validator) (h_j : Nat) (F : Block Validator) (h_F : Nat) (hasJC : Bool)
-    (C : Option (Block Validator)) (k : Nat) (T : Option (Block Validator)) (ν : Bool)
-    (hC : Nat) (H : SigningHistory Validator) :
-    Attestation Validator × SigningHistory Validator :=
-  let (fp, H₁) := finalityVote J h_j F h_F hasJC H     -- first the finality pair
-  let (hp, H₂) := heightVote C k T ν hC H₁             -- then the current-height pair
-  (Attestation.mk (validator := i) (round := r) (head := head)
-    (heightPair := hp) (finalityPair := fp), H₂)
+/-- The combined attestation over the store: the two pair rules evaluated **in order** —
+    first the finality pair, whose lock write is visible to the current-height rule's
+    record read. That ordering is what keeps the two pairs of one attestation from
+    contradicting each other; the claim itself is `Analysis/` matter.
 
-/-- `fgVote` over the store: the fork-choice fields are the store's own
-    (`Σ.J`, `Σ.h_j`, `Σ.F`, `Σ.h_F`), the round is `round(Σ.s)`, the confirmed block is
-    `Σ.live_confirmed`, and the context is read off that block's stored state — its
-    height, its `T_h` (always a block here), its nonjustifiable flag. The read raises when
-    the confirmed block has no recorded state; the module header records that this is a
-    departure from the first rendering, which answered with an empty pair. `head` and
-    `hasJC` stay explicit — see the module header. -/
+    The inputs: the fork-choice fields are the store's own (`Σ.J`, `Σ.h_j`, `Σ.F`,
+    `Σ.h_F`); the round is `round(Σ.s)`; the ceiling is `Σ.live_confirmed`, and the
+    height rule's context is read off that block's stored state — its height (passed as
+    both `k` and `hC`), its `T_h` (always a block here), its nonjustifiable flag. The
+    read raises when the confirmed block has no recorded state; the module header records
+    that this is a departure from the first rendering, which answered with an empty pair.
+    `head` and `hasJC` stay explicit — see the module header. The head is carried, not
+    derived. -/
 def Store.fgVote (i : Validator) (S : Store Validator) (head : Option (Block Validator))
     (hasJC : Bool) (H : SigningHistory Validator) :
     ResultOrExcept (Attestation Validator × SigningHistory Validator) := do
   let σC ← S.σ[S.liveConfirmed]
-  -- `Consensus1.fgVote`, qualified: inside `Store.fgVote` the bare name is this def itself
-  return Consensus1.fgVote
-    (i := i)                      -- the signing validator
-    (r := round S.s)              -- the attestation's round, from the store's slot
-    (head := head)                -- the SG head the attestation carries; passed through
-    (J := S.J) (h_j := S.h_j)     -- the latest justification, the store's
-    (F := S.F) (h_F := S.h_F)     -- the latest finalization, the store's
-    (hasJC := hasJC)              -- knowledge of the certificate; explicit input
-    (C := some S.liveConfirmed)   -- the ceiling: the confirmed block
-    (k := σC.h)                   -- the current height, the confirmed state's
-    (T := some σC.T_h)            -- the context target, never `⊥` in this subtree
-    (ν := σC.nj)                  -- the nonjustifiable flag, the confirmed state's
-    (hC := σC.h)                  -- the confirmed state's height; equal to `k` here
-    (H := H)                      -- the durable record, threaded through both rules
+  -- first the finality pair, over the store's fork-choice fields
+  let (fp, H₁) := finalityVote S.J S.h_j S.F S.h_F hasJC H
+  -- then the current-height pair: the ceiling, then k, T, ν, hC from the confirmed state
+  let (hp, H₂) := heightVote (some S.liveConfirmed) σC.h (some σC.T_h) σC.nj σC.h H₁
+  return (Attestation.mk (validator := i) (round := round S.s) (head := head)
+    (heightPair := hp) (finalityPair := fp), H₂)
 
 end Consensus1

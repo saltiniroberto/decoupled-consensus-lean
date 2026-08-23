@@ -3792,9 +3792,13 @@ attestation but never says how its pairs are filled; `lean/Spec/Consensus1/Final
 carries the first rendering's voting strategy (`Spec/Defs/Voting.lean`) over:
 `SigningHistory` (τ/T/lock per height, writes returned with the pair), `heightVote` (the
 five-case current-height rule under the confirmed ceiling), `finalityVote` (sign
-`(h_j, J)` when ahead, chained, certified, record-consistent; lock on first release),
-`fgVote` (finality first, so the lock write is visible to the height rule's read), and
-`Store.fgVote` (the wiring). The module header lists every crossing decision for review:
+`(h_j, J)` when ahead, chained, certified, record-consistent; lock on first release), and
+`Store.fgVote`, whose own body is the composition — finality first, so the lock write is
+visible to the height rule's read. A store-free `fgVote` layer briefly sat between the
+pair rules and the wiring, mirroring the first rendering's; Roberto had it folded — it
+added nothing but a name, and the name collided: inside `def Store.fgVote` a bare `fgVote`
+resolves to the def itself (measured — the fix while it existed was a qualified
+`Consensus1.fgVote`). The module header lists every crossing decision for review:
 subtree pair encodings (`.timeout` → `emptyTarget`, `.commit` → `pair`); all four
 fork-choice fields from the store (`h_F` no longer explicit); `C = Σ.live_confirmed`;
 context read raising off `Σ.σ[live_confirmed]` (the first rendering degraded to an empty
