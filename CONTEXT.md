@@ -3768,6 +3768,15 @@ the hypothesis — `if _ : … then`, the autoparam tactic reading the anonymous
 applied to all four tick branches. The send union is `Message`'s first equality consumer,
 so `Message` now derives `DecidableEq`, exactly as its docstring had planned.
 
+### Two parallel workstreams; `extract/` opened — 2026-08-23
+
+Roberto: two things in parallel — (1) keep improving and expanding the `Consensus1`
+definitions, in place; (2) a script that extracts, out of the Lean files, a document
+similar to the source `consensus-1.pdf`. Stream 2 works against `extract/Consensus1-frozen/`,
+a plain copy of `lean/Spec/Consensus1/` (frozen at `909b4f6`), so the live spec can keep
+moving under stream 1; `extract/README.md` carries the rules (nothing imports the copy, no
+build target reads it, refresh only on instruction). The script itself is not started.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
