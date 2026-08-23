@@ -66,6 +66,16 @@ reading, `S.processBlock`, is the protocol's; this one is what Section 2 defines
 `t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`Fig5SGDuty.lean`), is the
 protocol's; this one is the figure's, hence `Fig2.onTick`. See `Fig1GoldfishWalk.lean` on
 the figure-named readings.
+
+## Extract
+
+DEMO (2026-08-24): this section demonstrates the `## Extract` marker — only marked
+sections reach the PDF. The convention's durable home is the live spec's headers; a
+frozen refresh wipes what is written only here.
+
+Figure 2 defines the store handlers and the two duties. The handlers take the store and
+change it in place. Only the two duties concern the validator running the node, written
+`i`; a node whose `i` holds no duty for the slot simply does not run them.
 -/
 
 set_option autoImplicit false
@@ -145,7 +155,14 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     precedent). The autoparam tactic is `solve_by_elim` over the `And` projections rather
     than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
-    `have` (Roberto, 2026-08-23, second pass). -/
+    `have` (Roberto, 2026-08-23, second pass).
+
+    ## Extract
+
+    DEMO (2026-08-24): a figured routine's marked section leads its figure in. The
+    proposer applies no freeze — the tick precedes anything timestamped `t_s` — and the
+    block carries everything, not only the pre-freeze part, which is what makes it a
+    view-merge channel for its receivers. -/
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDRE (DutyResult Validator) := do
