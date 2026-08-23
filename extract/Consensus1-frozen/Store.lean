@@ -70,6 +70,26 @@ All of this is the arrangement the previous rendering arrived at over 2026-08-21
 `CONTEXT.md` records what else was tried and why each was set aside. A name is needed on each
 map type because instances resolve on a type's head constant, and a bare function type has
 none.
+
+## Extract
+
+The store is `Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed,
+latest_confirmed)`, and the later layers add their fields to it: `sg_votes[·]` at
+Section 3, and the state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)`
+at Section 5. Later sections only ever add fields and lines; they never rename either.
+
+`Σ.T` is the tree of processed blocks and `Σ.gf_votes[k]` the set of processed slot-`k`
+votes; both are timestamped, `Σ.timestamp(x)` being the time at which object `x` was
+processed into the store. `Σ.gf_votes[k]` keeps at most two distinct votes per
+validator, which is all any rule reads; the same holds for `Σ.sg_votes[r]`, the
+processed round-`r` SG votes. `Σ.live_confirmed` is the block the last evaluated slot
+confirmed. `Σ.latest_confirmed` is the monotone record the node exposes; no rule in
+this protocol reads it.
+
+Initially `Σ.T = {B_gen}` and `Σ.live_confirmed = Σ.latest_confirmed = B_gen`; other
+fields are empty. The store keeps messages and their arrival times, and nothing else:
+every rule below is a timestamp comparison on this one pool.
+
 -/
 
 set_option autoImplicit false

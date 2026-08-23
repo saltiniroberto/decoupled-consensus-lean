@@ -66,6 +66,25 @@ reading, `S.processBlock`, is the protocol's; this one is what Section 2 defines
 `t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`Fig5SGDuty.lean`), is the
 protocol's; this one is the figure's, hence `Fig2.onTick`. See `Fig1GoldfishWalk.lean` on
 the figure-named readings.
+
+## Extract
+
+Figure 2 defines the store handlers and the two duties. The handlers take the store and
+change it in place. Only the two duties concern the validator running the node, written
+`i`; a node whose `i` holds no duty for the slot simply does not run them. A duty
+returns the store with its own object already processed, together with the messages to
+broadcast, the send being left to whoever wires this up.
+
+To run the fork choice in slot `s`, a voter at `t_s + Δ` uses the slot-`(s − 1)` votes
+it saw before the view freeze at `t_{s−1} + 3Δ`, together with the votes carried by any
+slot-`s` block processed so far. That second part is the view merge: the proposal
+supplies its own view rather than a forced target. The proposer does not apply the
+freeze, and instead uses every held vote when running the fork choice at `t_s`.
+
+`process_block(Σ, B)` and `process_goldfish_vote(Σ, vote)` run once per object, after
+every dependency of that object is already in the store: a block's parent, and a vote's
+target block.
+
 -/
 
 set_option autoImplicit false

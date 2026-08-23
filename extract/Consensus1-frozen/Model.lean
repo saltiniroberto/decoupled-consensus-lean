@@ -76,6 +76,32 @@ kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `non
 The draft writes `⊥` for an absent block or height: the empty target, the empty head, the
 absent latest round. That is `Option.none` here, given the `⊥` spelling by a scoped `Bot`
 instance.
+
+## Extract
+
+A fixed validator set `V` is given, each validator with a fixed positive integer weight
+`w(v)`; for `S ⊆ V` write `w(S)` for the total weight, and `W = w(V)`. Slot `s` starts
+at `t_s = 4Δs` and has an assigned proposer and a fixed committee `K_s ⊆ V`. `Δ` is the
+delivery bound.
+
+Every block `B` has a root `B.root`, slot `B.slot`, and parent `B.parent`. Processed
+blocks form a parent-closed tree rooted at `B_gen`. Write `B ⪯ C` when `B = C` or `B` is
+an ancestor of `C`, and `B ≺ C` for strict ancestry. Two blocks are compatible when one
+is an ancestor of the other, and they conflict otherwise.
+
+A Goldfish vote is a tuple `(v, s, B)` from validator `v ∈ K_s` with target `B`, where
+`B.slot ≤ s`. A block `B` carries `B.parent`, `B.slot`, and a set `B.gf_votes` of
+slot-`(B.slot − 1)` Goldfish votes. There is no proposal envelope: the block is the only
+wire object a proposer emits, and `B.gf_votes` is the only relay channel in the
+protocol.
+
+An SG vote is a tuple `(v, r, H)` from validator `v ∈ V` with head `H`, a block or `⊥`.
+SG votes travel only on the wire: blocks do not carry them, and they never enter a
+Goldfish vote set. An attestation extends the SG vote with four finality-relevant
+fields, carried as two pairs: a height pair — a target vote `(h, T)` with `T ≠ ⊥`, an
+empty-target vote `(h, ⊥)`, or the empty pair — and a finality pair, `(h_f, T_f)` with
+`T_f ≠ ⊥` or the empty pair.
+
 -/
 
 set_option autoImplicit false
