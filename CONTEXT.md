@@ -3760,8 +3760,9 @@ Three refinements the same day, all Roberto's. The collision edge composes rathe
 drops: on a schedule where `a_r` coincided with a Goldfish instant, `sg_vote` runs on that
 duty's post-state and the return unions the two sends, so nothing is lost (on the draft's
 own schedules the instants are distinct and the Goldfish send there is `∅`). The bound
-result is `let S : DutyResult Validator ←`, shadowing the store, reads going through
-`S.state` — a `Coe (DutyResult → Store)` would not shorten them, field notation never
+result is `let res : DutyResult Validator ←` (briefly `S`, shadowing the store — Roberto
+took the shadowing back), reads going through `res.state` — a `Coe (DutyResult → Store)`
+would not shorten them, field notation never
 inserting coercions (the `↑H` limit). And dependent `if`s bind no name when nothing uses
 the hypothesis — `if _ : … then`, the autoparam tactic reading the anonymous hypothesis —
 applied to all four tick branches. The send union is `Message`'s first equality consumer,
