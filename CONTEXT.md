@@ -3810,7 +3810,11 @@ def itself, so the pure rule is called as `Consensus1.fgVote`. No citations, per
 the working source.
 
 Second pass, same day (Roberto): the record moved into the store and the rules moved onto
-it. `SigningHistory` and its writes live in `Store.lean`; the store gains the field `Σ.H`
+it. `SigningHistory` and its writes live in their own `SigningHistory.lean`, imported by
+`Store.lean` (third pass — a structure is closed, so the field line itself cannot leave
+the store file; only the type could). Its fields carry speaking names,
+`signedEmptyTarget`/`firstTarget`/`firstLock` (Roberto asked for better than the first
+paper's `τ`/`T`/`lock`; "first" is the record's once-only discipline). The store gains the field `Σ.H`
 (its docstring and the header table say it is not the draft's), `Store.gen` starts it
 empty. `Store.heightVote` (raising — it does the `Σ.σ[live_confirmed]` read itself) and
 `Store.finalityVote` read their inputs from the store and return the pair with the updated
