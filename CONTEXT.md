@@ -3807,6 +3807,20 @@ comment text (dropped when they merely echo the rewritten code). Class fields wi
 opening symbol fall back to namespace-stripped call form — `Committees.K s` renders `K(s)`,
 not the draft's `K_s`, until the live spec's docstring opens with the symbol.
 
+**v3 (2026-08-24): prose is opt-in, under the `## Extract` marker.** Roberto flipped the
+default — instead of subtracting Lean-side commentary, only sections headed `## Extract`
+(his keyword, chosen over Draft/Document/PDF for naming the destination without colliding
+with "the draft") reach the PDF: a module header's marked section is the file's section
+prose (`## Extract — X` titles it X), a figured routine's marked docstring section leads
+its figure in, any other declaration's follows the figure. Unmarked prose — all of it, at
+present — stays out, so the document is figures plus whatever has been deliberately
+written for it. Marked prose and the figures' margin notes render in the draft's
+typography: backticked spans go through the figure rewriter, falling back to mono exactly
+when a span quotes Lean (binder keywords, `:=`, camelCase or Type-looking names). The
+durable home for `## Extract` sections is the live spec's headers — a frozen refresh
+wipes what is written only in the frozen copy; the two sections in the frozen
+`Fig2GoldfishDuties.lean` are demos and say so in their own text.
+
 ### `FinalityVote.lean`: the attestation-filling rules, imported from the first rendering — 2026-08-23
 
 Roberto: the protocol determining finality votes, written by importing the logic from the

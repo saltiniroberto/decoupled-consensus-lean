@@ -4,6 +4,16 @@
 Reads extract/Consensus1-frozen/*.lean, writes extract/out/consensus1.tex, and (unless
 --no-pdf) compiles it with latexmk -lualatex.
 
+v3: prose is opt-in. A module header or docstring section headed `## Extract` is
+document prose (Roberto, 2026-08-24, choosing the marked-for-inclusion direction and the
+keyword); everything unmarked is Lean-side commentary and stays out of the PDF. A header
+section `## Extract — X` gets subsection title X. A figured routine's `## Extract`
+section leads its figure in, the way the draft's prose introduces each figure; other
+declarations' marked sections follow the figure. Marked prose and the figures' margin
+notes render in the paper's typography: each backticked span goes through the same
+rewriter the figures use, falling back to mono exactly when the span quotes Lean
+(binder keywords, `:=`, camelCase or Type-looking names).
+
 v2: the figure blocks are rewritten from Lean into the draft's own pseudocode style.
 Every rewrite rule is general — keyed on Lean/Mathlib surface syntax, or driven by
 tables harvested from the sources' own conventions — so the script applies to any spec
@@ -316,6 +326,7 @@ class Tables:
         self.tuple_structs = set()
         self.ctors = {}          # ctor name -> (Sym or None, param_names)
         self.def_arity = {}      # lean qualified name -> explicit arity
+        self.paper_names = set() # routine names as the paper spells them
 
     def callable_names(self):
         return set(self.routines) | set(self.defs)
@@ -409,6 +420,8 @@ def harvest(all_items):
         # no harvestable symbol: an uncited routine still renders as a call, snake-cased
         t.defs[name] = Sym(snake(name.split(".")[-1]), "call",
                            args=[p for p, _ in params], smallcaps=True)
+    t.paper_names = {r.paper_name for r in t.routines.values()} | \
+        {sym.name for sym in t.defs.values() if sym.smallcaps}
     return t
 
 
@@ -584,6 +597,7 @@ class Rewriter:
         self.routine = routine
         self.store_param = store_param   # Lean name of the store-typed param, if any
         self.param_types = param_types   # param name -> type text
+        self.miss = False                # set when a span turns out to quote Lean
         # idents that rename inside this routine's body
         self.var_renames = {}
         if store_param:
@@ -876,7 +890,17 @@ class Rewriter:
         # a `.ctor` anonymous constructor cannot reach here (leading dot is separate)
         if name in self.t.ctors and self.t.ctors[name][0]:
             return [("id", self.t.ctors[name][0].name)]
-        # a function-typed parameter renders call-style at its application site
+        # a paper-spelled routine name, in prose spans: set like the figures set it
+        if name in self.t.paper_names:
+            return [("fn", name)]
+        # Lean-only vocabulary marks the span as code (consulted by the prose pass):
+        # a camelCase name, or a Type/Namespace-looking one — not a paper spelling
+        if snake(name) != name:
+            self.miss = True
+        elif len(name) > 1 and name[0].isupper() and not is_greek(name) \
+                and not SUBSCRIPT_ID.match(name) \
+                and (any(c.islower() for c in name[1:]) or name.isupper()):
+            self.miss = True
         return [("id", snake(name))]
 
     def field_chain(self, base_spans, fields):
@@ -1575,8 +1599,10 @@ def md_inline(s: str) -> str:
     return "".join(out)
 
 
-def md_block(text: str) -> str:
+def md_block(text: str, inline=None) -> str:
     """Markdown-lite block conversion of a module header or docstring."""
+    if inline is None:
+        inline = md_inline
     out = []
     lines = text.split("\n")
     i = 0
@@ -1585,7 +1611,7 @@ def md_block(text: str) -> str:
 
     def flush():
         if para:
-            out.append(md_inline(" ".join(para)) + "\n")
+            out.append(inline(" ".join(para)) + "\n")
             para.clear()
 
     while i < n:
@@ -1599,7 +1625,7 @@ def md_block(text: str) -> str:
         m = re.match(r"(#+)\s+(.*)", s)
         if m and line.startswith("#"):
             flush()
-            out.append(r"\subsection*{" + md_inline(m.group(2)) + "}")
+            out.append(r"\subsection*{" + inline(m.group(2)) + "}")
             i += 1
             continue
         if s.startswith("|"):
@@ -1614,7 +1640,7 @@ def md_block(text: str) -> str:
                 ncols = max(len(r) for r in rows)
                 out.append(r"\begin{center}\begin{tabular}{" + "l" * ncols + "}")
                 for k, r in enumerate(rows):
-                    out.append(" & ".join(md_inline(c) for c in r) + r" \\")
+                    out.append(" & ".join(inline(c) for c in r) + r" \\")
                     if k == 0:
                         out.append(r"\hline")
                 out.append(r"\end{tabular}\end{center}")
@@ -1627,7 +1653,7 @@ def md_block(text: str) -> str:
                 t = lines[i].strip()
                 if t.startswith(("- ", "* ")):
                     if cur:
-                        out.append(r"\item " + md_inline(" ".join(cur)))
+                        out.append(r"\item " + inline(" ".join(cur)))
                     cur = [t[2:]]
                 elif t and lines[i].startswith(("  ", "\t")):
                     cur.append(t)
@@ -1637,13 +1663,85 @@ def md_block(text: str) -> str:
                     break
                 i += 1
             if cur:
-                out.append(r"\item " + md_inline(" ".join(cur)))
+                out.append(r"\item " + inline(" ".join(cur)))
             out.append(r"\end{itemize}")
             continue
         para.append(s)
         i += 1
     flush()
     return "\n".join(out)
+
+
+# ------------------------------------------------------------- the `## Extract` prose
+
+EXTRACT_HEADING = re.compile(r"Extract\b\s*(?:[—:–-]+\s*(.*))?$")
+
+
+def split_sections(text: str):
+    """A module header or docstring -> [(heading|None, body)], split at `## ` lines."""
+    out = []
+    heading = None
+    buf: list[str] = []
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            out.append((heading, "\n".join(buf).strip("\n")))
+            heading = line[3:].strip()
+            buf = []
+        else:
+            buf.append(line)
+    out.append((heading, "\n".join(buf).strip("\n")))
+    return out
+
+
+def extract_sections(text: str):
+    """The document prose of a header/docstring: [(subtitle|None, body)] of the
+    sections marked `## Extract`. Everything unmarked stays out of the PDF."""
+    out = []
+    for heading, body in split_sections(text):
+        if heading is None:
+            continue
+        m = EXTRACT_HEADING.match(heading)
+        if m and body:
+            out.append((m.group(1) or None, body))
+    return out
+
+
+def prose_span(span: str, rw) -> str | None:
+    """A backticked span set in the paper's typography, or None when it quotes Lean
+    (binder keywords, camelCase or Type-looking names) and should stay mono."""
+    toks = tokenize(span)
+    if any(t in ("let", "fun", "do", "mut", ":=", "=>", "←ᵖ", "∈ᴹ", "sorry")
+           for t in toks):
+        return None
+    rw.miss = False
+    tree, _ = parse_group(toks)
+    spans = rw.expr(tree)
+    if rw.miss or not spans:
+        return None
+    return latex_spans(spans)
+
+
+def prose_inline(s: str, rw) -> str:
+    """md_inline, with code spans routed through the figure rewriter where they parse
+    as spec vocabulary."""
+    m = re.search(r"\*\*(.+?)\*\*", s, re.DOTALL)
+    if m:
+        return prose_inline(s[:m.start()], rw) + r"\textbf{" + \
+            prose_inline(m.group(1), rw) + "}" + prose_inline(s[m.end():], rw)
+    out = []
+    parts = s.split("`")
+    for idx, part in enumerate(parts):
+        if idx % 2 == 1:
+            styled = prose_span(part, rw)
+            out.append(styled if styled is not None else r"\codett{" + esc(part) + "}")
+        else:
+            out.append(esc(part))
+    return "".join(out)
+
+
+def prose_block(text: str, rw) -> str:
+    """md_block with the paper-typography inline pass."""
+    return md_block(text, inline=lambda s: prose_inline(s, rw))
 
 
 PREAMBLE = r"""\documentclass[10pt]{article}
@@ -1687,7 +1785,7 @@ def flatten_spans(spans):
             yield (k, t)
 
 
-def render_figure(tex, fig_no, fig_title, routines_lines):
+def render_figure(tex, fig_no, fig_title, routines_lines, prose_rw):
     caption = f"Figure {fig_no}" + (f": {fig_title}" if fig_title else "")
     tex.append(r"\begin{center}\textbf{" + esc(caption) + r"}\end{center}")
     tex.append(r"\begin{figblock}")
@@ -1698,7 +1796,7 @@ def render_figure(tex, fig_no, fig_title, routines_lines):
             if note and not note_echoes(note, spans):
                 content += r"\hspace*{1.5em plus 1fill}" + \
                     r"{\scriptsize\color{black!55}$\triangleright$ " + \
-                    md_inline(note) + "}"
+                    prose_inline(note, prose_rw) + "}"
             tex.append(r"\figline{" + (esc(label) + ":" if label else "") + "}{" +
                        pad + "}{" + content + "}")
         tex.append(r"\smallskip")
@@ -1732,16 +1830,22 @@ def main():
         if m:
             title = m.group(1)
             body = header[m.end():]
-        tex.append(r"\section*{" + md_inline(title) + "}")
-        tex.append(md_block(body))
+        prose_rw = Rewriter(tables, None, None, {})
+        tex.append(r"\section*{" + prose_inline(title, prose_rw) + "}")
+        # the flip: only `## Extract` sections reach the PDF, in the paper's typography
+        for subtitle, sec in extract_sections(body):
+            if subtitle:
+                tex.append(r"\subsection*{" + prose_inline(subtitle, prose_rw) + "}")
+            tex.append(prose_block(sec, prose_rw))
 
-        figured = []   # (line_a, routine, src)
-        plain = []     # (docstring, kind, name, src)
+        figured = []   # (line_a, routine, src, docstring)
+        others = []    # (docstring, name)
         for doc, kind, name, src in items:
             r = tables.routines.get(name)
             if r and kind == "def":
-                figured.append((r.line_a, r, src))
-            plain.append((doc, kind, name, src))
+                figured.append((r.line_a, r, src, doc))
+            elif doc:
+                others.append((doc, name))
 
         if figured:
             figured.sort(key=lambda x: x[0])
@@ -1751,7 +1855,11 @@ def main():
             if mt:
                 fig_title = mt.group(1)
             blocks = []
-            for _a, r, src in figured:
+            for _a, r, src, doc in figured:
+                # a figured routine's `## Extract` prose leads its figure in, the way
+                # the draft's prose introduces each figure
+                for subtitle, sec in extract_sections(doc):
+                    tex.append(prose_block(sec, prose_rw))
                 sig, _b = split_signature(src)
                 params = parse_params(sig)
                 ptypes = {n: ty for n, ty, _a2 in params}
@@ -1763,17 +1871,14 @@ def main():
                         if ty.startswith(sname):
                             store_param = n
                 blocks.append(routine_lines(tables, r, src, store_param, ptypes))
-            render_figure(tex, fig, fig_title, blocks)
+            render_figure(tex, fig, fig_title, blocks, prose_rw)
 
-        notes = [
-            (doc, name) for doc, kind, name, _ in plain
-            if doc and kind in ("def", "structure", "class", "inductive")
-        ]
-        if notes:
-            tex.append(r"\subsection*{Notes, from the docstrings}")
-            for doc, name in notes:
-                tex.append(r"\paragraph{" + esc(name) + "}")
-                tex.append(md_block(doc))
+        # `## Extract` prose of the file's other declarations follows the figure
+        for doc, _name in others:
+            for subtitle, sec in extract_sections(doc):
+                if subtitle:
+                    tex.append(r"\subsection*{" + prose_inline(subtitle, prose_rw) + "}")
+                tex.append(prose_block(sec, prose_rw))
     tex.append(r"\end{document}")
     texfile = OUT / "consensus1.tex"
     texfile.write_text("\n".join(tex), encoding="utf-8")
