@@ -3743,12 +3743,13 @@ this list when a new call lands.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
   likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form
   `{ state := …, send := ∅ }`; `match` patterns untouched.
-- **Store-taking routines live in `namespace Store`** for dot notation. The protocol's
-  fork choice is `Store.getHead` (Figure 7's; Roberto, 2026-08-23); the superseded
-  `get_head`s, `process_block` ×2, `goldfish_eligible` ×2, and Fig1's
-  `eligible`/`forkChoice` keep `Goldfish`/`SG`/`FG`, one namespace holding one name. Names
-  whose draft prefix the old layer namespace carried spell it themselves now
-  (`Store.sgSupport`).
+- **Store-taking routines live in `namespace Store`** for dot notation, and a moved name
+  whose draft prefix the layer namespace carried spells it itself (`Store.sgSupport`,
+  `Store.goldfishForkChoice` — the second corrected 2026-08-23 after Figure 1 was missed).
+  The one forced exception: names *two* layers claim — `get_head` ×3, `process_block` ×2,
+  `goldfish_eligible` ×2 — cannot share one namespace, so the protocol's readings bear the
+  `Store` names (`S.getHead`, `S.goldfishEligible`, Figure 7's) and the superseded readings
+  keep `Goldfish`/`SG`/`FG`.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by assumption`); `on_tick` discharges them with dependent `if`s and a `have`.
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`

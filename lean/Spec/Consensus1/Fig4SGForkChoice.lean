@@ -102,7 +102,7 @@ namespace SG
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
-  Goldfish.forkChoice S anchor S.T votes s                      -- line 19
+  S.goldfishForkChoice anchor S.T votes s                       -- line 19
 
 end SG
 

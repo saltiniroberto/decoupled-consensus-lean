@@ -23,12 +23,13 @@ choice wants `FG.getHead`.
 `ghost` itself is not in a layer namespace: it is the shared building block, and no section
 redefines it.
 
-Everything that takes a store sits in `namespace Store`, so a caller writes
-`S.updateConfirmation k`, `S.majorityForkChoice …`, `S.viable` (Roberto, 2026-08-23) — except
-the layer-redefined names, one namespace holding one `getHead`. The protocol's readings bear
-the plain `Store` names where they are unique to it (`S.getHead` is Figure 7's); the
-superseded `get_head`s, `process_block` (two layers), `goldfish_eligible` (two), and
-`get_head`'s own vocabulary here (`eligible`, `forkChoice`) keep their layer namespaces.
+Everything that takes a store sits in `namespace Store`, and a name whose draft prefix the
+layer namespace carried spells it itself there (`S.goldfishForkChoice`, `S.sgSupport`) —
+so a caller writes `S.updateConfirmation k`, `S.goldfishForkChoice …`, `S.viable` (Roberto,
+2026-08-23). The one exception is forced: names *two* layers claim — `get_head` (three),
+`process_block` (two), `goldfish_eligible` (two) — cannot share one namespace, so the
+protocol's readings bear the `Store` names (`S.getHead`, `S.goldfishEligible` are
+Figure 7's) and the superseded readings keep `Goldfish`/`SG`.
 
 ## The arg-max step: the tie is a pick
 
@@ -161,13 +162,32 @@ def eligible (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s 
     (B : Block Validator) : Bool :=
   2 * score votes s B > votersCount votes s ∨ B.slot = S.s   -- line 14
 
+end Score
+
+end Goldfish
+
+namespace Store
+
+section Score
+variable [DecidableEq Validator] [Committees Validator]
+
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)` (Figure 1, lines 15–16): the shared
-    walk, instantiated with the Goldfish score and gate. -/
-def forkChoice (S : Store Validator) (anchor : Block Validator)
+    walk, instantiated with the Goldfish score and eligibility condition. In `Store` with
+    the draft's own prefix — the layer namespace no longer carries it. -/
+def goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   -- line 16; the pure condition offered to the walk's raising slot with `pure`
-  ghost anchor tree (score votes s) (fun B => pure (eligible S votes s B))
+  ghost anchor tree (Goldfish.score votes s) (fun B => pure (Goldfish.eligible S votes s B))
+
+end Score
+
+end Store
+
+namespace Goldfish
+
+section Score
+variable [DecidableEq Validator] [Committees Validator]
 
 /-- `get_head(Σ, votes, s)` (Figure 1, lines 17–18): the walk from genesis over the whole
     processed tree.
@@ -177,7 +197,7 @@ def forkChoice (S : Store Validator) (anchor : Block Validator)
     header on the namespaces. -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
-  forkChoice S .genesis S.T votes s                            -- line 18
+  S.goldfishForkChoice .genesis S.T votes s                    -- line 18
 
 end Score
 
