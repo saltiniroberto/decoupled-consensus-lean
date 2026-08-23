@@ -85,21 +85,22 @@ def Store.sgVote (i : Validator) (S : Store Validator)
     Figure 2's `on_tick`, then the one line. Section 5 never touches `on_tick`, so no later
     reading exists.
 
-    `Fig2.onTick` has already written the clock, so `S.t` is `t` and `S.s` its slot, and
-    the dependent `if` hands `sg_vote` its instant precondition, exactly as Figure 2's own
-    branches do.
+    `Fig2.onTick` has already written the clock, so its result's `state.t` is `t` and
+    `state.s` its slot, and the dependent `if` hands `sg_vote` its instant precondition,
+    exactly as Figure 2's own branches do.
 
-    The draft fixes no relation between `a_r` and the Goldfish instants, and its instants
-    are taken as distinct (`Fig2.onTick`'s docstring). On a schedule where `a_r` collided
-    with a Goldfish instant, this shape would run `sg_vote` on that duty's post-state and
-    drop the duty's messages; no tick the draft describes does so. -/
+    The draft fixes no relation between `a_r` and the Goldfish instants. On a schedule
+    where `a_r` coincided with one, the two actions compose: `sg_vote` runs on the Goldfish
+    duty's post-state, and the return keeps both sends — the union. On the draft's own
+    schedules the instants are distinct (`Fig2.onTick`'s docstring), so the Goldfish send
+    there is `∅`. -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
-  let res ← Fig2.onTick i S t isProposer
-  let S := res.state
+  let S : DutyResult Validator ← Fig2.onTick i S t isProposer
   -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
-  if h : S.t = SGSchedule.a (round S.s) then
-    return S.sgVote i
-  return res
+  if _ : S.state.t = SGSchedule.a (round S.state.s) then
+    let sg := S.state.sgVote i
+    return { state := sg.state, send := S.send ∪ sg.send }
+  return S
 
 end Consensus1

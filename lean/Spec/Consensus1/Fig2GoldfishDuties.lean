@@ -218,12 +218,12 @@ def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
-  if h : s > 0 ∧ t = slotStart s ∧ isProposer s i then         -- line 3
+  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s i then         -- line 3
     return ← S.proposeBlock i                                  -- line 4
-  if h : s > 0 ∧ t = slotStart s + (Δ : Int) then              -- line 5
+  if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then              -- line 5
     return ← S.goldfishVote i                                  -- line 6
   -- line 7: the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
-  if h : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
+  if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
     let S' ← S.updateConfirmation (s - 1)                      -- line 8
     return { state := S', send := ∅ }
   return { state := S, send := ∅ }

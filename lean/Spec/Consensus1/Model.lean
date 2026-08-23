@@ -489,9 +489,9 @@ instance : DecidableEq (SGVote Validator) := fun a b =>
 
 /-- A wire message: what a duty broadcasts. The draft's three wire objects as one type — the
     shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
-    can name what it sends (Roberto, 2026-08-23). No equality instance yet: nothing compares
-    or unions messages — every send is a singleton or empty — and `deriving DecidableEq`
-    works here (below the hand-written instances) the day a consumer arrives. -/
+    can name what it sends (Roberto, 2026-08-23). The equality instance is derived, sitting
+    below the hand-written ones it needs; its first consumer is `Store.onTick`'s send union
+    (same day). -/
 inductive Message (Validator : Type) [Roots] where
   /-- A proposed block. -/
   | block (B : Block Validator)
@@ -499,6 +499,7 @@ inductive Message (Validator : Type) [Roots] where
   | gfVote (v : GoldfishVote Validator)
   /-- An SG vote. -/
   | sgVote (v : SGVote Validator)
+deriving DecidableEq
 
 
 namespace Block

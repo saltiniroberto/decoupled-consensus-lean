@@ -3756,10 +3756,16 @@ The import between Figures 2 and 5 flipped back with it: the Section 3.4 line wa
 thing Figure 2 took from Figure 5, so `Fig2GoldfishDuties.lean` dropped that import (and
 its `[SGSchedule]` binder) and `Fig5SGDuty.lean` imports it instead.
 
-One semantic edge, stated in `Store.onTick`'s docstring: on a schedule where `a_r` collided
-with a Goldfish instant, the composed form runs `sg_vote` on that duty's post-state and
-drops the duty's messages, where the inlined form skipped `sg_vote`. The draft's instants
-are taken as distinct, so no tick the draft describes distinguishes the two.
+Three refinements the same day, all Roberto's. The collision edge composes rather than
+drops: on a schedule where `a_r` coincided with a Goldfish instant, `sg_vote` runs on that
+duty's post-state and the return unions the two sends, so nothing is lost (on the draft's
+own schedules the instants are distinct and the Goldfish send there is `∅`). The bound
+result is `let S : DutyResult Validator ←`, shadowing the store, reads going through
+`S.state` — a `Coe (DutyResult → Store)` would not shorten them, field notation never
+inserting coercions (the `↑H` limit). And dependent `if`s bind no name when nothing uses
+the hypothesis — `if _ : … then`, the autoparam tactic reading the anonymous hypothesis —
+applied to all four tick branches. The send union is `Message`'s first equality consumer,
+so `Message` now derives `DecidableEq`, exactly as its docstring had planned.
 
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
@@ -3798,7 +3804,9 @@ this list when a new call lands.
   three sites, being a local in the pdf, like the equivocator set.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
-  dependent `if`s alone, no `have`s (second pass 2026-08-23; entry above).
+  dependent `if`s alone, no `have`s (second pass 2026-08-23; entry above). The `if`s bind
+  `_`, not a name — the tactic reads the anonymous hypothesis; a dependent `if` names its
+  hypothesis only where the proof is used (`if hp :` at Figure 7's `(B.parent).get hp`).
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
   (abstract `Root`, its order, genesis's root), `RootComputation`, `SGSchedule`. Class over
   type parameter, confirmed 2026-08-23. Two former members dissolved into nondeterminism the
