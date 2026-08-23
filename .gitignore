@@ -12,3 +12,4 @@ REFERENCES_LOCAL.md
 __pycache__/
 *.vsix
 scratch/
+extract/out/
