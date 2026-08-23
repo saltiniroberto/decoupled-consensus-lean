@@ -29,13 +29,13 @@ structure SigningHistory (Validator : Type) [Roots] where
   /-- The first named target signed at height `h`. -/
   firstTarget : Nat → Option (Block Validator)
   /-- The target in the first finality pair signed at height `h`. -/
-  firstLock : Nat → Option (Block Validator)
+  finalityTarget : Nat → Option (Block Validator)
 
 /-- The record of a validator that has signed nothing anywhere: every validator's start. -/
 def SigningHistory.gen : SigningHistory Validator where
   signedEmptyTarget _ := false
   firstTarget _ := ⊥
-  firstLock _ := ⊥
+  finalityTarget _ := ⊥
 
 /-- The durable write behind signing an empty-target vote `(h, ⊥)`. -/
 def SigningHistory.saveEmptyTarget (H : SigningHistory Validator) (h : Nat) :
@@ -47,9 +47,10 @@ def SigningHistory.saveTarget (H : SigningHistory Validator) (h : Nat)
     (T : Block Validator) : SigningHistory Validator :=
   { H with firstTarget := Function.update H.firstTarget h (some T) }
 
-/-- The durable write behind a finality pair's first release: lock `J` at `h`. -/
-def SigningHistory.saveLock (H : SigningHistory Validator) (h : Nat)
+/-- The durable write behind a finality pair's first release: record `J` as the
+    height-`h` finality target. -/
+def SigningHistory.saveFinalityTarget (H : SigningHistory Validator) (h : Nat)
     (J : Block Validator) : SigningHistory Validator :=
-  { H with firstLock := Function.update H.firstLock h (some J) }
+  { H with finalityTarget := Function.update H.finalityTarget h (some J) }
 
 end Consensus1

@@ -11,24 +11,25 @@ rendering, `Spec/Defs/Voting.lean` (namespace `Decoupled`), whose module header 
 definition back to that paper.
 
 The strategy, in plain words. A validator keeps a durable per-height record of what it has
-signed — `Σ.H`, a `SigningHistory` (both in `Store.lean`): whether it signed an empty
-target at a height, the first named target it signed there, and the first finality-pair
-target it locked there. Two store rules read that record and the store's view, and each
+signed — `Σ.H`, a `SigningHistory` (the field in `Store.lean`): whether it signed an
+empty target at a height, the first named target it signed there, and the target of the
+first finality pair it signed there. Two store rules read that record and the store's
+view, and each
 returns its pair **and the updated store** — the record write rides the returned store, so
 no signature is released before its record is durable:
 
 * `Store.finalityVote` signs `(h_j, J)` — the latest justification — exactly when it is
   ahead of the finalization, on its chain, certified, and consistent with the record: the
   validator already signed `J` as its target at `h_j`, signed no empty target there, and
-  locked nothing else there. It locks `J` at `h_j` on first release.
+  its recorded finality target there is empty or `J` itself — written on first release.
 * `Store.heightVote` signs the current-height pair under the ceiling `Σ.live_confirmed`,
   the block the validator currently takes as confirmed: it repeats what its record forces
   (an empty-target vote or a recorded target), and only with a silent record does it sign
   something new — an empty target when the height is nonjustifiable, else the confirmed
   state's target when that target sits at or below the ceiling.
 
-`Store.fgVote` composes them, finality first, so the lock written by the finality rule is
-visible to the height rule's record read within the same attestation.
+`Store.fgVote` composes them, finality first, so the finality target written by the
+finality rule is visible to the height rule's record read within the same attestation.
 
 ## What changed in the crossing, from `Spec/Defs/Voting.lean` to here
 
@@ -91,8 +92,9 @@ structure SigningResult (Validator : Type) [Roots] (α : Type) where
     chain — and, through the raising read of the ceiling's stored state, the current
     height `h`, its target and the nonjustifiable flag.
 
-    The cases: (1) an empty target already signed at `h` is repeated; (2) a lock at `h` is
-    repeated as a target; (3) a named target already signed at `h` is repeated, and when it
+    The cases: (1) an empty target already signed at `h` is repeated; (2) a recorded
+    finality target at `h` is repeated as a target; (3) a named target already signed at
+    `h` is repeated, and when it
     no longer sits below the ceiling, an empty target is signed instead; (4) with a silent
     record and the height nonjustifiable, an empty target is signed; (5) with a silent
     record otherwise, the state's target is signed when it sits below the ceiling, else an
@@ -106,9 +108,9 @@ def Store.heightVote (S : Store Validator) :
   let h := σC.h
   if S.H.signedEmptyTarget h then                   -- case 1: repeat the empty target
     return { signed := .emptyTarget h, state := S }
-  if S.H.firstLock h ≠ ⊥ then                       -- case 2: repeat the lock
-    let lock ← S.H.firstLock h
-    if lock ⪯ C then return { signed := .target h lock, state := S }
+  if S.H.finalityTarget h ≠ ⊥ then                  -- case 2: repeat the finality target
+    let finalityTarget ← S.H.finalityTarget h
+    if finalityTarget ⪯ C then return { signed := .target h finalityTarget, state := S }
     return { signed := .empty, state := S }
   if S.H.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
     let target ← S.H.firstTarget h
@@ -129,20 +131,21 @@ def Store.heightVote (S : Store Validator) :
     height and the finalization from the store — exactly when it is ahead of the
     finalization (`h_F < h_j`), on its chain (`F ⪯ J`), certified (`hasJC`), and
     consistent with the record: the validator already signed `J` as its target at `h_j`,
-    signed no empty target there, and locked nothing else there. The lock is written into
-    the returned store on first release; the rule is total — every branch returns. -/
+    signed no empty target there, and its recorded finality target there is empty or `J`
+    itself. That record is written into the returned store on first release; the rule is
+    total — every branch returns. -/
 def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
   if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.firstTarget S.h_j = some S.J ∧
       ¬ S.H.signedEmptyTarget S.h_j ∧
-      (S.H.firstLock S.h_j = ⊥ ∨ S.H.firstLock S.h_j = some S.J) then
-    S.H ← S.H.saveLock S.h_j S.J
+      (S.H.finalityTarget S.h_j = ⊥ ∨ S.H.finalityTarget S.h_j = some S.J) then
+    S.H ← S.H.saveFinalityTarget S.h_j S.J
     return { signed := .pair S.h_j S.J, state := S }
   return { signed := .empty, state := S }
 
 /-- The combined attestation: the two pair rules evaluated **in order** — first the
-    finality pair, whose lock write rides the store the current-height rule then reads.
+    finality pair, whose record write rides the store the current-height rule then reads.
     That ordering is what keeps the two pairs of one attestation from contradicting each
     other; the claim itself is `Analysis/` matter. The round is `round(Σ.s)`; `head` and
     `hasJC` stay explicit — see the module header. The head is carried, not derived. -/
