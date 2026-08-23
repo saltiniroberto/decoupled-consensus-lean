@@ -94,13 +94,13 @@ def Store.heightVote (S : Store Validator) :
   let σC ← S.σ[S.liveConfirmed]
   let C := S.liveConfirmed
   let h := σC.h
-  if S.H.τ h then                                   -- case 1: repeat the empty target
+  if S.H.signedEmptyTarget h then                                   -- case 1: repeat the empty target
     return (.emptyTarget h, S)
-  if hl : (S.H.lock h).isSome then                  -- case 2: repeat the lock
-    let T_L := (S.H.lock h).get hl
+  if hl : (S.H.firstLock h).isSome then                  -- case 2: repeat the lock
+    let T_L := (S.H.firstLock h).get hl
     if T_L ⪯ C then return (.target h T_L, S) else return (.empty, S)
-  if ht : (S.H.T h).isSome then                     -- case 3: repeat the named target
-    let T₀ := (S.H.T h).get ht
+  if ht : (S.H.firstTarget h).isSome then                     -- case 3: repeat the named target
+    let T₀ := (S.H.firstTarget h).get ht
     if T₀ ⪯ C then return (.target h T₀, S)
     S.H ← S.H.saveEmptyTarget h
     return (.emptyTarget h, S)
@@ -122,8 +122,9 @@ def Store.heightVote (S : Store Validator) :
 def Store.finalityVote (S : Store Validator) (hasJC : Bool) :
     FinalityPair Validator × Store Validator := Id.run do
   let mut S := S
-  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.T S.h_j = some S.J ∧ S.H.τ S.h_j = false ∧
-      (S.H.lock S.h_j = ⊥ ∨ S.H.lock S.h_j = some S.J) then
+  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ hasJC ∧ S.H.firstTarget S.h_j = some S.J ∧
+      ¬ S.H.signedEmptyTarget S.h_j ∧
+      (S.H.firstLock S.h_j = ⊥ ∨ S.H.firstLock S.h_j = some S.J) then
     S.H ← S.H.saveLock S.h_j S.J
     return (.pair S.h_j S.J, S)
   return (.empty, S)
