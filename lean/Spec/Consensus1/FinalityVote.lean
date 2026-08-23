@@ -79,10 +79,10 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
     Reads from the store: the record `Σ.H`, the ceiling `Σ.live_confirmed` — the validator
     vouches for nothing beyond it, so a target is signed only when it lies on that block's
     chain — and, through the raising read of the ceiling's stored state, the current
-    height `k`, its target and the nonjustifiable flag.
+    height `h`, its target and the nonjustifiable flag.
 
-    The cases: (1) an empty target already signed at `k` is repeated; (2) a lock at `k` is
-    repeated as a target; (3) a named target already signed at `k` is repeated, and when it
+    The cases: (1) an empty target already signed at `h` is repeated; (2) a lock at `h` is
+    repeated as a target; (3) a named target already signed at `h` is repeated, and when it
     no longer sits below the ceiling, an empty target is signed instead; (4) with a silent
     record and the height nonjustifiable, an empty target is signed; (5) with a silent
     record otherwise, the state's target is signed when it sits below the ceiling, else an
@@ -93,25 +93,25 @@ def Store.heightVote (S : Store Validator) :
   let mut S := S
   let σC ← S.σ[S.liveConfirmed]
   let C := S.liveConfirmed
-  let k := σC.h
-  if S.H.τ k then                                   -- case 1: repeat the empty target
-    return (.emptyTarget k, S)
-  if hl : (S.H.lock k).isSome then                  -- case 2: repeat the lock
-    let T_L := (S.H.lock k).get hl
-    if T_L ⪯ C then return (.target k T_L, S) else return (.empty, S)
-  if ht : (S.H.T k).isSome then                     -- case 3: repeat the named target
-    let T₀ := (S.H.T k).get ht
-    if T₀ ⪯ C then return (.target k T₀, S)
-    S.H ← S.H.saveEmptyTarget k
-    return (.emptyTarget k, S)
+  let h := σC.h
+  if S.H.τ h then                                   -- case 1: repeat the empty target
+    return (.emptyTarget h, S)
+  if hl : (S.H.lock h).isSome then                  -- case 2: repeat the lock
+    let T_L := (S.H.lock h).get hl
+    if T_L ⪯ C then return (.target h T_L, S) else return (.empty, S)
+  if ht : (S.H.T h).isSome then                     -- case 3: repeat the named target
+    let T₀ := (S.H.T h).get ht
+    if T₀ ⪯ C then return (.target h T₀, S)
+    S.H ← S.H.saveEmptyTarget h
+    return (.emptyTarget h, S)
   if σC.nj then                                     -- case 4: no record, nonjustifiable
-    S.H ← S.H.saveEmptyTarget k
-    return (.emptyTarget k, S)
+    S.H ← S.H.saveEmptyTarget h
+    return (.emptyTarget h, S)
   if σC.T_h ⪯ C then                                -- case 5: no record, sign the target
-    S.H ← S.H.saveTarget k σC.T_h
-    return (.target k σC.T_h, S)
-  S.H ← S.H.saveEmptyTarget k
-  return (.emptyTarget k, S)
+    S.H ← S.H.saveTarget h σC.T_h
+    return (.target h σC.T_h, S)
+  S.H ← S.H.saveEmptyTarget h
+  return (.emptyTarget h, S)
 
 /-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
     height and the finalization from the store — exactly when it is ahead of the
