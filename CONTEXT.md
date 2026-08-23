@@ -3784,6 +3784,29 @@ a DejaVu fallback carries the unicode, so there is no symbol-translation table. 
 part is the Lean-to-pseudocode rewriting: v1 prints lightly cleaned Lean, and the rewrite
 rules are meant to accumulate in `clean_code_line`.
 
+**v2 (2026-08-23) rewrites the figure bodies into the draft's own pseudocode style.**
+Roberto's constraint: no rule fitted to the frozen files — every rule is keyed on Lean or
+Mathlib surface syntax, or driven by tables harvested from the sources' conventions. The
+harvested conventions: a docstring opening with a backticked paper form
+(`` `Σ.gf_votes[k]` ``, `` `t_s = 4Δs` ``, `` `B_gen` ``) names that declaration's paper
+symbol and access shape; the figure citation `name(args)` names a routine's paper signature,
+and Lean params absent from it (the validator `i`, `isProposer`) stay hidden at call sites,
+as the paper's own calls hide them; a structure whose field docstrings open `Σ.…` is the
+paper's `Σ`, so the store-typed parameter renders `Σ`; "the tuple `(v, s, B)`" in a
+structure's docstring makes its `.mk` a tuple; a constructor docstring's tuple template
+(`` `(h, ⊥)` ``) renders anonymous-constructor equalities. Syntax-keyed rules: all binders
+render `←`; dependent-`if` binders drop; top-level `∧`/`∨` become and/or, `∧` in a
+set-builder becomes a comma; `X ← X ∪ {e}` becomes "add e to X"; `x := fun y => e` becomes
+"define x(y) as e"; a `{state, send}` duty return becomes "broadcast m; call"; coercion and
+`Option` noise strips (`↑`, ascriptions, `.toNat` (⌊⌋ over a division), `.toFinset`, `some`,
+`pure`, `.get`, `.getD` — the last drops a default, the one lossy rule); `filterM`/`imageM`
+fuse into set-builders, `biUnion` into a big union; `for _ in [:e]` is the figure's `loop`.
+Typography follows the paper: bold keywords, small-caps routine names, italic variables,
+sans field names, subscripts for `x_y` names, right-margin `▷` notes from the `-- line n`
+comment text (dropped when they merely echo the rewritten code). Class fields without an
+opening symbol fall back to namespace-stripped call form — `Committees.K s` renders `K(s)`,
+not the draft's `K_s`, until the live spec's docstring opens with the symbol.
+
 ### `FinalityVote.lean`: the attestation-filling rules, imported from the first rendering — 2026-08-23
 
 Roberto: the protocol determining finality votes, written by importing the logic from the
