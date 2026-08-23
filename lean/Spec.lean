@@ -23,6 +23,7 @@ import Spec.Consensus1.Model
 import Spec.Consensus1.Notation
 import Spec.Consensus1.FinsetM
 import Spec.Consensus1.Raise
+import Spec.Consensus1.Nondet
 import Spec.Consensus1.Fig6StateTransition
 import Spec.Consensus1.Store
 import Spec.Consensus1.Fig1GoldfishWalk
