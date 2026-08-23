@@ -12,6 +12,7 @@ So there is one `Store` here, with each field's docstring naming the layer it ar
     Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)   § 2.2
       + sg_votes[·]                                                             § 3.2
       + σ[·], F, h_F, J, h_j, h_max                                             § 5.1
+      + H                                       not the draft's — see `FinalityVote.lean`
 
 ## The draft's `Σ` is written `S`
 
@@ -122,6 +123,48 @@ scoped instance stateMapGetElem :
       (ResultOrExcept (ChainState Validator)) (fun _ _ => True) where
   getElem σ B _ := if h : B ∈ σ then .ok ((σ B).get h) else .error .error
 
+/-! ## The signing record
+
+Not draft content: `consensus-1.pdf` never says how a validator fills the attestation pairs
+it signs. The filling rules are imported from the first specification's voting strategy —
+`FinalityVote.lean` carries them and the import's story — and this record is theirs: the
+durable per-height memory those rules read and write. It sits in this file, and in the
+store itself (Roberto, 2026-08-23), because the store is one validator's state and the
+rules are store rules. -/
+
+/-- The durable signing record a validator keeps per height: whether it signed an
+    empty-target vote at `h`, the first named target it signed at `h`, and the target of
+    the first finality pair it signed at `h`. The rules in `FinalityVote.lean` write it
+    into the store they return before the signature is released. -/
+structure SigningHistory (Validator : Type) [Roots] where
+  /-- `τ(h)`: an empty-target vote `(h, ⊥)` was signed at height `h`. -/
+  τ : Nat → Bool
+  /-- `T(h)`: the first named target signed at height `h`. -/
+  T : Nat → Option (Block Validator)
+  /-- `lock(h)`: the target in the first finality pair signed at height `h`. -/
+  lock : Nat → Option (Block Validator)
+
+/-- The record of a validator that has signed nothing anywhere: every validator's start. -/
+def SigningHistory.gen : SigningHistory Validator where
+  τ _ := false
+  T _ := ⊥
+  lock _ := ⊥
+
+/-- The durable write behind signing an empty-target vote `(k, ⊥)`. -/
+def SigningHistory.saveEmptyTarget (H : SigningHistory Validator) (k : Nat) :
+    SigningHistory Validator :=
+  { H with τ := Function.update H.τ k true }
+
+/-- The durable write behind signing a first named target `(k, T)`. -/
+def SigningHistory.saveTarget (H : SigningHistory Validator) (k : Nat)
+    (T : Block Validator) : SigningHistory Validator :=
+  { H with T := Function.update H.T k (some T) }
+
+/-- The durable write behind a finality pair's first release: lock `J` at `k`. -/
+def SigningHistory.saveLock (H : SigningHistory Validator) (k : Nat)
+    (J : Block Validator) : SigningHistory Validator :=
+  { H with lock := Function.update H.lock k (some J) }
+
 /-- The store (Definition 1 of the draft, with the fields Sections 3.2 and 5.1 add).
 
     "The store keeps messages and their arrival times, and nothing else. Every rule below is
@@ -166,6 +209,9 @@ structure Store (Validator : Type) where
   /-- `Σ.h_max`, the greatest state height in the live tree. It "otherwise only grows", and
       is recomputed inside the new live tree whenever `Σ.F` advances. -/
   h_max : Nat
+  /-- `Σ.H`, the validator's durable signing record — **not a field of the draft's store**;
+      see the section header above. Written only by the rules in `FinalityVote.lean`. -/
+  H : SigningHistory Validator
 
 /-- The initial store: `Σ.T = {B_gen}`, `Σ.live_confirmed = Σ.latest_confirmed = B_gen`,
     "other fields are empty".
@@ -195,6 +241,7 @@ def Store.gen : Store Validator where
   J := .genesis
   h_j := 0
   h_max := 1
+  H := SigningHistory.gen
 
 /-! ## The live tree
 

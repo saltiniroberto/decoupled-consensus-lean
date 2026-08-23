@@ -3809,6 +3809,18 @@ def itself, so the pure rule is called as `Consensus1.fgVote`. No citations, per
 2026-08-19 pivot — the docstrings are self-contained and name `Spec/Defs/Voting.lean` as
 the working source.
 
+Second pass, same day (Roberto): the record moved into the store and the rules moved onto
+it. `SigningHistory` and its writes live in `Store.lean`; the store gains the field `Σ.H`
+(its docstring and the header table say it is not the draft's), `Store.gen` starts it
+empty. `Store.heightVote` (raising — it does the `Σ.σ[live_confirmed]` read itself) and
+`Store.finalityVote` read their inputs from the store and return the pair with the updated
+store; `Store.fgVote` threads it — finality, then height, then the attestation. Two more
+collapses fell out of store access, both on the crossing list: the ceiling always exists
+(`live_confirmed` is a block from genesis on, so the first rendering's nothing-confirmed
+case is unrepresentable), and the two heights are the same state's (`hC = k`), so the
+`hC ≥ k` conditions hold outright and are unwritten. The explicit-`H` threading and the
+qualified-call trap are history from the first pass.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
