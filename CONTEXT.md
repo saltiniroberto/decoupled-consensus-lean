@@ -3402,6 +3402,19 @@ Each given as a correction; standing until revoked:
 - **No `∣` (divides) in code** — Roberto read it as a pipe/or. Write `% … = 0`
   (`Block.isOpening`, Figure 1's justify test). Docstrings quoting the draft's formula keep
   the draft's spelling, backticked.
+- **Sections and namespaces are minimized** (Roberto, 2026-08-23): one file-level
+  `variable` line per file — used-only inclusion keeps signatures unchanged — and namespace
+  blocks only where dot notation or a name collision demands them. The good-reason
+  exceptions, each stated where it stands: `Model.lean`'s one `Electorate` section (an
+  instance variable rides along unused into every declaration mentioning `Validator`,
+  and the eight `Beq_iff` theorems would each warn) and its mid-file `variable [Roots]`
+  (file-level placement would auto-include unevenly across the mutual family, whose
+  parameter lists must match).
+- **What the pdf writes inline stays inline** (Roberto, 2026-08-23): `goldfish_score`'s
+  equivocator set is a `let`, as its line 2 writes it — the standalone `equivocators` def
+  is gone, the draft defining no such function. A `let` from an inlining needs its type
+  ascribed where the deleted def's result type was the pin (`Committees ?m` stuck again
+  without it).
 - **A message is built by named `mk`** (Roberto, 2026-08-23, for `Consensus1`):
   `GoldfishVote.mk (validator := i) (slot := s) (target := H)`, never `⟨…⟩` — wire objects
   only. A `DutyResult` keeps the brace form `{ state := …, send := ∅ }`, and `match`

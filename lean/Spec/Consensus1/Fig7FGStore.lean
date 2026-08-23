@@ -53,11 +53,8 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots]
-
-section ForkChoice
-variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
-  [Params]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator]
+  [Committees Validator] [Params]
 
 open Params
 
@@ -209,6 +206,5 @@ def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k :
 
 end Store
 
-end ForkChoice
 
 end Consensus1

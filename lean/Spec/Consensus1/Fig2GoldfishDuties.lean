@@ -81,10 +81,7 @@ class RootComputation (Validator : Type) [Roots] where
   /-- The root of the block being built, from its parent and its slot. -/
   compute : Block Validator → Nat → Root
 
-variable {Validator : Type} [Roots]
-
-section Handlers
-variable [DecidableEq Validator] [Committees Validator] [Params]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
   [RootComputation Validator] [SGSchedule]
 
 open Params
@@ -244,6 +241,5 @@ def onTick (i : Validator) (S : Store Validator) (t : Int)
 
 end Store
 
-end Handlers
 
 end Consensus1

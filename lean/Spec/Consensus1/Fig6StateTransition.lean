@@ -47,7 +47,9 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params]
+
+open Params
 
 /-! ## Definition 4 — the chain state -/
 
@@ -103,9 +105,6 @@ def ChainState.gen : ChainState Validator where
   F := .genesis
   h_F := 0
 
-section QuorumSets
-variable [DecidableEq Validator] [Electorate Validator]
-
 /-- `Q_target(σ) = {i : σ.target_participation[i]}`, intersected with the electorate, since
     only `V`'s weights are ever summed. -/
 def ChainState.Qtarget (σ : ChainState Validator) : Finset Validator :=
@@ -119,14 +118,8 @@ def ChainState.Qprog (σ : ChainState Validator) : Finset Validator :=
 def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
   {i ∈ Electorate.V | σ.finalize i}
 
-end QuorumSets
 
 /-! ## The four routines -/
-
-section Routines
-variable [DecidableEq Validator] [Electorate Validator] [Params]
-
-open Params
 
 /-- `process_attestation(σ, a)` (Figure 6, lines 7–16): classify one attestation and set the
     bits it earns.
@@ -206,6 +199,5 @@ def stateTransition (σ : ChainState Validator) (B : Block Validator) :
   σ.L ← B                                                     -- line 5
   return processHeightEvents σ                                -- line 6
 
-end Routines
 
 end Consensus1

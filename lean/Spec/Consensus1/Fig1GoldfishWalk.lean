@@ -81,12 +81,9 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator]
 
 /-! ## The shared walk -/
-
-section Ghost
-variable [DecidableEq Validator]
 
 /-- Line 11's `arg max score`: the maximal-score members, the tie a genuine pick — every
     resolution among the outcomes, a root order being one. On empty `children` there are no
@@ -120,32 +117,25 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     H := (← bestChild children score)
   return H  -- the bound is reached: not a figure line, see the module header
 
-end Ghost
 
 namespace Goldfish
 
 /-! ## The Goldfish score and gate -/
 
-section Score
-variable [DecidableEq Validator] [Committees Validator]
-
-/-- The validators of `K_s` that `votes` shows equivocating: two distinct votes by the same
-    validator. Line 2 of `goldfish_score`, named because the score and the participant count
-    both read it. -/
-def equivocators (votes : Finset (GoldfishVote Validator)) (s : Nat) : Finset Validator :=
-  {v ∈ Committees.K s |
-    ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
-
 /-- `goldfish_score(votes, s, B)` (Figure 1, lines 1–4): every equivocator, plus every
-    non-equivocating participant whose target descends from `B`.
+    non-equivocating participant whose target descends from `B`. The equivocator set is a
+    `let`, as line 2 writes it — the draft defines no standalone function (Roberto,
+    2026-08-23; a named `equivocators` def preceded this, git history has it).
 
     An equivocator is counted without its target being read — see the module header. -/
 def score (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) : Nat :=
-  let eq := equivocators votes s
+  -- line 2: `{v ∈ K_s : votes holds two distinct votes by v}`
+  let equivocators : Finset Validator := {v ∈ Committees.K s |
+    ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
   -- line 3: `{v ∈ K_s \ equivocators : (v, s, B') ∈ votes with B ⪯ B'}`
-  let supporters := {v ∈ Committees.K s \ eq |
+  let supporters := {v ∈ Committees.K s \ equivocators |
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
-  |eq| + |supporters|                                          -- line 4
+  |equivocators| + |supporters|                                -- line 4
 
 /-- `voters_count = |{v ∈ K_s : votes holds a vote by v}|`: the participants `N_s(votes)` of
     Definition 2, as a count. Line 13 of `goldfish_eligible`, and line 5 of Figure 3's
@@ -162,14 +152,9 @@ def eligible (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s 
     (B : Block Validator) : Bool :=
   2 * score votes s B > votersCount votes s ∨ B.slot = S.s   -- line 14
 
-end Score
-
 end Goldfish
 
 namespace Store
-
-section Score
-variable [DecidableEq Validator] [Committees Validator]
 
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)` (Figure 1, lines 15–16): the shared
     walk, instantiated with the Goldfish score and eligibility condition. In `Store` with
@@ -180,14 +165,9 @@ def goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
   -- line 16; the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (Goldfish.score votes s) (fun B => pure (Goldfish.eligible S votes s B))
 
-end Score
-
 end Store
 
 namespace Goldfish
-
-section Score
-variable [DecidableEq Validator] [Committees Validator]
 
 /-- `get_head(Σ, votes, s)` (Figure 1, lines 17–18): the walk from genesis over the whole
     processed tree.
@@ -198,8 +178,6 @@ variable [DecidableEq Validator] [Committees Validator]
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   S.goldfishForkChoice .genesis S.T votes s                    -- line 18
-
-end Score
 
 end Goldfish
 

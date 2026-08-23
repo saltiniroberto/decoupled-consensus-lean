@@ -76,7 +76,7 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots]
+variable {Validator : Type} [Roots] [DecidableEq Validator]
 
 /-! ### The three map types, and how each is read -/
 
@@ -178,7 +178,7 @@ structure Store (Validator : Type) where
 
     Genesis has no timestamp: the draft's `−∞` and this `none` agree, nothing reading a
     block's timestamp. -/
-def Store.gen [DecidableEq Validator] : Store Validator where
+def Store.gen : Store Validator where
   t := -1
   s := 0
   T := {.genesis}
@@ -202,9 +202,6 @@ Section 5.1's other derived set, the processed finality evidence
 `E_F(Σ) = {(Σ.σ[B].F, Σ.σ[B].h_F) : B ∈ Σ.T}`, is **not** rendered: no figure reads it, and
 under this subtree's rule a definition lands with its first consumer. -/
 
-section Derived
-variable [DecidableEq Validator]
-
 /-- `T_F(Σ) = {B ∈ Σ.T : Σ.F ⪯ B}`, the *live tree*: the processed blocks at or below the
     finalized one. "It retains every processed block; the live tree is derived below the
     finalized block" — so nothing is ever removed from `Σ.T`, and this is the view every
@@ -212,7 +209,6 @@ variable [DecidableEq Validator]
 def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
   {B ∈ S.T | S.F ⪯ B}
 
-end Derived
 
 /-! ## What a duty returns
 

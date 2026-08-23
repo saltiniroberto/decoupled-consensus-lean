@@ -40,10 +40,7 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots]
-
-section Confirmation
-variable [DecidableEq Validator] [Committees Validator] [Params]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
 
 open Params
 
@@ -85,6 +82,5 @@ def updateConfirmation (S : Store Validator) (s : Nat)
 
 end Store
 
-end Confirmation
 
 end Consensus1

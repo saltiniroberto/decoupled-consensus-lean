@@ -101,9 +101,11 @@ class Electorate (Validator : Type) where
   /-- Weights are positive. -/
   w_pos : ∀ i ∈ V, 0 < w i
 
-variable {Validator : Type}
+variable {Validator : Type} [DecidableEq Validator]
 
-section Weights
+-- one section, the file's only one: `[Electorate]` scoped to its consumers, or it rides
+-- along unused into every later declaration that mentions `Validator`
+section Electorate
 variable [Electorate Validator]
 
 /-- `w(S) = ∑_{i ∈ S} w(i)`. -/
@@ -111,7 +113,6 @@ def weight (S : Finset Validator) : Nat := ∑ i ∈ S, Electorate.w i
 
 @[inherit_doc] scoped notation:max "w(" S ")" => weight S
 
-end Weights
 
 /-- `W = w(V)`, the total weight. -/
 def W (Validator : Type) [Electorate Validator] : Nat :=
@@ -125,9 +126,6 @@ def W (Validator : Type) [Electorate Validator] : Nat :=
     computes*, so each is written where it is used. -/
 def q (Validator : Type) [Electorate Validator] : Nat := (2 * W Validator + 2) / 3
 
-section Thresholds
-variable [Electorate Validator]
-
 /-- `S` is a *quorum*: `w(S) ≥ q`.
 
     A predicate taking the set, rather than a bare `q`: `W` and `q` are constants of the
@@ -140,7 +138,8 @@ def Quorum (S : Finset Validator) : Prop := w(S) ≥ q Validator
 
 instance (S : Finset Validator) : Decidable (Quorum S) := inferInstanceAs (Decidable (_ ≥ _))
 
-end Thresholds
+end Electorate
+
 
 /-- Each slot's committee `K_s ⊆ V` (Section 1), whose members cast that slot's Goldfish
     votes. How committees are drawn is outside the draft's scope — a VRF, a public shuffle,
@@ -330,9 +329,6 @@ built from.
 `SGVote` is not here: nothing nests through it, so its equality is one line off the block's,
 below the section. -/
 
-section DecEq
-variable [DecidableEq Validator]
-
 mutual
 
 /-- Structural equality of blocks. -/
@@ -504,7 +500,6 @@ inductive Message (Validator : Type) [Roots] where
   /-- An SG vote. -/
   | sgVote (v : SGVote Validator)
 
-end DecEq
 
 namespace Block
 
@@ -550,7 +545,7 @@ def Preceq (a b : Block Validator) : Prop := a ∈ ancestors b
 
 @[inherit_doc] scoped infix:50 " ⪯ " => Preceq
 
-instance [DecidableEq Validator] : DecidableRel (Preceq (Validator := Validator)) :=
+instance : DecidableRel (Preceq (Validator := Validator)) :=
   fun a b => inferInstanceAs (Decidable (a ∈ ancestors b))
 
 /-- `B ≺ C`: strict ancestry — `B ⪯ C` and `B ≠ C`. `C` is a *descendant* of `B` when
@@ -559,7 +554,7 @@ def Prec (a b : Block Validator) : Prop := a ⪯ b ∧ a ≠ b
 
 @[inherit_doc] scoped infix:50 " ≺ " => Prec
 
-instance [DecidableEq Validator] : DecidableRel (Prec (Validator := Validator)) :=
+instance : DecidableRel (Prec (Validator := Validator)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∧ _))
 
 /-- `B ∼ C`: *compatible* — `B ⪯ C` or `C ⪯ B`, the two lie on one chain. The draft's
@@ -568,7 +563,7 @@ def Compatible (a b : Block Validator) : Prop := a ⪯ b ∨ b ⪯ a
 
 @[inherit_doc] scoped infix:50 " ∼ " => Compatible
 
-instance [DecidableEq Validator] : DecidableRel (Compatible (Validator := Validator)) :=
+instance : DecidableRel (Compatible (Validator := Validator)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
 
 end Consensus1

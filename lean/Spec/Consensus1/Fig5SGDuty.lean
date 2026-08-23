@@ -36,10 +36,7 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-variable {Validator : Type} [Roots]
-
-section Duty
-variable [DecidableEq Validator] [Params] [SGSchedule]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Params] [SGSchedule]
 
 namespace Store
 
@@ -82,6 +79,5 @@ def sgVote (i : Validator) (S : Store Validator)
 
 end Store
 
-end Duty
 
 end Consensus1
