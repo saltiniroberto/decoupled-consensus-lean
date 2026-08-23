@@ -1,3 +1,4 @@
+import Mathlib.Data.Finset.Union
 import Spec.Consensus1.Fig3AvailableConfirmation
 import Spec.Consensus1.Fig5SGDuty
 
@@ -41,27 +42,23 @@ wiring layer's to render.
 
 ## Two collisions with `Finset`, and where each lands
 
-**Line 30's `for all B ∈ Σ.T` is a fold in the figure's own clothes.** A `Finset` has no
-`ForIn` instance and `Finset.toList` needs `Classical.choice`, so there is no computable
-loop over one. Line 31 accumulates a *union*, which is commutative and associative, so
-`Finset.fold` is exactly the right instrument and the result does not depend on an order —
-which is why the draft can write the loop over a set at all. The notation layer's
-`for all … do … ← … ∪ …` renders exactly that body shape as the fold (Roberto, 2026-08-23;
-a bare fold preceded it), so lines 30–31 read as the figure writes them.
+**Line 30's `for all B ∈ Σ.T` is an order-free union, written as one.** Line 31
+accumulates a union, so the loop's whole effect is `biUnion` — the standard name for it —
+and the loop spelling adds nothing (Roberto, 2026-08-23, retiring the `for all` macros; a
+bare fold and the macros preceded it, git history has both). A loop that were *not*
+order-free would use the nondeterministic `for` of `Nondet.lean` instead, every visitation
+order among the outcomes.
 
-**Line 25 crosses from `Finset` to `List`, under an assumed order.** The block's carried
-votes are a `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
-constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as the
-draft says. `Finset.toList` would cross for free but needs `Classical.choice` — there is no
-canonical representative to pick — so the crossing is `Finset.toSortedList` (`FinsetM.lean`),
-`Finset.sort` under an ambient `LinearOrder (GoldfishVote Validator)` (Roberto, 2026-08-23):
-sorting is permutation-invariant, so it descends to the quotient and yields one canonical
-list, computably. Nothing reads the list's order — votes are consumed as sets on arrival — so the
-assumption is inert protocol-wise, and realistic instances have one (validators are keys,
-blocks are hashes). The first form used `toList` and paid `noncomputable` on `propose_block`
-and `on_tick`; git history has it. The alternative both forms declined, holding the store's
-votes as lists, would make "at most two distinct votes per validator" a property of a list
-and put a `toFinset` at every counting site.
+**Line 25 crosses from `Finset` to `List` by a pick.** The block's carried votes are a
+`List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
+constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as
+the draft says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
+is a genuine nondeterministic choice, since the draft fixes none (Roberto, 2026-08-23). Two
+earlier forms are in git history: `Finset.toList`, which cost `noncomputable`, and
+`Finset.toSortedList` under an assumed `LinearOrder` on votes — an assumption the pick
+deletes. The alternative all forms declined, holding the store's votes as lists, would make
+"at most two distinct votes per validator" a property of a list and put a `toFinset` at
+every counting site.
 
 ## `process_block` here is the Goldfish layer's
 
@@ -87,8 +84,8 @@ class RootComputation (Validator : Type) [Roots] where
 variable {Validator : Type} [Roots]
 
 section Handlers
-variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator] [Params]
-  [LinearOrder (GoldfishVote Validator)] [RootComputation Validator] [SGSchedule]
+variable [DecidableEq Validator] [Committees Validator] [Params]
+  [RootComputation Validator] [SGSchedule]
 
 open Params
 
@@ -151,8 +148,8 @@ namespace Store
     function of the block's parent and its slot — the draft does not say what the proposer
     puts there, so the function's answer is unconstrained.
 
-    `ResultOrExcept` because the walk is, and the carried list is `votes` sorted by the
-    ambient order; see the module header on both.
+    `NDRE` because the walk is, and the carried list is a picked listing of `votes` — its
+    order a nondeterministic choice the draft leaves open; see the module header on both.
 
     "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
     the duty tests (Roberto, 2026-08-23; `onSGFGVotingAction` in the second rendering is the
@@ -162,13 +159,14 @@ namespace Store
     `have` (Roberto, 2026-08-23, second pass). -/
 def proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
-    ResultOrExcept (DutyResult Validator) := do
+    NDRE (DutyResult Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← Goldfish.getHead S votes (s - 1)                     -- line 24
   -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
+  let gfList ←ᵖ listings votes
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
-    (gfVotes := votes.toSortedList) (attestations := [])
+    (gfVotes := gfList) (attestations := [])
   -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
   return { state := Goldfish.processBlock S B, send := {Message.block B} }
 
@@ -187,13 +185,13 @@ def proposeBlock (i : Validator) (S : Store Validator)
     same conjunction-projecting tactic. -/
 def goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
-    ResultOrExcept (DutyResult Validator) := do
+    NDRE (DutyResult Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
   let mut votes ← {vote ∈ᴹ S.gfVotes[s - 1] |
     (← S.gfVoteTime[vote]) < slotStart (s - 1) + 3 * (Δ : Int)}
-  for all B ∈ S.T with B.slot = s do                           -- line 30: the view merge
-    votes ← votes ∪ B.gfVotes.toFinset                         -- line 31
+  -- lines 30–31, the view merge: the loop is an order-free union — see the module header
+  votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
   let H ← Goldfish.getHead S votes (s - 1)                     -- line 32
   if i ∈ Committees.K s then              -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
@@ -226,7 +224,7 @@ def goldfishVote (i : Validator) (S : Store Validator)
 
     `ResultOrExcept` because all three actions are. -/
 def onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : ResultOrExcept (DutyResult Validator) := do
+    (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t

@@ -1,8 +1,7 @@
-import Mathlib.Data.Finset.Sort
 import Spec.Consensus.FinsetM
 
 /-!
-# A monadic image and a sorted list over a `Finset`
+# A monadic image over a `Finset`
 
 **This file is not a specification.** It holds no protocol content, and nothing in it names
 anything from the draft. It is general Lean machinery in the root `Finset` namespace, the way
@@ -12,8 +11,6 @@ anything from the draft. It is general Lean machinery in the root `Finset` names
 is the version that does. `FG.updateFinality` (Figure 7) is the caller: line 15's
 `max{Σ.σ[B].h : B ∈ T_F(Σ)}` reads the state map per live block, and a missing entry has to
 reach whoever asked.
-
-`toSortedList` is `Finset.toList` without the choice; its docstring says how.
 
 ## Why this file imports across the subtrees
 
@@ -43,13 +40,5 @@ def imageM [DecidableEq β] [Monad m]
     [Std.Associative (unionM (α := β) (m := m))]
     (f : α → m β) (s : Finset α) : m (Finset β) :=
   s.fold unionM (pure ∅) fun a => do return {← f a}
-
-/-- `s.toSortedList`: the members of `s` as one canonical list, sorted by the order the
-    instance supplies. `Finset.toList` without the choice: sorting is permutation-invariant,
-    so it descends to the `Finset` quotient and stays computable, where `toList` must pick a
-    representative and needs `Classical.choice` for it. `proposeBlock` (Figure 2, line 25)
-    is the caller. -/
-def toSortedList [LinearOrder α] (s : Finset α) : List α :=
-  s.sort (· ≤ ·)
 
 end Finset

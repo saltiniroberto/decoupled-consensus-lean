@@ -50,8 +50,9 @@ reads it in one place: `update_finality` compares justifications in the lex orde
 class carries the type, the linear order the lex comparison needs, and the root `B_gen`
 carries — the draft says "every block `B` has a root" and its genesis is a block (Roberto,
 2026-08-23; the first form was a `Nat` with `0` at genesis). The walk's tie-break is **not**
-read off the root: that is `TieBreak` in `Fig1GoldfishWalk.lean`, an unspecified fixed choice
-of which a root order is one instance.
+read off the root: the tie is a nondeterministic pick in `Fig1GoldfishWalk.lean`, every
+resolution among the outcomes, a root order being one (Roberto, 2026-08-23; a chooser class
+— `Selection`, then `TieBreak` — preceded it, git history has both).
 
 Nothing constrains a block's root to match the post-state it would compute: the block
 *claims* a root — the proposer's own claim is the assumed `RootComputation` of Figure 2 —

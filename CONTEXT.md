@@ -3514,16 +3514,12 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 - **The duties return what they would broadcast** alongside the store that has processed it
   — since 2026-08-23 as a `DutyResult` (state and send set, the lean-sts step shape; entry
   below), `on_tick` unioning its duties' sends, so nothing a tick emits is lost.
-- **The protocol's `get_head` (`Store.getHead` since 2026-08-23, `FG.getHead` before) does
-  not pass the extended eligibility condition to `ghost`.** That
-  condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — and `ghost`'s condition
-  parameter is a pure `Block → Bool`. The walk gets the height clause read through the raw
-  `Option` instead, so an unrecorded block fails the clause rather than the walk. The two
-  agree wherever `Σ.σ` covers `Σ.T`. **This is the one deviation to revisit**, and it has
-  narrowed twice on 2026-08-22: the `filterM` adoption made it the subtree's only raw-`Option`
-  read of the state map, and the `TieBreak.pick` entry below made the walk itself carry
-  `ResultOrExcept`, so closing it is now one signature change — `eligible : Block →
-  ResultOrExcept Bool` on Figure 1's `ghost` — awaiting the word.
+- **The one named deviation is closed** (2026-08-23, with the nondeterminism adoption —
+  entry below). Its history: from 2026-08-22 the walk received Figure 7's eligibility
+  condition with its height clause read through the raw `Option`, because the condition
+  raises and `ghost`'s slot was a pure `Block → Bool`; it narrowed twice (the `filterM`
+  adoption, the raising tie-break) and closed when `ghost`'s slot became
+  `Block → ResultOrExcept Bool` — line 29 now passes `goldfish_eligible` itself.
 - Absent for want of a consumer: Section 5.1's `E_F(Σ)`, Section 4.1's E1/E2 slashing
   conditions, Section 3.4's intermediate `on_tick` line and `get_head` redirection — Section 5
   changes the same two places and its version is the protocol's.
@@ -3675,22 +3671,72 @@ Roberto's two calls, ending the root-as-`Nat` rendering.
   Section 5, so the function is assumed, its answer unconstrained, exactly as a received
   block's claim is unchecked.
 
+### The walk goes nondeterministic: `NDR`/`NDRE` adopted — 2026-08-23
+
+Roberto: implement the scoped-out solution. This resolves the parked `for all` decision by
+its fourth exit, measured in `scratch/SetMonadProbe.lean` and `scratch/SetExceptProbe.lean`
+(kept). `Nondet.lean` is the machinery: `NDR α := Set α` (picks only, Mathlib's opt-in
+`Set.monad` activated scoped), `NDRE α := ExceptT Error Set α` (picks and raising reads,
+`Set (ResultOrExcept α)` under `.run`), the missing `Except`-into-`ExceptT` lift, the pick
+`let x ←ᵖ s` over `Pickable` (`Set` or `Finset`), `listings` (a predicate, never an
+enumeration), and a `ForIn` over `Finset` for any monad `Set` lifts into — pick a listing,
+loop the list.
+
+**What dissolved, all in one motion:**
+
+- `TieBreak` — the tie at `bestChild` is `let W ←ᵖ top`: every resolution among the
+  outcomes, a root order one of them; "the walk does not depend on the tie" becomes a
+  provable singleton statement.
+- `[LinearOrder (GoldfishVote Validator)]` and `toSortedList` — `propose_block`'s carried
+  list is `let gfList ←ᵖ listings votes`, its order a genuine nondeterministic choice.
+- **The one named deviation** — `ghost`'s condition slot is `Block → ResultOrExcept Bool`,
+  so Figure 7's raising `goldfish_eligible` passes directly at line 29; the pure layers
+  offer their conditions with `pure`.
+- The `for all` macros and the `all` token — the two order-free loops are written as the
+  sets they build: the view merge as one `biUnion` union, `sg_support` as the set-builder
+  it always was.
+
+**The tier map**: pure handlers stay pure (`sgVote` included); `viable`, `updateFinality`,
+`FG.processBlock`, `goldfishEligible` keep plain `ResultOrExcept` (raising, no picks) and
+lift into `NDRE` callers by `←`; the walk and everything that runs one — `bestChild`
+(`NDR`), `ghost`, both `forkChoice`s, the three `getHead`s, `updateConfirmation`,
+`proposeBlock`, `goldfishVote`, `onTick` — carry `NDRE`. `S.goldfishEligible` moved to
+`Store` with `S.getHead`, their bare names being unique to the protocol layer.
+
+**Consumption discipline**: inside a stack, compose by `←`; at the boundary a stack is a
+relation, `res ∈ (f …).run` — the lean-sts step shape — and there is deliberately no
+computable exit. What `Analysis/` owes changed shape with it: "the exception never fires"
+is now `.error ∉ (…).run` on coherent stores, and "the walk does not depend on its picks"
+is `(…).run` a singleton.
+
+**Measured on the way** (the traps, each recorded at its site): a `do` block's result type
+must *name* the stack or the binds elaborate in the `Set` monad; a `filterM` inside an
+`NDRE` block must be ascribed to `ResultOrExcept` and lifted whole — at the stack itself its
+fold would need `unionM` commutativity, which is *false* there, a pick with no outcomes
+annihilating where an error survives (the `∈ᴹ` builder's expansion now pins the monad for
+this reason); and a quotation's global names resolve at macro declaration, so `Notation.lean`
+had to import `Raise.lean` before its expansion could name `ResultOrExcept`.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
 above carry the reasoning, the docstrings at each point of use carry the mechanics. Update
 this list when a new call lands.
 
-- **Raise, never answer silently.** Map reads are raising brackets (`Σ.σ[B]`,
-  `Σ.timestamp[x]` via `TimeMap`), set operations that read them go through
-  `filterM`/`imageM`, `TieBreak.pick` raises on `∅`, and the raw `Option` stays reachable by
-  application. One deviation stands: the walk predicate inside `FG.getHead`.
-- **Pseudocode spelling, gaps closed in `Notation.lean`**: assignment arrows (incl. bare
-  identifiers and two-level maps), `|s|` for `Finset.card` (cost: the `abs` bars, shadowed
-  in-namespace), `for all x ∈ s with p do acc ← acc ∪ e` (cost: `all` is a token), and the
-  raising set-builder `let y ← {x ∈ᴹ s | p}` (a `doElem`, necessarily — the term-macro form
-  loses the `←` to the outer `do`'s lift). **The `for all` productions are parked for
-  review** — see `Next` item 0.
+- **Raise, never answer silently — and since 2026-08-23, branch rather than assume.** Map
+  reads are raising brackets (`Σ.σ[B]`, `Σ.timestamp[x]` via `TimeMap`), set operations that
+  read them go through `filterM`/`imageM`, and the raw `Option` stays reachable by
+  application. The walk and the duties carry `NDRE` (`Nondet.lean`): ties and list orders
+  are picks (`←ᵖ`), every resolution among the outcomes. No deviation stands.
+- **Pseudocode spelling, gaps closed in `Notation.lean` and `Nondet.lean`**: assignment
+  arrows (incl. bare identifiers and two-level maps), `|s|` for `Finset.card` (cost: the
+  `abs` bars, shadowed in-namespace), the raising set-builder `let y ← {x ∈ᴹ s | p}` (a
+  `doElem`, necessarily — the term-macro form loses the `←` to the outer `do`'s lift; its
+  expansion pins `ResultOrExcept` so it lifts whole inside `NDRE`), and the pick
+  `let x ←ᵖ s`. The `for all` productions are **retired** (2026-08-23, resolving the parked
+  review): the order-free loops are written as the sets they build (`biUnion`, the
+  set-builder), and a genuinely order-sensitive loop would use `Nondet.lean`'s `for` over a
+  `Finset`. The `all` token is freed with them.
 - **No `match` and no `|` alternatives in spec bodies** — dependent `if h : o.isSome` idiom;
   recursion patterns like a `for`-range bound are the tolerated shape. **No `∣` (divides)**:
   write `% … = 0`.
@@ -3706,9 +3752,10 @@ this list when a new call lands.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by assumption`); `on_tick` discharges them with dependent `if`s and a `have`.
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
-  (abstract `Root`, its order, genesis's root), `TieBreak`, `RootComputation`, and
-  `[LinearOrder (GoldfishVote Validator)]` for `toSortedList`. Class over type parameter,
-  confirmed 2026-08-23.
+  (abstract `Root`, its order, genesis's root), `RootComputation`, `SGSchedule`. Class over
+  type parameter, confirmed 2026-08-23. Two former members dissolved into nondeterminism the
+  same day: `TieBreak` (the tie is a pick) and `[LinearOrder (GoldfishVote Validator)]`
+  (the carried list is a picked listing).
 - **Duties return `DutyResult`** (`state`, `send` — the lean-sts step shape); `on_tick`
   returns from each action branch directly.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H`.
@@ -3719,45 +3766,13 @@ this list when a new call lands.
 
 0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All seven
    figures of the newer draft are in, `lake build Spec` green across the three renderings.
-   What is open there: **the `for all` macros are parked for review** (Roberto, 2026-08-23:
-   "not sure I like the idea of having a macro this narrow — feels very hacky"; park, but
-   come back). The narrowness is forced — a general body cannot be checked order-free — and
-   the exits form a spectrum by where the order-question is settled (explored with Roberto,
-   2026-08-23):
-
-   - **fold** (status quo, the macros): order-freedom *proved* per operation, by the
-     `Std.Commutative`/`Std.Associative` instances;
-   - **retreat**: `Finset.biUnion` for Figure 2's merge, the set-builder for Figure 4's
-     supporters — same folds, standard names, productions and the `all` token deleted;
-   - **`Enumeration` class** (`list : Finset α → List α` with a `toFinset`/`Nodup` law):
-     order *assumed* away globally — weaker than a `LinearOrder`, real `for` over
-     `Enumeration.list s`, any body — but an order-sensitive body silently means "whatever
-     the assumed listing makes it";
-   - **`foldResults`** (`Set β` of every permutation's fold) or the equivalent relation:
-     order *never settled*, all outcomes carried — provably a singleton exactly when the
-     fold's instances hold, and the natural object for the lean-sts step relation
-     (`res ∈ possible…`) — but infectious and non-executable as a duty body. Measured
-     2026-08-23 (`scratch/SetMonadProbe.lean`, `scratch/SetExceptProbe.lean`): Mathlib's
-     opt-in `Set.monad` makes `x ← S` the pick; `ExceptT Error Set` stacks raising on it
-     (the result type must *name* the stack or `do` elaborates in the `Set` monad); the
-     full imperative kit works inside, `return` included; a genuine `ForIn` over `Finset`
-     is definable in the stack — pick a listing, loop the list — dissolving the whole loop
-     problem at the price of the architecture; and with two scoped `MonadLift`s (a bare
-     `Except` into the stack, and `Finset` directly — `MonadLift` needs no monad on the
-     source) a duty reads as pure pseudocode: `let B ← {B ∈ S.T | B.slot = s}`,
-     `let σB ← S.σ[B]`, `let v ← S.gfVotes[s]`, no lift or coercion visible. Callers:
-     compose by `←` inside the stack; consume at the boundary as a relation
-     (`res ∈ (f …).run`, the lean-sts step shape); state `NeverRaises`/`Deterministic` as
-     propositions over `.run`. Veil (the sibling `finality` project's DSL) is the worked
-     precedent: its `VeilM` is `NonDetT` over state-and-exceptions, with `pick`,
-     `let x :| p`, havoc, and a `wp` calculus.
-
-   Decide before the notation layer grows another production. The one-by-one review started
-   2026-08-23 at Figure 2's view merge and is unfinished. Also open: the one deviation, the
-   protocol's `Store.getHead` not handing `ghost` the extended eligibility condition
-   (the entry above says why and what closing it would cost); and no `Analysis/` at all for
-   this draft — the coherence invariant on the `coherence-invariant` branch is about the
-   *older* store and does not transfer.
+   What is open there: the `for all` review **resolved** — the nondeterministic
+   architecture was adopted 2026-08-23 (entry above), the macros retired, the deviation
+   closed. What remains open is what the adoption reshaped: no `Analysis/` at all for this
+   draft — "the exception never fires" is now `.error ∉ (…).run` on coherent stores, "the
+   walk does not depend on its picks" a singleton statement — and the eventual sts wiring,
+   whose step consumes a duty as `res ∈ (….run)`. The coherence invariant on the
+   `coherence-invariant` branch is about the *older* store and does not transfer.
 
 1. **`Spec/Consensus/`, where 2026-08-22 left it.** `Spec/Consensus/` renders all six figures
    of `consensus.pdf` plus `Validator.lean`, the honest-validator layer, whose only routine

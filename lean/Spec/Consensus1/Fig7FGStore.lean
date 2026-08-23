@@ -8,10 +8,10 @@ Definition 5 and Figure 7: `process_block` extended, `update_finality`, `fork_ch
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
 **This is the protocol.** Where a routine here has the same name as one in an earlier layer,
-this is the one a caller wants: `FG.processBlock`, `FG.goldfishEligible`, and the fork
-choice, which bears the plain `Store` name — `S.getHead` — the superseded readings keeping
-`Goldfish`/`SG` (Roberto, 2026-08-23). See `Fig1GoldfishWalk.lean` on why the layers are
-namespaces.
+this is the one a caller wants: `FG.processBlock`, and — bearing plain `Store` names, their
+bare spellings unique to this layer — `S.goldfishEligible` and the fork choice `S.getHead`;
+the superseded readings keep `Goldfish`/`SG` (Roberto, 2026-08-23). See
+`Fig1GoldfishWalk.lean` on why the layers are namespaces.
 
 The `-- line n` comments use Figure 7's own line numbering, in the draft as of 2026-08-22.
 
@@ -44,8 +44,9 @@ nothing raises at all, and that theorem belongs to `Analysis/`.
 
 A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
 `Finset.filterM` collects Definition 5's witnesses, and `Finset.imageM` collects line 15's
-heights. The one read the monad cannot reach is inside `get_head`'s walk — see its docstring,
-this subtree's one named deviation.
+heights. The former deviation — the walk once received the eligibility condition with its
+height clause read through the raw `Option` — closed on 2026-08-23: `ghost`'s condition
+slot is `ResultOrExcept`, so line 29 passes `goldfish_eligible` itself.
 -/
 
 set_option autoImplicit false
@@ -56,7 +57,7 @@ variable {Validator : Type} [Roots]
 
 section ForkChoice
 variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
-  [TieBreak Validator] [Params]
+  [Params]
 
 open Params
 
@@ -171,19 +172,16 @@ def getFilteredBlockTree (S : Store Validator) :
   let root := S.forkChoiceRoot                                 -- line 21
   return {B ∈ (← S.viable) | root ⪯ B}                         -- line 22
 
-end Store
-
-namespace FG
-
-/-- `goldfish_eligible(Σ, votes, s, B)` (Figure 7, lines 23–25): Figure 1's gate with a third
-    disjunct — "a child whose state height is below `Σ.h_max − 1` is eligible without a
-    majority".
+/-- `goldfish_eligible(Σ, votes, s, B)` (Figure 7, lines 23–25): Figure 1's eligibility
+    condition with a third disjunct — "a child whose state height is below `Σ.h_max − 1` is
+    eligible without a majority".
 
     That clause is what lets the walk descend past blocks nobody has voted on yet, which is
     what makes the height filter a filter rather than a wall.
 
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
-    none. Figure 1's gate is total, having no state to read. -/
+    none — and it is what line 29 hands the walk, `ghost`'s condition slot being
+    `ResultOrExcept`. In `Store` for dot notation, its bare name unique to this layer. -/
 def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat)
     (B : Block Validator) : ResultOrExcept Bool := do
   let σB ← S.σ[B]
@@ -191,38 +189,23 @@ def goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validat
   return σB.h < S.h_max - 1 ∨
     2 * Goldfish.score votes s B > Goldfish.votersCount votes s ∨ B.slot = S.s
 
-end FG
-
-namespace Store
-
 /-- `get_head(Σ, votes, k)` (Figure 7, lines 26–29): the protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
     selects a descendant of it over the same tree. It raises where the filtered tree does.
 
-    **The extended eligibility condition is not what `ghost` receives here**, and that is a
-    deviation worth stating plainly. `ghost` takes a `Block → Bool` predicate; this layer's
-    condition returns `ResultOrExcept Bool` — it reads `Σ.σ[B].h` — so the two do not compose.
-    What the walk is given instead is the same condition with the height clause read through
-    the raw `Option`: a block the map does not record fails the height clause rather than
-    failing the walk.
-
-    On a store whose `Σ.σ` covers `Σ.T` the two readings agree, and the filtered tree is a
-    subset of `Σ.T`, so every block the walk can reach is recorded. The walk already carries
-    `ResultOrExcept` for its tie-break (2026-08-22), so closing this is one signature change —
-    `eligible : Block → ResultOrExcept Bool` on Figure 1's `ghost` — not taken yet. Left as
-    it is, with the disagreement named.
+    The walk receives `goldfish_eligible` itself: `ghost`'s condition slot is
+    `ResultOrExcept`, so the extended condition — which raises, reading `Σ.σ[B].h` — passes
+    directly, and the deviation this line carried from 2026-08-22 is closed (Roberto,
+    2026-08-23; the history is in `CONTEXT.md`).
 
     It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
     caller wants; the superseded ones keep `Goldfish`/`SG` (Roberto, 2026-08-23). -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
-    ResultOrExcept (Block Validator) := do
+    NDRE (Block Validator) := do
   let root := S.forkChoiceRoot                                 -- line 27
   let tree ← S.getFilteredBlockTree
   let anchor ← S.majorityForkChoice root tree (round S.s)      -- line 28
-  -- line 29, with the eligibility condition as described above
-  ghost anchor tree (Goldfish.score votes k)
-    (fun B => (S.σ B).any (fun σB => σB.h < S.h_max - 1) ∨
-      2 * Goldfish.score votes k B > Goldfish.votersCount votes k ∨ B.slot = S.s)
+  ghost anchor tree (Goldfish.score votes k) (S.goldfishEligible votes k)  -- line 29
 
 end Store
 

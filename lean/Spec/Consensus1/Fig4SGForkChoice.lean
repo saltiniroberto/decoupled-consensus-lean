@@ -46,7 +46,7 @@ variable {Validator : Type} [Roots]
 
 section ForkChoice
 variable [DecidableEq Validator] [Electorate Validator] [Committees Validator]
-  [TieBreak Validator] [Params]
+  [Params]
 
 open Params
 
@@ -67,28 +67,27 @@ def latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
     that vote's head is a block, and `B` precedes the head.
 
-    Line 9's `k ← latest(Σ, v, r)` reads an `Option` the loop's `with` clause has already
-    tested; the notation layer evaluates line 10 under `Option.any`, so a `⊥` contributes
-    nothing — see `forAllUnionBind` in `Notation.lean`. -/
-def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat := Id.run do
-  let mut supporters : Finset Validator := ∅                   -- line 7
-  -- line 8: `for all v ∈ V with latest(Σ, v, r) ≠ ⊥ do`
-  for all v ∈ Electorate.V with S.latest v r ≠ ⊥ do
-    k ← S.latest v r                                           -- line 9
-    -- line 10: `sg_votes[k]` holds exactly one distinct vote by `v`, head a block above `B`
-    if ∃ a ∈ S.sgVotes[k], a.validator = v ∧
-        (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
-        ∃ H, a.head = some H ∧ B ⪯ H then
-      supporters ← supporters ∪ {v}                            -- line 11
-  return w(supporters)                                         -- line 12
+    Lines 7–12 build a set by an order-free conditional add, so the loop *is* the set it
+    builds, written as the set-builder (Roberto, 2026-08-23, retiring the `for all` macros;
+    the loop spelling is in git history). Line 9's `k ← latest(Σ, v, r)` binds out of an
+    `Option` the line-8 test has vouched for; the `∃ k, … = some k` form says it without a
+    dependent `if`. -/
+def sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
+  -- lines 7–12, as the set the loop builds
+  w({v ∈ Electorate.V |
+      ∃ k, S.latest v r = some k ∧
+        ∃ a ∈ S.sgVotes[k], a.validator = v ∧
+          (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
+          ∃ H, a.head = some H ∧ B ⪯ H})
 
 /-- `majority_fork_choice(Σ, anchor, tree, r)` (Figure 4, lines 13–16): the shared walk with
     the SG support as its score, gated on a strict majority of the represented weight. -/
 def majorityForkChoice (S : Store Validator) (anchor : Block Validator)
-    (tree : Finset (Block Validator)) (r : Nat) : ResultOrExcept (Block Validator) :=
+    (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})       -- line 14
   let eligible := fun B => 2 * S.sgSupport r B > total         -- line 15
-  ghost anchor tree (S.sgSupport r) eligible                   -- line 16
+  -- line 16; the pure condition offered to the walk's raising slot with `pure`
+  ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
 
 end Store
 
@@ -101,7 +100,7 @@ namespace SG
     the fork-choice root; that one is the protocol's. -/
     -- (in `SG`, not `Store`: three layers define a `get_head`, and a namespace holds one)
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
-    ResultOrExcept (Block Validator) := do
+    NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
   Goldfish.forkChoice S anchor S.T votes s                      -- line 19
 

@@ -1,4 +1,5 @@
 import Spec.Consensus1.Store
+import Spec.Consensus1.Nondet
 
 /-!
 # Figure 1 — the Goldfish score and the walk
@@ -29,28 +30,27 @@ the plain `Store` names where they are unique to it (`S.getHead` is Figure 7's);
 superseded `get_head`s, `process_block` (two layers), `goldfish_eligible` (two), and
 `get_head`'s own vocabulary here (`eligible`, `forkChoice`) keep their layer namespaces.
 
-## The arg-max step, and where the choice goes
+## The arg-max step: the tie is a pick
 
 Line 11 is `arg max score`, "ties by root order". The maximal-score children are a filter;
-the tie-break is the ambient `TieBreak` class, an *unspecified* fixed choice (Roberto,
-2026-08-22). The draft never says what a root is or how one is computed — Section 1 asks only
-that the tie-break be fixed — so committing the Lean to `≤` on `B.root` claimed more than the
-draft does, and a root order is one instance of the class.
+the tie is a **nondeterministic pick**, `←ᵖ` (Roberto, 2026-08-23, ending the chooser-class
+line: `Selection`, then `TieBreak`, are gone). The draft never says what a root is or how one
+is computed — Section 1 asks only that the tie-break be fixed — so nothing is assumed at all:
+every resolution is among the outcomes, a root order being one of them, and "the walk does
+not depend on the tie" is a provable singleton statement, not a precondition.
 
-A class is also what getting one block out of a `Finset` computably needs: `Finset.toList`
-depends on `Classical.choice`, so a fold over it makes every caller `noncomputable` (measured
-2026-08-21), and `Finset.min'` would want a `LinearOrder` on blocks, which the model has no
-way to build — `Validator` carries no order.
+## The walk is `NDRE`
 
-## The walk raises
-
-`TieBreak.pick` raises on the empty set instead of taking a nonemptiness proof (Roberto,
-2026-08-22, replacing the proof-carrying `Selection.select`): no proof text at any call, and
-the walk carries `ResultOrExcept` for it — and with the walk, every fork choice and duty that
-runs one. Line 9 never hands `pick` an empty set, so the raise is unreachable in `ghost`;
-that is a fact for `Analysis/`, not a hypothesis of the definition. One notation cost,
-measured: the figure's `H ← arg max` cannot use the plain arrow, which the assignment macro
-claims for pure re-assignment, so the monadic bind is written `H := (← bestChild …)`.
+The tie-break picks and the eligibility condition may raise — Figure 7's reads `Σ.σ[B].h` —
+so the walk carries `NDRE`, and its `eligible` parameter is `Block → ResultOrExcept Bool`:
+the raising layer passes its condition directly (the deviation this closed is recorded in
+`CONTEXT.md`), and the pure layers offer theirs with `pure`. Line 8 filters the children
+through `Finset.filterM` at `ResultOrExcept`, whose fold instances exist; a per-child
+condition in `NDRE` itself would not commute (a pick with no outcomes annihilates where an
+error survives), which is why the parameter type is the raising monad, not the full stack.
+One notation cost, measured: the figure's `H ← arg max` cannot use the plain arrow, which
+the assignment macro claims for pure re-assignment, so the monadic bind is written
+`H := (← bestChild …)`.
 
 ## The figure's `loop` gets a bound
 
@@ -84,48 +84,34 @@ variable {Validator : Type} [Roots]
 
 /-! ## The shared walk -/
 
-/-- The draft's tie-break: "ties use a fixed root order" (Section 1), assumed as an
-    unspecified fixed choice rather than rendered — the draft never says what a root is or
-    how one is computed, and a root order is one instance of this class.
-
-    `pick s` is one member of `s`, or the failure on the empty set (Roberto, 2026-08-22).
-    The subtype does most of the specifying: an `.ok` answer is a member by type, and on `∅`
-    the failure is *forced* — `{B // B ∈ ∅}` has no inhabitants, so no total instance can
-    answer `.ok` there. What the type cannot force is the converse, so `pick_ok` is a field:
-    a nonempty set is never refused. A `Prop` field of a class is a definition component, not
-    a `Spec/` theorem — the `Electorate.w_pos` precedent — and every instance owes its proof. -/
-class TieBreak (Validator : Type) [Roots] where
-  /-- One member of `s`, or the failure on the empty set. -/
-  pick : (s : Finset (Block Validator)) → ResultOrExcept {B // B ∈ s}
-  /-- A nonempty set is never refused. -/
-  pick_ok : ∀ s : Finset (Block Validator), s.Nonempty → ∃ B, pick s = .ok B
-
 section Ghost
-variable [DecidableEq Validator] [TieBreak Validator]
+variable [DecidableEq Validator]
 
-/-- Line 11's `arg max score`: the maximal-score members, the tie broken by the ambient
-    `TieBreak.pick`. It raises exactly on empty `children` — the filter keeps a maximum
-    whenever one exists, and `pick_ok` accepts anything nonempty — and `ghost`'s line 9
-    never passes it an empty set. -/
+/-- Line 11's `arg max score`: the maximal-score members, the tie a genuine pick — every
+    resolution among the outcomes, a root order being one. On empty `children` there are no
+    outcomes at all, an answer `ghost`'s line 9 never asks for. -/
 def bestChild (children : Finset (Block Validator)) (score : Block Validator → Nat) :
-    ResultOrExcept (Block Validator) := do
+    NDR (Block Validator) := do
   let top := {B ∈ children | ∀ C ∈ children, score C ≤ score B}
-  return (← TieBreak.pick top)
+  let W ←ᵖ top
+  return W
 
 /-- `ghost(anchor, tree, score, eligible)` (Figure 1, lines 5–11): descend from `anchor`
     through eligible children in `tree`, taking the highest score at each step, and stop
-    where no child is eligible. Ties are broken by the ambient `TieBreak`.
+    where no child is eligible. The tie at each step is a pick; the eligibility condition
+    may raise. See the module header on both, and on why `eligible` is `ResultOrExcept`
+    rather than the full stack.
 
-    The figure's `loop` is bounded by `|tree|`, and the result is `ResultOrExcept`
-    because the tie-break raises — on a set line 9 keeps empty sets out of, so the raise is
-    unreachable here. See the module header for both. -/
+    The figure's `loop` is bounded by `|tree|`. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
-    (score : Block Validator → Nat) (eligible : Block Validator → Bool) :
-    ResultOrExcept (Block Validator) := do
+    (score : Block Validator → Nat) (eligible : Block Validator → ResultOrExcept Bool) :
+    NDRE (Block Validator) := do
   let mut H := anchor                                          -- line 6
   for _ in [:|tree|] do                                        -- line 7: `loop`, bounded
-    -- line 8: the eligible children of the block we stand on
-    let children := {B ∈ tree | B.parent = ↑H ∧ eligible B}
+    -- line 8: the eligible children of the block we stand on; the filter runs at
+    -- `ResultOrExcept` — the ascription keeps the stack out of it — and lifts whole
+    let children ← (({B ∈ tree | B.parent = ↑H}).filterM eligible :
+      ResultOrExcept (Finset (Block Validator)))
     if children = ∅ then                                       -- line 9
       return H                                                 -- line 10
     -- line 11: `H ← arg max score`; the plain arrow is the assignment macro's, so the
@@ -140,7 +126,7 @@ namespace Goldfish
 /-! ## The Goldfish score and gate -/
 
 section Score
-variable [DecidableEq Validator] [Committees Validator] [TieBreak Validator]
+variable [DecidableEq Validator] [Committees Validator]
 
 /-- The validators of `K_s` that `votes` shows equivocating: two distinct votes by the same
     validator. Line 2 of `goldfish_score`, named because the score and the participant count
@@ -179,8 +165,9 @@ def eligible (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s 
     walk, instantiated with the Goldfish score and gate. -/
 def forkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
-    ResultOrExcept (Block Validator) :=
-  ghost anchor tree (score votes s) (eligible S votes s)       -- line 16
+    NDRE (Block Validator) :=
+  -- line 16; the pure condition offered to the walk's raising slot with `pure`
+  ghost anchor tree (score votes s) (fun B => pure (eligible S votes s B))
 
 /-- `get_head(Σ, votes, s)` (Figure 1, lines 17–18): the walk from genesis over the whole
     processed tree.
@@ -189,7 +176,7 @@ def forkChoice (S : Store Validator) (anchor : Block Validator)
     Figure 7 again to start from the fork-choice root over the filtered tree; see the module
     header on the namespaces. -/
 def getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
-    ResultOrExcept (Block Validator) :=
+    NDRE (Block Validator) :=
   forkChoice S .genesis S.T votes s                            -- line 18
 
 end Score
