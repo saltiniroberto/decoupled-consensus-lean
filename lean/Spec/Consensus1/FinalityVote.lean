@@ -91,25 +91,26 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
 def Store.heightVote (S : Store Validator) :
     ResultOrExcept (HeightPair Validator × Store Validator) := do
   let mut S := S
-  let σC ← S.σ[S.liveConfirmed]
   let C := S.liveConfirmed
+  let σC ← S.σ[C]
   let h := σC.h
-  if S.H.signedEmptyTarget h then                                   -- case 1: repeat the empty target
+  if S.H.signedEmptyTarget h then                   -- case 1: repeat the empty target
     return (.emptyTarget h, S)
   if _ : S.H.firstLock h ≠ ⊥ then                   -- case 2: repeat the lock
-    let T_L := (S.H.firstLock h).value
-    if T_L ⪯ C then return (.target h T_L, S) else return (.empty, S)
+    let lock := (S.H.firstLock h).value
+    if lock ⪯ C then return (.target h lock, S) else return (.empty, S)
   if _ : S.H.firstTarget h ≠ ⊥ then                 -- case 3: repeat the named target
-    let T₀ := (S.H.firstTarget h).value
-    if T₀ ⪯ C then return (.target h T₀, S)
+    let target := (S.H.firstTarget h).value
+    if target ⪯ C then return (.target h target, S)
     S.H ← S.H.saveEmptyTarget h
     return (.emptyTarget h, S)
   if σC.nj then                                     -- case 4: no record, nonjustifiable
     S.H ← S.H.saveEmptyTarget h
     return (.emptyTarget h, S)
-  if σC.T_h ⪯ C then                                -- case 5: no record, sign the target
-    S.H ← S.H.saveTarget h σC.T_h
-    return (.target h σC.T_h, S)
+  let T := σC.T_h                                   -- case 5: no record, sign the state's
+  if T ⪯ C then                                     --   target when it sits below `C`
+    S.H ← S.H.saveTarget h T
+    return (.target h T, S)
   S.H ← S.H.saveEmptyTarget h
   return (.emptyTarget h, S)
 

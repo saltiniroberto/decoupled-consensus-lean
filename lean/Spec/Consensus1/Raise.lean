@@ -94,4 +94,17 @@ instance {α : Type} [DecidableEq α] :
         | exact congrArg _ (Subsingleton.elim _ _)
         | exact congrArg _ (Finset.union_assoc _ _ _)
 
+/-- The raising coercion out of `Option` (Roberto, 2026-08-24, added to try): in any
+    raising `do` block, `let y ← x` with `x : Option α` binds the value and raises on
+    `⊥` — total, the one failure. A `MonadLift`, not a `Coe`, because `←` resolves
+    through lifts; the chain into `NDRE` composes through `Nondet.lean`'s `Except` lift.
+
+    The cost to watch, from the discussion that preceded it: `←` gains a reading whose
+    failure mode nothing at the site shows. Where absence is a normal branch — the record
+    cases of `heightVote`, Figure 7's genesis parent — the dependent `if _ : x ≠ ⊥` test
+    remains the right spelling; this lift is for reads where an absent value marks a
+    store the handlers cannot build, alongside the bracket reads. -/
+scoped instance : MonadLift Option ResultOrExcept :=
+  ⟨fun x => x.elim (.error .error) .ok⟩
+
 end Consensus1

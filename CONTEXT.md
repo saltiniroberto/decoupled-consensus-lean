@@ -3890,7 +3890,12 @@ this list when a new call lands.
   `_root_.Option.value`: dot notation resolves fields in the type's own namespace only, so
   a `Consensus1.Option.value` is invisible to `x.value` (measured). The store's map
   machinery (`GetElem` instances, the `StateMap` membership) keeps `.isSome` internally —
-  the rule is about spec bodies. **No `∣` (divides)**: write `% … = 0`.
+  the rule is about spec bodies. Since 2026-08-24 (Roberto, "let's see how it goes") a
+  scoped `MonadLift Option ResultOrExcept` in `Raise.lean` also makes `let y ← x` bind an
+  `Option` in any raising block — value or raise; probe `scratch/OptionLiftProbe.lean`.
+  Its docstring reserves it for reads where absence marks an incoherent store: where
+  absence is a normal branch, the `≠ ⊥` test stays. **No `∣` (divides)**: write
+  `% … = 0`.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`); `Block.mk`
   likewise names its fields at Figure 2 line 25; `DutyResult` keeps the brace form
   `{ state := …, send := ∅ }`; `match` patterns untouched.

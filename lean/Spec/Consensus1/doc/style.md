@@ -31,7 +31,9 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 - **Absence is tested `x ≠ ⊥`, never `.isSome`**, and the branch extracts with
   `x.value` — its `x ≠ ⊥` hypothesis is an autoparam the dependent `if _ :` discharges
   (`Option.value`, `Model.lean`). The store's map machinery keeps `.isSome` internally;
-  the rule is about spec bodies.
+  the rule is about spec bodies. A raising read out of an `Option` — `let y ← x` in a
+  raising block, value or raise — is the scoped `MonadLift Option ResultOrExcept` in
+  `Raise.lean`, reserved for reads where absence marks an incoherent store.
 - **No `∣` (divides)**: write `% … = 0`.
 - **What the pdf writes inline stays inline.** `voters_count` and the equivocator set are
   `let`s at each use site, because the pdf makes them locals, not definitions.
