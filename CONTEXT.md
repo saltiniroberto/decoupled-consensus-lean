@@ -643,6 +643,28 @@ layout, whose `Spec/Defs/` name returns. `doc/` moved up with them. Module names
 mentions in the dated entries above were left as written — they describe the layout of
 their day.
 
+### Docstrings stop narrating their own history — 2026-08-24
+
+The audit pass over the purge (Roberto: "purging the Lean docstrings of history about
+changes"): attributions, was-X-until-Y notes, git-history and branch pointers, and probe
+filenames left the `.lean` docstrings — this file is where that history lives. Two
+provenance notes stayed by design: `FinalityVote.lean` names the source of its imported
+strategy, and `OldDefs.lean` entries say where each parked piece came from, that being
+the file's charter.
+
+### Accountable safety: the statement imported — 2026-08-24
+
+Roberto: import the accountable-safety theorem statements (only the statements) from the
+first specification's analysis and adapt them. `lean/Analysis/AccountableSafety.lean`
+(the `Analysis` lib returns to `lakefile.toml` for it): `E1`, `E2` over this rendering's
+pair constructors, `IncludedOn`, `replay` (`state_transition` folded along the parent
+link — store-free, what every coherent store's `Σ.σ[B]` equals), and `AccountableSafety`
+as a named `Prop`, so nothing claims a proof and `make check` stays green. The adaptation
+decisions are the module header's bullet list: totality deletes the `≠ invalid`
+hypotheses, "conflicting" is `¬ Compatible`, the height binders the source itself called
+redundant are dropped. The source statement and its proof live on the
+`pre-consensus1-purge` branch (`Analysis/Theorems.lean`, its Lemma 11 chain).
+
 ## Next
 
 0. **`consensus-1.pdf` is rendered as `Spec/`, and everything builds.** All

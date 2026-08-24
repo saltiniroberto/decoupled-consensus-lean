@@ -40,7 +40,8 @@ dev: nodecide orphans sorries build
 # recreated a whole stale directory, invisible to the build.
 orphans:
 	@bad=`find lean -name '*.lean' \
-	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*'`; \
+	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' \
+	    ! -path 'lean/Analysis.lean' ! -path 'lean/Analysis/*'`; \
 	if [ -n "$$bad" ]; then \
 		echo "$$bad"; \
 		echo 'FAIL: .lean under lean/ claimed by no lean_lib glob in lakefile.toml'; \

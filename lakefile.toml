@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["Spec"]
+defaultTargets = ["Spec", "Analysis"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -24,10 +24,18 @@ scope = "leanprover-community"
 rev = "v4.32.2"
 
 # This project's sources. `srcDir` is `lean` and the module root is `Spec`, so a module
-# `Spec.Consensus1.Model` is the file `lean/Spec/Consensus1/Model.lean`. Lake derives a
+# `Spec.Defs.Model` is the file `lean/Spec/Defs/Model.lean`. Lake derives a
 # module's path from its name and nothing else — measured, not assumed — so every directory
 # under `srcDir` repeats a module component.
 [[lean_lib]]
 name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
+
+# The analysis: results stated (and eventually proved) against the specification above.
+# Root `Analysis`, same `srcDir`, so `Analysis.AccountableSafety` is
+# `lean/Analysis/AccountableSafety.lean`.
+[[lean_lib]]
+name = "Analysis"
+srcDir = "lean"
+globs = ["Analysis", "Analysis.+"]
