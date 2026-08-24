@@ -33,9 +33,7 @@ results, not a raise.
 
 `listings s` is the set of duplicate-free orderings of `s` — a predicate, not an
 enumeration: no list is ever built, so none is ever chosen. `propose_block` picks one for
-the block's carried votes. A `ForIn` over `Finset` built on it — pick a listing, loop the
-list, every visitation order among the outcomes — is parked in `OldDefs.lean`, no spec
-routine looping over a `Finset`.
+the block's carried votes.
 
 ## The duty monad, `NDREB`
 

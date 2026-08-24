@@ -37,9 +37,8 @@ namespace Consensus1
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
 
 /-- What a pair rule produces: the height or finality pair it signed, and the store
-    afterwards, its `Σ.H` already carrying the rule's record write. The `DutyResult` move,
-    for the same reason: a named structure where a bare product would make the caller
-    remember which component is which. -/
+    afterwards, its `Σ.H` already carrying the rule's record write. A named structure,
+    where a bare product would make the caller remember which component is which. -/
 structure SigningResult (Validator : Type) [Roots] (α : Type) where
   /-- The pair the rule signed. -/
   pair : α

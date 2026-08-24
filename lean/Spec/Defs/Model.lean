@@ -198,10 +198,9 @@ def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
 def round [Params] (s : Nat) : Nat := s / Params.R
 
 /-- `a_r`, each round's SG vote time: a public parameter of the protocol, no formula
-    fixed. A public parameter is exactly an ambient class — the `Committees` move —
-    so `on_tick` can dispatch on it and `sg_vote` can require it, with the protocol fixing no
-    formula. Nothing relates it to the slot schedule; that the protocol's instants are distinct
-    is a convention this rendering inherits (see `on_tick`). -/
+    fixed. A public parameter is exactly an ambient class, as `Committees` is, so
+    `on_tick` can dispatch on it and `sg_vote` can require it. Nothing relates it to the
+    slot schedule; `on_tick` composes the actions even where instants coincide. -/
 class SGSchedule where
   /-- `a_r`, the SG vote time of round `r`. -/
   a : Nat → Int
@@ -234,7 +233,7 @@ and in both of its pairs. -/
 
 mutual
 
-/-- A block (Sections 1, 2.1 and 4 of the protocol). Genesis has no parent, slot `0`, the
+/-- A block. Genesis has no parent, slot `0`, the
     `Roots.genesisRoot` and nothing carried; every other block has a parent, a slot, a root —
     the post-state root, see the module header — a list of Goldfish votes of the *previous*
     slot, and a list of combined attestations. Chains are in bijection with their tips and
@@ -322,8 +321,7 @@ structure SGVote (Validator : Type) where
   validator : Validator
   /-- The round the vote belongs to. -/
   round : Nat
-  /-- The head: a block, or `⊥` in an adversarial vote — and in the timeout votes of the
-      graded protocol, which this protocol does not reach. -/
+  /-- The head: a block, or `⊥` in an adversarial vote. -/
   head : Option (Block Validator)
 
 /-! ### Decidable equality, written out

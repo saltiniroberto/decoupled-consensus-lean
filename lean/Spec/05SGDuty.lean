@@ -22,9 +22,8 @@ protocol's tick. The redirected `get_head` is not written out: the finality laye
 redefines it again, and that version, `Store.getHead`, is the protocol's. So this file
 holds the two routines Figure 5 itself introduces and the protocol's `on_tick`.
 
-`a_r` is a public parameter, no formula fixed — the `SGSchedule` class in `Model.lean`,
-the `Committees` move: assumed, so `on_tick` can dispatch on it and `sg_vote` can require
-it.
+`a_r` is a public parameter, no formula fixed — the `SGSchedule` class in `Model.lean`:
+assumed, so `on_tick` can dispatch on it and `sg_vote` can require it.
 
 ## An honest vote is never empty
 

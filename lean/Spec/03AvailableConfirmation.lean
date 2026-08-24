@@ -10,17 +10,12 @@ The `-- line n` comments number the algorithm's lines.
 
 ## What makes it stricter
 
-Two cutoffs on the same pool. `early` is the slot-`s` votes stamped before `t_s + 2Δ` and
-`late` those stamped before `t_s + 6Δ`, so `early ⊆ late`. The walk scores the `early` votes
-whose validator has not been *caught equivocating by* `late`, and divides by the participants
-of `late`: "a validator counts when it voted in time and no second vote of its has appeared
-since; the denominator counts everyone who voted at all".
-
-Two consequences the protocol draws, and neither is rendered as a hypothesis because both are
-facts about the sets rather than about this routine. Because `early ⊆ late`, a validator
-equivocating in `early` equivocates in `late` too, so the scored set holds at most one vote
-per validator and `goldfish_score`'s equivocator clause never fires here. And at most one
-child can pass the gate, so the descent has no choice to make.
+Two cutoffs on the same pool, `early ⊆ late`; the walk scores the `early` votes whose
+validator `late` has not caught equivocating, against `late`'s participants — the rule
+itself is the Extract prose below. The two consequences the protocol draws there — the
+scored set holds at most one vote per validator, and at most one child can pass the
+eligibility condition — are facts about the sets rather than about this routine, so
+neither is rendered as a hypothesis.
 
 ## Why it does not reuse `goldfish_eligible`
 

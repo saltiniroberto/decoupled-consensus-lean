@@ -17,8 +17,7 @@ belongs to `Analysis/`.
 
 ## Why one payload-free value
 
-`Error` has no type parameter, one constructor, and distinguishes no cause. Three reasons, the
-last one decisive:
+`Error` has no type parameter, one constructor, and distinguishes no cause:
 
 * the error is a rendering artifact, so detail in it helps nobody — the fact worth proving is
   that it never fires;
@@ -97,8 +96,7 @@ instance {α : Type} [DecidableEq α] :
     branch, a plain `if x ≠ ⊥` decides the branch and the bind behind it cannot raise.
     The accepted cost: the extraction's safety
     is not checked at the site — dropping the test leaves compiling code that raises
-    where a rule meant to fall through. The autoparam extraction that did check,
-    `Option.value`, is parked in `OldDefs.lean`. -/
+    where a rule meant to fall through. -/
 scoped instance : MonadLift Option DRE :=
   ⟨fun x => x.elim (.error .error) .ok⟩
 

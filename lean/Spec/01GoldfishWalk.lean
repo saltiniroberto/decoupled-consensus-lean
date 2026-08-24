@@ -19,9 +19,8 @@ protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
 defined it — `Fig1.getHead`, `Fig1.goldfishEligible`, `Fig4.getHead`, `Fig2.processBlock` —
 so a call to an old reading says so in the protocol's own coordinates.
 
-There are no namespace blocks: every definition carries its full name at its own `def` —
-`Store.…` for whatever a store flows into, so dot notation works; `Fig<n>.…` for a
-superseded reading; a bare name for everything defined once (`ghost`, `goldfishScore`).
+There are no namespace blocks: every definition carries its full name at its own `def`.
+The full naming scheme is `doc/naming.md`.
 
 ## The arg-max step: the tie is a pick
 

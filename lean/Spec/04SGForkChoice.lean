@@ -16,25 +16,19 @@ majority of the represented weight as the gate. Nothing about the walk changes �
 walks are the same function with different scores and gates" — so this file instantiates the
 `ghost` of Figure 1 and defines no walk of its own.
 
-## What "represented" means, and why an equivocator raises the bar
+## The equivocator consequence is a fact, not a hypothesis
 
-A validator with a latest round is *represented*: "it counts
-in the denominator whatever its votes say". It *supports* a block only when its latest round
-holds exactly one distinct vote by it and that vote's head is a block. So an empty or
-equivocating latest round supplies no support and, because only the latest round is read,
-"also silences every older head; a later clean round restores support".
-
-The consequence the protocol draws: an equivocator supplies no support but stays in the
-denominator, so equivocating weight can only raise the bar, and two conflicting children
-cannot both pass. That is what makes the descent uniquely determined, and it is a fact about
-the definition rather than a hypothesis of it.
+What "represented" and "supports" mean is the Extract prose below. The consequence the
+protocol draws — an equivocator supplies no support but stays in the denominator, so
+equivocating weight can only raise the bar and two conflicting children cannot both
+pass — makes the descent uniquely determined, and it is a fact about the definition
+rather than a hypothesis of it.
 
 ## Ancestry is read in the live tree
 
-"Ancestry is read in the live tree `T`, so a head outside a restricted child tree still
-supports the child through which it descends." So `sg_support` tests `B ⪯ H` on the block
-itself, with no reference to the `tree` the walk is running over — the two are deliberately
-different views, and passing `tree` to the walk does not narrow what counts as support.
+`sg_support` tests `B ⪯ H` on the block itself, with no reference to the `tree` the walk
+is running over — the two are deliberately different views, and passing `tree` to the
+walk does not narrow what counts as support.
 
 ## Extract
 

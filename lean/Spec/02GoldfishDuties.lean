@@ -219,22 +219,17 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     This is the availability layer's reading. The SG layer extends it with one line — at `t = a_r`, run
     `sg_vote` — and that reading, `S.onTick` (`05SGDuty.lean`), is the protocol's.
 
-    `isProposer` is the parameter of line 3; see the module header. The three actions are
-    exclusive because the protocol's instants are distinct: a proposal at `t_s`, a vote at
-    `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
-    evaluation of the *previous* slot, and that is the slot line 8 passes.
+    `isProposer` is the parameter of line 3; see the module header. A `NDREB` duty too,
+    so whatever an action broadcasts is in the outbox. Each action branch returns its
+    store directly: the three instants are mutually exclusive — distinct multiples of
+    `Δ`: a proposal at `t_s`, a vote at `t_s + Δ`, a confirmation evaluation at
+    `t_s + 2Δ` — so at most one branch runs, and a tick at no action instant returns the
+    re-clocked store having broadcast nothing.
 
-    A `NDREB` duty too, so whatever an action broadcasts is in the outbox. Each action
-    branch returns its store directly: the three instants are
-    mutually exclusive — distinct multiples of `Δ` — so at most one branch runs, and a
-    tick at no action instant returns the re-clocked store having broadcast nothing.
-
-    Each branch discharges its action's instant precondition from its own dependent `if`:
-    the clock was written just above, so `S.t` reduces to `t` whatever came before, and the
-    duties' autoparam tactic projects the instant out of the branch's conjunction, so no
-    branch restates anything. Line 7 writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal
-    whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
-    already said the two coincide.
+    Each branch discharges its action's instant precondition from its own dependent `if` —
+    the clock was written just above, so `S.t` reduces to `t` whatever came before. Line 7
+    writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ` — equal whenever `s > 0`, the
+    evaluation of the *previous* slot, and the form line 8's precondition wants.
 
     ## Extract -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
