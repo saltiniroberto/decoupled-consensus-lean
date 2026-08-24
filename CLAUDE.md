@@ -1,10 +1,10 @@
 # decoupled-consensus-lean
 
-The Lean 4 specification of **Ethereum decoupled consensus**, as `lean/Spec/`, plus the
-extractor under `extract/` that renders the Lean back into a paper-shaped document. The
-protocol's working draft is `consensus-1.pdf`, human-controlled and not distributed with
-this repository — the spec renders it, but the project is the protocol's formalization,
-not the document's.
+The Lean 4 specification of **Ethereum decoupled consensus**. `lean/Spec/` is the
+protocol's source of truth; `extract/` renders it into a paper-shaped document
+(`extract/out/dc.pdf`); `lean/Analysis/` states results against it. The spec originated
+as a rendering of a human-controlled draft (`consensus-1.pdf`, not distributed with this
+repository); since 2026-08-24 the spec speaks for itself.
 
 @CLAUDE.local.md
 
@@ -18,22 +18,19 @@ every definition is correct, and Roberto is the judge of what correct means. Pra
 
 - **Strictly reactive.** Semantics change only on Roberto's explicit call, and correctness
   work happens where he points. No uninvited correctness audits.
-- **`consensus-1.pdf`** is the draft being rendered, and it is **never committed** — no
-  PDF spec is; `CONTEXT_LOCAL.md` says where to read it. It has no stable labels or line
-  numbers and is under revision, so nothing cites it in a checked sense; a docstring
-  saying "Definition 1 of the draft" names the draft's numbering as of the date the
-  docstring records, and the docstring's own text is what the Lean is read against.
+- **No PDF spec is ever committed.** The draft that seeded the spec stays local
+  (`CONTEXT_LOCAL.md` says where to read it) and is consulted only on Roberto's word;
+  docstrings cite no document — each definition's own text is what the Lean is read
+  against.
 - **Definitions carry self-contained docstrings** that say what the definition means, and
   cite nothing.
 
 ## What was here before, and where it went
 
-Two older renderings — the `latex-specs` papers (namespace `Decoupled`, with `Analysis/`
-and a citation apparatus) and `consensus.pdf` (namespace `Consensus`) — were removed on
-2026-08-24 (Roberto: keep only what `Spec/` and the extractor need). **The
-branch `pre-consensus1-purge` holds the last commit carrying all of it**, history
-included; docstrings that name a removed file point there. Treat everything from those
-layers as unverified until re-checked here.
+Everything outside the current scope was removed on 2026-08-24; **the branch
+`pre-consensus1-purge` holds the last commit carrying all of it**, history included.
+Treat everything from those layers as unverified until re-checked here. The one live
+pointer is `Analysis/AccountableSafety.lean`'s, to the old proof.
 
 ## The framework is a submodule, and must not be pushed to
 
@@ -62,31 +59,32 @@ statement around a definition that is still absent. Do not pick a directory layo
 files that are not written. When one of those questions comes up, say what the step needs,
 note the question, and leave it.
 
-**The one exception is deciding which of the draft's results to skip**, which does need
-looking ahead: whether something is worth rendering turns on what it depends on and on
-whether anything else consumes it, and both are known from the draft without writing any
-Lean.
+**The one exception is deciding what of a source document to skip** when importing from
+one, which does need looking ahead: whether something is worth carrying over turns on
+what it depends on and on whether anything else consumes it, and both are known from the
+document without writing any Lean.
 
-## Protocol code reads like the draft's pseudocode
+## Protocol code reads like paper pseudocode
 
-Roberto, 2026-08-16. When writing protocol code — the figure renderings and the layers
-around them — aim for the draft's own spelling, line for line. When a Lean type blocks
-that spelling, prefer closing the gap once in the vocabulary or notation layer (the way
-`⊥`, `w(S)`, the assignment arrows, `←ᵖ` and `broadcast` are done) over inlining a Lean
-idiom in the routine; when the gap cannot be closed safely, keep the routine's shape as
-close as the types allow and say in a comment or the docstring which line deviates. One
-measured limit: `∈` cannot be overloaded for `Option` elements (recorded on the
+Roberto, 2026-08-16. When writing protocol code — the algorithm files and the layers
+around them — aim for the spelling a paper's figure would use, line for line. When a Lean
+type blocks that spelling, prefer closing the gap once in the vocabulary or notation
+layer (the way `⊥`, `w(S)`, the assignment arrows, `←ᵖ` and `broadcast` are done) over
+inlining a Lean idiom in the routine; when the gap cannot be closed safely, keep the
+routine's shape as close as the types allow and say in the docstring where it deviates.
+One measured limit: `∈` cannot be overloaded for `Option` elements (recorded on the
 `pre-consensus1-purge` branch).
 
 The running list of every stylistic ruling is **"The `DC` style sheet"** in
 `CONTEXT.md`; the reader-facing versions are the pages under `lean/Spec/doc/`.
 Update the style sheet when a new ruling lands.
 
-**A word the draft *defines* keeps its name; a word it does not define is not used.**
-Check that the draft defines a term before adopting it into a name, a docstring or
-`CONTEXT.md`. The extractor's conventions (`extract/README.md`) lean on the same
-discipline: a docstring opens with the draft's own backticked form, and that is what the
-extraction harvests.
+**A term is used only where the spec defines it.** A definition's docstring, a module
+header, or the `## Extract` prose is where a term gets its meaning; do not adopt a word
+into a name, a docstring or `CONTEXT.md` without a definition a reader can find there.
+The extractor (`extract/README.md`) leans on the same discipline: a docstring may open
+with a backticked paper form, which overrides the paper signature the extraction
+otherwise derives from the `def` itself.
 
 ## A spec change stops at the spec
 
@@ -96,14 +94,13 @@ looks. A changed definition changes what any theorem *says*, and what each shoul
 is Roberto's call, made looking at the new definition — not read off a diff that already
 rewrote everything downstream. So: land the spec edit, say plainly that the build is red
 and which declarations fail, sketch what each failing statement could become, and wait for
-the word. (No `Analysis/` exists for this draft yet; the rule is what will govern it when
-it does.)
+the word.
 
 ## `Spec/` holds definitions, never theorems
 
 Roberto, 2026-08-17. **A `theorem` in a `Spec/` file is a bug.** The specification layer
-is what a reader audits against the draft, and every proved fact about it belongs under
-`Analysis/` when that layer exists. The one tolerated exception is a proof a *definition
+is what a reader audits — each definition against its own docstring — and every proved
+fact about it belongs under `Analysis/`. The one tolerated exception is a proof a *definition
 itself* cannot exist without — the `…Beq_iff` soundness theorems behind `Model.lean`'s
 decidability instances, and `Raise.lean`'s `Subsingleton Error` behind the fold
 instances; do not add to that set without instruction.
@@ -131,10 +128,10 @@ talks about one** — the pattern exempts a backticked mention and counts a bare
 A result whose *statement* cannot yet be written — because it quantifies over something
 this project has not modelled — is different from one whose proof is missing. That one
 stays a `def … : Prop`, or takes the absent notion as an explicit parameter, so that
-nothing claims a shape the draft has not been checked to support.
+nothing claims a shape that has not been checked to hold.
 
 **Invoke the `lean-proof-idioms` skill before starting a proof over a definition written
-in the draft's imperative shape** — `Id.run do`, `let mut`, `while`. The obvious tactics
+in the imperative pseudocode shape** — `Id.run do`, `let mut`, `while`. The obvious tactics
 fail on those in ways that misdiagnose. The skill is an import from the first attempt and
 has not been re-checked here; correct it in place when it turns out to be wrong for this
 rendering.
@@ -192,8 +189,8 @@ whether the skill ever fires.
 **Do not use a term the reader has not been given a definition for.** Prefer the
 identifier over a nickname for it: write `S`, not "the cursor". A coined term is fine if
 it earns its keep, but define it where it is first used in that file and then use it
-consistently. A term taken from the draft counts as undefined unless the draft defines it,
-and checking is the writer's job.
+consistently. A term taken from a source document counts as undefined unless the spec's
+own prose defines it, and checking is the writer's job.
 
 **Write plainly.** Short sentences, one point at a time, in order. Avoid em-dash asides
 stacked several to a paragraph, a bolded lead-in on every bullet, "three reasons, the last
