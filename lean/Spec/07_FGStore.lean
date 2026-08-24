@@ -108,7 +108,7 @@ def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
 /-! ## The store handler, extended -/
 
 /-! ## Figure -/
-/-- `update_finality(Σ, σ)`: fold one offered post-state into the
+/-- Fold one offered post-state into the
     finality caches.
 
     Three steps, in the figure's order. `Σ.h_max` takes the offered height. The justified pair
@@ -143,7 +143,7 @@ def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
   return S
 
 /-! ## Figure -/
-/-- `process_block(Σ, B)`: the Goldfish handler (`Fig2.processBlock`) with the two lines
+/-- The Goldfish handler (`Fig2.processBlock`) with the two lines
     this layer adds — the post-state write, and `update_finality`.
 
     The post-state is computed from the parent's, and the parent's is read with the raising
@@ -176,7 +176,7 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
 /-! ## The two derived views, and the redefined fork choice -/
 
 /-! ## Figure -/
-/-- `fork_choice_root(Σ)`: `Σ.J` while the justified pair sits one
+/-- `Σ.J` while the justified pair sits one
     height under the store's frontier, and `Σ.F` otherwise. The only routine of this layer
     that reads no state map, and so the only one that does not raise. -/
 def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
@@ -185,7 +185,7 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
   return S.F
 
 /-! ## Figure -/
-/-- `get_filtered_block_tree(Σ)`: the viable blocks at or below the
+/-- The viable blocks at or below the
     fork-choice root, which "limit the selectable children".
 
     "Goldfish starts at the root even if the root is not in the filtered tree" — so this set
@@ -197,7 +197,7 @@ def Store.getFilteredBlockTree (S : Store Validator) :
   return {B ∈ (← S.viable) | root ⪯ B}
 
 /-! ## Figure -/
-/-- `goldfish_eligible(Σ, votes, s, B)`: the Goldfish eligibility condition
+/-- The Goldfish eligibility condition
     (`Fig1.goldfishEligible`) with a third disjunct — "a child whose state height is below
     `Σ.h_max − 1` is eligible without a majority".
 
@@ -217,7 +217,7 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
 /-! ## Figure -/
-/-- `get_head(Σ, votes, k)`: the protocol's fork choice. The SG walk
+/-- The protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
     selects a descendant of it over the same tree. It raises where the filtered tree does.
 

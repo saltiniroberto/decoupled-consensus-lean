@@ -113,7 +113,7 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
   return W
 
 /-! ## Figure -/
-/-- `ghost(anchor, tree, score, eligible)`: descend from `anchor`
+/-- Descend from `anchor`
     through eligible children in `tree`, taking the highest score at each step, and stop
     where no child is eligible. The tie at each step is a pick; the eligibility condition
     may raise. See the module header on both, and on why `eligible` is `DRE`
@@ -139,7 +139,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
 /-! ## The Goldfish score and eligibility -/
 
 /-! ## Figure -/
-/-- `goldfish_score(votes, s, B)`: every equivocator, plus every
+/-- Every equivocator, plus every
     non-equivocating participant whose target descends from `B`. The equivocator set is a
     `let`, as the figure writes it — the protocol defines no standalone function.
 
@@ -155,7 +155,7 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
   |equivocators| + |supporters|
 
 /-! ## Figure -/
-/-- `goldfish_eligible(Σ, votes, s, B)`: a strict majority of the
+/-- A strict majority of the
     participants support `B`, or `B` is a block of the current slot. The finality layer
     redefines it with a height clause; that reading, `S.goldfishEligible`, is the
     protocol's, and this one is this file's — hence the `Fig1` name.
@@ -173,7 +173,7 @@ def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
   2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
 /-! ## Figure -/
-/-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)`: the shared
+/-- The shared
     walk, instantiated with the Goldfish score and eligibility condition. -/
 def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
@@ -182,7 +182,7 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
   ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
 /-! ## Figure -/
-/-- `get_head(Σ, votes, s)`: the walk from genesis over the whole
+/-- The walk from genesis over the whole
     processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
     and the finality layer again, from the fork-choice root over the filtered tree — that
     reading, `S.getHead`, is the protocol's, and this one is this file's. -/

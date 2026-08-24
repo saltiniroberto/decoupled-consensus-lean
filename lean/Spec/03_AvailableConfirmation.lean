@@ -61,7 +61,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 open Params
 
 /-! ## Figure at `t_s + 6Δ` -/
-/-- `update_confirmation(Σ, s)`, run at `t_s + 6Δ`: evaluate slot `s`
+/-- Run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
 
     `Σ.live_confirmed` takes the result unconditionally — it is "the block the last evaluated

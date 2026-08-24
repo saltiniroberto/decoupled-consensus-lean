@@ -100,7 +100,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 open Params
 
 /-! ## Figure -/
-/-- `process_goldfish_vote(Σ, vote)`: record a slot-`k` vote with its
+/-- Record a slot-`k` vote with its
     processing time, unless it is from the future, already held, or a third vote by a
     validator already seen equivocating.
 
@@ -120,7 +120,7 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
   return S
 
 /-! ## Figure -/
-/-- `process_block(Σ, B)`: accept a block whose slot has started,
+/-- Accept a block whose slot has started,
     stamp it, and fold in every Goldfish vote it carries.
 
     A block from the future is dropped and nothing else is checked: the protocol's admission at
@@ -138,7 +138,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
   return S
 
 /-! ## Figure `propose_block(Σ)` -/
-/-- `propose_block(Σ)`, run at `t_s`: take every held slot-`(s−1)`
+/-- Run at `t_s`: take every held slot-`(s−1)`
     vote, run the fork choice on it, and build a block on the head carrying **all** of those
     votes.
 
@@ -173,7 +173,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   return Fig2.processBlock S B
 
 /-! ## Figure `goldfish_vote(Σ)` — runs at `t_s + Δ` -/
-/-- `goldfish_vote(Σ)`, run at `t_s + Δ`: vote for the head of the
+/-- Run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
     The merge: the slot-`(s−1)` votes held before the *previous* slot's view
@@ -204,7 +204,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   return S
 
 /-! ## Figure `on_tick(Σ, t)` -/
-/-- `on_tick(Σ, t)`: set the clock and the slot, then run whichever of
+/-- Set the clock and the slot, then run whichever of
     the slot's actions this instant is.
 
     This is the availability layer's reading. The SG layer extends it with one line — at `t = a_r`, run
