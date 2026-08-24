@@ -112,15 +112,14 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
   let W ←ᵖ top
   return W
 
+/-! ## Extract -/
 /-- `ghost(anchor, tree, score, eligible)`: descend from `anchor`
     through eligible children in `tree`, taking the highest score at each step, and stop
     where no child is eligible. The tie at each step is a pick; the eligibility condition
     may raise. See the module header on both, and on why `eligible` is `DRE`
     rather than the full stack.
 
-    The figure's `loop` is bounded by `|tree|`.
-
-    ## Extract -/
+    The figure's `loop` is bounded by `|tree|`. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     (score : Block Validator → Nat) (eligible : Block Validator → DRE Bool) :
     NDRE (Block Validator) := do
@@ -139,13 +138,12 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
 
 /-! ## The Goldfish score and eligibility -/
 
+/-! ## Extract -/
 /-- `goldfish_score(votes, s, B)`: every equivocator, plus every
     non-equivocating participant whose target descends from `B`. The equivocator set is a
     `let`, as the figure writes it — the protocol defines no standalone function.
 
-    An equivocator is counted without its target being read — see the module header.
-
-    ## Extract -/
+    An equivocator is counted without its target being read — see the module header. -/
 def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :
     Nat :=
   -- `{v ∈ K_s : votes holds two distinct votes by v}`
@@ -156,6 +154,7 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
   |equivocators| + |supporters|
 
+/-! ## Extract -/
 /-- `goldfish_eligible(Σ, votes, s, B)`: a strict majority of the
     participants support `B`, or `B` is a block of the current slot. The finality layer
     redefines it with a height clause; that reading, `S.goldfishEligible`, is the
@@ -166,31 +165,27 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
     `S.goldfishEligible`, each over its own vote set.
 
     The second disjunct is why a fresh proposal can be walked onto at all: "it only does not
-    apply to proposals from the current slot, which cannot yet have votes".
-
-    ## Extract -/
+    apply to proposals from the current slot, which cannot yet have votes". -/
 def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : Bool :=
   -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|`
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
   2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
+/-! ## Extract -/
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)`: the shared
-    walk, instantiated with the Goldfish score and eligibility condition.
-
-    ## Extract -/
+    walk, instantiated with the Goldfish score and eligibility condition. -/
 def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
+/-! ## Extract -/
 /-- `get_head(Σ, votes, s)`: the walk from genesis over the whole
     processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
     and the finality layer again, from the fork-choice root over the filtered tree — that
-    reading, `S.getHead`, is the protocol's, and this one is this file's.
-
-    ## Extract -/
+    reading, `S.getHead`, is the protocol's, and this one is this file's. -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   S.goldfishForkChoice .genesis S.T votes s

@@ -99,14 +99,13 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
+/-! ## Extract -/
 /-- `process_goldfish_vote(Σ, vote)`: record a slot-`k` vote with its
     processing time, unless it is from the future, already held, or a third vote by a
     validator already seen equivocating.
 
     The two-votes test is where the protocol's "at most two distinct votes per validator"
-    is maintained: "two witness the equivocation; nothing reads a third".
-
-    ## Extract -/
+    is maintained: "two witness the equivocation; nothing reads a third". -/
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
   let mut S := S
@@ -120,14 +119,13 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
   S.gfVoteTime[vote] ← some S.t
   return S
 
+/-! ## Extract -/
 /-- `process_block(Σ, B)`: accept a block whose slot has started,
     stamp it, and fold in every Goldfish vote it carries.
 
     A block from the future is dropped and nothing else is checked: the protocol's admission at
     this layer is the slot test alone. The carried votes go through
-    `process_goldfish_vote`, so each is subject to that routine's own three tests.
-
-    ## Extract -/
+    `process_goldfish_vote`, so each is subject to that routine's own three tests. -/
 def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Validator :=
     Id.run do
   let mut S := S
@@ -139,6 +137,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     S ← S.processGoldfishVote vote
   return S
 
+/-! ## Extract -/
 /-- `propose_block(Σ)`, run at `t_s`: take every held slot-`(s−1)`
     vote, run the fork choice on it, and build a block on the head carrying **all** of those
     votes.
@@ -159,9 +158,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     the duty tests. The autoparam tactic is `solve_by_elim` over the `And` projections rather
     than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
-    `have`.
-
-    ## Extract -/
+    `have`. -/
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
@@ -175,6 +172,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   broadcast (Message.block B)
   return Fig2.processBlock S B
 
+/-! ## Extract -/
 /-- `goldfish_vote(Σ)`, run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
@@ -187,9 +185,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     unchanged.
 
     "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
-    same conjunction-projecting tactic.
-
-    ## Extract -/
+    same conjunction-projecting tactic. -/
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
@@ -207,6 +203,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     return S.processGoldfishVote vote
   return S
 
+/-! ## Extract -/
 /-- `on_tick(Σ, t)`: set the clock and the slot, then run whichever of
     the slot's actions this instant is.
 
@@ -224,9 +221,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     the clock was written just above, so `S.t` reduces to `t` whatever came before. The
     confirmation branch writes its `t_s + 2Δ` instant as `t_{s−1} + 6Δ` — equal whenever
     `s > 0`, the evaluation of the *previous* slot, and the form `update_confirmation`'s
-    precondition wants.
-
-    ## Extract -/
+    precondition wants. -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let mut S := S

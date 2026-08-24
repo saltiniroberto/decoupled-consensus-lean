@@ -60,6 +60,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
+/-! ## Extract -/
 /-- `update_confirmation(Σ, s)`, run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
 
@@ -74,9 +75,7 @@ open Params
     marks a store the handlers cannot build — a coherence fact for `Analysis/`.
 
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the
-    Goldfish duties' instants are.
-
-    ## Extract -/
+    Goldfish duties' instants are. -/
 def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do

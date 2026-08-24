@@ -79,18 +79,18 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
 
 open Params
 
+/-! ## Extract -/
 /-- `latest(Σ, v, r)`: the greatest round in
     `[max{0, r − ηSG}, r)` whose SG votes hold one by `v`, or `⊥` when there is none.
 
-    The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on".
-
-    ## Extract -/
+    The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on". -/
 def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
   -- the greatest eligible round; `Finset.max` answers `⊥` when there is none
   let eligible := ({k ∈ Finset.range r |
     max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
   eligible.max
 
+/-! ## Extract -/
 /-- `sg_support(Σ, r, B)`: the represented weight supporting `B`.
 
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
@@ -99,9 +99,7 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     The figure's loop builds a set by an order-free conditional add, so the loop *is* the
     set it builds, written as the set-builder. Its `k ← latest(Σ, v, r)` binds out of an
     `Option` that the loop's own `latest(Σ, v, r) ≠ ⊥` test has vouched for; the
-    `∃ k, … = some k` form says it without a dependent `if`.
-
-    ## Extract -/
+    `∃ k, … = some k` form says it without a dependent `if`. -/
 def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
   -- as the set the loop builds
   w({v ∈ Electorate.V |
@@ -110,10 +108,9 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
           (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
           ∃ H, a.head = some H ∧ B ⪯ H})
 
+/-! ## Extract -/
 /-- `majority_fork_choice(Σ, anchor, tree, r)`: the shared walk with
-    the SG support as its score, gated on a strict majority of the represented weight.
-
-    ## Extract -/
+    the SG support as its score, gated on a strict majority of the represented weight. -/
 def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})
@@ -121,12 +118,11 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
 
+/-! ## Extract -/
 /-- `get_head(Σ, votes, s)`: the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
     The finality layer redefines it again, over the filtered tree and from the fork-choice
-    root — that reading, `S.getHead`, is the protocol's, and this one is this file's.
-
-    ## Extract -/
+    root — that reading, `S.getHead`, is the protocol's, and this one is this file's. -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
