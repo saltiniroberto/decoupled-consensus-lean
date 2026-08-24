@@ -4,6 +4,13 @@
 Reads extract/Consensus1-frozen/*.lean, writes extract/out/consensus1.tex, and (unless
 --no-pdf) compiles it with latexmk -lualatex.
 
+v4: definition blocks. An `## Extract — Definition (Title)` section renders as the
+draft's definition environment — bold "Definition N (Title)." running into the section's
+first paragraph, later paragraphs following as plain prose. N is assigned by this script,
+sequentially in document order: the Lean is the source of truth and the PDF is generated
+from it, so no number is read from a docstring (Roberto, 2026-08-24; the docstrings'
+"(Definition N of the draft)" citations are provenance, never input).
+
 v3: prose is opt-in. A module header or docstring section headed `## Extract` is
 document prose (Roberto, 2026-08-24, choosing the marked-for-inclusion direction and the
 keyword); everything unmarked is Lean-side commentary and stays out of the PDF. A header
@@ -1694,6 +1701,10 @@ def md_block(text: str, inline=None) -> str:
 
 EXTRACT_HEADING = re.compile(r"Extract\b\s*(?:[—:–-]+\s*(.*))?$")
 
+# a subtitle of the form `Definition (Title)`: rendered as the draft's definition
+# environment, numbered by this script in document order
+DEF_SUBTITLE = re.compile(r"Definition\s*(?:\((.*)\))?\s*$")
+
 
 def split_sections(text: str):
     """A module header or docstring -> [(heading|None, body)], split at `## ` lines."""
@@ -1760,6 +1771,25 @@ def prose_inline(s: str, rw) -> str:
 def prose_block(text: str, rw) -> str:
     """md_block with the paper-typography inline pass."""
     return md_block(text, inline=lambda s: prose_inline(s, rw))
+
+
+def emit_sections(tex, sections, prose_rw, defctr):
+    """Emit `## Extract` sections: plain prose, subsections, and definition blocks.
+    `defctr` is the document-wide definition counter, a one-element list."""
+    for subtitle, sec in sections:
+        m = DEF_SUBTITLE.fullmatch(subtitle) if subtitle else None
+        if m is not None:
+            defctr[0] += 1
+            head = r"\textbf{Definition " + str(defctr[0]) + "}"
+            if m.group(1):
+                head += " (" + prose_inline(m.group(1), prose_rw) + ")"
+            head += r"\textbf{.}"
+            # the head runs into the section's first paragraph; later paragraphs follow
+            tex.append(head + " " + prose_block(sec, prose_rw))
+            continue
+        if subtitle:
+            tex.append(r"\subsection*{" + prose_inline(subtitle, prose_rw) + "}")
+        tex.append(prose_block(sec, prose_rw))
 
 
 PREAMBLE = r"""\documentclass[10pt]{article}
@@ -1837,6 +1867,7 @@ def main():
     tables = harvest(all_items)
 
     tex = [PREAMBLE]
+    defctr = [0]  # definitions are numbered here, in document order — never from a doc
     for stem in FILE_ORDER:
         if stem not in parsed:
             print(f"warning: {stem}.lean missing", file=sys.stderr)
@@ -1851,10 +1882,7 @@ def main():
         prose_rw = Rewriter(tables, None, None, {})
         tex.append(r"\section*{" + prose_inline(title, prose_rw) + "}")
         # the flip: only `## Extract` sections reach the PDF, in the paper's typography
-        for subtitle, sec in extract_sections(body):
-            if subtitle:
-                tex.append(r"\subsection*{" + prose_inline(subtitle, prose_rw) + "}")
-            tex.append(prose_block(sec, prose_rw))
+        emit_sections(tex, extract_sections(body), prose_rw, defctr)
 
         figured = []   # (line_a, routine, src, docstring)
         others = []    # (docstring, name)
@@ -1876,8 +1904,7 @@ def main():
             for _a, r, src, doc in figured:
                 # a figured routine's `## Extract` prose leads its figure in, the way
                 # the draft's prose introduces each figure
-                for subtitle, sec in extract_sections(doc):
-                    tex.append(prose_block(sec, prose_rw))
+                emit_sections(tex, extract_sections(doc), prose_rw, defctr)
                 sig, _b = split_signature(src)
                 params = parse_params(sig)
                 ptypes = {n: ty for n, ty, _a2 in params}
@@ -1893,10 +1920,7 @@ def main():
 
         # `## Extract` prose of the file's other declarations follows the figure
         for doc, _name in others:
-            for subtitle, sec in extract_sections(doc):
-                if subtitle:
-                    tex.append(r"\subsection*{" + prose_inline(subtitle, prose_rw) + "}")
-                tex.append(prose_block(sec, prose_rw))
+            emit_sections(tex, extract_sections(doc), prose_rw, defctr)
     tex.append(r"\end{document}")
     texfile = OUT / "consensus1.tex"
     texfile.write_text("\n".join(tex), encoding="utf-8")

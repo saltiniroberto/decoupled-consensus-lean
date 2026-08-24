@@ -40,8 +40,15 @@ script:
   docstring's first paragraph gives the paper name, the paper signature, the figure the
   routine's pseudocode belongs to, and its position. Lean parameters absent from the
   cited signature (the validator `i`, the `isProposer` test) stay hidden at call sites,
-  exactly as the draft's own calls hide them. `(Definition N …)` citations are not yet
-  consumed; definition blocks would build on them.
+  exactly as the draft's own calls hide them.
+- **A section headed `## Extract — Definition (Title)` is a definition block**, rendered
+  as the draft's definition environment: bold "Definition N (Title)." running into the
+  section's first paragraph, later paragraphs following as plain prose. **N is assigned
+  by the extractor, sequentially in document order** — the Lean is the source of truth
+  and the PDF is generated from it, so no number is read from a docstring (Roberto,
+  2026-08-24). The docstrings' "(Definition N of the draft)" citations are provenance,
+  pointing at the old source; the generated numbers coincide with the draft's today
+  because the document order matches, a consequence and not a contract.
 - **A structure whose field docstrings open `X.…` is the paper's `X`.** The store's
   fields open `` `Σ.…` ``, so `Store` is `Σ` and every store-typed parameter renders
   `Σ`.
