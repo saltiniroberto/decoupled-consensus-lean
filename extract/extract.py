@@ -2029,6 +2029,9 @@ def render_figure(tex, stem, fig_title, routines_lines, prose_rw):
     line numbers are the rendering's own."""
     tex.append(r"\begin{figure}[H]")
     tex.append(r"\caption{" + esc(fig_title or stem) + r"}\label{fig:" + stem + "}")
+    # the draft boxes each figure: a thin full frame around the algorithm block
+    tex.append(r"\noindent\fbox{\begin{minipage}"
+               r"{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}")
     tex.append(r"\begin{algorithmic}[1]")
     stack = []  # open blocks: (indent, end command)
     first = True
@@ -2083,6 +2086,7 @@ def render_figure(tex, stem, fig_title, routines_lines, prose_rw):
     while stack:
         tex.append(stack.pop()[1])
     tex.append(r"\end{algorithmic}")
+    tex.append(r"\end{minipage}}")
     tex.append(r"\end{figure}")
 
 
