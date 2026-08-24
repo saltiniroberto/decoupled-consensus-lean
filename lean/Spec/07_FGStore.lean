@@ -107,7 +107,7 @@ def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
 
 /-! ## The store handler, extended -/
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `update_finality(Σ, σ)`: fold one offered post-state into the
     finality caches.
 
@@ -142,7 +142,7 @@ def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `process_block(Σ, B)`: the Goldfish handler (`Fig2.processBlock`) with the two lines
     this layer adds — the post-state write, and `update_finality`.
 
@@ -175,7 +175,7 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
 
 /-! ## The two derived views, and the redefined fork choice -/
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `fork_choice_root(Σ)`: `Σ.J` while the justified pair sits one
     height under the store's frontier, and `Σ.F` otherwise. The only routine of this layer
     that reads no state map, and so the only one that does not raise. -/
@@ -184,7 +184,7 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     return S.J
   return S.F
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `get_filtered_block_tree(Σ)`: the viable blocks at or below the
     fork-choice root, which "limit the selectable children".
 
@@ -196,7 +196,7 @@ def Store.getFilteredBlockTree (S : Store Validator) :
   let root := S.forkChoiceRoot
   return {B ∈ (← S.viable) | root ⪯ B}
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `goldfish_eligible(Σ, votes, s, B)`: the Goldfish eligibility condition
     (`Fig1.goldfishEligible`) with a third disjunct — "a child whose state height is below
     `Σ.h_max − 1` is eligible without a majority".
@@ -216,7 +216,7 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
   return σB.h < S.h_max - 1 ∨
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `get_head(Σ, votes, k)`: the protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
     selects a descendant of it over the same tree. It raises where the filtered tree does.

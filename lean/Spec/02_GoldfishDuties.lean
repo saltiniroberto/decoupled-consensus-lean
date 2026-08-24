@@ -99,7 +99,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `process_goldfish_vote(Σ, vote)`: record a slot-`k` vote with its
     processing time, unless it is from the future, already held, or a third vote by a
     validator already seen equivocating.
@@ -119,7 +119,7 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
   S.gfVoteTime[vote] ← some S.t
   return S
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `process_block(Σ, B)`: accept a block whose slot has started,
     stamp it, and fold in every Goldfish vote it carries.
 
@@ -137,7 +137,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     S ← S.processGoldfishVote vote
   return S
 
-/-! ## Extract -/
+/-! ## Figure `propose_block(Σ)` -/
 /-- `propose_block(Σ)`, run at `t_s`: take every held slot-`(s−1)`
     vote, run the fork choice on it, and build a block on the head carrying **all** of those
     votes.
@@ -162,7 +162,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
-  let s := S.s
+  let s := S.s                                      -- runs at `t_s`
   let votes := S.gfVotes[s - 1]
   let H ← Fig1.getHead S votes (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
@@ -172,7 +172,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   broadcast (Message.block B)
   return Fig2.processBlock S B
 
-/-! ## Extract -/
+/-! ## Figure `goldfish_vote(Σ)` — runs at `t_s + Δ` -/
 /-- `goldfish_vote(Σ)`, run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
@@ -203,7 +203,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     return S.processGoldfishVote vote
   return S
 
-/-! ## Extract -/
+/-! ## Figure `on_tick(Σ, t)` -/
 /-- `on_tick(Σ, t)`: set the clock and the slot, then run whichever of
     the slot's actions this instant is.
 

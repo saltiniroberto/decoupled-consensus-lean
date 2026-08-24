@@ -60,7 +60,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-/-! ## Extract -/
+/-! ## Figure at `t_s + 6Δ` -/
 /-- `update_confirmation(Σ, s)`, run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
 

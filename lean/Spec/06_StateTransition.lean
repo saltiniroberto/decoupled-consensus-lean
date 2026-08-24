@@ -184,7 +184,7 @@ def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
 
 /-! ## The four routines -/
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `process_attestation(σ, a)`: classify one attestation and set the
     bits it earns.
 
@@ -209,7 +209,7 @@ def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     σ.progress[i] ← true
   return σ
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `advance_height(σ)`: increment the height, record the advancing
     block — `σ.L`, already the block being processed — recompute `nj` for the height just
     entered, and clear both height-participation arrays.
@@ -225,7 +225,7 @@ def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run d
   σ.targetParticipation, σ.progress ← fun _ => false          -- `false^V`
   return σ
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `process_height_events(σ)`: after a block's attestations are
     folded in, the height events are checked once, in order — *finalize*, then *justify*,
     then *progress*.
@@ -250,7 +250,7 @@ def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id
     return advanceHeight σ
   return σ
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `state_transition(σ, B)`, with `σ = σ[B.parent]`: fold `B`'s
     attestations into the parent's post-state, install `B` as the latest block, and check the
     height events once. The *state height* of `B` is `σ[B].h`, which is what the finality

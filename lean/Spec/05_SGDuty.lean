@@ -54,7 +54,7 @@ namespace DC
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
   [RootComputation Validator]
 
-/-! ## Extract -/
+/-! ## Figure `process_sg_vote(Σ, vote)` -/
 /-- `process_sg_vote(Σ, vote)`: record a round-`r` SG vote with its
     processing time, unless it is from a future round, already held, or a third vote by a
     validator already seen equivocating.
@@ -76,7 +76,7 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
   S.sgVoteTime[vote] ← S.t
   return S
 
-/-! ## Extract -/
+/-! ## Figure `sg_vote(Σ)` — runs at `a_r` -/
 /-- `sg_vote(Σ)`, run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 

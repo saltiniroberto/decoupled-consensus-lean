@@ -112,7 +112,7 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
   let W ←ᵖ top
   return W
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `ghost(anchor, tree, score, eligible)`: descend from `anchor`
     through eligible children in `tree`, taking the highest score at each step, and stop
     where no child is eligible. The tie at each step is a pick; the eligibility condition
@@ -138,7 +138,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
 
 /-! ## The Goldfish score and eligibility -/
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `goldfish_score(votes, s, B)`: every equivocator, plus every
     non-equivocating participant whose target descends from `B`. The equivocator set is a
     `let`, as the figure writes it — the protocol defines no standalone function.
@@ -154,7 +154,7 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
   |equivocators| + |supporters|
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `goldfish_eligible(Σ, votes, s, B)`: a strict majority of the
     participants support `B`, or `B` is a block of the current slot. The finality layer
     redefines it with a height clause; that reading, `S.goldfishEligible`, is the
@@ -172,7 +172,7 @@ def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
   2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)`: the shared
     walk, instantiated with the Goldfish score and eligibility condition. -/
 def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
@@ -181,7 +181,7 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `get_head(Σ, votes, s)`: the walk from genesis over the whole
     processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
     and the finality layer again, from the fork-choice root over the filtered tree — that

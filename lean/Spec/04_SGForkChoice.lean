@@ -79,7 +79,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
 
 open Params
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `latest(Σ, v, r)`: the greatest round in
     `[max{0, r − ηSG}, r)` whose SG votes hold one by `v`, or `⊥` when there is none.
 
@@ -90,7 +90,7 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
   eligible.max
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `sg_support(Σ, r, B)`: the represented weight supporting `B`.
 
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
@@ -108,7 +108,7 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
           (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
           ∃ H, a.head = some H ∧ B ⪯ H})
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `majority_fork_choice(Σ, anchor, tree, r)`: the shared walk with
     the SG support as its score, gated on a strict majority of the represented weight. -/
 def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
@@ -118,7 +118,7 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
 
-/-! ## Extract -/
+/-! ## Figure -/
 /-- `get_head(Σ, votes, s)`: the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
     The finality layer redefines it again, over the filtered tree and from the fork-choice
