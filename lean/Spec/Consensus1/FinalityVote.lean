@@ -157,13 +157,13 @@ def Store.finalityVote (S : Store Validator) :
     is what keeps the two pairs of one attestation from contradicting each other; the
     claim itself is `Analysis/` matter.
 
-    A `DutyM` duty, as every duty: the attestation leaves by `broadcast` —
+    A `NDREB` duty, as every duty: the attestation leaves by `broadcast` —
     `Message.attestation`, the wire decision recorded on that constructor — and the
     returned store carries both record writes. The signer is the store's own `Σ.i`
     (Roberto, 2026-08-24 — no identity parameter); the round is `round(Σ.s)`; `head`
     stays explicit — see the module header. The head is carried, not derived. -/
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
-    DutyM Validator (Store Validator) := do
+    NDREB Validator (Store Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair
   let { pair := hp, state := S } ← S.heightVote     -- then the current-height pair
   broadcast (Message.attestation (Attestation.mk (validator := S.i)

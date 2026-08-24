@@ -82,13 +82,13 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
 /-- `sg_vote(Σ)` (Figure 5, lines 1–4), run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 
-    A `DutyM` duty, as the Goldfish duties are: line 4 is the draft's two verbs. Total —
+    A `NDREB` duty, as the Goldfish duties are: line 4 is the draft's two verbs. Total —
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
     are, over the assumed `SGSchedule`. -/
 def Store.sgVote (i : Validator) (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
-    DutyM Validator (Store Validator) := do
+    NDREB Validator (Store Validator) := do
   let r := round S.s                                           -- line 2
   -- line 3
   let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
@@ -110,7 +110,7 @@ def Store.sgVote (i : Validator) (S : Store Validator)
     written anywhere, the monad carrying the earlier sends past the `if`. On the draft's
     own schedules the instants are distinct (`Fig2.onTick`'s docstring). -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : DutyM Validator (Store Validator) := do
+    (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let S ← Fig2.onTick i S t isProposer
   -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
   if _ : S.t = SGSchedule.a (round S.s) then

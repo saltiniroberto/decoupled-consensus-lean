@@ -31,10 +31,10 @@ to run it* that is not.
 
 The draft's duties broadcast and then process their own object: `broadcast B;
 process_block(Σ, B)`. That line renders verbatim (Roberto, 2026-08-24): a duty runs in
-`DutyM` (`Duty.lean`) — the outbox threaded over `NDRE` — taking the store and returning
+`NDREB` (`Duty.lean`) — the outbox threaded over `NDRE` — taking the store and returning
 the store, with `broadcast` the draft's own verb. No caller unions sends: an earlier
 duty's broadcasts are already in the outbox when a later one runs. The boundary object
-`DutyResult` survives only in `DutyM.outcomes`, where the sts wiring consumes a duty as a
+`DutyResult` survives only in `NDREB.outcomes`, where the sts wiring consumes a duty as a
 relation. (From 2026-08-23 to the adoption a duty *returned* its `DutyResult`; git
 history has that form, and `CONTEXT.md` the decision trail.) The two handlers stay
 `Store → Store`: the figure gives them no broadcast line, and Section 1's "an honest node
@@ -158,7 +158,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     function of the block's parent and its slot — the draft does not say what the proposer
     puts there, so the function's answer is unconstrained.
 
-    `DutyM` as every duty; the walk and the picked listing of `votes` — its order a
+    `NDREB` as every duty; the walk and the picked listing of `votes` — its order a
     nondeterministic choice the draft leaves open — live underneath it.
 
     "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
@@ -169,7 +169,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     `have` (Roberto, 2026-08-23, second pass). -/
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
-    DutyM Validator (Store Validator) := do
+    NDREB Validator (Store Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← Fig1.getHead S votes (s - 1)                         -- line 24
@@ -195,7 +195,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     same conjunction-projecting tactic. -/
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
-    DutyM Validator (Store Validator) := do
+    NDREB Validator (Store Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
   let mut votes ← {vote ∈ᴹ S.gfVotes[s - 1] |
@@ -221,7 +221,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
     evaluation of the *previous* slot, and that is the slot line 8 passes.
 
-    A `DutyM` duty too, so whatever an action broadcasts is in the outbox. Each action
+    A `NDREB` duty too, so whatever an action broadcasts is in the outbox. Each action
     branch returns its store directly (Roberto, 2026-08-23): the three instants are
     mutually exclusive — distinct multiples of `Δ` — so at most one branch runs, and a
     tick at no action instant returns the re-clocked store having broadcast nothing.
@@ -233,7 +233,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
     already said the two coincide. -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : DutyM Validator (Store Validator) := do
+    (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t

@@ -45,10 +45,10 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 - **Messages are built by named `mk`**: `GoldfishVote.mk (validator := i) …`, and
   `Block.mk` likewise names its fields (Figure 2, line 25). `DutyResult` keeps the brace
   form `{ state := …, send := … }`.
-- **Duties run in `DutyM`** (`Duty.lean`): the outbox threaded over `NDRE`,
+- **Duties run in `NDREB`** (`Duty.lean`): the outbox threaded over `NDRE`,
   `broadcast` the draft's own verb, the store an explicit input and output — no caller
   ever unions sends, an earlier duty's broadcasts already sitting in the outbox when a
-  later one runs. `DutyResult` survives only at the boundary: `DutyM.outcomes` is the
+  later one runs. `DutyResult` survives only at the boundary: `NDREB.outcomes` is the
   outcome set the sts wiring and `Analysis/` consume a duty as. The tick still returns
   from each action branch directly (`Fig2.onTick`; the protocol's `Store.onTick` runs it
   and then Section 3.4's added line).

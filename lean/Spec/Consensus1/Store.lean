@@ -253,15 +253,15 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 /-! ## The duty boundary object
 
 Not draft content: the draft's duties `broadcast` and return nothing. Duties run in
-`DutyM` (`Duty.lean`, Roberto 2026-08-24) — they broadcast into the monad's outbox and
+`NDREB` (`Duty.lean`, Roberto 2026-08-24) — they broadcast into the monad's outbox and
 return the store — and this structure survives at the consumption boundary alone:
-`DutyM.outcomes` packages a run's store and outbox as one value, the state-and-send shape
+`NDREB.outcomes` packages a run's store and outbox as one value, the state-and-send shape
 of a lean-sts step result (`NodeStepResult` in the framework), so the wiring layer
 consumes a duty without reshaping it. (From 2026-08-23 to the adoption the duties
 returned this structure themselves; git history has that form.) -/
 
 /-- What a duty's run produces, at the boundary: the store afterwards, and everything it
-    broadcast. Built only by `DutyM.outcomes`; no duty returns one. -/
+    broadcast. Built only by `NDREB.outcomes`; no duty returns one. -/
 structure DutyResult (Validator : Type) [Roots] where
   /-- The store afterwards. -/
   state : Store Validator

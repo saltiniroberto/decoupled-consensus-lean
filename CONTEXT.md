@@ -3907,14 +3907,17 @@ The trail: `DutyResult.withSend` (the tick's send union) prompted "any alternati
 duty-monad option was probed twice — `scratch/DutyMonadProbe.lean`, store and outbox both
 ambient, **declined** (Roberto: the functions must keep their input `Store`; ambient
 identity also cost the instant autoparams) — and `scratch/DutyWriterProbe.lean`, outbox
-only, adopted ("ok"). `Duty.lean` is the machinery (a not-a-specification file): `DutyM α
-= StateT (Finset (Message _)) NDRE α`, `broadcast`, and `DutyM.outcomes`. The named
+only, adopted ("ok"). `Duty.lean` is the machinery (a not-a-specification file): `NDREB α
+= StateT (Finset (Message _)) NDRE α` — nondeterministic result with exception and
+broadcasts, the effect-inventory name continuing `DRE`/`NDRE` (Roberto; the first name,
+`DutyM`, lasted an hour — the `-M` suffix here marks monadic variants of named pure
+operations, which a duty monad is not) — plus `broadcast` and `NDREB.outcomes`. The named
 `runDuty` of the probes does not exist — Roberto: it "reads off compared to the paper" —
 its content folded into `outcomes`, the one boundary, so no `run` appears anywhere in
 `Spec/` and the wiring will read `res ∈ (…).outcomes`.
 
 What moved: the five duties (`proposeBlock`, `goldfishVote`, `sgVote`, `fgVote`, both
-`onTick`s) are `… → DutyM (Store _)` — store in, store out, instant autoparams untouched
+`onTick`s) are `… → NDREB (Store _)` — store in, store out, instant autoparams untouched
 since the store stayed a term — with `broadcast` at the draft's own broadcast lines and
 `return S.process… vote` closing each. The ticks compose by calling: Figure 2's sends
 cross the `if` inside the outbox, so `withSend` lost its consumer and is parked in
@@ -3985,9 +3988,9 @@ this list when a new call lands.
   type parameter, confirmed 2026-08-23. Two former members dissolved into nondeterminism the
   same day: `TieBreak` (the tie is a pick) and `[LinearOrder (GoldfishVote Validator)]`
   (the carried list is a picked listing).
-- **Duties run in `DutyM`** (`Duty.lean`, 2026-08-24; entry above): the outbox threaded
+- **Duties run in `NDREB`** (`Duty.lean`, 2026-08-24; entry above): the outbox threaded
   over `NDRE`, `broadcast` the draft's own verb, the store an explicit input and output —
-  no caller unions sends. `DutyResult` survives at the boundary only, `DutyM.outcomes`
+  no caller unions sends. `DutyResult` survives at the boundary only, `NDREB.outcomes`
   being what the sts wiring and `Analysis/` consume; `on_tick` returns from each action
   branch directly.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H`.

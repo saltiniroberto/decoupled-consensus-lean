@@ -44,7 +44,7 @@ A routine takes the weakest type that fits what it does:
 | chooses, never raises      | `NDR α`            | `bestChild` |
 | both                       | `NDRE α`           | `ghost`, `Store.getHead` |
 
-The duties sit one layer up: `DutyM α` (`Duty.lean`) is the broadcast outbox threaded
+The duties sit one layer up: `NDREB α` (`Duty.lean`) is the broadcast outbox threaded
 over `NDRE`, so a duty picks, raises, *and* broadcasts — see [style.md](style.md).
 
 Inside a `do` block at a higher tier, a call at any lower tier binds with the ordinary `←`.
@@ -89,7 +89,7 @@ res ∈ (S.onTick i t p).outcomes
 ```
 
 read: `res` is one possible outcome of the duty — a failure, or the store afterwards with
-everything broadcast (`DutyM.outcomes`, `Duty.lean`, packaging a run started with an
+everything broadcast (`NDREB.outcomes`, `Duty.lean`, packaging a run started with an
 empty outbox). This is the shape a state-transition-system step wants — the eventual
 lean-sts wiring relates pre-state to post-state through that membership. Statements
 *about all outcomes* are `Analysis/` matter, over the same set:

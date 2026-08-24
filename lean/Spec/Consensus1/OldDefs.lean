@@ -41,7 +41,7 @@ macro_rules
 
 /-- `d.withSend prior`: a `DutyResult` with an earlier duty's broadcasts unioned into
     its own. From `Store.lean`; its one consumer was `Store.onTick`'s composition, which
-    the `DutyM` adoption (2026-08-24, `Duty.lean`) dissolved — the outbox carries earlier
+    the `NDREB` adoption (2026-08-24, `Duty.lean`) dissolved — the outbox carries earlier
     sends, so nothing unions. Revived by any composition done on `DutyResult` values
     rather than in the monad. -/
 def DutyResult.withSend {Validator : Type} [Roots] [DecidableEq Validator]
