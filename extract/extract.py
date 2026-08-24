@@ -57,7 +57,7 @@ import unicodedata
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SRC = HERE / "Consensus1-frozen"
+SRC = HERE / "Consensus1-frozen-2"
 OUT = HERE / "out"
 
 # Section order: file stem -> None (use the module header's own title).
@@ -335,6 +335,7 @@ class Tables:
         self.ctors = {}          # ctor name -> (Sym or None, param_names)
         self.def_arity = {}      # lean qualified name -> explicit arity
         self.paper_names = set() # routine names as the paper spells them
+        self.duty_monad = None   # the monad `broadcast` writes into (NDREB)
 
     def callable_names(self):
         return set(self.routines) | set(self.defs)
@@ -430,6 +431,14 @@ def harvest(all_items):
                            args=[p for p, _ in params], smallcaps=True)
     t.paper_names = {r.paper_name for r in t.routines.values()} | \
         {sym.name for sym in t.defs.values() if sym.smallcaps}
+    # the duty monad: the head of `broadcast`'s result type. Routines typed in it are
+    # duties — they broadcast as a statement and their tail call carries no `return`.
+    for doc, kind, name, src in all_items:
+        if kind == "def" and name == "broadcast":
+            sig, _b = split_signature(src)
+            m = re.search(r":\s*([A-Za-z]\w*)[^:()]*$", sig.strip())
+            if m:
+                t.duty_monad = m.group(1)
     return t
 
 
@@ -602,11 +611,12 @@ INFIX = set("=≠<>≤≥+-*/%∧∨∈∉∪∩⊆⊇\\⪯≺∼←↦∣") | {
 
 class Rewriter:
     def __init__(self, tables: Tables, routine: Routine | None, store_param: str | None,
-                 param_types: dict):
+                 param_types: dict, is_duty: bool = False):
         self.t = tables
         self.routine = routine
         self.store_param = store_param   # Lean name of the store-typed param, if any
         self.param_types = param_types   # param name -> type text
+        self.is_duty = is_duty           # typed in the duty monad: broadcasts, no `return`
         self.miss = False                # set when a span turns out to quote Lean
         # idents that rename inside this routine's body
         self.var_renames = {}
@@ -1271,6 +1281,16 @@ def rewrite_statement(rw: Rewriter, st: Stmt, is_last: bool):
                 ("space", " "), ("sym", "∈"), ("space", " ")] + rw.expr(rest) + \
             [("space", " "), ("kw", "do")]
 
+    # broadcast m — the draft's own verb, a statement in the duty monad
+    if tree and tree[0] == "broadcast" and rw.t.duty_monad:
+        arg = tree[1:]
+        if len(arg) == 1 and is_group(arg[0], "("):
+            arg = arg[0]["items"]
+        # a `Message.ctor x` wrapper strips: the paper broadcasts the object itself
+        if len(arg) >= 3 and isinstance(arg[0], str) and arg[1] == ".":
+            arg = arg[3:]
+        return [("kw", "broadcast"), ("space", " ")] + rw.expr(arg)
+
     # return …
     if tree and tree[0] == "return":
         rest = tree[1:]
@@ -1289,6 +1309,9 @@ def rewrite_statement(rw: Rewriter, st: Stmt, is_last: bool):
         # return of the store variable itself
         if len(rest) == 1 and isinstance(rest[0], str) and rest[0] in rw.var_renames:
             return None if is_last else sp_kw("return")
+        # a duty's tail call carries no `return`: the draft's duties end on the call
+        if rw.is_duty:
+            return rw.expr(rest)
         # return f args… where f is a routine: the paper's call-with-return
         return [("kw", "return"), ("space", " ")] + rw.expr(rest)
 
@@ -1447,13 +1470,18 @@ def is_plain_assign(spans):
            and t in ("if", "for all", "loop", "else", "return", "define")
            for k, t in spans):
         return False
+    # a duty's bare tail call (its `return` dropped) joins its broadcast line
+    if spans and spans[0][0] == "fn":
+        return True
     return "←" in txt or txt.startswith(("add", "broadcast"))
 
 
 def routine_lines(tables: Tables, r: Routine, decl_src, store_param, param_types):
     """Render one figured routine into [(label, indent, spans, note)] lines."""
-    rw = Rewriter(tables, r, store_param, param_types)
-    _sig, body = split_signature(decl_src)
+    sig, body = split_signature(decl_src)
+    is_duty = bool(tables.duty_monad
+                   and re.search(rf"\b{tables.duty_monad}\b", sig))
+    rw = Rewriter(tables, r, store_param, param_types, is_duty=is_duty)
     stmts = statements_of(body)
     rendered = []
     for k, st in enumerate(stmts):
@@ -1824,6 +1852,7 @@ PREAMBLE = r"""\documentclass[10pt]{article}
 \usepackage[noend]{algpseudocode}
 \directlua{luaotfload.add_fallback("symfall", {"DejaVuSans:mode=node;"})}
 \setmainfont{Latin Modern Roman}[RawFeature={fallback=symfall}]
+\setsansfont{Latin Modern Sans}[RawFeature={fallback=symfall}]
 \setmonofont{DejaVu Sans Mono}[Scale=0.82,RawFeature={fallback=symfall}]
 \newcommand{\codett}[1]{\texttt{#1}}
 \theoremstyle{definition}

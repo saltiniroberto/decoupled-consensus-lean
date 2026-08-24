@@ -74,13 +74,19 @@ script:
 
 ## The rewrite rules, by what each is keyed on
 
-**Keyed on this style's conventions** — the two flagged rules are the only ones that
+**Keyed on this style's conventions** — the flagged rules are the only ones that
 would misfire on a spec using the same spellings differently:
 
-- `return { state := σ, send := M }` renders "**broadcast** m; ⟨call⟩" — keyed on the
-  literal field names `state`/`send`, the lean-sts step shape (**flagged**);
-- inside a send set, a one-argument constructor wrapper `Qualified.ctor x` strips to
-  `x` — the `Message` convention (**flagged**);
+- **the duty monad is harvested from `broadcast` itself**: the def named `broadcast`
+  names the monad in its result type (`NDREB`), a routine typed in that monad is a
+  duty, a `broadcast m` statement renders as the draft's bold verb, and a duty's tail
+  `return` drops — the draft's duties end on the call (**flagged**: keyed on the
+  identifier `broadcast`, the draft's own verb);
+- a one-argument constructor wrapper `Qualified.ctor x` on a broadcast message strips
+  to `x` — the `Message` convention (**flagged**);
+- `return { state := σ, send := M }` renders "**broadcast** m; ⟨call⟩" — the lean-sts
+  step shape, keyed on the literal field names `state`/`send`; retired in practice by
+  the NDREB revision, kept for the boundary shape (**flagged**);
 - `let mut S := S` (the shadow copy of a parameter) is dropped;
 - `for _ in [:e]` is the figure's bounded **loop**; `←ᵖ` is kept; `∈ᴹ` renders `∈`;
 - `-- line n` / `-- lines a–b` comments give the printed line numbers, their trailing
@@ -113,16 +119,23 @@ camelCase names, and Type-looking uppercase names, Greek-initial exempt. A
 paper-spelled routine name takes small caps, and a single parenthesized comma tuple
 after a callable is its argument list, so prose writes calls in paper form.
 
-## `Consensus1-frozen/`
+## The frozen copies
 
-A plain copy of `lean/Spec/Consensus1/` (the `.lean` files, without `doc/`), frozen at
-commit `909b4f6` on 2026-08-23. It exists so the extraction script has a stable input
-while the live spec keeps changing in parallel.
+**`Consensus1-frozen-2/` is the extractor's input**: the `.lean` files of
+`lean/Spec/Consensus1/` (without `doc/`), frozen at commit `b145f3c` on 2026-08-24 —
+the NDREB revision, where a duty broadcasts as a statement — with the extraction-side
+docstring changes applied on top (the `[fig:…]` symbolic references, and the Figure 2
+duty sentence updated to the broadcast shape).
+
+`Consensus1-frozen/` is the first freeze (`909b4f6`, 2026-08-23, `DutyResult`-returning
+duties), kept as that iteration's record; nothing reads it.
 
 Rules:
 
-- **The live spec is `lean/Spec/Consensus1/`.** Nothing imports the frozen copy, no build
-  target reads it (`lake`'s globs claim only `lean/`, and `make orphans` scans only
+- **The live spec is `lean/Spec/Consensus1/`.** Nothing imports a frozen copy, no build
+  target reads one (`lake`'s globs claim only `lean/`, and `make orphans` scans only
   `lean/`), and no spec change is made here.
-- The copy is refreshed deliberately, on instruction — re-copy and update the commit hash
-  above — never as a side effect of editing the live spec.
+- A new freeze is made deliberately, on instruction — copy the live `.lean` files and
+  record the commit hash above — never as a side effect of editing the live spec.
+- The `## Extract` sections and every extraction-side edit live in the frozen copy the
+  extractor reads; a freeze carries them forward.
