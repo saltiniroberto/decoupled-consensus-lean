@@ -18,8 +18,7 @@ Later figures redefine three routines — `get_head` (Figures 1, 4, 7), `process
 protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
 `S.goldfishEligible`, all Figure 7's); each superseded reading is named by the figure that
 defined it — `Fig1.getHead`, `Fig1.goldfishEligible`, `Fig4.getHead`, `Fig2.processBlock` —
-so a call to an old reading says so in the draft's own coordinates (Roberto, 2026-08-23;
-layer namespaces `Goldfish`/`SG`/`FG` preceded this, git history has them).
+so a call to an old reading says so in the draft's own coordinates.
 
 There are no namespace blocks: every definition carries its full name at its own `def` —
 `Store.…` for whatever a store flows into, so dot notation works; `Fig<n>.…` for a
@@ -28,8 +27,7 @@ superseded reading; a bare name for everything defined once (`ghost`, `goldfishS
 ## The arg-max step: the tie is a pick
 
 Line 11 is `arg max score`, "ties by root order". The maximal-score children are a filter;
-the tie is a **nondeterministic pick**, `←ᵖ` (Roberto, 2026-08-23, ending the chooser-class
-line: `Selection`, then `TieBreak`, are gone). The draft never says what a root is or how one
+the tie is a **nondeterministic pick**, `←ᵖ`. The draft never says what a root is or how one
 is computed — Section 1 asks only that the tie-break be fixed — so nothing is assumed at all:
 every resolution is among the outcomes, a root order being one of them, and "the walk does
 not depend on the tie" is a provable singleton statement, not a precondition.
@@ -38,8 +36,8 @@ not depend on the tie" is a provable singleton statement, not a precondition.
 
 The tie-break picks and the eligibility condition may raise — Figure 7's reads `Σ.σ[B].h` —
 so the walk carries `NDRE`, and its `eligible` parameter is `Block → DRE Bool`:
-the raising layer passes its condition directly (the deviation this closed is recorded in
-`CONTEXT.md`), and the pure layers offer theirs with `pure`. Line 8 filters the children
+the raising layer passes its condition directly, and the pure layers offer theirs with
+`pure`. Line 8 filters the children
 through `Finset.filterM` at `DRE`, whose fold instances exist; a per-child
 condition in `NDRE` itself would not commute (a pick with no outcomes annihilates where an
 error survives), which is why the parameter type is the raising monad, not the full stack.
@@ -139,8 +137,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
 
 /-- `goldfish_score(votes, s, B)` (Figure 1, lines 1–4): every equivocator, plus every
     non-equivocating participant whose target descends from `B`. The equivocator set is a
-    `let`, as line 2 writes it — the draft defines no standalone function (Roberto,
-    2026-08-23; a named `equivocators` def preceded this, git history has it).
+    `let`, as line 2 writes it — the draft defines no standalone function.
 
     An equivocator is counted without its target being read — see the module header. -/
 def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :

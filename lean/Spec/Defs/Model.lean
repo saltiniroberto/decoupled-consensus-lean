@@ -9,13 +9,6 @@ import Mathlib.Data.Finset.Lattice.Basic
 This is the rendering of `consensus-1.pdf`, the human-controlled draft kept locally at
 the repository root (no PDF spec is committed), under namespace `Consensus1`.
 
-**Two older renderings preceded it** — `latex-specs` (namespace `Decoupled`) and
-`consensus.pdf` (namespace `Consensus`) — removed with their apparatus on 2026-08-24;
-branch `pre-consensus1-purge` holds the last commit carrying them. This subtree was built
-sharing nothing with them — not the base types and not the notation, each rendering
-keeping its own copy of what it needed (Roberto, 2026-08-22) — which is what made the
-removal a clean cut.
-
 The file holds the model vocabulary the figure files read, and nothing else: a definition
 lands here at the moment a figure first consumes it, so everything below has a consumer under
 `Spec/`.
@@ -47,11 +40,9 @@ The draft gives every block a root — the post-state root of Section 4 — and 
 reads it in one place: `update_finality` compares justifications in the lex order
 `(h_j, J.root)`. What a root *is* the draft never says, so the type is abstract: the `Roots`
 class carries the type, the linear order the lex comparison needs, and the root `B_gen`
-carries — the draft says "every block `B` has a root" and its genesis is a block (Roberto,
-2026-08-23; the first form was a `Nat` with `0` at genesis). The walk's tie-break is **not**
-read off the root: the tie is a nondeterministic pick in `Fig1GoldfishWalk.lean`, every
-resolution among the outcomes, a root order being one (Roberto, 2026-08-23; a chooser class
-— `Selection`, then `TieBreak` — preceded it, git history has both).
+carries — the draft says "every block `B` has a root" and its genesis is a block. The
+walk's tie-break is **not** read off the root: the tie is a nondeterministic pick in
+`Fig1GoldfishWalk.lean`, every resolution among the outcomes, a root order being one.
 
 Nothing constrains a block's root to match the post-state it would compute: the block
 *claims* a root — the proposer's own claim is the assumed `RootComputation` of Figure 2 —
@@ -65,8 +56,7 @@ never mention a root carry the instance anyway.
 ## Block equality is decided by hand
 
 `deriving DecidableEq` does not reach a mutual family nested through `List` and `Option`;
-that was measured on the two earlier renderings' identical shape (their files live on the
-`pre-consensus1-purge` branch; `CONTEXT.md` for what was tried). So the decision procedure is written out below, under
+measured. So the decision procedure is written out below, under
 "Decidable equality, written out", with the soundness theorems the instances need — the one
 kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `noncomputable`.
 
@@ -74,9 +64,8 @@ kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `non
 
 The draft writes `⊥` for an absent block or height: the empty target, the empty head, the
 absent latest round. That is `Option.none` here, given the `⊥` spelling by a scoped `Bot`
-instance. Spec bodies test absence as the draft writes it — `x ≠ ⊥`, never `.isSome`
-(Roberto, 2026-08-23) — and a raising body extracts by the lift in `Raise.lean`,
-`let y ← x` (Roberto, 2026-08-24).
+instance. Spec bodies test absence as the draft writes it — `x ≠ ⊥`, never `.isSome` —
+and a raising body extracts by the lift in `Raise.lean`, `let y ← x`.
 
 ## Extract
 
@@ -228,7 +217,7 @@ class SGSchedule where
 
 /-! ## Roots -/
 
-/-- The vocabulary of roots (Roberto, 2026-08-23). `Root` is the type of the draft's
+/-- The vocabulary of roots. `Root` is the type of the draft's
     post-state roots, abstract — the draft never says what a root is or how one is computed.
     `ord` is the linear order `update_finality`'s lex comparison `(h_j, J.root)` reads.
     `genesisRoot` is `B_gen`'s: the draft says every block has a root, and its genesis is a
@@ -516,11 +505,10 @@ instance : DecidableEq (SGVote Validator) := fun a b =>
 
 /-- A wire message: what a duty broadcasts. The draft's wire objects as one type — the
     shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
-    can name what it sends (Roberto, 2026-08-23). The equality instance is derived, sitting
-    below the hand-written ones it needs; its first consumer is `Store.onTick`'s send union
-    (same day).
+    can name what it sends. The equality instance is derived, sitting below the
+    hand-written ones it needs.
 
-    The `attestation` constructor is **not the draft's** (Roberto, 2026-08-24): the draft's
+    The `attestation` constructor is **not the draft's**: the draft's
     blocks carry attestations but it never says how one travels from signer to proposer,
     because it never defines the signing layer at all. The first specification's
     attestation is a wire message, and `FinalityVote.lean` imports that answer with the

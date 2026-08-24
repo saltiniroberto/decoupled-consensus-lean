@@ -11,13 +11,8 @@ figure files carry the draft's own assignment statements — `σ.h ← σ.h + 1`
 `σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, and its
 set-builders whose condition raises, `{x ∈ᴹ s | p}`.
 
-It began as a duplicate — the third — of the first rendering's notation file (on the
-`pre-consensus1-purge` branch since the 2026-08-24 removal), under this subtree's own
-namespace, because the renderings share nothing, not even by import, so each stays untouched
-by the others (2026-08-19, and again 2026-08-22 for this copy). The macros are protocol-free,
-so duplication carries no claim that could drift, and the scoped syntax is what makes three
-copies legal: each is active only inside its own namespace. What the first file decided, and
-this copy keeps:
+The macros are protocol-free — nothing here names anything from the draft — and
+`scoped`, active only inside this namespace. The decisions:
 
 **A routine is a plain `def … : T := Id.run do`.** No `function` command that would default
 the result type from the state binder: the type is worth having visible at the declaration.
@@ -138,10 +133,9 @@ macro_rules
 /-- `|s|` for `Finset.card s`, as the draft writes it: `|equivocators| + |supporters|`
     (Figure 1, line 4). Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so
     `|{v ∈ K | p v}|` parses with the set-builder's own `|` inside, and a bar in a `match`
-    alternative is untouched (both measured, 2026-08-23; not in the older notation layers,
-    whose figures write no cardinality).
+    alternative is untouched (both measured).
 
-    What it costs, measured the same day: two macros on one spelling do not overload, so
+    What it costs, measured: two macros on one spelling do not overload, so
     while this namespace is open the `abs` bars stop elaborating — `|x| : Int` becomes
     `Finset.card x` and fails. Nothing in this subtree takes an absolute value; write
     `abs x` if one ever does. A mistake is a type error, never a silent one. -/

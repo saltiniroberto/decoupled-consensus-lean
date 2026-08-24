@@ -21,3 +21,6 @@ consensus.pdf
 consensus-1.pdf
 paper-snapshots/
 latex-specs/
+
+# The local, uncommitted copy of the tree at pre-consensus1-purge (Roberto, 2026-08-24)
+pre-purge/

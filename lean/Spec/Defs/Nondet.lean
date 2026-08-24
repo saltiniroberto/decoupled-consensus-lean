@@ -2,12 +2,11 @@ import Mathlib.Data.Set.Functor
 import Spec.Defs.Raise
 
 /-!
-# Nondeterminism: the two stacks, the pick, and the loop over a set
+# Nondeterminism: the two stacks and the pick
 
 **This file is not a specification.** It holds no protocol content — nothing here renders a
-definition or a figure of the draft. It is the nondeterminism vocabulary the rendering is
-adopting (Roberto, 2026-08-23), measured first in `scratch/SetMonadProbe.lean` and
-`scratch/SetExceptProbe.lean`; `CONTEXT.md`'s for-all entry carries the decision trail.
+definition or a figure of the draft. It is the rendering's nondeterminism vocabulary;
+`CONTEXT.md` carries the decision trail.
 
 ## The two stacks
 
@@ -29,13 +28,13 @@ right: a `Set`, or a `Finset` read as its members, so set-builders, bracket read
 store fields pick directly. A pick from the empty set has **no outcomes** — the empty set of
 results, not a raise.
 
-## `listings`, and the loop that moved out
+## `listings`
 
 `listings s` is the set of duplicate-free orderings of `s` — a predicate, not an
 enumeration: no list is ever built, so none is ever chosen. `propose_block` picks one for
-the block's carried votes. The `ForIn` over `Finset` it once powered — pick a listing, loop
-the list, every visitation order among the outcomes — lost its last consumer in the
-2026-08-23 migration and is parked in `OldDefs.lean`.
+the block's carried votes. A `ForIn` over `Finset` built on it — pick a listing, loop the
+list, every visitation order among the outcomes — is parked in `OldDefs.lean`, no spec
+routine looping over a `Finset`.
 
 ## Consuming a stack
 

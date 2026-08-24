@@ -10,8 +10,8 @@ Definition 5 and Figure 7: `process_block` extended, `update_finality`, `fork_ch
 **This is the protocol.** Where a routine here shares a draft name with an earlier figure,
 this is the reading a caller wants, and it bears the plain `Store` name: `S.processBlock`,
 `S.goldfishEligible`, and the fork choice `S.getHead`. The superseded readings are
-figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`
-(Roberto, 2026-08-23). See `Fig1GoldfishWalk.lean` on the scheme.
+figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`.
+See `Fig1GoldfishWalk.lean` on the scheme.
 
 The `-- line n` comments use Figure 7's own line numbering, in the draft as of 2026-08-22.
 
@@ -44,9 +44,8 @@ nothing raises at all, and that theorem belongs to `Analysis/`.
 
 A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
 `Finset.filterM` collects Definition 5's witnesses, and `Finset.imageM` collects line 15's
-heights. The former deviation — the walk once received the eligibility condition with its
-height clause read through the raw `Option` — closed on 2026-08-23: `ghost`'s condition
-slot is `DRE`, so line 29 passes `goldfish_eligible` itself.
+heights. `ghost`'s condition slot is `DRE`, so line 29 passes `goldfish_eligible` itself,
+raising reads included — the rendering carries no deviation there.
 
 ## Extract
 
@@ -216,8 +215,7 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
 
     The walk receives `goldfish_eligible` itself: `ghost`'s condition slot is
     `DRE`, so the extended condition — which raises, reading `Σ.σ[B].h` — passes
-    directly, and the deviation this line carried from 2026-08-22 is closed (Roberto,
-    2026-08-23; the history is in `CONTEXT.md`).
+    directly.
 
     It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
     caller wants; the superseded ones are `Fig1.getHead` and `Fig4.getHead`. -/

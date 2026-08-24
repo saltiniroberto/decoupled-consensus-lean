@@ -7,12 +7,7 @@ import Spec.Defs.FinsetM
 **This file is not a specification.** It holds no protocol content — nothing here renders a
 definition or a figure of the draft. It is the failure vocabulary the whole rendering shares,
 kept out of the figure files so that each of those states what the draft says and nothing
-else (Roberto, 2026-08-21).
-
-A copy of the second rendering's `Raise.lean` (on the `pre-consensus1-purge` branch
-since the 2026-08-24 removal) under this subtree's namespace, for the reason
-`Notation.lean` gives: the renderings shared nothing. The fold instances below are the
-same copy's, at this subtree's own error type.
+else.
 
 The draft has no failures. Its state map is defined on every accepted block and its routines
 run at the instants the schedule names, so every raise below is a rendering artifact: it marks
@@ -33,14 +28,12 @@ last one decisive:
   need their combining operation commutative, and the failure-failure case needs the two
   failures to be *equal* — which is `Subsingleton Error`. Give `Error` a payload and
   `Std.Commutative` becomes false, not merely unproved, because the result would then depend
-  on which failure the traversal met first. Figure 7's `viable` and `update_finality` are the
-  consumers (2026-08-22, Roberto's call — a first form read the map through the raw `Option`
-  inside the set-builders, which answered silently where this raises).
+  on which failure the traversal met first. Figure 7's `viable` and `update_finality` are
+  the consumers — a raw-`Option` read would answer silently where these raise.
 
 `DRE α` is `Except Error α` — a *deterministic* result or exception, named as the
-deterministic partner of `Nondet.lean`'s `NDRE` (Roberto, 2026-08-24; it was
-`ResultOrExcept` until then, a long name chosen so as not to take `Result`, which
-`EStateM.Result` in core would silently shadow — an avoidance `DRE` keeps).
+deterministic partner of `Nondet.lean`'s `NDRE`. (A bare `Result` would silently shadow
+core's `EStateM.Result`, which is why the name is an acronym rather than the word.)
 -/
 
 set_option autoImplicit false
@@ -96,13 +89,13 @@ instance {α : Type} [DecidableEq α] :
         | exact congrArg _ (Subsingleton.elim _ _)
         | exact congrArg _ (Finset.union_assoc _ _ _)
 
-/-- The raising coercion out of `Option` (Roberto, 2026-08-24): in any raising `do`
+/-- The raising coercion out of `Option`: in any raising `do`
     block, `let y ← x` with `x : Option α` binds the value and raises on `⊥` — total, the
     one failure. A `MonadLift`, not a `Coe`, because `←` resolves through lifts; the
     chain into `NDRE` composes through `Nondet.lean`'s `Except` lift. This is the
     subtree's extraction spelling wherever the body raises: where absence is a normal
     branch, a plain `if x ≠ ⊥` decides the branch and the bind behind it cannot raise.
-    The cost accepted with it (Roberto, "let's see how it goes"): the extraction's safety
+    The accepted cost: the extraction's safety
     is not checked at the site — dropping the test leaves compiling code that raises
     where a rule meant to fall through. The autoparam extraction that did check,
     `Option.value`, is parked in `OldDefs.lean`. -/

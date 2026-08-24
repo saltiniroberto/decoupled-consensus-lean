@@ -30,13 +30,12 @@ to run it* that is not.
 ## How a duty broadcasts
 
 The draft's duties broadcast and then process their own object: `broadcast B;
-process_block(Σ, B)`. That line renders verbatim (Roberto, 2026-08-24): a duty runs in
+process_block(Σ, B)`. That line renders verbatim: a duty runs in
 `NDREB` (`Duty.lean`) — the outbox threaded over `NDRE` — taking the store and returning
 the store, with `broadcast` the draft's own verb. No caller unions sends: an earlier
 duty's broadcasts are already in the outbox when a later one runs. The boundary object
 `DutyResult` survives only in `NDREB.outcomes`, where the sts wiring consumes a duty as a
-relation. (From 2026-08-23 to the adoption a duty *returned* its `DutyResult`; git
-history has that form, and `CONTEXT.md` the decision trail.) The two handlers stay
+relation. The two handlers stay
 `Store → Store`: the figure gives them no broadcast line, and Section 1's "an honest node
 relays every object it processes" is network behaviour, the wiring layer's to render.
 
@@ -44,8 +43,7 @@ relays every object it processes" is network behaviour, the wiring layer's to re
 
 **Line 30's `for all B ∈ Σ.T` is an order-free union, written as one.** Line 31
 accumulates a union, so the loop's whole effect is `biUnion` — the standard name for it —
-and the loop spelling adds nothing (Roberto, 2026-08-23, retiring the `for all` macros; a
-bare fold and the macros preceded it, git history has both). A loop that were *not*
+and the loop spelling adds nothing. A loop that were *not*
 order-free would use the nondeterministic `for` of `Nondet.lean` instead, every visitation
 order among the outcomes.
 
@@ -53,10 +51,8 @@ order among the outcomes.
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
 constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as
 the draft says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
-is a genuine nondeterministic choice, since the draft fixes none (Roberto, 2026-08-23). Two
-earlier forms are in git history: `Finset.toList`, which cost `noncomputable`, and
-`Finset.toSortedList` under an assumed `LinearOrder` on votes — an assumption the pick
-deletes. The alternative all forms declined, holding the store's votes as lists, would make
+is a genuine nondeterministic choice, since the draft fixes none. The alternative —
+holding the store's votes as lists — would make
 "at most two distinct votes per validator" a property of a list and put a `toFinset` at
 every counting site.
 
@@ -94,8 +90,7 @@ set_option autoImplicit false
 namespace Consensus1
 
 /-- The root a proposer writes into its block, as an assumed function of the block's parent
-    and its slot (Roberto, 2026-08-23; before it, the root was a parameter threaded through
-    `on_tick`). The draft calls a block's root its post-state root, and the post-state only
+    and its slot. The draft calls a block's root its post-state root, and the post-state only
     becomes defined at Section 5 — so this layer can only assume the function exists, and
     nothing constrains its answer, exactly as nothing constrains the root a received block
     claims (`Model.lean`, the `B.root` section). -/
@@ -162,11 +157,10 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     nondeterministic choice the draft leaves open — live underneath it.
 
     "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
-    the duty tests (Roberto, 2026-08-23; `onSGFGVotingAction` in the second rendering is the
-    precedent). The autoparam tactic is `solve_by_elim` over the `And` projections rather
+    the duty tests. The autoparam tactic is `solve_by_elim` over the `And` projections rather
     than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
-    `have` (Roberto, 2026-08-23, second pass). -/
+    `have`. -/
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
@@ -222,7 +216,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     evaluation of the *previous* slot, and that is the slot line 8 passes.
 
     A `NDREB` duty too, so whatever an action broadcasts is in the outbox. Each action
-    branch returns its store directly (Roberto, 2026-08-23): the three instants are
+    branch returns its store directly: the three instants are
     mutually exclusive — distinct multiples of `Δ` — so at most one branch runs, and a
     tick at no action instant returns the re-clocked store having broadcast nothing.
 

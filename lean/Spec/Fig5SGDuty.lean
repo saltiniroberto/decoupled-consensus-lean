@@ -18,9 +18,7 @@ Available confirmation is unchanged."
 
 The extra `on_tick` line **is** rendered, as this file's `Store.onTick`: run Figure 2's
 reading, `Fig2.onTick`, and then the one line. Section 5 never touches `on_tick`, so that
-composition is the protocol's tick (a first reading claimed `Fig7FGStore.lean` carried a
-final `on_tick` — it carries none; a second inlined the line into Figure 2's `on_tick` —
-both corrected 2026-08-23). The redirected `get_head` is not rendered: Section 5 redefines
+composition is the protocol's tick. The redirected `get_head` is not rendered: Section 5 redefines
 it again, and that version, `Store.getHead`, is the protocol's. So this file holds the two
 routines Figure 5 itself introduces — which Section 5 does not touch — and the protocol's
 `on_tick`.

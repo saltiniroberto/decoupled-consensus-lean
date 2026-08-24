@@ -6,15 +6,13 @@ import Spec.Defs.Nondet
 
 **This file is not a specification.** It holds no protocol content — nothing here renders
 a definition or a figure of the draft. It is the vocabulary that lets a duty *broadcast*
-— the draft's own verb — instead of returning its messages (Roberto, 2026-08-24; probes
-`scratch/DutyWriterProbe.lean` and, for the declined store-ambient variant,
-`scratch/DutyMonadProbe.lean`).
+— the draft's own verb — instead of returning its messages.
 
 ## The design
 
 A duty is `Store → … → NDREB (Store …)`: the store stays an explicit input and output —
-Roberto declined the variant that made it ambient, and keeping it explicit is also what
-keeps the instant autoparams attachable — while the **outbox** threads through the monad.
+which is also what keeps the instant autoparams attachable — while the **outbox** threads
+through the monad.
 `broadcast m` puts a message in it; composition is function call, and a caller never
 unions sends: an earlier duty's broadcasts are already in the outbox when a later duty
 runs.
@@ -43,8 +41,8 @@ namespace Consensus1
 variable {Validator : Type} [Roots] [DecidableEq Validator]
 
 /-- The duty monad — nondeterministic result with exception and **broadcasts**, the
-    effect-inventory name continuing `DRE`/`NDR`/`NDRE` (Roberto, 2026-08-24; `DutyM` for
-    an hour first). The outbox threads over the nondeterministic-raising base; the store
+    effect-inventory name continuing `DRE`/`NDR`/`NDRE`. The outbox threads over the
+    nondeterministic-raising base; the store
     is deliberately not in here — a duty takes and returns it explicitly. -/
 abbrev NDREB (Validator : Type) (α : Type) :=
   StateT (Finset (Message Validator)) NDRE α

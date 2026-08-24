@@ -9,7 +9,7 @@ strategy — `FinalityVote.lean` carries them and the import's story — and thi
 theirs: the durable per-height memory those rules read and write. The store holds one as
 its field `Σ.H` (`Store.lean`), because the store is one validator's state and the rules
 are store rules; this file exists so the record's type and writes live outside the
-draft's own store file (Roberto, 2026-08-23).
+draft's own store file.
 -/
 
 set_option autoImplicit false

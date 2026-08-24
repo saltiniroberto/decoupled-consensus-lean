@@ -8,9 +8,7 @@
   // unnoticed while `make check` stayed green.
   //
   // The same tab open on a file that still exists would have reverted real work instead. This
-  // repository moves files often (the specification changed layout three times in one day) and
-  // carries generated files that `make index` and `make mapping` rewrite, so a buffer holding a
-  // previous version is a normal state here rather than a rare one. Saving is therefore worth
-  // making deliberate.
+  // repository moves files, so a buffer holding a previous version is a normal state here
+  // rather than a rare one. Saving is therefore worth making deliberate.
   // "files.autoSave": "off"
 }

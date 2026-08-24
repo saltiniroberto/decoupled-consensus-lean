@@ -35,7 +35,7 @@ with no stamp, and the two readings agree because **no rendered rule reads a blo
 timestamp at all** — the block map is written by `process_block` and read by nothing,
 exactly as in the draft. Vote timestamps are read, always on a vote drawn from a
 `gf_votes[·]` or `sg_votes[·]` set, so always on a processed one — which is why the bracket
-read `Σ.timestamp[x]` **raises**, exactly as `Σ.σ[B]` does (Roberto, 2026-08-23): an
+read `Σ.timestamp[x]` **raises**, exactly as `Σ.σ[B]` does: an
 unstamped held vote marks a store the handlers cannot build, and the failure reaches the
 caller instead of the vote silently failing a cutoff. The raw `Option` stays reachable by
 application, `S.gfVoteTime vote`.
@@ -69,9 +69,7 @@ application, `Σ.σ B`, because the map *is* a function; its one reader is the w
 inside `S.getHead`, which cannot carry the monad — set-builders raise instead, through the
 `FinsetM` fold machinery.
 
-All of this is the arrangement the previous rendering arrived at over 2026-08-21 and -22;
-its decision trail left with that rendering in the 2026-08-24 purge and lives on the
-`pre-consensus1-purge` branch. A name is needed on each
+A name is needed on each
 map type because instances resolve on a type's head constant, and a bare function type has
 none.
 
@@ -200,8 +198,8 @@ structure Store (Validator : Type) where
   H : SigningHistory Validator
   /-- `Σ.i`, the validator running this node — the draft's `ℓ`, which its figures treat
       as ambient and **its store does not list**. A field here, so a duty can read its
-      own identity instead of taking it as a parameter (Roberto, 2026-08-24, for
-      `fgVote`). Written by nothing: fixed at `gen`. -/
+      own identity instead of taking it as a parameter. Written by nothing: fixed at
+      `gen`. -/
   i : Validator
 
 /-- The initial store: `Σ.T = {B_gen}`, `Σ.live_confirmed = Σ.latest_confirmed = B_gen`,
@@ -254,12 +252,11 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 /-! ## The duty boundary object
 
 Not draft content: the draft's duties `broadcast` and return nothing. Duties run in
-`NDREB` (`Duty.lean`, Roberto 2026-08-24) — they broadcast into the monad's outbox and
-return the store — and this structure survives at the consumption boundary alone:
-`NDREB.outcomes` packages a run's store and outbox as one value, the state-and-send shape
-of a lean-sts step result (`NodeStepResult` in the framework), so the wiring layer
-consumes a duty without reshaping it. (From 2026-08-23 to the adoption the duties
-returned this structure themselves; git history has that form.) -/
+`NDREB` (`Duty.lean`) — they broadcast into the monad's outbox and return the store — and
+this structure survives at the consumption boundary alone: `NDREB.outcomes` packages a
+run's store and outbox as one value, the state-and-send shape of a lean-sts step result
+(`NodeStepResult` in the framework), so the wiring layer consumes a duty without
+reshaping it. -/
 
 /-- What a duty's run produces, at the boundary: the store afterwards, and everything it
     broadcast. Built only by `NDREB.outcomes`; no duty returns one. -/

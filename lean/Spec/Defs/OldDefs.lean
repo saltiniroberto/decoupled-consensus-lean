@@ -5,7 +5,7 @@ import Spec.Defs.Store
 # Parked definitions: compiled, unconsumed
 
 **This file is not a specification.** It holds machinery that lost its last consumer and is
-kept compiling here instead of deleted (Roberto, 2026-08-23), so reviving a piece is a move
+kept compiling here instead of deleted, so reviving a piece is a move
 back to its home file rather than an excavation. Each entry says where it came from and what
 would revive it. Nothing under `Spec/` may import this file: a revived definition
 moves out first.
@@ -41,9 +41,9 @@ macro_rules
 
 /-- `d.withSend prior`: a `DutyResult` with an earlier duty's broadcasts unioned into
     its own. From `Store.lean`; its one consumer was `Store.onTick`'s composition, which
-    the `NDREB` adoption (2026-08-24, `Duty.lean`) dissolved — the outbox carries earlier
-    sends, so nothing unions. Revived by any composition done on `DutyResult` values
-    rather than in the monad. -/
+    the duty monad (`Duty.lean`) dissolved — the outbox carries earlier sends, so nothing
+    unions. Revived by any composition done on `DutyResult` values rather than in the
+    monad. -/
 def DutyResult.withSend {Validator : Type} [Roots] [DecidableEq Validator]
     (d : DutyResult Validator) (prior : Finset (Message Validator)) :
     DutyResult Validator :=

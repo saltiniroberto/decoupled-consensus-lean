@@ -92,8 +92,7 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     that vote's head is a block, and `B` precedes the head.
 
     Lines 7–12 build a set by an order-free conditional add, so the loop *is* the set it
-    builds, written as the set-builder (Roberto, 2026-08-23, retiring the `for all` macros;
-    the loop spelling is in git history). Line 9's `k ← latest(Σ, v, r)` binds out of an
+    builds, written as the set-builder. Line 9's `k ← latest(Σ, v, r)` binds out of an
     `Option` the line-8 test has vouched for; the `∃ k, … = some k` form says it without a
     dependent `if`. -/
 def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=

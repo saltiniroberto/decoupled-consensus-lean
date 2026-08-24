@@ -7,11 +7,9 @@ import Spec.Defs.Duty
 `consensus-1.pdf` gives the attestation its shape (`Attestation` in `Model.lean`) and says
 how processed attestations move the chain state (Figure 6), but it does not say how a
 validator *fills* the height pair and the finality pair it signs. This file carries that
-logic over from the first specification's voting strategy. The working source was its
-rendering, `Spec/Defs/Voting.lean` (namespace `Decoupled`) — since the 2026-08-24 removal
-of the older renderings it lives on the `pre-consensus1-purge` branch, its module header
-mapping every definition back to that paper, which is itself local-only in
-`latex-specs/`.
+logic over from the first specification's voting strategy; its Lean rendering —
+`Voting.lean`, namespace `Decoupled`, on the `pre-consensus1-purge` branch — maps every
+definition back to that paper (itself local-only, in `latex-specs/`).
 
 The strategy, in plain words. A validator keeps a durable per-height record of what it has
 signed — `Σ.H`, a `SigningHistory` (the field in `Store.lean`): whether it signed an
@@ -34,15 +32,14 @@ no signature is released before its record is durable:
 `Store.fgVote` composes them, finality first, so the finality target written by the
 finality rule is visible to the height rule's record read within the same attestation.
 
-## What changed in the crossing, from `Spec/Defs/Voting.lean` to here
+## What changed in the crossing
 
 Each of these is a decision this file makes, listed so it can be revisited:
 
-* **The rules are store rules, and the record is a store field** (Roberto, 2026-08-23; the
-  first rendering stated them over explicit inputs, with the record threaded through).
-  What each rule reads from the store is named in its docstring; the record write is the
-  `Σ.H` write in the store it returns. The first rendering's store-free composition layer
-  is likewise gone — `Store.fgVote`'s body is the composition.
+* **The rules are store rules, and the record is a store field** (the source stated them
+  over explicit inputs, the record threaded through). What each rule reads from the store
+  is named in its docstring; the record write is the `Σ.H` write in the store it returns,
+  and `Store.fgVote`'s body is the composition.
 * **The pair encodings are this subtree's.** The first rendering's `.timeout k` is
   `HeightPair.emptyTarget k` here, and its `.commit h J` is `FinalityPair.pair h J`; the
   record write `saveTimeout` is renamed `saveEmptyTarget` to match.
@@ -67,9 +64,9 @@ Each of these is a decision this file makes, listed so it can be revisited:
   rendering took `r` as an argument.
 * **One input stays explicit, and one condition is dropped.** `head` stays: the rule
   producing the SG head is a separate concern (this subtree's confirmation rule), so the
-  head the attestation carries is passed in. The first rendering's `hasJC` — "it knows
-  the justification certificate `JC(h_j, J)`", a `Bool` input there and briefly here —
-  is removed (Roberto, 2026-08-24): in this draft justification is an on-chain fact,
+  head the attestation carries is passed in. The source's `hasJC` — "it knows the
+  justification certificate `JC(h_j, J)`", a `Bool` input there — is not carried over: in
+  this draft justification is an on-chain fact,
   `Σ.J` and `Σ.h_j` read off replayed states whose justifying attestations sit inside
   blocks the validator has processed, so a coherent store's own chain is the evidence
   and there is no separate knowledge to model.
@@ -142,7 +139,7 @@ def Store.heightVote (S : Store Validator) :
     the validator already signed `J` as its target at `h_j`, signed no empty target
     there, and its recorded finality target there is empty or `J` itself. That record is
     written into the returned store on first release; the rule is total — every branch
-    returns. The first rendering's certificate-knowledge condition is gone — see the
+    returns. The source's certificate-knowledge condition is not carried over — see the
     module header. -/
 def Store.finalityVote (S : Store Validator) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
@@ -161,9 +158,9 @@ def Store.finalityVote (S : Store Validator) :
 
     A `NDREB` duty, as every duty: the attestation leaves by `broadcast` —
     `Message.attestation`, the wire decision recorded on that constructor — and the
-    returned store carries both record writes. The signer is the store's own `Σ.i`
-    (Roberto, 2026-08-24 — no identity parameter); the round is `round(Σ.s)`; `head`
-    stays explicit — see the module header. The head is carried, not derived. -/
+    returned store carries both record writes. The signer is the store's own `Σ.i`; the
+    round is `round(Σ.s)`; `head` stays explicit — see the module header. The head is
+    carried, not derived. -/
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     NDREB Validator (Store Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair

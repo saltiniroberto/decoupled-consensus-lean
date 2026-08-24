@@ -71,7 +71,7 @@ open Params
     `Σ.latest_confirmed` only ever moves forward, line 9 testing `Σ.latest_confirmed ⪯ H`.
 
     Both cutoffs read the timestamps with the raising bracket, through `Finset.filterM`
-    (Roberto, 2026-08-23): a held vote the store never stamped raises rather than silently
+: a held vote the store never stamped raises rather than silently
     failing the cutoff. `process_goldfish_vote` stamps everything it stores, so the raise
     marks a store the handlers cannot build — a coherence fact for `Analysis/`.
 
