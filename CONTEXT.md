@@ -3816,10 +3816,15 @@ its figure in, any other declaration's follows the figure. Unmarked prose — al
 present — stays out, so the document is figures plus whatever has been deliberately
 written for it. Marked prose and the figures' margin notes render in the draft's
 typography: backticked spans go through the figure rewriter, falling back to mono exactly
-when a span quotes Lean (binder keywords, `:=`, camelCase or Type-looking names). The
-durable home for `## Extract` sections is the live spec's headers — a frozen refresh
-wipes what is written only in the frozen copy; the two sections in the frozen
-`Fig2GoldfishDuties.lean` are demos and say so in their own text.
+when a span quotes Lean (binder keywords, `:=`, camelCase or Type-looking names).
+
+**The extraction workstream edits only the frozen copy** (Roberto, 2026-08-24). The
+`## Extract` sections' home is `extract/Consensus1-frozen/`; a future frozen refresh
+carries them forward. On 2026-08-24 the sections and the Definition carve were also
+mirrored into the live headers, on the earlier (wrong) reading that a refresh would
+otherwise wipe them; Roberto stopped a revert of those live commits mid-conflict — the
+live spec had meanwhile moved (the `DutyM` refactor) — so the live copies stay as they
+landed, and no further extraction edit touches `lean/Spec/Consensus1/`.
 
 ### `FinalityVote.lean`: the attestation-filling rules, imported from the first rendering — 2026-08-23
 
