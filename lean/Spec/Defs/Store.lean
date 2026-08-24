@@ -1,4 +1,4 @@
-import Spec.Fig6StateTransition
+import Spec.«06StateTransition»
 import Spec.Defs.Raise
 import Spec.Defs.SigningHistory
 
@@ -192,7 +192,7 @@ structure Store (Validator : Type) where
   h_max : Nat
   /-- `Σ.H`, the validator's durable signing record — **not a field of the protocol's store**:
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
-      its use in `FinalityVote.lean`. Written only by those rules. -/
+      its use in `08FinalityVote.lean`. Written only by those rules. -/
   H : SigningHistory Validator
   /-- `Σ.i`, the validator running this node — the protocol's `ℓ`, which its figures treat
       as ambient and **its store does not list**. A field here, so a duty can read its

@@ -5,14 +5,14 @@ part of the protocol; read them in this order, which is dependency order:
 
 | File | What it specifies |
 | --- | --- |
-| [`Fig1GoldfishWalk.lean`](../Fig1GoldfishWalk.lean) | the fork-choice walk: `best_child`, `ghost`, the Goldfish fork choice |
-| [`Fig6StateTransition.lean`](../Fig6StateTransition.lean) | the chain state: how processed attestations justify and finalize heights |
-| [`Fig3AvailableConfirmation.lean`](../Fig3AvailableConfirmation.lean) | `update_confirmation`: what a slot confirms |
-| [`Fig2GoldfishDuties.lean`](../Fig2GoldfishDuties.lean) | the slot duties: `on_tick`, `propose_block`, `goldfish_vote`, the block and vote handlers |
-| [`Fig4SGForkChoice.lean`](../Fig4SGForkChoice.lean) | `latest`, `sg_support`, the majority fork choice |
-| [`Fig5SGDuty.lean`](../Fig5SGDuty.lean) | `sg_vote`, its handler, and the protocol's `on_tick` |
-| [`Fig7FGStore.lean`](../Fig7FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, the protocol's `get_head` |
-| [`FinalityVote.lean`](../FinalityVote.lean) | how a validator fills the attestation it signs |
+| [`01GoldfishWalk.lean`](../01GoldfishWalk.lean) | the fork-choice walk: `best_child`, `ghost`, the Goldfish fork choice |
+| [`06StateTransition.lean`](../06StateTransition.lean) | the chain state: how processed attestations justify and finalize heights |
+| [`03AvailableConfirmation.lean`](../03AvailableConfirmation.lean) | `update_confirmation`: what a slot confirms |
+| [`02GoldfishDuties.lean`](../02GoldfishDuties.lean) | the slot duties: `on_tick`, `propose_block`, `goldfish_vote`, the block and vote handlers |
+| [`04SGForkChoice.lean`](../04SGForkChoice.lean) | `latest`, `sg_support`, the majority fork choice |
+| [`05SGDuty.lean`](../05SGDuty.lean) | `sg_vote`, its handler, and the protocol's `on_tick` |
+| [`07FGStore.lean`](../07FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, the protocol's `get_head` |
+| [`08FinalityVote.lean`](../08FinalityVote.lean) | how a validator fills the attestation it signs |
 
 What the algorithms are written in terms of sits in [`Defs/`](../Defs):
 

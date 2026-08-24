@@ -1,5 +1,5 @@
-import Spec.Fig4SGForkChoice
-import Spec.Fig2GoldfishDuties
+import Spec.«04SGForkChoice»
+import Spec.«02GoldfishDuties»
 import Spec.Defs.Nondet
 
 /-!
@@ -36,8 +36,8 @@ duty produces uses it.
 ## Extract
 
 `on_tick` gains one line: at `t = a_r` for the current round `r`, run `sg_vote`. The
-proposer and voter of [fig:Fig2GoldfishDuties] then call the `get_head` of
-[fig:Fig4SGForkChoice]; that redirected reading is not written out here, because the
+proposer and voter of [fig:02GoldfishDuties] then call the `get_head` of
+[fig:04SGForkChoice]; that redirected reading is not written out here, because the
 finality layer redefines `get_head` again and that final reading is the protocol's. Available confirmation is unchanged.
 
 At `a_r`, an honest validator votes its current `live_confirmed`, which is a block; the

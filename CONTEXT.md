@@ -778,6 +778,20 @@ Roberto: with the duty monad being nondeterminism machinery, the filename said n
 duty-monad section in its header; `Duty.lean` is deleted, its importers (Fig2, Fig5,
 `FinalityVote.lean`, `Spec.lean`) rewired, the doc pages updated.
 
+### The spec files are numbered: `XXName.lean` — 2026-08-24
+
+Roberto: rename the Lean spec files to `XXName`, `XX` a double-digit number, dropping the
+`Fig` prefix. His picks, asked: `XX` keeps the figure numbers (over dependency order),
+and `Defs/` stays untouched. So `Fig1GoldfishWalk.lean` → `01GoldfishWalk.lean` through
+`07FGStore.lean`, and `FinalityVote.lean` → `08FinalityVote.lean`. Digit-leading module
+names need guillemets: `import Spec.«01GoldfishWalk»`. The `Fig<n>.…` declaration
+prefixes are unchanged — the naming scheme still keys on the figure headers. Accepted
+consequence, decided knowingly: the extractor renders files in alphabetical path order
+and digits sort before `Defs/`, so the extracted document now opens with the eight
+numbered files and puts the Model and Store sections last; if that order is wrong it is
+the extractor's to fix. The `[fig:…]` labels in `## Extract` prose follow the stems
+(`[fig:02GoldfishDuties]`), since the extractor derives `\label{fig:<stem>}`.
+
 ### `doc/guide.md` gains the typing table — 2026-08-24
 
 Roberto: write how to type the symbols people might not know (`←ᵖ`, `⪯`, …). A table of

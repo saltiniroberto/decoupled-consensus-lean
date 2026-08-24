@@ -1,4 +1,4 @@
-import Spec.Fig1GoldfishWalk
+import Spec.«01GoldfishWalk»
 
 /-!
 # Figure 4 — the SG fork choice

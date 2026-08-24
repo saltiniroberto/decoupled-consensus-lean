@@ -1,5 +1,5 @@
-import Spec.Fig5SGDuty
-import Spec.Fig2GoldfishDuties
+import Spec.«05SGDuty»
+import Spec.«02GoldfishDuties»
 
 /-!
 # Figure 7 — the finality gadget in the fork choice
@@ -11,7 +11,7 @@ Viability, and the finality layer's routines: `process_block` extended, `update_
 this is the reading a caller wants, and it bears the plain `Store` name: `S.processBlock`,
 `S.goldfishEligible`, and the fork choice `S.getHead`. The superseded readings are
 figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`.
-See `Fig1GoldfishWalk.lean` on the scheme.
+See `01GoldfishWalk.lean` on the scheme.
 
 The `-- line n` comments number the algorithm's lines.
 
@@ -53,7 +53,7 @@ The store adds a block state map `Σ.σ[·]` and finality state
 `(Σ.F, Σ.h_F, Σ.J, Σ.h_j, Σ.h_max)`. It retains every processed block; the live tree is
 derived below the finalized block, `T_F(Σ) = {B ∈ Σ.T : Σ.F ⪯ B}`.
 
-[fig:Fig7FGStore] extends the block handler: it computes and stores the post-state,
+[fig:07FGStore] extends the block handler: it computes and stores the post-state,
 then folds it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
 tracks the lex-greatest justification event compatible with the finalized block. `Σ.F`
 advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯ Σ.J`

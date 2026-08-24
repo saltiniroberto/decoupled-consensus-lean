@@ -1,4 +1,4 @@
-import Spec.Fig6StateTransition
+import Spec.«06StateTransition»
 
 /-!
 # Accountable safety — the statement

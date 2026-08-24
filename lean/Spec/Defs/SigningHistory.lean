@@ -3,7 +3,7 @@ import Spec.Defs.Model
 /-!
 # The signing record
 
-The durable per-height memory behind the attestation rules: `FinalityVote.lean` holds
+The durable per-height memory behind the attestation rules: `08FinalityVote.lean` holds
 the rules that fill the pairs a validator signs, and this record is what those rules read
 and write. The store holds one as its field `Σ.H` (`Store.lean`), because the store is
 one validator's state and the rules are store rules.
@@ -18,7 +18,7 @@ variable {Validator : Type} [Roots]
 /-- The durable signing record a validator keeps per height: whether it signed an
     empty-target vote at `h`, the first named target it signed at `h`, and the target of
     the first finality pair it signed at `h`. Only the *first* signing of each kind at a
-    height is remembered — the rules in `FinalityVote.lean` repeat what the record holds,
+    height is remembered — the rules in `08FinalityVote.lean` repeat what the record holds,
     and they write it into the store they return before the signature is released. -/
 structure SigningHistory (Validator : Type) [Roots] where
   /-- An empty-target vote `(h, ⊥)` was signed at height `h`. -/
