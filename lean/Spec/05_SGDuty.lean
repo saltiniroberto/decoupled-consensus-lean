@@ -8,8 +8,6 @@ import Spec.Defs.Nondet
 `sg_vote`, run at the round's vote time `a_r`, and `process_sg_vote` — and the protocol's
 `on_tick`, the SG layer's extension of Figure 2's.
 
-The `-- line n` comments number the algorithm's lines.
-
 ## What the SG layer adds to `on_tick`
 
 One line: at `t = a_r` for the current round `r`, run `sg_vote`. The proposer and voter of
@@ -68,14 +66,13 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     Store Validator := Id.run do
   let mut S := S
-  -- line 6
   if vote.round > round S.s ∨ vote ∈ S.sgVotes[vote.round] then
-    return S                                                   -- line 7
-  -- line 8: two distinct votes by this validator are already held
+    return S
+  -- two distinct votes by this validator are already held
   if ∃ a ∈ S.sgVotes[vote.round], ∃ b ∈ S.sgVotes[vote.round],
       a.validator = vote.validator ∧ b.validator = vote.validator ∧ a ≠ b then
-    return S                                                   -- line 9
-  S.sgVotes[vote.round] ← S.sgVotes[vote.round] ∪ {vote}       -- line 10
+    return S
+  S.sgVotes[vote.round] ← S.sgVotes[vote.round] ∪ {vote}
   S.sgVoteTime[vote] ← S.t
   return S
 
@@ -91,10 +88,9 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
 def Store.sgVote (i : Validator) (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
-  let r := round S.s                                           -- line 2
-  -- line 3
+  let r := round S.s
   let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
-  broadcast (Message.sgVote vote)                              -- line 4
+  broadcast (Message.sgVote vote)
   return S.processSGVote vote
 
 /-- `on_tick(Σ, t)`, the protocol's reading: Figure 2's `on_tick`, then the SG layer's

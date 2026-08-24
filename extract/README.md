@@ -105,8 +105,8 @@ would misfire on a spec using the same spellings differently:
 - `for _ in [:e]` is the figure's bounded **loop**; `←ᵖ` is kept; `∈ᴹ` renders `∈`;
 - any `--` comment in a body is the `▷` margin note of the statement it trails or
   precedes (consecutive comment lines join; a note that merely echoes the rewritten
-  code drops; a legacy `line n:` prefix is stripped while the sources still carry
-  them — nothing numbers the lines);
+  code drops; a legacy `line n:` prefix is stripped, though the sources no longer
+  carry any — nothing numbers the lines);
 - one peephole: `X ← call` followed by `return {state := X, send := ∅}` collapses to
   the call.
 

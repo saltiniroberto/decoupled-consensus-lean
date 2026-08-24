@@ -7,8 +7,6 @@ import Spec.«01_GoldfishWalk»
 layer adds one message layer to Goldfish: a relative-majority fork choice over the latest
 SG votes selects the root from which the Goldfish walk starts.
 
-The `-- line n` comments number the algorithm's lines.
-
 ## The two walks are one function
 
 `majority_fork_choice` is `ghost` again, with the SG support as the score and a strict
@@ -76,7 +74,7 @@ open Params
 
     ## Extract -/
 def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
-  -- lines 2-5: the greatest eligible round; `Finset.max` answers `⊥` when there is none
+  -- the greatest eligible round; `Finset.max` answers `⊥` when there is none
   let eligible := ({k ∈ Finset.range r |
     max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
   eligible.max
@@ -93,7 +91,7 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
 
     ## Extract -/
 def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
-  -- lines 7–12, as the set the loop builds
+  -- as the set the loop builds
   w({v ∈ Electorate.V |
       ∃ k, S.latest v r = some k ∧
         ∃ a ∈ S.sgVotes[k], a.validator = v ∧
@@ -106,9 +104,9 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
     ## Extract -/
 def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
-  let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})       -- line 14
-  let eligible := fun B => 2 * S.sgSupport r B > total         -- line 15
-  -- line 16; the pure condition offered to the walk's raising slot with `pure`
+  let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})
+  let eligible := fun B => 2 * S.sgSupport r B > total
+  -- the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
 
 /-- `get_head(Σ, votes, s)`: the SG walk selects the anchor from
@@ -119,7 +117,7 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     ## Extract -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
-  let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
-  S.goldfishForkChoice anchor S.T votes s                       -- line 19
+  let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
+  S.goldfishForkChoice anchor S.T votes s
 
 end DC

@@ -22,7 +22,7 @@ docstring that opens with a backticked `name(args)` span overrides the derivatio
 the way a paper signature hides Lean-side parameters (`on_tick(Σ, t)` hides the
 validator and the proposer test). Any `--` comment in a body is the margin note of the
 statement it trails or precedes; nothing numbers lines (a legacy `line n:` prefix in a
-comment is stripped while the sources still carry them).
+comment is stripped; the live spec no longer carries any).
 
 v4: definition blocks. An `## Extract — Definition (Title)` section renders as the
 draft's definition environment — bold "Definition N (Title)." running into the section's

@@ -8,8 +8,6 @@ import Spec.Defs.Nondet
 `ghost` is the protocol's one building block: every later fork choice is the same walk
 with a different score and eligibility condition.
 
-The `-- line n` comments number the algorithm's lines.
-
 ## The protocol defines incrementally; the old readings are figure-named
 
 Later figures redefine three routines — `get_head` (Figures 1, 4, 7), `process_block`
@@ -120,15 +118,15 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     (score : Block Validator → Nat) (eligible : Block Validator → DRE Bool) :
     NDRE (Block Validator) := do
-  let mut H := anchor                                          -- line 6
-  for _ in [:|tree|] do                                        -- line 7: `loop`, bounded
-    -- line 8: the eligible children of the block we stand on; the filter runs at
+  let mut H := anchor
+  for _ in [:|tree|] do                                        -- `loop`, bounded
+    -- the eligible children of the block we stand on; the filter runs at
     -- `DRE` — the ascription keeps the stack out of it — and lifts whole
     let children ← (({B ∈ tree | B.parent = ↑H}).filterM eligible :
       DRE (Finset (Block Validator)))
-    if children = ∅ then                                       -- line 9
-      return H                                                 -- line 10
-    -- line 11: `H ← arg max score`; the plain arrow is the assignment macro's, so the
+    if children = ∅ then
+      return H
+    -- `H ← arg max score`; the plain arrow is the assignment macro's, so the
     -- monadic bind is written through `:=`
     H := (← bestChild children score)
   return H  -- the bound is reached: not a figure line, see the module header
@@ -144,13 +142,13 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     ## Extract -/
 def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :
     Nat :=
-  -- line 2: `{v ∈ K_s : votes holds two distinct votes by v}`
+  -- `{v ∈ K_s : votes holds two distinct votes by v}`
   let equivocators : Finset Validator := {v ∈ Committees.K s |
     ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
-  -- line 3: `{v ∈ K_s \ equivocators : (v, s, B') ∈ votes with B ⪯ B'}`
+  -- `{v ∈ K_s \ equivocators : (v, s, B') ∈ votes with B ⪯ B'}`
   let supporters := {v ∈ Committees.K s \ equivocators |
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
-  |equivocators| + |supporters|                                -- line 4
+  |equivocators| + |supporters|
 
 /-- `goldfish_eligible(Σ, votes, s, B)`: a strict majority of the
     participants support `B`, or `B` is a block of the current slot. Figure 7 redefines it
@@ -167,9 +165,9 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
     ## Extract -/
 def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : Bool :=
-  -- line 13: `voters_count ← |{v ∈ K_s : votes holds a vote by v}|`
+  -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|`
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
-  2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s   -- line 14
+  2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)`: the shared
     walk, instantiated with the Goldfish score and eligibility condition.
@@ -178,7 +176,7 @@ def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
 def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
-  -- line 16; the pure condition offered to the walk's raising slot with `pure`
+  -- the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
 /-- `get_head(Σ, votes, s)`: the walk from genesis over the whole
@@ -189,6 +187,6 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     ## Extract -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
-  S.goldfishForkChoice .genesis S.T votes s                    -- line 18
+  S.goldfishForkChoice .genesis S.T votes s
 
 end DC

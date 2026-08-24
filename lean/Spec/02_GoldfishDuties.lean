@@ -10,7 +10,6 @@ handlers change the store in place; only the two duties concern the validator ru
 node, written `ℓ` in the protocol and `i` here — a node whose `ℓ` holds no duty for the slot
 simply does not run them.
 
-The `-- line n` comments number the algorithm's lines.
 The routines appear callee-first; the figure's order is `on_tick`, `process_block`,
 `process_goldfish_vote`, `propose_block`, `goldfish_vote`.
 
@@ -115,14 +114,13 @@ open Params
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
   let mut S := S
-  -- line 16
   if vote.slot > S.s ∨ vote ∈ S.gfVotes[vote.slot] then
-    return S                                                   -- line 17
-  -- line 18: two distinct votes by this validator are already held
+    return S
+  -- two distinct votes by this validator are already held
   if ∃ a ∈ S.gfVotes[vote.slot], ∃ b ∈ S.gfVotes[vote.slot],
       a.validator = vote.validator ∧ b.validator = vote.validator ∧ a ≠ b then
-    return S                                                   -- line 19
-  S.gfVotes[vote.slot] ← S.gfVotes[vote.slot] ∪ {vote}         -- line 20
+    return S
+  S.gfVotes[vote.slot] ← S.gfVotes[vote.slot] ∪ {vote}
   S.gfVoteTime[vote] ← some S.t
   return S
 
@@ -137,12 +135,12 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
 def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Validator :=
     Id.run do
   let mut S := S
-  if B.slot > S.s then                                         -- line 10
-    return S                                                   -- line 11
-  S.T ← S.T ∪ {B}                                              -- line 12
+  if B.slot > S.s then
+    return S
+  S.T ← S.T ∪ {B}
   S.blockTime[B] ← some S.t
-  for vote in B.gfVotes do                                     -- line 13
-    S ← S.processGoldfishVote vote                             -- line 14
+  for vote in B.gfVotes do
+    S ← S.processGoldfishVote vote
   return S
 
 /-- `propose_block(Σ)`, run at `t_s`: take every held slot-`(s−1)`
@@ -171,14 +169,14 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
-  let s := S.s                                                 -- line 22
-  let votes := S.gfVotes[s - 1]                                -- line 23
-  let H ← Fig1.getHead S votes (s - 1)                         -- line 24
-  -- line 25: a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
+  let s := S.s
+  let votes := S.gfVotes[s - 1]
+  let H ← Fig1.getHead S votes (s - 1)
+  -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings votes
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := gfList) (attestations := [])
-  broadcast (Message.block B)                                  -- line 26
+  broadcast (Message.block B)
   return Fig2.processBlock S B
 
 /-- `goldfish_vote(Σ)`, run at `t_s + Δ`: vote for the head of the
@@ -199,15 +197,15 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
-  let s := S.s                                                 -- line 28
-  -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
+  let s := S.s
+  -- held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
   let mut votes ← {vote ∈ᴹ S.gfVotes[s - 1] |
     (← S.gfVoteTime[vote]) < slotStart (s - 1) + 3 * (Δ : Int)}
-  -- lines 30–31, the view merge: the loop is an order-free union — see the module header
+  -- the view merge: the loop is an order-free union — see the module header
   votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
-  let H ← Fig1.getHead S votes (s - 1)                         -- line 32
-  if i ∈ Committees.K s then                                   -- line 33
-    -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
+  let H ← Fig1.getHead S votes (s - 1)
+  if i ∈ Committees.K s then
+    -- `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
     broadcast (Message.gfVote vote)
     return S.processGoldfishVote vote
@@ -235,16 +233,16 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let mut S := S
-  let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
+  let s := (t / (4 * (Δ : Int))).toNat                         -- `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
-  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s i then         -- line 3
-    return ← S.proposeBlock i                                  -- line 4
-  if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then              -- line 5
-    return ← S.goldfishVote i                                  -- line 6
-  -- line 7: the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
+  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s i then
+    return ← S.proposeBlock i
+  if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then
+    return ← S.goldfishVote i
+  -- the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
   if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
-    return ← S.updateConfirmation (s - 1)                      -- line 8
+    return ← S.updateConfirmation (s - 1)
   return S
 
 end DC

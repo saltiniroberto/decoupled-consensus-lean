@@ -13,8 +13,6 @@ this is the reading a caller wants, and it bears the plain `Store` name: `S.proc
 figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`.
 See `01_GoldfishWalk.lean` on the scheme.
 
-The `-- line n` comments number the algorithm's lines.
-
 ## What this layer adds
 
 The store gains `Σ.σ[·]` and the finality state `(Σ.F, Σ.h_F, Σ.J, Σ.h_j,
@@ -128,15 +126,15 @@ def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
 def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     DRE (Store Validator) := do
   let mut S := S
-  S.h_max ← max S.h_max σ.h                                    -- line 10
-  -- line 11: `(σ.h_j, σ.J.root) > (Σ.h_j, Σ.J.root)`, the lex order written out
+  S.h_max ← max S.h_max σ.h
+  -- `(σ.h_j, σ.J.root) > (Σ.h_j, Σ.J.root)`, the lex order written out
   if S.F ⪯ σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ S.J.root < σ.J.root)) then
-    S.J ← σ.J                                                  -- line 12
+    S.J ← σ.J
     S.h_j ← σ.h_j
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ (← S.viable) then           -- line 13
-    S.F ← σ.F                                                  -- line 14
+  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ (← S.viable) then
+    S.F ← σ.F
     S.h_F ← σ.h_F
-    -- line 15: `max{Σ.σ[B].h : B ∈ T_F(Σ)}`, in the live tree that just shrank
+    -- `max{Σ.σ[B].h : B ∈ T_F(Σ)}`, in the live tree that just shrank
     S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
 
@@ -157,19 +155,19 @@ def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
 def Store.processBlock (S : Store Validator) (B : Block Validator) :
     DRE (Store Validator) := do
   let mut S := S
-  if B.slot > S.s then                                         -- line 2
-    return S                                                   -- line 3
-  -- line 4: `Σ.σ[B] ← state_transition(Σ.σ[B.parent], B)` — new at this layer
+  if B.slot > S.s then
+    return S
+  -- `Σ.σ[B] ← state_transition(Σ.σ[B.parent], B)` — new at this layer
   if B.parent ≠ ⊥ then
     let σp ← S.σ[(← B.parent)]
     S.σ[B] ← some (stateTransition σp B)
   else
     return S
-  S.T ← S.T ∪ {B}                                              -- line 5
+  S.T ← S.T ∪ {B}
   S.blockTime[B] ← some S.t
-  for vote in B.gfVotes do                                     -- line 6
-    S ← S.processGoldfishVote vote                              -- line 7
-  -- line 8: `update_finality(Σ, Σ.σ[B])` — new at this layer
+  for vote in B.gfVotes do
+    S ← S.processGoldfishVote vote
+  -- `update_finality(Σ, Σ.σ[B])` — new at this layer
   return ← S.updateFinality (← S.σ[B])
 
 /-! ## The two derived views, and the redefined fork choice -/
@@ -180,9 +178,9 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
 
     ## Extract -/
 def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
-  if S.h_max = S.h_j + 1 then                                  -- line 17
-    return S.J                                                 -- line 18
-  return S.F                                                   -- line 19
+  if S.h_max = S.h_j + 1 then
+    return S.J
+  return S.F
 
 /-- `get_filtered_block_tree(Σ)`: the viable blocks at or below the
     fork-choice root, which "limit the selectable children".
@@ -194,8 +192,8 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     ## Extract -/
 def Store.getFilteredBlockTree (S : Store Validator) :
     DRE (Finset (Block Validator)) := do
-  let root := S.forkChoiceRoot                                 -- line 21
-  return {B ∈ (← S.viable) | root ⪯ B}                         -- line 22
+  let root := S.forkChoiceRoot
+  return {B ∈ (← S.viable) | root ⪯ B}
 
 /-- `goldfish_eligible(Σ, votes, s, B)`: Figure 1's eligibility
     condition with a third disjunct — "a child whose state height is below `Σ.h_max − 1` is
@@ -212,10 +210,9 @@ def Store.getFilteredBlockTree (S : Store Validator) :
 def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : DRE Bool := do
   let σB ← S.σ[B]
-  -- line 24: `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
+  -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
   -- figure writes it
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
-  -- line 25
   return σB.h < S.h_max - 1 ∨
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
@@ -233,9 +230,9 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
     ## Extract -/
 def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
-  let root := S.forkChoiceRoot                                 -- line 27
+  let root := S.forkChoiceRoot
   let tree ← S.getFilteredBlockTree
-  let anchor ← S.majorityForkChoice root tree (round S.s)      -- line 28
-  ghost anchor tree (goldfishScore votes k) (S.goldfishEligible votes k)  -- line 29
+  let anchor ← S.majorityForkChoice root tree (round S.s)
+  ghost anchor tree (goldfishScore votes k) (S.goldfishEligible votes k)
 
 end DC

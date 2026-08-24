@@ -8,7 +8,6 @@ The chain state and its four routines: `state_transition`,
 from its parent's immutable post-state, `σ[B] = state_transition(σ[B.parent], B)`, and the
 result is a deterministic function of the chain ending at `B`.
 
-The `-- line n` comments number the algorithm's lines.
 The routines appear callee-first, because Lean wants a definition before its use; the
 figure's order is `state_transition`, `process_attestation`, `process_height_events`,
 `advance_height`.
@@ -147,7 +146,6 @@ def ChainState.Qprog (σ : ChainState Validator) : Finset Validator :=
 def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
   {i ∈ Electorate.V | σ.finalize i}
 
-
 /-! ## The four routines -/
 
 /-- `process_attestation(σ, a)`: classify one attestation and set the
@@ -166,16 +164,15 @@ def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
 def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     ChainState Validator := Id.run do
   let mut σ := σ
-  let i := a.validator                                        -- line 8
-  -- line 9
+  let i := a.validator
   if σ.h_j > σ.h_F ∧ σ.F ⪯ σ.J ∧ a.finalityPair = .pair σ.h_j σ.J then
-    σ.finalize[i] ← true                                      -- line 10
-  if a.heightPair = .target σ.h σ.T_h then                    -- line 11
-    σ.targetParticipation[i] ← true                           -- line 12
-    σ.progress[i] ← true                                      -- line 13
-  else if a.heightPair = .emptyTarget σ.h then                -- line 14
-    σ.progress[i] ← true                                      -- line 15
-  return σ                                                    -- line 16
+    σ.finalize[i] ← true
+  if a.heightPair = .target σ.h σ.T_h then
+    σ.targetParticipation[i] ← true
+    σ.progress[i] ← true
+  else if a.heightPair = .emptyTarget σ.h then
+    σ.progress[i] ← true
+  return σ
 
 /-- `advance_height(σ)`: increment the height, record the advancing
     block — `σ.L`, already the block being processed — recompute `nj` for the height just
@@ -187,12 +184,12 @@ def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     ## Extract -/
 def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run do
   let mut σ := σ
-  σ.h ← σ.h + 1                                               -- line 28
+  σ.h ← σ.h + 1
   σ.T_h ← σ.L
-  -- line 29: `σ.nj ← (K ∣ σ.h) ∧ (σ.h − σ.h_F > D)`; the divisibility is `% = 0`
+  -- `σ.nj ← (K ∣ σ.h) ∧ (σ.h − σ.h_F > D)`; the divisibility is `% = 0`
   σ.nj ← σ.h % K = 0 ∧ σ.h - σ.h_F > D
-  σ.targetParticipation, σ.progress ← fun _ => false          -- line 30: `false^V`
-  return σ                                                    -- line 31
+  σ.targetParticipation, σ.progress ← fun _ => false          -- `false^V`
+  return σ
 
 /-- `process_height_events(σ)`: after a block's attestations are
     folded in, the height events are checked once, in order — *finalize*, then *justify*,
@@ -208,18 +205,17 @@ def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run d
     ## Extract -/
 def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id.run do
   let mut σ := σ
-  -- line 18
   if σ.h_j > σ.h_F ∧ σ.F ⪯ σ.J ∧ w(σ.Qfinality)≥q then
-    σ.F ← σ.J                                                 -- line 19: `(σ.F, σ.h_F) ← (σ.J, σ.h_j)`
+    σ.F ← σ.J                                                 -- `(σ.F, σ.h_F) ← (σ.J, σ.h_j)`
     σ.h_F ← σ.h_j
-  if ¬ σ.nj ∧ w(σ.Qtarget)≥q then                             -- line 20
-    σ.J ← σ.T_h                                               -- line 21: `(σ.J, σ.h_j) ← (σ.T_h, σ.h)`
+  if ¬ σ.nj ∧ w(σ.Qtarget)≥q then
+    σ.J ← σ.T_h                                               -- `(σ.J, σ.h_j) ← (σ.T_h, σ.h)`
     σ.h_j ← σ.h
-    σ.finalize ← fun _ => false                               -- line 22: `false^V`
-    return advanceHeight σ                                    -- line 23
-  if w(σ.Qprog)≥q then                                        -- line 24
-    return advanceHeight σ                                    -- line 25
-  return σ                                                    -- line 26
+    σ.finalize ← fun _ => false                               -- `false^V`
+    return advanceHeight σ
+  if w(σ.Qprog)≥q then
+    return advanceHeight σ
+  return σ
 
 /-- `state_transition(σ, B)`, with `σ = σ[B.parent]`: fold `B`'s
     attestations into the parent's post-state, install `B` as the latest block, and check the
@@ -230,11 +226,10 @@ def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id
 def stateTransition (σ : ChainState Validator) (B : Block Validator) :
     ChainState Validator := Id.run do
   let mut σ := σ
-  σ.s ← B.slot                                                -- line 2
-  for a in B.attestations do                                  -- line 3
-    σ ← processAttestation σ a                                -- line 4
-  σ.L ← B                                                     -- line 5
-  return processHeightEvents σ                                -- line 6
-
+  σ.s ← B.slot
+  for a in B.attestations do
+    σ ← processAttestation σ a
+  σ.L ← B
+  return processHeightEvents σ
 
 end DC

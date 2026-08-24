@@ -6,8 +6,6 @@ import Spec.«01_GoldfishWalk»
 `update_confirmation(Σ, s)`, run once per slot at `t_s + 6Δ`. "Confirmation is the same walk
 over a stricter vote set and a larger denominator."
 
-The `-- line n` comments number the algorithm's lines.
-
 ## What makes it stricter
 
 Two cutoffs on the same pool, `early ⊆ late`; the walk scores the `early` votes whose
@@ -78,22 +76,18 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
-  -- line 2
   let early ← {vote ∈ᴹ S.gfVotes[s] | (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)}
-  -- line 3
   let late ← {vote ∈ᴹ S.gfVotes[s] | (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)}
-  -- line 4: the early votes whose validator `late` does not catch equivocating
+  -- the early votes whose validator `late` does not catch equivocating
   let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
-  -- line 5: the denominator is `late`'s participants
+  -- the denominator is `late`'s participants
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
-  -- line 6: the majority gate, with no current-slot escape — see the module header
+  -- the majority gate, with no current-slot escape — see the module header
   let eligible := fun B => 2 * goldfishScore votes s B > votersCount
-  let H ← ghost .genesis S.T (goldfishScore votes s) (fun B => pure (eligible B))  -- line 7
-  S.liveConfirmed ← H                                           -- line 8
-  if S.latestConfirmed ⪯ H then                                 -- line 9
-    S.latestConfirmed ← H                                       -- line 10
+  let H ← ghost .genesis S.T (goldfishScore votes s) (fun B => pure (eligible B))
+  S.liveConfirmed ← H
+  if S.latestConfirmed ⪯ H then
+    S.latestConfirmed ← H
   return S
-
-
 
 end DC
