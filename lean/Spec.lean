@@ -14,6 +14,7 @@ import Spec.«04_SGForkChoice»
 import Spec.«05_SGDuty»
 import Spec.«07_FGStore»
 import Spec.«08_FinalityVote»
+import Spec.«09_Healing»
 
 /-!
 # The specification
