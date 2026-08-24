@@ -632,6 +632,17 @@ as prose, "gains one line", not figure lines) plus `FinalityVote.lean`'s three r
 figure blocks; `make check` green. The marking script and the fixture are gitignored
 under `extract/out/` (`_add_marks.py`, `_mark_test.py`, `_run_test.py`).
 
+Later the same day, two prose conventions (Roberto: render the equation rows above the
+draft's state-transition figure without duplicating strings): `[eq:name]` in
+`## Extract` prose expands to the named declaration's docstring opening span — the
+formula lives once, at the definition site; keyed by Lean name, unique Lean-name tail,
+or unique harvested paper symbol — and a paragraph of nothing but backticked spans
+and/or `[eq:…]` refs renders as a centered display line, items quad-separated.
+Placement stays authored: the reference is written where the equation should appear.
+Typography same day: symbol glyphs fall back to Latin Modern Math before DejaVu
+(weight-matched, no more bold-looking `⪯`/`∈`), and no space after a quantifier
+(`∃a ∈ votes`, as math sets it).
+
 ### The identity is the protocol, and the spec speaks as the source of truth — 2026-08-24
 
 Roberto, in sequence: "this is not anymore a formalization of consensus-1.pdf. It is the
