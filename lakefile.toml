@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["Spec", "Analysis"]
+defaultTargets = ["Spec"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -9,7 +9,8 @@ defaultTargets = ["Spec", "Analysis"]
 #
 # The flavour used is `StsMultisetLog` (`import StsMultisetLog.Spec.Protocol`); the package
 # declares four others, and nothing is shared between them, so importing one does not build
-# the rest.
+# the rest. Nothing imports it yet: the sts wiring that will consume the duties is future
+# work, and the DutyResult/`outcomes` boundary is shaped for it.
 [[require]]
 name = "sts-framework"
 path = "deps/lean-sts"
@@ -22,29 +23,11 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.32.2"
 
-# This project's own sources. `srcDir` is `lean` and the module root is `Spec`, so a module
-# `Spec.Defs.Basic` is the file `lean/Spec/Defs/Basic.lean`. Lake derives a module's path from
-# its name and nothing else — measured, not assumed — so every directory under `srcDir`
-# repeats a module component. Naming the root `Spec` rather than `Decoupled.Spec` is what
-# keeps that short.
-#
-# `Spec/` itself holds only the figure translations, `Fig<n><Subject>.lean`. What they are
-# written in terms of is one level down in `Spec/Defs/`, so listing `Spec/*.lean` is the list
-# of figures rendered so far.
-#
-# The analysis is a second `lean_lib` below, over the same `srcDir` with root `Analysis`, so
-# `lean/Analysis/…`. The two globs stay disjoint because the roots differ.
-#
-# `tools/decl_index.lean` filters on module roots, and its `modRoots` list is what has to name
-# both — there is no single shared prefix over the two halves.
+# This project's sources. `srcDir` is `lean` and the module root is `Spec`, so a module
+# `Spec.Consensus1.Model` is the file `lean/Spec/Consensus1/Model.lean`. Lake derives a
+# module's path from its name and nothing else — measured, not assumed — so every directory
+# under `srcDir` repeats a module component.
 [[lean_lib]]
 name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
-
-# The analysis: the paper's numbered results, stated and proved against the specification
-# above. Root `Analysis`, same `srcDir`, so `Analysis.Lemmas` is `lean/Analysis/Lemmas.lean`.
-[[lean_lib]]
-name = "Analysis"
-srcDir = "lean"
-globs = ["Analysis", "Analysis.+"]
