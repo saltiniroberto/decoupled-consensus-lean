@@ -13,3 +13,11 @@ __pycache__/
 *.vsix
 scratch/
 extract/out/
+
+# The PDF specs and the old papers' checkout stay local-only: nothing here commits a
+# PDF spec, and latex-specs is a plain local clone since 2026-08-24 (it was a submodule;
+# branch pre-consensus1-purge has the last commit tracking it).
+consensus.pdf
+consensus-1.pdf
+paper-snapshots/
+latex-specs/
