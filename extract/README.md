@@ -12,20 +12,20 @@ the draft, and new commentary stays out without anyone remembering to fence it.
 
 - In a module header: the section becomes the file's section prose. `## Extract — X`
   gives it subsection title `X`.
-- In a figured routine's docstring: the section leads that routine's figure in, the way
-  the draft's prose introduces each figure.
+- In a `def`'s docstring: **the marker is what makes the def figured** (Roberto,
+  2026-08-24) — rendered as pseudocode in the file's figure — and its prose leads the
+  figure in, the way the draft's prose introduces each figure. A bare `## Extract`
+  with no prose still figures the def.
 - In any other declaration's docstring: the section follows the figure.
+
+The marker also drives the document's structure (Roberto, 2026-08-24): **files render
+in alphabetical order of their path under `lean/Spec/`**, a file with nothing marked
+emitting no section, and **a file's figured routines render in declaration order**.
 
 Marked prose renders in the draft's typography: backticked spans go through the same
 rewriter as the figures, and fall back to mono exactly when they quote Lean.
 
-**The `## Extract` sections live in the frozen copy** (Roberto, 2026-08-24): the
-extraction workstream edits the frozen copies under `extract/` only, never
-`lean/Spec/`, and a new freeze carries the sections forward rather than
-wiping them.
-All nine module headers carry their section, adapted from the draft's own prose. (The
-live headers hold a 2026-08-24 mirror of the sections, made on the earlier, withdrawn
-reading of where they belong; it stays as it landed, and is not maintained from here.)
+**The `## Extract` sections live in `lean/Spec/`**, the extractor's input.
 
 ## The conventions the extractor harvests
 
@@ -39,20 +39,22 @@ script:
   `t_s` (the part before `=`, the subscript matched against the parameter name);
   `` `B_gen` `` a plain symbol; `` `Q_target(σ) = {…}` `` a call form. A docstring that
   does not open with a backtick contributes nothing.
-- **A figure citation names a routine.** `` `name(args)` (Figure N, lines a–b)`` in the
-  docstring's first paragraph gives the paper name, the paper signature, the figure the
-  routine's pseudocode belongs to, and its position. Lean parameters absent from the
-  cited signature (the validator `i`, the `isProposer` test) stay hidden at call sites,
-  exactly as the draft's own calls hide them.
+- **A figured routine's paper form derives from its Lean `def`** (Roberto, 2026-08-24):
+  the name snake-cased from the Lean name's tail, the signature from the explicit
+  parameters in order, a store-typed parameter shown as its structure's symbol —
+  `def goldfishScore (votes …) (s …) (B …)` renders `goldfish_score(votes, s, B)`. A
+  docstring that opens with a pure backticked call span `` `name(args)` `` overrides
+  the derivation; that is how a paper signature hides Lean-side parameters (the
+  validator `i`, the `isProposer` test in `` `on_tick(Σ, t)` ``), which then stay
+  hidden at call sites exactly as the draft's own calls hide them.
 - **A section headed `## Extract — Definition (Title)` is a definition block**, emitted
   as an `amsthm` environment with label `def:<slugified title>`. **Every number in the
   document is LaTeX's own** — definitions, figures, sections, and, since 2026-08-24,
   the figures' line numbers, which `algorithmicx` assigns to the rendered lines. The
   Lean is the source of truth and the PDF is generated from it, so no number is read
-  from a docstring (Roberto, 2026-08-24): the "(Definition N of the draft)" citations
-  and the `-- line n` comments are provenance, pointing at the old source's
-  coordinates; the generated numbers coincide with the draft's where the content
-  matches, a consequence and not a contract. A section title's "Figure N — " prefix is
+  from a docstring or comment (Roberto, 2026-08-24); the generated numbers coincide
+  with the draft's where the content matches, a consequence and not a contract.
+  A section title's "Figure N — " prefix is
   likewise stripped in the PDF; the figure is captioned and numbered by LaTeX, with
   label `fig:<file stem>`.
 - **Prose never writes a generated number.** `## Extract` prose references figures and
@@ -69,7 +71,8 @@ script:
   `` `(h, ⊥)` `` on `emptyTarget (h : Nat)` renders `.emptyTarget σ.h` as `(σ.h, ⊥)`.
 - **Fallbacks.** A class field with no opening symbol renders namespace-stripped, call
   form with the arity of its type — `Committees.K s` renders `K(s)` until the docstring
-  opens with `` `K_s` ``. An uncited `def` renders as a snake-cased small-caps call. All
+  opens with `` `K_s` ``. An unfigured `def` with no opening symbol renders as a
+  snake-cased small-caps call. All
   names convert camelCase → snake_case; names without an internal case boundary (`B`,
   `T_h`, `S'`) stay.
 
@@ -90,10 +93,12 @@ would misfire on a spec using the same spellings differently:
   the NDREB revision, kept for the boundary shape (**flagged**);
 - `let mut S := S` (the shadow copy of a parameter) is dropped;
 - `for _ in [:e]` is the figure's bounded **loop**; `←ᵖ` is kept; `∈ᴹ` renders `∈`;
-- `-- line n` / `-- lines a–b` comments give the printed line numbers, their trailing
-  text the `▷` margin note, dropped when it merely echoes the rewritten code;
-- two peepholes: `X ← call` followed by `return {state := X, send := ∅}` collapses to
-  the call, and an unnumbered field assignment joins its numbered predecessor with `;`.
+- any `--` comment in a body is the `▷` margin note of the statement it trails or
+  precedes (consecutive comment lines join; a note that merely echoes the rewritten
+  code drops; a legacy `line n:` prefix is stripped while the sources still carry
+  them — nothing numbers the lines);
+- one peephole: `X ← call` followed by `return {state := X, send := ∅}` collapses to
+  the call.
 
 **Keyed on Lean/Mathlib names:** `filterM` fuses into a set-builder, `imageM` renders
 `{e : x ∈ s}`, `biUnion` renders `⋃{…}`; `.toNat` strips (`⌊…⌋` over a division),
@@ -123,26 +128,14 @@ after a callable is its argument list, so prose writes calls in paper form.
 ## The input, and the frozen copies
 
 **The extractor's input is the live spec, `lean/Spec/`** (Roberto, 2026-08-24; read
-recursively, `Defs/` included). Known consequence: the live docstrings carry no
-`(Figure N, lines a–b)` citations, so no routine is figured and the output is
-prose-only until a replacement convention is decided.
+recursively, `Defs/` included). The `## Extract` sections and every extraction-side
+edit live there. A `def` renders as pseudocode when its docstring carries the marker,
+so the figures fill in as the spec marks its routines.
 
-`Consensus1-frozen-2/` was the input before that: the `.lean` files of
-`lean/Spec/` (without `doc/`), frozen at commit `b145f3c` on 2026-08-24 —
-the NDREB revision, where a duty broadcasts as a statement — with the extraction-side
-docstring changes applied on top (the `[fig:…]` symbolic references, and the Figure 2
-duty sentence updated to the broadcast shape). Kept as that iteration's record;
-nothing reads it.
-
-`Consensus1-frozen/` is the first freeze (`909b4f6`, 2026-08-23, `DutyResult`-returning
-duties), kept as that iteration's record; nothing reads it.
-
-Rules:
-
-- **The live spec is `lean/Spec/`.** Nothing imports a frozen copy, no build
-  target reads one (`lake`'s globs claim only `lean/`, and `make orphans` scans only
-  `lean/`), and no spec change is made here.
-- A new freeze is made deliberately, on instruction — copy the live `.lean` files and
-  record the commit hash above — never as a side effect of editing the live spec.
-- The `## Extract` sections and every extraction-side edit live in `lean/Spec/`, the
-  files the extractor reads (until 2026-08-24 they lived in the frozen copy).
+**The frozen copies live under `archive/`, outside `extract/`** (Roberto, 2026-08-24:
+kept as records, and placed where the extractor cannot access them; nothing reads
+them, no build target claims them — `lake`'s globs and `make orphans` scan only
+`lean/`). `archive/Consensus1-frozen-2/` is the second freeze (`b145f3c`, 2026-08-24,
+the NDREB revision, with the extraction-side docstring edits of its day applied on
+top); `archive/Consensus1-frozen/` is the first (`909b4f6`, 2026-08-23,
+`DutyResult`-returning duties).

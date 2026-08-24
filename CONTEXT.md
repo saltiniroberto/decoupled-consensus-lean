@@ -692,11 +692,39 @@ nothing reads them. Found in the same step: the live docstrings carry no
 `Consensus1-frozen-2/` — so `CITE_RE` matches nothing, no routine is figured, and the
 generated document is prose-only. The paper-form signature spans (`` `ghost(anchor,
 tree, score, eligible)` ``) and the `-- line n` comments are still in the spec; what is
-missing is the marker that a `def` is figured. Replacement convention: Roberto's call.
-Open in the same conversation: `FILE_ORDER` (the hardcoded section order) should stop
-being hardcoded; the reading order is editorial (it disagrees with `Spec.lean`'s
-dependency-ordered import list: Fig6 before Store, Fig3 before Fig2), so it has to be
-authored somewhere in the sources.
+missing was the marker that a `def` is figured — settled the same day, entry below.
+
+### The spec drives the extraction's structure; nothing is hardcoded — 2026-08-24
+
+Roberto, five instructions in one sitting, all landed in `extract/extract.py` (its
+module docstring's v5 note and `extract/README.md` carry the conventions):
+
+- **Files render in alphabetical order** of their path under `lean/Spec/`; a file with
+  nothing marked `## Extract` emits no section. `FILE_ORDER` is deleted. Today the
+  alphabetical order reproduces the old hardcoded one exactly (`Defs/` sorts before
+  `Fig*`; only Model, Store and the seven figure files carry marks).
+- **A `def` is figured — rendered as pseudocode — when its own docstring carries an
+  `## Extract` section** (a bare heading with no prose counts). The section's prose
+  leads the figure in, as before. Alternatives considered and dropped: deriving
+  figuredness from body shape (`do`/`let`) misclassifies `Q_target`-style symbol defs
+  and the `Beq` helpers; a root-module import list authors order but not figuredness.
+- **Routines render in declaration order** within their file; the `line_a` sort is gone.
+- **The paper form derives from the Lean `def`**: name snake-cased from the Lean name's
+  tail, signature from the explicit params in order, store-typed params as their
+  structure's symbol. A docstring opening with a pure call span `` `name(args)` ``
+  overrides — still the way to hide params (`on_tick(Σ, t)` hides `i`, `isProposer`).
+- **Any `--` comment is the margin note** of the statement it trails or precedes; the
+  `-- line n` convention is retired (a legacy `line n:` prefix is stripped while the
+  sources still carry them). The join-to-numbered-predecessor peephole went with it.
+- **The frozen copies moved to `archive/`** — kept as records, outside `extract/` so
+  the extractor cannot reach them; nothing reads them.
+
+As of this entry no live `def` is marked yet — all fifteen `## Extract` markers sit in
+module headers — so `dc.pdf` is still prose-only; figures fill in as the spec marks its
+routines. The machinery is verified against a marked fixture (gitignored,
+`extract/out/_test_src/` built by `_mark_test.py`, run by `_run_test.py`): explicit-span
+and derived paths both render, `goldfish_score(votes, s, B)` deriving from
+`def goldfishScore (votes …) (s …) (B …)`.
 
 ### The identity is the protocol, and the spec speaks as the source of truth — 2026-08-24
 
@@ -769,7 +797,7 @@ it now speaks of paper pseudocode and the protocol, no external document.
      singleton outcome set. The `coherence-invariant` branch predates this store and does
      not transfer.
 1. **The extractor workstream** (`extract/`): the conventions and rewrite rules are in
-   `extract/README.md`; the input is the live `lean/Spec/` (2026-08-24). Owed: a
-   figured-routine convention to replace the dropped `(Figure N, lines a–b)` citations,
-   and an authored home for the section order.
+   `extract/README.md`; the input is the live `lean/Spec/` (2026-08-24), and the spec
+   drives the structure (entry above). Owed: `## Extract` marks on the figured defs
+   themselves — until then `dc.pdf` renders prose only.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.

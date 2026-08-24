@@ -5,6 +5,18 @@ Reads the live spec named by SRC below (lean/Spec/, subdirectories included),
 writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
 latexmk -lualatex.
 
+v5: the sources drive the structure. Files render in alphabetical order of their path
+under SRC, a file emitting a section only when something in it is marked `## Extract`.
+A `def` whose own docstring carries an `## Extract` section is *figured* — rendered as
+pseudocode in the file's figure, in the file's declaration order. The paper form
+derives from the Lean signature (`goldfishScore (votes …) (s …) (B …)` renders
+`goldfish_score(votes, s, B)`, a store-typed parameter by its structure's symbol); a
+docstring that opens with a backticked `name(args)` span overrides the derivation —
+the way a paper signature hides Lean-side parameters (`on_tick(Σ, t)` hides the
+validator and the proposer test). Any `--` comment in a body is the margin note of the
+statement it trails or precedes; nothing numbers lines (a legacy `line n:` prefix in a
+comment is stripped while the sources still carry them).
+
 v4: definition blocks. An `## Extract — Definition (Title)` section renders as the
 draft's definition environment — bold "Definition N (Title)." running into the section's
 first paragraph, later paragraphs following as plain prose. N is assigned by this script,
@@ -61,28 +73,15 @@ HERE = Path(__file__).resolve().parent
 SRC = HERE.parent / "lean" / "Spec"
 OUT = HERE / "out"
 
-# Section order: file stem -> None (use the module header's own title).
-FILE_ORDER = [
-    "Model",
-    "Store",
-    "Fig1GoldfishWalk",
-    "Fig2GoldfishDuties",
-    "Fig3AvailableConfirmation",
-    "Fig4SGForkChoice",
-    "Fig5SGDuty",
-    "Fig6StateTransition",
-    "Fig7FGStore",
-]
-# Vocabulary files (Nondet, Notation, Raise, FinsetM, OldDefs) are the rendering's own
-# machinery, not the draft's content: skipped as sections, still harvested for renames.
+# Files render in alphabetical order of their path under SRC; a file with nothing
+# marked `## Extract` emits no section but is still harvested for renames.
 
 DECL_RE = re.compile(
     r"^(?:noncomputable\s+)?(def|abbrev|structure|inductive|class|instance)\s+([^\s(:\[{]+)"
 )
-CITE_RE = re.compile(
-    r"`([A-Za-z_0-9]+)\(([^`)]*)\)`[^(]*\(Figure\s+(\d+),\s*lines?\s+(\d+)(?:[–-](\d+))?"
-)
-LINENUM_RE = re.compile(r"--\s*lines?\s+(\d+)(?:[–-](\d+))?\s*:?\s*(.*)$")
+# a docstring's opening span that is a pure call — `name(args)` and nothing else —
+# names a figured routine's paper signature explicitly, overriding the derivation
+SPAN_CALL_RE = re.compile(r"([A-Za-z_0-9]+)\(([^)]*)\)")
 
 
 # ---------------------------------------------------------------- Lean parsing
@@ -314,13 +313,10 @@ def parse_symbol(span: str, param_names):
 
 
 class Routine:
-    def __init__(self, lean_name, paper_name, cite_args, figure, line_a, line_b, params):
+    def __init__(self, lean_name, paper_name, cite_args, params):
         self.lean_name = lean_name
         self.paper_name = paper_name
-        self.cite_args = cite_args      # the paper signature's arg names
-        self.figure = figure            # int or None
-        self.line_a = line_a
-        self.line_b = line_b
+        self.cite_args = cite_args      # the paper signature's arg names, as displayed
         self.params = params            # explicit non-autoparam (name, type) pairs
 
 
@@ -342,6 +338,15 @@ class Tables:
         return set(self.routines) | set(self.defs)
 
 
+def derived_arg(t: "Tables", pname: str, ptype: str) -> str:
+    """One derived paper-signature slot: a struct-typed parameter shows as its
+    structure's paper symbol (the store's Σ), anything else as its snake-cased name."""
+    for sname, ssym in t.struct_sym.items():
+        if ptype.startswith(sname):
+            return ssym
+    return snake(pname)
+
+
 def snake(name: str) -> str:
     """camelCase -> snake_case, the style's own naming rule in reverse.
 
@@ -357,7 +362,9 @@ def snake(name: str) -> str:
 
 
 def harvest(all_items):
-    """Build the rename tables from every parsed declaration."""
+    """Build the rename tables from every parsed declaration. Two passes: the
+    structures first, so a def's derived signature can render a store-typed parameter
+    by its structure's paper symbol."""
     t = Tables()
     for doc, kind, name, src in all_items:
         sig, _body = split_signature(src)
@@ -411,15 +418,24 @@ def harvest(all_items):
                             sym = parsed[0]
                 t.ctors[cname] = (sym, cparams)
             continue
+    for doc, kind, name, src in all_items:
         if kind != "def":
             continue
-        first_para = doc.split("\n\n")[0] if doc else ""
-        m = CITE_RE.search(first_para)
-        if m:
-            cite_args = [a.strip() for a in m.group(2).split(",")] if m.group(2).strip() else []
-            t.routines[name] = Routine(
-                name, m.group(1), cite_args, int(m.group(3)), int(m.group(4)),
-                int(m.group(5)) if m.group(5) else None, params)
+        sig, _body = split_signature(src)
+        params = [(n, ty) for n, ty, auto in parse_params(sig) if not auto]
+        if has_extract_section(doc):
+            # the def is figured: paper name and signature derive from the Lean def;
+            # an opening `name(args)` span overrides — the way the paper hides params
+            span = first_span(doc)
+            m = SPAN_CALL_RE.fullmatch(span) if span else None
+            if m:
+                paper = m.group(1)
+                cite_args = [a.strip() for a in m.group(2).split(",")] \
+                    if m.group(2).strip() else []
+            else:
+                paper = snake(name.split(".")[-1])
+                cite_args = [derived_arg(t, p, ty) for p, ty in params]
+            t.routines[name] = Routine(name, paper, cite_args, params)
             continue
         span = first_span(doc)
         if span:
@@ -427,7 +443,7 @@ def harvest(all_items):
             if parsed and parsed[0]:
                 t.defs[name] = parsed[0]
                 continue
-        # no harvestable symbol: an uncited routine still renders as a call, snake-cased
+        # no harvestable symbol: an unfigured routine still renders as a call, snake-cased
         t.defs[name] = Sym(snake(name.split(".")[-1]), "call",
                            args=[p for p, _ in params], smallcaps=True)
     t.paper_names = {r.paper_name for r in t.routines.values()} | \
@@ -500,48 +516,48 @@ def flat(tree):
 # ---------------------------------------------------------------- statements
 
 class Stmt:
-    def __init__(self, indent, text, label=None, note=None):
+    def __init__(self, indent, text, note=None):
         self.indent = indent
         self.text = text
-        self.label = label      # "21" or "30–31"
         self.note = note        # margin note text
         self.spans = None       # rendered spans, filled by the rewriter
 
     def __repr__(self):
-        return f"Stmt({self.label},{self.text!r})"
+        return f"Stmt({self.text!r})"
 
 
 BLOCK_ENDERS = ("then", "do", "else")
 
 
+def clean_note(text: str):
+    """A comment's note text: a legacy `line n:` prefix drops (the sources may still
+    number their lines; the rendering does not), leading punctuation is trimmed."""
+    text = re.sub(r"^lines?\s+\d+(?:[–-]\d+)?\s*", "", text.strip())
+    return text.lstrip(",:;— ").strip() or None
+
+
 def statements_of(body_lines):
-    """Join continuation lines into logical statements, carrying `-- line n` labels."""
+    """Join continuation lines into logical statements. Any `--` comment is the margin
+    note of the statement it trails or precedes; consecutive comment lines join."""
     stmts = []
-    pending_label = None
     pending_note = None
     for raw in body_lines:
-        m = LINENUM_RE.search(raw)
-        label = note = None
-        if m:
-            label = m.group(1) + (f"–{m.group(2)}" if m.group(2) else "")
-            note = m.group(3).strip().lstrip(",:;— ").strip() or None
+        m = re.search(r"--\s*(.*)$", raw)
+        note = clean_note(m.group(1)) if m else None
         code = re.sub(r"\s*--.*$", "", raw).rstrip()
         if not code.strip():
-            if label:
-                pending_label, pending_note = label, note
-            elif pending_note and raw.lstrip().startswith("--"):
-                # a continued comment extends the pending note
-                pending_note += " " + raw.lstrip().lstrip("- ").strip()
+            if note:
+                pending_note = f"{pending_note} {note}" if pending_note else note
             continue
         indent = (len(code) - len(code.lstrip())) // 2
         text = code.strip()
         if stmts and _continues(stmts[-1], indent, text):
             stmts[-1].text += " " + text
-            if label and not stmts[-1].label:
-                stmts[-1].label, stmts[-1].note = label, note
+            if note and not stmts[-1].note:
+                stmts[-1].note = note
             continue
-        st = Stmt(indent, text, label or pending_label, note or pending_note)
-        pending_label = pending_note = None
+        st = Stmt(indent, text, note or pending_note)
+        pending_note = None
         stmts.append(st)
     return stmts
 
@@ -1462,23 +1478,8 @@ def constructor_spans(rw: Rewriter, lhs, rhs):
 
 # ---------------------------------------------------------------- routine -> figure lines
 
-def is_plain_assign(spans):
-    """A rendered statement that is a short assignment (joins its predecessor)."""
-    if spans is None or spans == "drop":
-        return False
-    txt = "".join(t for _k, t in spans if isinstance(t, str))
-    if any(k == "kw" and isinstance(t, str)
-           and t in ("if", "for all", "loop", "else", "return", "define")
-           for k, t in spans):
-        return False
-    # a duty's bare tail call (its `return` dropped) joins its broadcast line
-    if spans and spans[0][0] == "fn":
-        return True
-    return "←" in txt or txt.startswith(("add", "broadcast"))
-
-
 def routine_lines(tables: Tables, r: Routine, decl_src, store_param, param_types):
-    """Render one figured routine into [(label, indent, spans, note)] lines."""
+    """Render one figured routine into [(indent, spans, note)] lines."""
     sig, body = split_signature(decl_src)
     is_duty = bool(tables.duty_monad
                    and re.search(rf"\b{tables.duty_monad}\b", sig))
@@ -1500,27 +1501,18 @@ def routine_lines(tables: Tables, r: Routine, decl_src, store_param, param_types
         if idx + 1 < len(rendered):
             st2, spans2 = rendered[idx + 1]
             bound = bound_var(spans)
-            if bound and spans2 is not None and st2.label is None \
+            if bound and spans2 is not None \
                     and st2.indent == st.indent and is_return_of(spans2, bound):
                 spans = strip_binder(spans, bound)
-                lines.append((st.label, st.indent, spans, st.note))
+                lines.append((st.indent, spans, st.note))
                 idx += 2
                 continue
-        # join: an unnumbered plain assignment continues its numbered predecessor
-        if lines and st.label is None and is_plain_assign(spans) \
-                and lines[-1][1] == st.indent and not ends_with_block(lines[-1][2]):
-            lbl, ind, prev, note = lines[-1]
-            lines[-1] = (lbl, ind, prev + [("sym", ";"), ("space", "  ")] + spans, note)
-            idx += 1
-            continue
-        lines.append((st.label, st.indent, spans, st.note))
+        lines.append((st.indent, spans, st.note))
         idx += 1
     # the function header
     header = [("kw", "function"), ("space", " "), ("fn", r.paper_name), ("sym", "(")] + \
         join_sp([[("id", a)] for a in r.cite_args], COMMA) + [("sym", ")")]
-    out = [(str(r.line_a), -1, header, None)]
-    out += lines
-    return out
+    return [(-1, header, None)] + lines
 
 
 def bound_var(spans):
@@ -1538,10 +1530,6 @@ def is_return_of(spans, var):
 
 def strip_binder(spans, _var):
     return spans[4:]  # drop `X`, space, `←`, space
-
-
-def ends_with_block(spans):
-    return any(k == "kw" and t in ("then", "do", "else") for k, t in spans)
 
 
 # ---------------------------------------------------------------- LaTeX rendering
@@ -1765,6 +1753,13 @@ def extract_sections(text: str):
     return out
 
 
+def has_extract_section(text: str) -> bool:
+    """Whether a docstring carries an `## Extract` heading at all — the mark that makes
+    a `def` figured, prose under the heading or not."""
+    return any(h is not None and EXTRACT_HEADING.match(h)
+               for h, _b in split_sections(text))
+
+
 def prose_span(span: str, rw) -> str | None:
     """A backticked span set in the paper's typography, or None when it quotes Lean
     (binder keywords, camelCase or Type-looking names) and should stay mono."""
@@ -1960,7 +1955,7 @@ def render_figure(tex, stem, fig_title, routines_lines, prose_rw):
     stack = []  # open blocks: (indent, end command)
     first = True
     for lines in routines_lines:
-        for _label, indent, spans, note in lines:
+        for indent, spans, note in lines:
             kind, content = classify_stmt(indent, spans)
             comment = ""
             trailing = None
@@ -2019,21 +2014,19 @@ def main():
     args = ap.parse_args()
     OUT.mkdir(exist_ok=True)
 
-    # harvest over every file, vocabulary included
+    # harvest over every file, vocabulary included; files render in alphabetical
+    # order of their path under SRC
     all_items = []
-    parsed = {}
+    parsed = []
     for path in sorted(SRC.rglob("*.lean")):
         header, items = parse_file(path)
-        parsed[path.stem] = (header, items)
+        parsed.append((path, header, items))
         all_items.extend(items)
     tables = harvest(all_items)
 
     tex = [PREAMBLE, frontmatter()]
-    for stem in FILE_ORDER:
-        if stem not in parsed:
-            print(f"warning: {stem}.lean missing", file=sys.stderr)
-            continue
-        header, items = parsed[stem]
+    for path, header, items in parsed:
+        stem = path.stem
         title = stem
         body = header
         m = re.match(r"#\s+(.*)\n?", header)
@@ -2047,24 +2040,29 @@ def main():
         if mt:
             fig_title = mt.group(1)
             title = fig_title[0].upper() + fig_title[1:]
-        prose_rw = Rewriter(tables, None, None, {})
-        tex.append(r"\section{" + prose_inline(title, prose_rw) + "}")
-        # the flip: only `## Extract` sections reach the PDF, in the paper's typography
-        emit_sections(tex, extract_sections(body), prose_rw)
-
-        figured = []   # (line_a, routine, src, docstring)
+        figured = []   # (routine, src, docstring), in the file's declaration order
         others = []    # (docstring, name)
         for doc, kind, name, src in items:
             r = tables.routines.get(name)
             if r and kind == "def":
-                figured.append((r.line_a, r, src, doc))
+                figured.append((r, src, doc))
             elif doc:
                 others.append((doc, name))
 
+        # a file with nothing marked `## Extract` emits no section
+        header_secs = extract_sections(body)
+        if not header_secs and not figured \
+                and not any(extract_sections(doc) for doc, _n in others):
+            continue
+
+        prose_rw = Rewriter(tables, None, None, {})
+        tex.append(r"\section{" + prose_inline(title, prose_rw) + "}")
+        # the flip: only `## Extract` sections reach the PDF, in the paper's typography
+        emit_sections(tex, header_secs, prose_rw)
+
         if figured:
-            figured.sort(key=lambda x: x[0])
             blocks = []
-            for _a, r, src, doc in figured:
+            for r, src, doc in figured:
                 # a figured routine's `## Extract` prose leads its figure in, the way
                 # the draft's prose introduces each figure
                 emit_sections(tex, extract_sections(doc), prose_rw)
