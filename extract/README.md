@@ -120,13 +120,19 @@ camelCase names, and Type-looking uppercase names, Greek-initial exempt. A
 paper-spelled routine name takes small caps, and a single parenthesized comma tuple
 after a callable is its argument list, so prose writes calls in paper form.
 
-## The frozen copies
+## The input, and the frozen copies
 
-**`Consensus1-frozen-2/` is the extractor's input**: the `.lean` files of
+**The extractor's input is the live spec, `lean/Spec/`** (Roberto, 2026-08-24; read
+recursively, `Defs/` included). Known consequence: the live docstrings carry no
+`(Figure N, lines a–b)` citations, so no routine is figured and the output is
+prose-only until a replacement convention is decided.
+
+`Consensus1-frozen-2/` was the input before that: the `.lean` files of
 `lean/Spec/` (without `doc/`), frozen at commit `b145f3c` on 2026-08-24 —
 the NDREB revision, where a duty broadcasts as a statement — with the extraction-side
 docstring changes applied on top (the `[fig:…]` symbolic references, and the Figure 2
-duty sentence updated to the broadcast shape).
+duty sentence updated to the broadcast shape). Kept as that iteration's record;
+nothing reads it.
 
 `Consensus1-frozen/` is the first freeze (`909b4f6`, 2026-08-23, `DutyResult`-returning
 duties), kept as that iteration's record; nothing reads it.
@@ -138,5 +144,5 @@ Rules:
   `lean/`), and no spec change is made here.
 - A new freeze is made deliberately, on instruction — copy the live `.lean` files and
   record the commit hash above — never as a side effect of editing the live spec.
-- The `## Extract` sections and every extraction-side edit live in the frozen copy the
-  extractor reads; a freeze carries them forward.
+- The `## Extract` sections and every extraction-side edit live in `lean/Spec/`, the
+  files the extractor reads (until 2026-08-24 they lived in the frozen copy).

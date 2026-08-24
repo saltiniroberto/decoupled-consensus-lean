@@ -675,6 +675,21 @@ the shape of a file, the effect scale read off return types (plain/`DRE`/`NDR`/`
 `NDREB`), the pick and the outbox, and the small bumps (`⊥`, `Finset`, records, class
 assumptions, instant autoparams). Linked first from `doc/README.md`.
 
+### The extractor reads the live spec — 2026-08-24
+
+Roberto: "the source should be the Spec folder". `extract/extract.py`'s `SRC` is now
+`lean/Spec/`, read recursively (`Defs/` included); the frozen copies stay as records,
+nothing reads them. Found in the same step: the live docstrings carry no
+`(Figure N, lines a–b)` citations — those were extraction-side edits living only in
+`Consensus1-frozen-2/` — so `CITE_RE` matches nothing, no routine is figured, and the
+generated document is prose-only. The paper-form signature spans (`` `ghost(anchor,
+tree, score, eligible)` ``) and the `-- line n` comments are still in the spec; what is
+missing is the marker that a `def` is figured. Replacement convention: Roberto's call.
+Open in the same conversation: `FILE_ORDER` (the hardcoded section order) should stop
+being hardcoded; the reading order is editorial (it disagrees with `Spec.lean`'s
+dependency-ordered import list: Fig6 before Store, Fig3 before Fig2), so it has to be
+authored somewhere in the sources.
+
 ## Next
 
 0. **`consensus-1.pdf` is rendered as `Spec/`, and everything builds.** All
@@ -689,5 +704,7 @@ assumptions, instant autoparams). Linked first from `doc/README.md`.
      singleton outcome set. The `coherence-invariant` branch predates this store and does
      not transfer.
 1. **The extractor workstream** (`extract/`): the conventions and rewrite rules are in
-   `extract/README.md`; the frozen copy refreshes only on instruction.
+   `extract/README.md`; the input is the live `lean/Spec/` (2026-08-24). Owed: a
+   figured-routine convention to replace the dropped `(Figure N, lines a–b)` citations,
+   and an authored home for the section order.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.
