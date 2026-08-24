@@ -145,15 +145,20 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 - **The attestation times are assumed: `class SGSchedule`** (2026-08-25).
   `sgfgVoting : (i : Validator) → (r : Nat) → Int` is when validator `i` sends its
   attestation for round `r` — a public parameter with no formula fixed. Total on the
-  validator set by being a function; the binders are named for documentation only. The
-  one constraint Roberto gave is a proof field,
-  `sgfgVoting_ge : ∀ i r, SGSchedule.a r ≤ sgfgVoting i r` — no attestation time
-  precedes the round's SG vote time. The class shares the namespace of the definition
-  `SGSchedule.a` (Roberto: "combine it all under SGSchedule"), so the whole round
-  schedule reads `SGSchedule.…`; a declaration and its namespace may share a name, and
-  the build confirms no clash. Names are Roberto's after two same-day renames (it landed
-  as `FGSchedule` with field `b`, then `SGFGVotingSchedule`); the constraint field's
-  `_ge` suffix follows `Params`. Nothing consumes the class yet.
+  validator set by being a function; the binders are named for documentation only. Two
+  proof fields, both Roberto's, bound each time within its round:
+  `sgfgVoting_ge : ∀ i r, SGSchedule.a r ≤ sgfgVoting i r` and
+  `sgfgVoting_lt : ∀ i r, sgfgVoting i r < roundStart (r + 1)`. The window is
+  `[roundStart r + 6Δ, roundStart r + 4ΔR)`, nonempty exactly when `R ≥ 2` — with
+  `R = 1` the two fields contradict and the class has no instance; `Params` requires
+  only `R ≥ 1` (flagged, not ruled on — it sharpens the `a_r` vs `R = 1` question
+  under Next). `roundStart r = t_{rR}` is a definition next to `round`, and
+  `SGSchedule.a` reads `roundStart r + 6Δ`. The class shares the namespace of the
+  definition `SGSchedule.a` (Roberto: "combine it all under SGSchedule"), so the whole
+  round schedule reads `SGSchedule.…`; a declaration and its namespace may share a name,
+  and the build confirms no clash. Names are Roberto's after two same-day renames (it
+  landed as `FGSchedule` with field `b`, then `SGFGVotingSchedule`); the constraint
+  fields' `_ge`/`_lt` suffixes follow `Params`. Nothing consumes the class yet.
 - **Block equality is decided by hand**: `deriving DecidableEq` does not reach a mutual
   family nested through `List` and `Option` (measured), so the `…Beq` functions and their
   `…Beq_iff` soundness theorems are written out — the one kind of proof a `Spec/` file

@@ -205,25 +205,32 @@ def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
     `rR, …, rR + R − 1`, and slot `rR` is its *opening slot*. -/
 def round [Params] (s : Nat) : Nat := s / Params.R
 
-/-- `a_r`, each round's SG vote time: `6Δ` after the beginning of the round — the round
-    begins at its opening slot `rR`, so `a_r = t_{rR} + 6Δ`. That instant is also
-    `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s confirmation is evaluated; the two
-    actions compose (`Store.onTick`, `05_SGDuty.lean`). -/
+/-- The start of round `r`: the start of its opening slot, `t_{rR}`. -/
+def roundStart [Params] (r : Nat) : Int := slotStart (r * Params.R)
+
+/-- `a_r`, each round's SG vote time: `6Δ` after the beginning of the round,
+    `a_r = roundStart r + 6Δ`. That instant is also `t_{rR+1} + 2Δ`, the tick at which
+    slot `rR`'s confirmation is evaluated; the two actions compose (`Store.onTick`,
+    `05_SGDuty.lean`). -/
 def SGSchedule.a [Params] (r : Nat) : Int :=
-  slotStart (r * Params.R) + 6 * (Params.Δ : Int)
+  roundStart r + 6 * (Params.Δ : Int)
 
 /-- The assumed part of the round schedule (`a_r`, above, is the fixed part): the time
     each validator sends its attestation (`Attestation`, below) for each round — a
     public parameter of the protocol, no formula fixed, and a public parameter is
     exactly an ambient class, as `Committees` is. The assignment is total: every
-    validator has an attestation time in every round. The one constraint is
-    `sgfgVoting_ge`: no attestation time precedes the round's SG vote time `a_r`. -/
+    validator has an attestation time in every round. Two constraints bound each time,
+    `sgfgVoting_ge` and `sgfgVoting_lt`: it is at or after the round's SG vote time and
+    before the next round begins, `a_r ≤ sgfgVoting i r < roundStart (r + 1)`. -/
 class SGSchedule (Validator : Type) [Params] where
   /-- The time validator `i` sends its attestation for round `r`. -/
   sgfgVoting : (i : Validator) → (r : Nat) → Int
   /-- No attestation time precedes the round's SG vote time:
       `a_r ≤ sgfgVoting i r`. -/
   sgfgVoting_ge : ∀ (i : Validator) (r : Nat), SGSchedule.a r ≤ sgfgVoting i r
+  /-- Every attestation time falls before the next round begins:
+      `sgfgVoting i r < roundStart (r + 1)`. -/
+  sgfgVoting_lt : ∀ (i : Validator) (r : Nat), sgfgVoting i r < roundStart (r + 1)
 
 /-! ## Roots -/
 
