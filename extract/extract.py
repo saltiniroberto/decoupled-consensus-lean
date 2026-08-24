@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Extract a consensus-1-like document out of the frozen Lean files.
 
-Reads extract/Consensus1-frozen/*.lean, writes extract/out/consensus1.tex, and (unless
---no-pdf) compiles it with latexmk -lualatex.
+Reads the frozen copy named by SRC below (currently extract/Consensus1-frozen-2/),
+writes extract/out/consensus1.tex, and (unless --no-pdf) compiles it with
+latexmk -lualatex.
 
 v4: definition blocks. An `## Extract — Definition (Title)` section renders as the
 draft's definition environment — bold "Definition N (Title)." running into the section's
@@ -1883,7 +1884,8 @@ def frontmatter():
     return "\n".join([
         r"\begin{center}",
         r"{\LARGE Consensus-1}\\[2mm]",
-        r"{\small generated from the Lean specification, \codett{extract/Consensus1-frozen/}}\\[1mm]",
+        r"{\small generated from the Lean specification, \codett{extract/" +
+        esc(SRC.name) + r"/}}\\[1mm]",
         r"{\small " + esc(commit) + r" · " + esc(stamp) + "}",
         r"\end{center}",
         r"\tableofcontents",

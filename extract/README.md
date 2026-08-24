@@ -20,8 +20,9 @@ Marked prose renders in the draft's typography: backticked spans go through the 
 rewriter as the figures, and fall back to mono exactly when they quote Lean.
 
 **The `## Extract` sections live in the frozen copy** (Roberto, 2026-08-24): the
-extraction workstream edits `Consensus1-frozen/` only, never `lean/Spec/Consensus1/`,
-and a refresh of the frozen copy carries the sections forward rather than wiping them.
+extraction workstream edits the frozen copies under `extract/` only, never
+`lean/Spec/Consensus1/`, and a new freeze carries the sections forward rather than
+wiping them.
 All nine module headers carry their section, adapted from the draft's own prose. (The
 live headers hold a 2026-08-24 mirror of the sections, made on the earlier, withdrawn
 reading of where they belong; it stays as it landed, and is not maintained from here.)
