@@ -1,7 +1,12 @@
 # `extract/` — the document-extraction workstream
 
 The goal (Roberto, 2026-08-23): a script that extracts, out of the `Spec/`
-Lean files, a document similar to the source `consensus-1.pdf`.
+Lean files, a document in the shape of the protocol's working draft.
+
+Run `python3 extract/extract.py` (add `--no-pdf` to stop at the TeX). It reads
+`lean/Spec/` and writes `extract/out/dc.tex`, then compiles `extract/out/dc.pdf` with
+`latexmk -lualatex`. `extract/out/` is gitignored and also holds the throwaway test
+fixtures (`_test_src/`, `_run_test.py` and friends).
 
 ## Prose is opt-in: the `## Extract` marker
 
@@ -115,9 +120,9 @@ would misfire on a spec using the same spellings differently:
 **Keyed on Lean/Mathlib names:** `filterM` fuses into a set-builder, `imageM` renders
 `{e : x ∈ s}`, `biUnion` renders `⋃{…}`; `.toNat` strips (`⌊…⌋` over a division),
 `.toFinset`, `.run`, `.get h`, `some`, `pure`, `↑` and type ascriptions strip;
-`.isSome` renders `≠ ⊥`; `.getD d` drops — **the one lossy rule**, Figure 7's line 15
-shows `max{…}` without the empty-set default the Lean carries; `max`/`min`/`abs`/
-`Finset.range` render call-style.
+`.isSome` renders `≠ ⊥`; `.getD d` drops — **the one lossy rule**: `update_finality`'s
+`max{…}` line shows no sign of the empty-set default the Lean carries; `max`/`min`/
+`abs`/`Finset.range` render call-style.
 
 **Keyed on Lean surface syntax:** every binder (`let`, `let mut`, `:=`, `x := (← e)`)
 renders `←`; let-type annotations and `if _ : c` binders drop; top-level `∧`/`∨` render
@@ -129,13 +134,23 @@ renders `←`; let-type annotations and `if _ : c` binders drop; top-level `∧`
 operator-free groups and call arguments; `n * x` renders as a juxtaposed product, `*`
 as `·`, `-` as `−`, `%` as **mod**.
 
-**Typography, figures and prose alike:** keywords bold, cited routine names small caps,
-variables italic, field names sans, Greek upright, `x_y` and `t_{s−1}` subscripted. In
-`## Extract` prose a backticked span renders through the rewriter unless it quotes Lean
-— the mono-fallback triggers are `let`/`fun`/`do`/`mut`/`:=`/`=>`/`←ᵖ`/`∈ᴹ` tokens,
-camelCase names, and Type-looking uppercase names, Greek-initial exempt. A
-paper-spelled routine name takes small caps, and a single parenthesized comma tuple
-after a callable is its argument list, so prose writes calls in paper form.
+**Typography, figures and prose alike:** keywords bold, figured routine names small
+caps, variables italic, field names sans, Greek upright, `x_y` and `t_{s−1}`
+subscripted. No space after a quantifier (`∃a ∈ votes`, as math sets it); a numeral
+joins a single-letter or Greek-initial symbol with a thin space (`2W`, `4Δs`); a
+primed letter (`T'`, `S'`) is paper vocabulary; a bare argument-less mention of a
+callable is the name, not a padded call. In `## Extract` prose a backticked span
+renders through the rewriter unless it quotes Lean — the mono-fallback triggers are
+`let`/`fun`/`do`/`mut`/`:=`/`=>`/`←ᵖ`/`∈ᴹ` tokens, camelCase names, and Type-looking
+uppercase names, Greek-initial exempt. A paper-spelled routine name takes small caps,
+and a single parenthesized comma tuple after a callable is its argument list, so prose
+writes calls in paper form.
+
+**The page:** each figure is a float with its caption above and the algorithm block in
+a thin full-width frame, as the source document boxes its figures. The text fonts are
+Latin Modern; the symbol glyphs they lack (`⪯`, `∈`, `⊥`, …) fall back to Latin Modern
+Math first — weight-matched — with DejaVu Sans as last resort, and DejaVu Sans Mono is
+the mono face.
 
 ## The input, and the frozen copies
 
