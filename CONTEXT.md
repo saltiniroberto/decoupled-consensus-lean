@@ -72,45 +72,13 @@ A newer variant of the draft arrived. It is a rewrite, not a revision: **block-o
 one store built up in three layers, and seven figures none of which matches the older draft's
 six.
 
-**It lives beside the older rendering, not in place of it** (Roberto's call, after seeing the
-first attempt delete seven files). `Spec/Defs/` renders `latex-specs` and is frozen;
-`Spec/Consensus/` renders `consensus.pdf` and is byte-identical to what it was; and
-`Spec/` renders the newer variant under namespace `Consensus1`. Three renderings,
-sharing nothing — not the base types, not the notation — so `Consensus1` keeps its own copies
-of `Notation.lean` and `Raise.lean`, and `Validator.lean` goes on building against the store
-it was written for.
-
-Two notes on the copies. `Notation.lean` is now duplicated three times, and that is legal
-because the macros are `scoped`: each copy is active only inside its own namespace.
-`FinsetM.lean` is *not* duplicated — its declarations are in the root `Finset` namespace and
-two copies would collide. `Consensus1` first went without it, reading the state map inside
-its set-builders through the raw `Option`; on 2026-08-22 Roberto had the exception style
-carried through, so `Spec/FinsetM.lean` *imported* the second rendering's file —
-the one cross-subtree import, legal because that file held no protocol content — and added
-`Finset.imageM`, the effectful image. (The 2026-08-24 purge absorbed the imported
-combinators into this subtree's own `FinsetM.lean`; no cross-subtree import remains.) `Consensus1/Raise.lean` carries the same two
-`Finset.unionM` fold instances as the `Consensus` copy, at its own error type. The consumers,
-all in `Fig7FGStore.lean`: `viable` collects Definition 5's witnesses with `filterM`
-(reading `Σ.σ[W]` per live block, raising where the first form silently failed to witness);
-`updateFinality` is `ResultOrExcept` — line 13's `(← viable S)` lifts above the `if`, so it
-raises on an unrecorded live block even when no advance is offered, and line 15's
-`max{Σ.σ[B].h : B ∈ T_F(Σ)}` goes through `imageM`; `getFilteredBlockTree` and `FG.getHead`
-propagate. The one raw-`Option` read left in the subtree is the walk predicate inside
-`FG.getHead` — the named deviation below, narrowed to exactly that.
-
-What the two drafts share: the attestation's seven fields, the chain state's shape, `q =
-⌈2W/3⌉`, and the slot/round arithmetic. What the newer one drops: the candidate tree, the
-grades `G0`–`G3`, the round roots, `Σ.head[·]`/`Σ.equiv[·]`, `Σ.root_proposal[·]`,
-`Σ.sg_root[·]`, `Σ.action_root[·]`, and the SG/FG action time. What it adds: `ghost` as a named
-building block, per-slot committees `K_s`, block-carried Goldfish votes as the only relay
-channel, timestamps on everything, available confirmation over two cutoffs, and a
-relative-majority SG fork choice.
-
-**The three layers are three namespaces.** Sections 2, 3 and 5 each redefine `get_head`, and
-Section 5 redefines `process_block` and `goldfish_eligible` too. A draft can replace a reading;
-Lean cannot. So `Consensus.Goldfish`, `Consensus.SG`, `Consensus.FG`, with the protocol being
-the last — `FG.getHead` is *the* fork choice — and `ghost` in `Consensus` itself, no section
-redefining it.
+**It began beside the two older renderings, not in place of them** (Roberto's call, after
+seeing the first attempt delete seven files; the coexistence ended with the 2026-08-24
+purge). One mechanic from that era still shapes the tree: `FinsetM.lean`'s combinators
+live in the root `Finset` namespace, where a second copy would collide, so this subtree
+*imported* the second rendering's file — adding `Finset.imageM` on 2026-08-22, when
+Roberto had the exception style carried through the set operations — until the purge
+absorbed the combinators into this subtree's own `FinsetM.lean`.
 
 **File layout.** `Model.lean` (Section 1's substrate and the wire objects), `Store.lean`
 (Definition 1 plus the fields Sections 3.2 and 5.1 add), then `Fig<n>` per figure. The import
@@ -134,27 +102,13 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
   cost is unchanged from the fuel form — one case the draft has not, the bound reached with an
   eligible child still available, which returns the block it stands on. A well-founded
   recursion would need the tree invariant *in the definition*.
-- **The arg-max step's tie-break is assumed, not rendered** (Roberto, 2026-08-22; the first
-  form filtered to the least `B.root` and kept a chooser for the residue). The draft says
-  "ties by root order" but never says what a root is or how one is computed — Section 1 asks
-  only that the tie-break be fixed — so `bestChild` filters to the maximal-score children and
-  hands the set to `TieBreak.pick`, an unspecified fixed choice of which a root order is one
-  instance; the entry below says how `pick` fails on the empty set. `Finset.toList` needs
-  `Classical.choice` and `Finset.min'` would want a `LinearOrder` on blocks, which the model
-  cannot build; the ambient class is the one computable route. `B.root` stays a field:
-  `update_finality`'s lex order still reads it.
-- **Line 25 crosses `Finset` → `List` by `Finset.sort`, under an assumed order** (Roberto,
-  2026-08-23; the first form used `Finset.toList` and paid `noncomputable` on `propose_block`
-  and `on_tick`). The block's carried votes must be a `List` — a `Finset` is a quotient and
-  cannot appear in an inductive's constructor — while the store's `gf_votes[·]` is a `Finset`,
-  as the draft says. `toList` needs `Classical.choice`; `Finset.sort` is computable because
-  sorting is permutation-invariant and so descends to the quotient; the figure line reads
-  `votes.toSortedList`, the helper beside `imageM` in `FinsetM.lean` — at the price of an
-  ambient `[LinearOrder (GoldfishVote Validator)]` on the handlers section. The assumption is
-  inert protocol-wise (nothing reads the list's order; votes are consumed as sets), and with
-  it nothing in the subtree is `noncomputable`. The alternative both forms declined,
-  list-valued vote tables, would make "at most two per validator" a property of a list and
-  put `.toFinset` at every counting site.
+- **The arg-max tie-break and line 25's `Finset` → `List` crossing each went through two
+  designs before the nondeterminism adoption dissolved both** (entry below: the tie and the
+  list order are picks). Two facts from those designs still hold: `Finset.toList` needs
+  `Classical.choice`, so no computable route enumerates a `Finset` without an assumed
+  order; and the alternative every form declined — list-valued vote tables — would make
+  "at most two per validator" a property of a list and put `.toFinset` at every counting
+  site (recorded in Figure 2's header).
 - **Line 30's `for all B ∈ Σ.T` is a `Finset.fold`**, not a loop: no `ForIn` for `Finset`, and
   the body accumulates a *union*, which is commutative and associative — which is why the
   draft can write a loop over a set at all. Needed `Mathlib.Data.Finset.Lattice.Basic` in the
@@ -163,64 +117,24 @@ and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 - **Timestamps are three maps**, one per object kind, since Lean has no sum over them here.
   Each is `Option Int`, `none` standing for both "not processed" and the draft's
   `timestamp(B_gen) = −∞` — which costs nothing, no rule reading a block's timestamp.
-- **The duties return what they would broadcast** alongside the store that has processed it
-  — since 2026-08-23 as a `DutyResult` (state and send set, the lean-sts step shape; entry
-  below), `on_tick` unioning its duties' sends, so nothing a tick emits is lost.
-- **The one named deviation is closed** (2026-08-23, with the nondeterminism adoption —
-  entry below). Its history: from 2026-08-22 the walk received Figure 7's eligibility
-  condition with its height clause read through the raw `Option`, because the condition
-  raises and `ghost`'s slot was a pure `Block → Bool`; it narrowed twice (the `filterM`
-  adoption, the raising tie-break) and closed when `ghost`'s slot became
-  `Block → ResultOrExcept Bool` — line 29 now passes `goldfish_eligible` itself.
-- Absent for want of a consumer: Section 5.1's `E_F(Σ)`, Section 4.1's E1/E2 slashing
-  conditions, and Section 3.4's `get_head` redirection — Section 5 redefines `get_head`
-  again and its version is the protocol's. Section 3.4's `on_tick` line first sat in this
-  list too, wrongly: Section 5 never touches `on_tick`, so the line is rendered — since
+- Absent for want of a consumer: Section 5.1's `E_F(Σ)`, and Section 3.4's `get_head`
+  redirection — Section 5 redefines `get_head` again and its version is the protocol's.
+  Section 4.1's E1/E2 slashing conditions sat in this list until 2026-08-24, when
+  `Analysis/AccountableSafety.lean` rendered them. Section 3.4's `on_tick` line first sat
+  here too, wrongly: Section 5 never touches `on_tick`, so the line is rendered — since
   2026-08-23 as its own reading, `Store.onTick` (entry below).
 
-#### `Validator.lean` is untouched, and everything builds
-
-It stays in `Spec/Consensus/` against the store it was written for, so `lake build Spec` is
-green across all three renderings. That is the whole reason the newer draft went into its own
-subtree: the first attempt re-rendered in place, which left `Validator.lean` importing a
-deleted file and took the entire library down at the import stage. Recorded because the same
-trap is one `git rm` away any time a draft is superseded.
-
-Nothing in `Consensus1` answers to that file, and nothing needs to: the old
-`Σ.action_root[r]`, the grades, `candidateTreeFrom` and the veto have no counterpart in the
-newer draft, and Section 6 — the honest-validator spec it was written against — is not in that
-draft at all. If the newer draft grows a Section 6, its validator layer is a new file under
-`Consensus1`, not a port of this one.
-
-### The walk raises: `TieBreak.pick` — 2026-08-22
+### The walk raises: `TieBreak.pick` — 2026-08-22, dissolved 2026-08-23
 
 Roberto did not want the nonemptiness proofs inside `bestChild`. The routes weighed, each
 declined for a stated reason: a total chooser with a junk value on `∅` (the Mathlib standard —
 `n / 0 = 0` — but the silent-answer pattern this subtree already rejected once); a named
 lemma above the definition (relocates the proof, keeps it); a linear order on blocks assumed
 as a class (most faithful to "a fixed root order", but order-lifting plumbing). His call: the
-chooser raises.
+chooser raises — a `TieBreak` class whose `pick` returned a member of the set or the
+failure. The nondeterminism adoption (entry below) dissolved the class the next day: the
+tie is a pick, and a pick from the empty set has no outcomes.
 
-- **`class TieBreak (Validator)`** — renamed from `Selection`, the field `pick` — with
-  `pick : (s : Finset (Block Validator)) → ResultOrExcept {B // B ∈ s}` and the law
-  `pick_ok : ∀ s, s.Nonempty → ∃ B, pick s = .ok B`. The subtype does most of the specifying:
-  an `.ok` answer is a member by type, and on `∅` the failure is *forced*, `{B // B ∈ ∅}`
-  having no inhabitants. The law adds the converse — a nonempty set is never refused. A
-  `Prop` field of a class is a definition component, not a `Spec/` theorem (the
-  `Electorate.w_pos` precedent); every instance owes its proof.
-- The class lives in `Fig1GoldfishWalk.lean` with its first consumer: it mentions
-  `ResultOrExcept`, so it cannot stay in `Model.lean`, which `Raise.lean` imports.
-- `bestChild` is now `let top := …; return (← TieBreak.pick top)` — no `Nonempty` argument,
-  no `have`, raising exactly on empty `children`.
-- **The cascade**: `ghost`, `Goldfish.forkChoice`/`getHead`, `updateConfirmation`,
-  `proposeBlock`, `goldfishVote`, `onTick`, `SG.majorityForkChoice`/`getHead` and
-  `FG.getHead` all carry `ResultOrExcept` now. Figure 5 is untouched — `sgVote` votes
-  `live_confirmed` and runs no walk. One simplification fell out: `ghost`'s lines 9–10 are
-  back in the figure's own order with no `else` and no dependent `if`, the continuation no
-  longer needing a nonemptiness hypothesis.
-- **The notation cost `Notation.lean` predicted is now paid**: the assignment macro claims
-  `x ← e` for pure re-assignment, so a monadic bind onto a `mut` variable is written
-  `H := (← bestChild …)`, `S := (← proposeBlock i S root).2`.
 - **Subtype-coercion facts, measured**: the `Subtype.val`
   coercion fires at expected-type positions — `return b`, `return (← e)`, and `:=` onto a
   typed `mut` variable — but never at field access (`b.slot` fails) nor in an application
@@ -258,22 +172,15 @@ line 7 tests the figure's `t_s + 2Δ` in the form `t_{s−1} + 6Δ`, equal whene
 the identity the 2026-08-22 docstring already stated — so no arithmetic is proved anywhere
 in `Spec/`.
 
-### Store-taking routines live in `namespace Store` — 2026-08-23
+### Store-taking routines take the `Store.` prefix — 2026-08-23
 
-Roberto: everything that takes a store should be in the `Store` namespace, for dot notation.
-So a caller writes `S.updateConfirmation k`, `S.proposeBlock i`, `S.majorityForkChoice
-anchor tree r`, `S.viable`, `S.processGoldfishVote vote` — the store need not be the first
-parameter, dot notation filling the first `Store`-typed one.
-
-**The exception is forced, not chosen: the layer-redefined names.** One namespace holds one
-`getHead`, and the draft defines `get_head` three times, `process_block` twice and
-`goldfish_eligible` twice — the reason the layers are namespaces at all. Those seven, plus
-`get_head`'s own Fig1 vocabulary (`Goldfish.eligible`, `Goldfish.forkChoice`, whose bare
-names would be wrong or ambiguous in `Store`), keep `Goldfish`/`SG`/`FG`. Options if the
-exception grates, not taken: rename per layer inside `Store` (`goldfishGetHead`…), or give
-`FG`'s versions the plain `Store` names as *the* protocol's and keep only the earlier
-layers namespaced. The `namespace Store` blocks sit in the figure files beside the
-definitions they hold; nothing moved files.
+Roberto: everything that takes a store should be in the `Store` namespace, for dot notation
+— `S.updateConfirmation k`, `S.viable`, `S.processGoldfishVote vote`; the store need not be
+the first parameter, dot notation filling the first `Store`-typed one. The layer-redefined
+names were the exception (one namespace holds one `getHead`), first kept in layer
+namespaces `Goldfish`/`SG`/`FG`; the third naming pass the same day replaced those with the
+figure-named readings and full names at each `def` — the style sheet below carries the
+scheme that stands.
 
 ### The duty result takes the framework's shape — 2026-08-23
 
@@ -343,9 +250,10 @@ loop the list.
   provable singleton statement.
 - `[LinearOrder (GoldfishVote Validator)]` and `toSortedList` — `propose_block`'s carried
   list is `let gfList ←ᵖ listings votes`, its order a genuine nondeterministic choice.
-- **The one named deviation** — `ghost`'s condition slot is `Block → ResultOrExcept Bool`,
-  so Figure 7's raising `goldfish_eligible` passes directly at line 29; the pure layers
-  offer their conditions with `pure`.
+- **The one named deviation** — the walk had read Figure 7's height clause through the
+  raw `Option`, its condition slot being pure — closed: the slot is
+  `Block → ResultOrExcept Bool`, so the raising `goldfish_eligible` passes directly at
+  line 29; the pure layers offer their conditions with `pure`.
 - The `for all` macros and the `all` token — the two order-free loops are written as the
   sets they build: the view merge as one `biUnion` union, `sg_support` as the set-builder
   it always was.
@@ -468,13 +376,9 @@ date. Prose never writes a generated number: `[fig:Name]`/`[def:slug]` forms res
 hyperlinked `\ref`s — the four hardcoded "Figure N" mentions in the frozen prose became
 symbolic the same day.
 
-**The extraction workstream edits only the frozen copy** (Roberto, 2026-08-24). The
-`## Extract` sections' home is `extract/Consensus1-frozen/`; a future frozen refresh
-carries them forward. On 2026-08-24 the sections and the Definition carve were also
-mirrored into the live headers, on the earlier (wrong) reading that a refresh would
-otherwise wipe them; Roberto stopped a revert of those live commits mid-conflict — the
-live spec had meanwhile moved (the `DutyM` refactor) — so the live copies stay as they
-landed, and no further extraction edit touches `lean/Spec/`.
+**The frozen-copy discipline governed v1–v5 and ended the same day**: the extractor now
+reads the live `lean/Spec/` (entry below), the `## Extract` sections' home is the live
+spec itself, and the frozen copies moved to `archive/`, records nothing reads.
 
 ### `FinalityVote.lean`: the attestation-filling rules, imported from the first rendering — 2026-08-23
 
