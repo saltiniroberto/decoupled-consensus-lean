@@ -490,7 +490,8 @@ visible to the height rule's read. A store-free `fgVote` layer briefly sat betwe
 pair rules and the wiring, mirroring the first rendering's; Roberto had it folded — it
 added nothing but a name, and the name collided: inside `def Store.fgVote` a bare `fgVote`
 resolves to the def itself (measured — the fix while it existed was a qualified
-`Consensus1.fgVote`). The module header lists every crossing decision for review:
+`Consensus1.fgVote`). The crossing decisions, for review (they were the module header's
+list until the 2026-08-24 de-referencing sweep, entry below; this is now the record):
 subtree pair encodings (`.timeout` → `emptyTarget`, `.commit` → `pair`); all four
 fork-choice fields from the store (`h_F` no longer explicit); `C = Σ.live_confirmed`;
 context read raising off `Σ.σ[live_confirmed]` (the first rendering degraded to an empty
@@ -525,7 +526,7 @@ on it (the draft never says how attestations reach a proposer; the first specifi
 attestation is a wire message, and the import keeps that answer). Two removals later on
 2026-08-24, both Roberto's: `hasJC` is gone — in this draft justification is an on-chain
 fact, the store's replayed chain being the evidence, so there is no separate
-certificate-knowledge to model (the crossing bullet records it) — and `fgVote` takes no
+certificate-knowledge to model — and `fgVote` takes no
 identity parameter: the store carries its node's validator as the new field `Σ.i`
 (not the draft's; the draft's `ℓ` is ambient in its figures), fixed at `Store.gen`,
 which now takes it. The other duties still take `i`; whether they switch to `Σ.i` is
@@ -651,9 +652,9 @@ their day.
 The audit pass over the purge (Roberto: "purging the Lean docstrings of history about
 changes"): attributions, was-X-until-Y notes, git-history and branch pointers, and probe
 filenames left the `.lean` docstrings — this file is where that history lives. Two
-provenance notes stayed by design: `FinalityVote.lean` names the source of its imported
-strategy, and `OldDefs.lean` entries say where each parked piece came from, that being
-the file's charter.
+provenance notes stayed then — `FinalityVote.lean` naming the source of its imported
+strategy, and `OldDefs.lean` entries saying where each parked piece came from — and fell
+in the same day's second, stricter sweep (entry below).
 
 ### Accountable safety: the statement imported — 2026-08-24
 
@@ -663,10 +664,16 @@ first specification's analysis and adapt them. `lean/Analysis/AccountableSafety.
 pair constructors, `IncludedOn`, `replay` (`state_transition` folded along the parent
 link — store-free, what every coherent store's `Σ.σ[B]` equals), and `AccountableSafety`
 as a named `Prop`, so nothing claims a proof and `make check` stays green. The adaptation
-decisions are the module header's bullet list: totality deletes the `≠ invalid`
-hypotheses, "conflicting" is `¬ Compatible`, the height binders the source itself called
-redundant are dropped. The source statement and its proof live on the
-`pre-consensus1-purge` branch (`Analysis/Theorems.lean`, its Lemma 11 chain).
+decisions, each one to revisit (they were the module header's bullet list until the
+de-referencing sweep, entry below; this is now the record): totality deletes the source's
+two `≠ invalid` hypotheses (every block replays to a state, there is no invalid);
+`replay` is defined here because the statement must be store-free; "conflicting" is
+`¬ Compatible` (the source defines *compatible*, `∼`, and names no relation for its
+negation); the pair encodings are this rendering's (`.commit` → `FinalityPair.pair`,
+`.timeout` → `HeightPair.emptyTarget`); and the height binders the source itself called
+redundant are dropped — "for some height `h`" lives inside E1 and E2's own pairs. The
+source statement and its proof live on the `pre-consensus1-purge` branch
+(`Analysis/Theorems.lean`, its Lemma 11 chain).
 
 ### `doc/guide.md`: reading the spec without Lean — 2026-08-24
 
@@ -690,6 +697,63 @@ Open in the same conversation: `FILE_ORDER` (the hardcoded section order) should
 being hardcoded; the reading order is editorial (it disagrees with `Spec.lean`'s
 dependency-ordered import list: Fig6 before Store, Fig3 before Fig2), so it has to be
 authored somewhere in the sources.
+
+### The identity is the protocol, and the spec speaks as the source of truth — 2026-08-24
+
+Roberto, in sequence: "this is not anymore a formalization of consensus-1.pdf. It is the
+formalization of Ethereum decoupled consensus"; then remove every reference to
+`consensus-1.pdf` from the README and from all docstrings — "assume no knowledge of
+consensus-1.pdf": the spec being the source of truth, Definition-number, Section-number
+and figure-line citations of the pdf make no sense; and (twice, emphatic) docstrings
+narrate no history at all — the history goes here. What fell in the sweep, beyond the
+first audit's scope: `FinalityVote.lean`'s "what changed in the crossing" section (the
+record is the 2026-08-23/24 entries above) and its two module-header pointers, inlined;
+`AccountableSafety.lean`'s adaptation bullets (record above); `Spec.lean`'s history
+paragraph; `OldDefs.lean`'s where-it-came-from narrations; `Model.lean`'s `Message`
+first-specification paragraph, rewritten as what the constructor is for; every residual
+"draft"/"pdf"/"previous rendering" token in `.lean` docstrings and the `doc/` pages
+(`naming.md`'s table header was "pdf routine"; `Store.onTick`'s home is named as
+`Fig5SGDuty.lean`, not a section number). Layer language — availability, SG, finality —
+replaces section numbers. Two things deliberately kept: the "measured YYYY-MM-DD" stamps
+on Lean-behavior facts (dated measurements, not spec history), and
+`AccountableSafety.lean`'s pointer to the old proof on the `pre-consensus1-purge` branch
+(a resource for whoever proves it here, marked "a starting point, not a citation").
+
+### `README.md` is a front door — 2026-08-24
+
+Roberto: someone landing on the repository should get where the spec is and be able to
+jump to it at once, and should come away expecting it to be easy to read without the
+README saying so. So the README is navigation only: the one-line identity, where the spec
+lives with an `sgVote` snippet showing what the routines look like, links to the guide /
+file map / design pages / `Analysis/`, the extractor line, and Building. Removed on his
+instruction: the natural-language protocol description, the history section, every
+`consensus-1.pdf` mention, every local-file mention. Per-file descriptions moved to
+`doc/README.md`.
+
+### `make extract` renders `extract/out/dc.pdf` — 2026-08-24
+
+Roberto: the extractor's output is `dc.pdf`; a make target runs it and is documented in
+the README's Building list. `extract/out/` is gitignored — no PDF is committed.
+
+### `FinalityVote.lean` moves to the spec root — 2026-08-24
+
+Roberto: "I want FinalityVote to be part of the root spec." `git mv` from `Spec/Defs/` to
+`Spec/`, module `Spec.FinalityVote`; the doc file map lists it with the algorithm files.
+
+### `Duty.lean` merges into `Nondet.lean` — 2026-08-24
+
+Roberto: with the duty monad being nondeterminism machinery, the filename said nothing.
+`NDREB`, `broadcast` and `NDREB.outcomes` moved into `Nondet.lean`, which gained
+`import Spec.Defs.Store` (acyclic — nothing below `Store` imports `Nondet`) and a
+duty-monad section in its header; `Duty.lean` is deleted, its importers (Fig2, Fig5,
+`FinalityVote.lean`, `Spec.lean`) rewired, the doc pages updated.
+
+### `doc/guide.md` gains the typing table — 2026-08-24
+
+Roberto: write how to type the symbols people might not know (`←ᵖ`, `⪯`, …). A table of
+the VS Code Lean abbreviations (`\l`, `\l\^p`, `\preceq`, `\bot`, …) with the hover tip,
+in the guide before "Where to go deeper"; the guide itself de-drafted in the same pass —
+it now speaks of paper pseudocode and the protocol, no external document.
 
 ## Next
 
