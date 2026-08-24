@@ -37,7 +37,7 @@ core's `EStateM.Result`, which is why the name is an acronym rather than the wor
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 /-- The one failure of this rendering, thrown by every routine that can fail and carrying
     nothing. `Σ.σ[B]` raises it when the map does not record `B`; anything added later raises
@@ -100,4 +100,4 @@ instance {α : Type} [DecidableEq α] :
 scoped instance : MonadLift Option DRE :=
   ⟨fun x => x.elim (.error .error) .ok⟩
 
-end Consensus1
+end DC

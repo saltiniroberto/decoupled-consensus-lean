@@ -13,7 +13,7 @@ removed formalization lives on the `pre-consensus1-purge` branch
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator]
 
@@ -73,4 +73,4 @@ def AccountableSafety (Validator : Type) [DecidableEq Validator]
         ((IncludedOn x B_F ∧ IncludedOn y B_F') ∨ (IncludedOn x B_F' ∧ IncludedOn y B_F)) ∧
         (E1 x y ∨ E2 x y)
 
-end Consensus1
+end DC

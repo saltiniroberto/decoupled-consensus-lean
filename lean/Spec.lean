@@ -19,7 +19,7 @@ import Spec.«08_FinalityVote»
 # The specification
 
 One import per file. **This library is the specification of Ethereum decoupled
-consensus**, under namespace `Consensus1`. The algorithm files sit directly under
+consensus**, under namespace `DC`. The algorithm files sit directly under
 `Spec/`, and everything they are written in terms of sits in `Spec/Defs/`. The protocol
 is block-only Goldfish: one store built up in three layers — availability, SG, finality —
 with `ghost` as a named building block, per-slot committees, block-carried Goldfish votes
@@ -33,7 +33,7 @@ cannot. The last reading
 of each is the protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
 `S.goldfishEligible`); each superseded reading is named by its figure — `Fig1.getHead`,
 `Fig4.getHead`, `Fig2.processBlock`, `Fig1.goldfishEligible`. Store-taking routines sit in
-`Consensus1.Store` for dot notation; everything defined once is bare (`ghost`,
+`DC.Store` for dot notation; everything defined once is bare (`ghost`,
 `goldfishScore`); there are no namespace blocks, every definition carrying its full name at
 its own `def`.
 

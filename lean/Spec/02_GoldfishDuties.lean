@@ -87,7 +87,7 @@ target block.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 /-- The root a proposer writes into its block, as an assumed function of the block's parent
     and its slot. The protocol calls a block's root its post-state root, and the
@@ -247,4 +247,4 @@ def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     return ← S.updateConfirmation (s - 1)                      -- line 8
   return S
 
-end Consensus1
+end DC

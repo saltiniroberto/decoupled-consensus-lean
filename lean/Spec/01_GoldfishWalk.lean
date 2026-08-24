@@ -93,7 +93,7 @@ genesis.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator]
 
@@ -191,4 +191,4 @@ def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     NDRE (Block Validator) :=
   S.goldfishForkChoice .genesis S.T votes s                    -- line 18
 
-end Consensus1
+end DC

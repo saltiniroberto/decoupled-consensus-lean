@@ -51,7 +51,7 @@ already seen equivocating.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
   [RootComputation Validator]
@@ -119,4 +119,4 @@ def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
     return ← S.sgVote i
   return S
 
-end Consensus1
+end DC

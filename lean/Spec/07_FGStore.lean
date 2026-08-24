@@ -81,7 +81,7 @@ from `Σ.F` over `T_F(Σ)`; it uses neither the SG root nor the filtered tree.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator]
   [Committees Validator] [Params]
@@ -238,4 +238,4 @@ def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)
   let anchor ← S.majorityForkChoice root tree (round S.s)      -- line 28
   ghost anchor tree (goldfishScore votes k) (S.goldfishEligible votes k)  -- line 29
 
-end Consensus1
+end DC

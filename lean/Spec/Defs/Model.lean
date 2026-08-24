@@ -88,7 +88,7 @@ empty-target vote `(h, ⊥)`, or the empty pair — and a finality pair, `(h_f, 
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 /-- `⊥` for an absent block, height or head, as the protocol writes it. Scoped, so it cannot
     leak into a file that means something else by `⊥`. -/
@@ -576,4 +576,4 @@ def Compatible (a b : Block Validator) : Prop := a ⪯ b ∨ b ⪯ a
 instance : DecidableRel (Compatible (Validator := Validator)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
 
-end Consensus1
+end DC

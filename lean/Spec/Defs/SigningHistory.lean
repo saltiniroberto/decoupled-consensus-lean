@@ -11,7 +11,7 @@ one validator's state and the rules are store rules.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots]
 
@@ -50,4 +50,4 @@ def SigningHistory.saveFinalityTarget (H : SigningHistory Validator) (h : Nat)
     (J : Block Validator) : SigningHistory Validator :=
   { H with finalityTarget := Function.update H.finalityTarget h (some J) }
 
-end Consensus1
+end DC

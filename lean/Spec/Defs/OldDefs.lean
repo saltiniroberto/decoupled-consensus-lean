@@ -12,12 +12,12 @@ than an excavation. Each entry says what it is and what would revive it. Nothing
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 open Lean
 
 /-- `σ.arr[i][j] ← e`, a doubly indexed write to a map-of-maps field, and `x[i][j] ← e` to a
-    map-of-maps local. No `Consensus1` figure writes a two-level map, so it has no
+    map-of-maps local. No `DC` figure writes a two-level map, so it has no
     consumer. Revived by any store field of shape `Nat → κ → Option V`. -/
 scoped syntax (name := idx2Assign) (priority := high)
   ident noWs "[" term "]" noWs "[" term "]" " ← " term : doElem
@@ -51,7 +51,7 @@ def DutyResult.withSend {Validator : Type} [Roots] [DecidableEq Validator]
     bodies, so this has no consumer. Revived by a *pure* body that must extract, where no
     lift can fire. The measured trap it carries:
     dot notation resolves fields in the type's own namespace only, hence the `_root_.`
-    (a `Consensus1.Option.value` is invisible to `x.value`). -/
+    (a `DC.Option.value` is invisible to `x.value`). -/
 def _root_.Option.value {α : Type} (x : Option α)
     (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
   x.get (Option.ne_none_iff_isSome.mp h)
@@ -67,4 +67,4 @@ scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [De
     let l ← liftM (listings s)
     forIn l init body
 
-end Consensus1
+end DC

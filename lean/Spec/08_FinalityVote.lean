@@ -32,7 +32,7 @@ finality rule is visible to the height rule's record read within the same attest
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
 
@@ -135,4 +135,4 @@ def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     (round := round S.s) (head := head) (heightPair := hp) (finalityPair := fp)))
   return S
 
-end Consensus1
+end DC

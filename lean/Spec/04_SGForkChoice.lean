@@ -62,7 +62,7 @@ uniquely determined.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator]
   [Committees Validator] [Params]
@@ -122,4 +122,4 @@ def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
   S.goldfishForkChoice anchor S.T votes s                       -- line 19
 
-end Consensus1
+end DC

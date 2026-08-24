@@ -74,7 +74,7 @@ after the same transition has applied any finalization, `nj ← (K ∣ h) ∧ (h
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params]
 
@@ -237,4 +237,4 @@ def stateTransition (σ : ChainState Validator) (B : Block Validator) :
   return processHeightEvents σ                                -- line 6
 
 
-end Consensus1
+end DC

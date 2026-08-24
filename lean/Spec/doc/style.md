@@ -2,7 +2,7 @@
 
 One line per ruling, with a pointer to where the mechanics live. The two large ones —
 nondeterminism and naming — have their own pages. The running list, with dates and
-reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
+reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 
 ## Reads and failure
 

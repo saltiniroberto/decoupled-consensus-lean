@@ -52,7 +52,7 @@ is at worst genesis, never empty. `Σ.live_confirmed` takes the result unconditi
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
 
@@ -96,4 +96,4 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
 
 
 
-end Consensus1
+end DC

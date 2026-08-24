@@ -77,7 +77,7 @@ broadcasts — or the failure. The sts wiring consumes a duty as
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 attribute [scoped instance] Set.monad
 
@@ -141,4 +141,4 @@ def NDREB.outcomes (d : NDREB Validator (Store Validator)) :
     let (S, out) ← d.run ∅
     return { state := S, send := out } : NDRE (DutyResult Validator)).run
 
-end Consensus1
+end DC

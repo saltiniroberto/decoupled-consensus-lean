@@ -475,7 +475,7 @@ picking duty broadcasting differently per pick; and the store-ambient variant's 
 loss is a general fact — a precondition needs the store as a *term*, which is the
 recorded reason the store stays explicit.
 
-### The `Consensus1` style sheet — running list, updated 2026-08-23
+### The `DC` style sheet — running list (named `Consensus1` until 2026-08-24)
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
 above carry the reasoning, the docstrings at each point of use carry the mechanics. Update
@@ -696,6 +696,15 @@ and digits sort before `Defs/`, so the extracted document now opens with the eig
 numbered files and puts the Model and Store sections last; if that order is wrong it is
 the extractor's to fix. The `[fig:…]` labels in `## Extract` prose follow the stems
 (`[fig:02_GoldfishDuties]`), since the extractor derives `\label{fig:<stem>}`.
+
+### The namespace is `DC` — 2026-08-24
+
+Roberto: rename the namespace `Consensus1` to `DC`. All declarations now live under
+`DC` (`DC.Store.getHead`, …); the style sheet's heading follows, as do the doc pages and
+`CLAUDE.md`'s pointer to it. Dated entries above keep `Consensus1`, the name of their
+day — historical searches need both names, as with `ResultOrExcept`. The `a_r` schedule
+kept its `SGSchedule.a` spelling when the class became a definition earlier the same day
+(entry above is the class's era; the formula is `Model.lean`'s docstring).
 
 ### `doc/guide.md` gains the typing table — 2026-08-24
 

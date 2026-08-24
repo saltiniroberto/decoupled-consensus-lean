@@ -36,5 +36,5 @@ What the algorithms are written in terms of sits in [`Defs/`](../Defs):
   mechanics live.
 
 The running record behind these pages is `CONTEXT.md` at the repository root — the dated
-entries and the section "The `Consensus1` style sheet". Where a page here and
+entries and the section "The `DC` style sheet". Where a page here and
 `CONTEXT.md` disagree, `CONTEXT.md` is the record: fix the page.

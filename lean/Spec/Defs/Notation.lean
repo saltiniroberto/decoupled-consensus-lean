@@ -47,7 +47,7 @@ rather than declaring a `".h"`-style token.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 open Lean
 
@@ -140,4 +140,4 @@ macro_rules
     `abs x` if one ever does. A mistake is a type error, never a silent one. -/
 scoped macro:max atomic("|" noWs) s:term noWs "|" : term => `(Finset.card $s)
 
-end Consensus1
+end DC

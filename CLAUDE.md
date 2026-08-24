@@ -78,7 +78,7 @@ close as the types allow and say in a comment or the docstring which line deviat
 measured limit: `∈` cannot be overloaded for `Option` elements (recorded on the
 `pre-consensus1-purge` branch).
 
-The running list of every stylistic ruling is **"The `Consensus1` style sheet"** in
+The running list of every stylistic ruling is **"The `DC` style sheet"** in
 `CONTEXT.md`; the reader-facing versions are the pages under `lean/Spec/doc/`.
 Update the style sheet when a new ruling lands.
 

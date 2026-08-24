@@ -98,7 +98,7 @@ every rule below is a timestamp comparison on this one pool.
 
 set_option autoImplicit false
 
-namespace Consensus1
+namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator]
 
@@ -264,4 +264,4 @@ structure DutyResult (Validator : Type) [Roots] where
   /-- The messages broadcast, for the network to deliver. -/
   send : Finset (Message Validator)
 
-end Consensus1
+end DC
