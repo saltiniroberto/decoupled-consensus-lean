@@ -6,6 +6,13 @@ writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
 latexmk -lualatex. The document's title comes from extract/config.toml
 (`title` under `[document]`).
 
+v7: `## Extract` marks prose, `## Figure` marks pseudocode. A def is figured by a
+`/-! ## Figure … -/` comment standing immediately before it; the block's opening
+`name(args)` span is the paper signature (overriding the derivation, hiding params),
+the rest of the block the function line's margin comment. `/-! ## Extract … -/`
+comments carry only document prose, everywhere; docstrings carry no rendering markup
+beyond the symbol convention's opening span.
+
 v6: prose can quote a definition instead of restating it. `[eq:name]` in `## Extract`
 prose expands to the named declaration's docstring opening span — the formula is
 written once, at the definition site; the key is the Lean name, a unique Lean-name
@@ -406,11 +413,12 @@ def parse_symbol(span: str, param_names):
 
 
 class Routine:
-    def __init__(self, lean_name, paper_name, cite_args, params):
+    def __init__(self, lean_name, paper_name, cite_args, params, note=None):
         self.lean_name = lean_name
         self.paper_name = paper_name
         self.cite_args = cite_args      # the paper signature's arg names, as displayed
         self.params = params            # explicit non-autoparam (name, type) pairs
+        self.note = note                # the function line's margin comment
 
 
 class Tables:
@@ -523,20 +531,24 @@ def harvest(all_items):
         raw = first_span(doc)
         if raw:
             t.raw_spans.setdefault(name, raw)
-        if has_extract_section(pre):
-            # the def is figured — its own `/-! ## Extract -/` comment stands before
-            # it. The paper name and signature derive from the Lean def; a docstring
-            # opening `name(args)` span overrides — the way the paper hides params
-            span = first_span(doc)
+        fig = figure_section(pre)
+        if fig is not None:
+            # the def is figured — its own `/-! ## Figure … -/` comment stands before
+            # it. The paper name and signature derive from the Lean def; the block's
+            # opening `name(args)` span overrides — the way the paper hides params —
+            # and the rest of the block is the function's margin comment.
+            span = first_span(fig)
             m = SPAN_CALL_RE.fullmatch(span) if span else None
             if m:
                 paper = m.group(1)
                 cite_args = [a.strip() for a in m.group(2).split(",")] \
                     if m.group(2).strip() else []
+                fig = fig[len(span) + 2:]
             else:
                 paper = snake(name.split(".")[-1])
                 cite_args = [derived_arg(t, p, ty) for p, ty in params]
-            t.routines[name] = Routine(name, paper, cite_args, params)
+            note = fig.strip().lstrip("—–:;, ").strip() or None
+            t.routines[name] = Routine(name, paper, cite_args, params, note)
             continue
         span = first_span(doc)
         if span:
@@ -1618,7 +1630,7 @@ def routine_lines(tables: Tables, r: Routine, decl_src, store_param, param_types
     # the function header
     header = [("kw", "function"), ("space", " "), ("fn", r.paper_name), ("sym", "(")] + \
         join_sp([[("id", a)] for a in r.cite_args], COMMA) + [("sym", ")")]
-    return [(-1, header, None)] + lines
+    return [(-1, header, r.note)] + lines
 
 
 def bound_var(spans):
@@ -1868,11 +1880,21 @@ def extract_sections(text: str):
     return out
 
 
-def has_extract_section(text: str) -> bool:
-    """Whether a docstring carries an `## Extract` heading at all — the mark that makes
-    a `def` figured, prose under the heading or not."""
-    return any(h is not None and EXTRACT_HEADING.match(h)
-               for h, _b in split_sections(text))
+FIGURE_HEADING = re.compile(r"Figure\b\s*(.*)$")
+
+
+def figure_section(text: str):
+    """The `## Figure` section of a declaration's preceding comment, or None. Returns
+    the payload — anything after the word on the heading line, plus the section body:
+    an opening `name(args)` span is the paper signature, the rest the function's
+    margin comment. A bare `/-! ## Figure -/` returns the empty payload."""
+    for h, b in split_sections(text):
+        if h is None:
+            continue
+        m = FIGURE_HEADING.match(h)
+        if m is not None:
+            return (m.group(1).strip() + "\n" + b).strip()
+    return None
 
 
 def prose_span(span: str, rw) -> str | None:

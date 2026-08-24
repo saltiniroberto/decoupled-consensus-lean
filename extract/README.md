@@ -28,18 +28,30 @@ prose; everything unmarked is Lean-side commentary and stays out of the PDF. The
 was chosen deliberately: marked text is written *for* the document, so it can read like
 the draft, and new commentary stays out without anyone remembering to fence it.
 
+`## Extract` always and only marks prose (Roberto, 2026-08-24, resolving the
+one-heading-two-meanings confusion):
+
 - In a module header: the section becomes the file's section prose. `## Extract — X`
   gives it subsection title `X`.
-- **In its own `/-! ## Extract … -/` comment immediately before a `def`** (Roberto,
-  2026-08-24: the marker lives in its own comment, never in the docstring): the marker
-  is what makes the def figured — rendered as pseudocode in the file's figure — and
-  its prose leads the figure in, the way the draft's prose introduces each figure. A
-  bare `/-! ## Extract -/` with no prose still figures the def.
+- In its own `/-! ## Extract … -/` comment before a figured `def`: the prose leads
+  that def's figure in, the way the draft's prose introduces each figure.
 - Before any other declaration: the comment's section follows the figure.
 
-Docstrings carry no document markup at all — a declaration's docstring is Lean-side
-documentation, and only its opening backticked span is harvested (the symbol/signature
-conventions below).
+**`## Figure` is what makes a `def` figured** — a `/-! ## Figure … -/` comment
+standing immediately before it (Roberto, 2026-08-24). Its payload, both optional:
+
+- an opening `` `name(args)` `` span is the routine's paper signature, overriding the
+  derivation — the way Lean-side parameters are hidden (`` `on_tick(Σ, t)` `` hides
+  `i` and `is_proposer`);
+- the rest is the function line's `▷` margin comment — the draft's own
+  "runs at `t_s + Δ`" on a duty's header.
+
+So `/-! ## Figure -/` bare figures a def with the derived signature, and
+`` /-! ## Figure `sg_vote(Σ)` — runs at `a_r` -/ `` names the signature and annotates
+the header. The markers live in their own comments, never in a docstring: a docstring
+is Lean-side documentation, and only its opening backticked span is harvested (the
+symbol conventions below — for figured routines the signature comes from the `Figure`
+block, not the docstring).
 
 The marker also drives the document's structure (Roberto, 2026-08-24): **files in a
 subdirectory render before the files at the root** — the vocabulary a spec is written
@@ -68,11 +80,11 @@ script:
 - **A figured routine's paper form derives from its Lean `def`** (Roberto, 2026-08-24):
   the name snake-cased from the Lean name's tail, the signature from the explicit
   parameters in order, a store-typed parameter shown as its structure's symbol —
-  `def goldfishScore (votes …) (s …) (B …)` renders `goldfish_score(votes, s, B)`. A
-  docstring that opens with a pure backticked call span `` `name(args)` `` overrides
-  the derivation; that is how a paper signature hides Lean-side parameters (the
-  validator `i`, the `isProposer` test in `` `on_tick(Σ, t)` ``), which then stay
-  hidden at call sites exactly as the draft's own calls hide them.
+  `def goldfishScore (votes …) (s …) (B …)` renders `goldfish_score(votes, s, B)`. The
+  `## Figure` block's opening `` `name(args)` `` span overrides the derivation; that is
+  how a paper signature hides Lean-side parameters (the validator `i`, the `isProposer`
+  test in `` `on_tick(Σ, t)` ``), which then stay hidden at call sites exactly as the
+  draft's own calls hide them.
 - **A section headed `## Extract — Definition (Title)` is a definition block**, emitted
   as an `amsthm` environment with label `def:<slugified title>`. **Every number in the
   document is LaTeX's own** — definitions, figures, sections, and, since 2026-08-24,
