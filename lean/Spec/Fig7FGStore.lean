@@ -1,5 +1,5 @@
-import Spec.Consensus1.Fig5SGDuty
-import Spec.Consensus1.Fig2GoldfishDuties
+import Spec.Fig5SGDuty
+import Spec.Fig2GoldfishDuties
 
 /-!
 # Figure 7 — the finality gadget in the fork choice

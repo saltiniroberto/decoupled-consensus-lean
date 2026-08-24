@@ -1,4 +1,4 @@
-import Spec.Consensus1.Model
+import Spec.Defs.Model
 
 /-!
 # The signing record

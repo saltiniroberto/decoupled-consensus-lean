@@ -10,22 +10,25 @@ self-contained.
 
 ## The specification
 
-Everything is under `lean/`. The Lake library is `Spec`, `srcDir` is `lean`, and the module
-root is `Spec`, so `Spec.Consensus1.Model` is `lean/Spec/Consensus1/Model.lean`. The one
-subtree is `lean/Spec/Consensus1/`, namespace `Consensus1`:
+Everything is under `lean/`, namespace `Consensus1`. The Lake library is `Spec`,
+`srcDir` is `lean`, and the module root is `Spec`, so `Spec.Fig1GoldfishWalk` is
+`lean/Spec/Fig1GoldfishWalk.lean` and `Spec.Defs.Model` is `lean/Spec/Defs/Model.lean`.
 
-- `Fig<n><Subject>.lean` — one file per figure of the draft, `<n>` the draft's own figure
-  number, the `-- line n` comments its own line numbering. The draft defines some routines
-  incrementally; the last reading of each bears the plain `Store` name and the superseded
-  readings are figure-named (`Fig1.getHead`, …).
-- `Model.lean`, `Store.lean`, `SigningHistory.lean`, `FinalityVote.lean` — the substrate,
-  the store, and the imported finality-vote strategy (the draft never defines how the
-  attestation pairs are filled; `FinalityVote.lean` says where its logic comes from).
-- `Notation.lean`, `Raise.lean`, `FinsetM.lean`, `Nondet.lean`, `Duty.lean`,
-  `OldDefs.lean` — the vocabulary layers: the draft's spellings, the failure monad `DRE`,
-  monadic set operations, the nondeterminism monads `NDR`/`NDRE` and the pick `←ᵖ`, the
-  duty monad `NDREB` with `broadcast`, and parked definitions.
-- `doc/` — reader-facing pages on the design: nondeterminism, naming, the style rulings.
+- **`lean/Spec/Fig<n><Subject>.lean`** — one file per figure of the draft, `<n>` the
+  draft's own figure number, the `-- line n` comments its own line numbering. The draft
+  defines some routines incrementally; the last reading of each bears the plain `Store`
+  name and the superseded readings are figure-named (`Fig1.getHead`, …).
+- **`lean/Spec/Defs/`** — what the figures are written in terms of:
+  - `Model.lean`, `Store.lean`, `SigningHistory.lean`, `FinalityVote.lean` — the
+    substrate and wire objects, the store, and the imported finality-vote strategy (the
+    draft never defines how the attestation pairs are filled; `FinalityVote.lean` says
+    where its logic comes from);
+  - `Notation.lean`, `Raise.lean`, `FinsetM.lean`, `Nondet.lean`, `Duty.lean`,
+    `OldDefs.lean` — the vocabulary layers: the draft's spellings, the failure monad
+    `DRE`, monadic set operations, the nondeterminism monads `NDR`/`NDRE` and the pick
+    `←ᵖ`, the duty monad `NDREB` with `broadcast`, and parked definitions.
+- **`lean/Spec/doc/`** — reader-facing pages on the design: nondeterminism, naming, the
+  style rulings.
 
 ## The extractor
 

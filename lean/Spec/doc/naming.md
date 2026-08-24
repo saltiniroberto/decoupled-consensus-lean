@@ -1,6 +1,6 @@
 # Naming: full names at each `def`, no namespace blocks
 
-Every definition in `Spec/Consensus1/` carries its full name at its own `def`; the files
+Every definition in `Spec/` carries its full name at its own `def`; the files
 contain no `namespace` blocks. (The one `section` left is `Model.lean`'s `Electorate`,
 which scopes section variables and says so where it opens.) The point: a definition read
 mid-file tells the reader everything from its own first line, with no scrolling up to find

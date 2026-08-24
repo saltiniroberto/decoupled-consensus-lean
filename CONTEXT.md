@@ -7,12 +7,12 @@ gitignored. Keep both current as work happens; delete what becomes wrong.
 ## What this is
 
 A Lean 4 formalization of `consensus-1.pdf`, a human-controlled draft of a
-Simplex-style finality protocol, as `lean/Spec/Consensus1/` — plus `extract/`, a script
+Simplex-style finality protocol, as `lean/Spec/` — plus `extract/`, a script
 that renders the Lean back into a document shaped like the draft. The draft itself is
 kept locally at the repository root and never committed; no PDF spec is.
 
 **Two older renderings and their apparatus preceded this scope and were removed on
-2026-08-24** (Roberto: keep only what `Spec/Consensus1/` and the extractor need): the
+2026-08-24** (Roberto: keep only what `Spec/` and the extractor need): the
 `latex-specs` papers' rendering (`Spec/Defs/` and the root figure files, namespace
 `Decoupled`, with `Analysis/`, the citation checker, `MAPPING.md` and its tooling) and
 `consensus.pdf`'s (`Spec/Consensus/`, namespace `Consensus`). **The branch
@@ -63,7 +63,7 @@ So the rule is about the shared continuation, not about `if` or `for`. Consequen
 
 ## The `Consensus1` rendering — 2026-08-22 onward
 
-### `consensus-1.pdf` is a *third* rendering, `Spec/Consensus1/` — 2026-08-22
+### `consensus-1.pdf` is a *third* rendering — 2026-08-22 (then `Spec/Consensus1/`)
 
 A newer variant of the draft arrived. It is a rewrite, not a revision: **block-only Goldfish**,
 one store built up in three layers, and seven figures none of which matches the older draft's
@@ -72,7 +72,7 @@ six.
 **It lives beside the older rendering, not in place of it** (Roberto's call, after seeing the
 first attempt delete seven files). `Spec/Defs/` renders `latex-specs` and is frozen;
 `Spec/Consensus/` renders `consensus.pdf` and is byte-identical to what it was; and
-`Spec/Consensus1/` renders the newer variant under namespace `Consensus1`. Three renderings,
+`Spec/` renders the newer variant under namespace `Consensus1`. Three renderings,
 sharing nothing — not the base types, not the notation — so `Consensus1` keeps its own copies
 of `Notation.lean` and `Raise.lean`, and `Validator.lean` goes on building against the store
 it was written for.
@@ -82,7 +82,7 @@ because the macros are `scoped`: each copy is active only inside its own namespa
 `FinsetM.lean` is *not* duplicated — its declarations are in the root `Finset` namespace and
 two copies would collide. `Consensus1` first went without it, reading the state map inside
 its set-builders through the raw `Option`; on 2026-08-22 Roberto had the exception style
-carried through, so `Spec/Consensus1/FinsetM.lean` *imported* the second rendering's file —
+carried through, so `Spec/FinsetM.lean` *imported* the second rendering's file —
 the one cross-subtree import, legal because that file held no protocol content — and added
 `Finset.imageM`, the effectful image. (The 2026-08-24 purge absorbed the imported
 combinators into this subtree's own `FinsetM.lean`; no cross-subtree import remains.) `Consensus1/Raise.lean` carries the same two
@@ -368,10 +368,10 @@ annihilating where an error survives (the `∈ᴹ` builder's expansion now pins 
 this reason); and a quotation's global names resolve at macro declaration, so `Notation.lean`
 had to import `Raise.lean` before its expansion could name `ResultOrExcept`.
 
-### `Spec/Consensus1/doc/` — reader-facing pages for the design — 2026-08-23
+### `Spec/doc/` — reader-facing pages for the design — 2026-08-23
 
 On Roberto's word ("perhaps in a doc folder under consensus-1 for now"): four markdown
-pages under `lean/Spec/Consensus1/doc/` — `README.md` (index), `nondeterminism.md`
+pages under `lean/Spec/doc/` — `README.md` (index), `nondeterminism.md`
 (`NDR`/`NDRE`, the pick, consumption as `res ∈ (…).run`), `naming.md` (the full-name
 scheme, the `Fig<n>` table), `style.md` (the remaining rulings, one line each). They state
 the decisions for a reader of the subtree; the decision trails stay here. **This file is
@@ -409,7 +409,7 @@ so `Message` now derives `DecidableEq`, exactly as its docstring had planned.
 Roberto: two things in parallel — (1) keep improving and expanding the `Consensus1`
 definitions, in place; (2) a script that extracts, out of the Lean files, a document
 similar to the source `consensus-1.pdf`. Stream 2 works against `extract/Consensus1-frozen/`,
-a plain copy of `lean/Spec/Consensus1/` (frozen at `909b4f6`), so the live spec can keep
+a plain copy of `lean/Spec/` (frozen at `909b4f6`), so the live spec can keep
 moving under stream 1; `extract/README.md` carries the rules (nothing imports the copy, no
 build target reads it, refresh only on instruction). Roberto chose the target: LaTeX
 compiled to PDF, figures plus prose. `extract/extract.py` is the v1 pipeline
@@ -471,13 +471,13 @@ carries them forward. On 2026-08-24 the sections and the Definition carve were a
 mirrored into the live headers, on the earlier (wrong) reading that a refresh would
 otherwise wipe them; Roberto stopped a revert of those live commits mid-conflict — the
 live spec had meanwhile moved (the `DutyM` refactor) — so the live copies stay as they
-landed, and no further extraction edit touches `lean/Spec/Consensus1/`.
+landed, and no further extraction edit touches `lean/Spec/`.
 
 ### `FinalityVote.lean`: the attestation-filling rules, imported from the first rendering — 2026-08-23
 
 Roberto: the protocol determining finality votes, written by importing the logic from the
 initial spec (`latex-specs` and the root `Spec` folder). `consensus-1.pdf` shapes the
-attestation but never says how its pairs are filled; `lean/Spec/Consensus1/FinalityVote.lean`
+attestation but never says how its pairs are filled; `lean/Spec/FinalityVote.lean`
 carries the first rendering's voting strategy (`Spec/Defs/Voting.lean`) over:
 `SigningHistory` (τ/T/lock per height, writes returned with the pair), `heightVote` (the
 five-case current-height rule under the confirmed ceiling), `finalityVote` (sign
@@ -633,9 +633,19 @@ this list when a new call lands.
 - **Line comments cite the figure's own numbering**; docstrings are self-contained and cite
   nothing (the 2026-08-19 pivot).
 
+### The spec moves up: `Spec/` and `Spec/Defs/` — 2026-08-24
+
+With one rendering left, its `Consensus1/` directory level said nothing (Roberto: "the
+spec should live under Spec"). The figure files now sit directly under `lean/Spec/`, and
+the definition and vocabulary files under `lean/Spec/Defs/` — the first rendering's
+layout, whose `Spec/Defs/` name returns. `doc/` moved up with them. Module names follow
+(`Spec.Fig1GoldfishWalk`, `Spec.Defs.Model`); the namespace stays `Consensus1`. Path
+mentions in the dated entries above were left as written — they describe the layout of
+their day.
+
 ## Next
 
-0. **`consensus-1.pdf` is rendered as `Spec/Consensus1/`, and everything builds.** All
+0. **`consensus-1.pdf` is rendered as `Spec/`, and everything builds.** All
    seven figures are in; the nondeterministic architecture (2026-08-23), the duty monad
    `NDREB` (2026-08-24) and the imported finality-vote strategy are adopted. Open, in
    order of readiness:

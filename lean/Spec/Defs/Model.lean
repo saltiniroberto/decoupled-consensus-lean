@@ -18,7 +18,7 @@ removal a clean cut.
 
 The file holds the model vocabulary the figure files read, and nothing else: a definition
 lands here at the moment a figure first consumes it, so everything below has a consumer under
-`Spec/Consensus1/`.
+`Spec/`.
 
 **`consensus-1.pdf` has no stable labels or line numbers and is under revision**, so nothing
 here cites it in the checked sense. A docstring saying "Definition 1 of the draft" names the

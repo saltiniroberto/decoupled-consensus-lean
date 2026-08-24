@@ -1,6 +1,6 @@
-import Spec.Consensus1.Model
-import Spec.Consensus1.FinsetM
-import Spec.Consensus1.Raise
+import Spec.Defs.Model
+import Spec.Defs.FinsetM
+import Spec.Defs.Raise
 
 /-!
 # Notation for rendering the draft's figures as pseudocode

@@ -1,7 +1,7 @@
 # decoupled-consensus-lean
 
 A formalization of `consensus-1.pdf` — a human-controlled draft of a Simplex-style finality
-protocol — in Lean 4, as `lean/Spec/Consensus1/`, plus the extractor under `extract/` that
+protocol — in Lean 4, as `lean/Spec/`, plus the extractor under `extract/` that
 renders the Lean back into a document shaped like the draft.
 
 @CLAUDE.local.md
@@ -29,7 +29,7 @@ every definition is correct, and Roberto is the judge of what correct means. Pra
 
 Two older renderings — the `latex-specs` papers (namespace `Decoupled`, with `Analysis/`
 and a citation apparatus) and `consensus.pdf` (namespace `Consensus`) — were removed on
-2026-08-24 (Roberto: keep only what `Spec/Consensus1/` and the extractor need). **The
+2026-08-24 (Roberto: keep only what `Spec/` and the extractor need). **The
 branch `pre-consensus1-purge` holds the last commit carrying all of it**, history
 included; docstrings that name a removed file point there. The `latex-specs` checkout
 survives locally as a plain untracked clone (it was a submodule), and the local
@@ -80,7 +80,7 @@ measured limit: `∈` cannot be overloaded for `Option` elements (recorded on th
 `pre-consensus1-purge` branch).
 
 The running list of every stylistic ruling is **"The `Consensus1` style sheet"** in
-`CONTEXT.md`; the reader-facing versions are the pages under `lean/Spec/Consensus1/doc/`.
+`CONTEXT.md`; the reader-facing versions are the pages under `lean/Spec/doc/`.
 Update the style sheet when a new ruling lands.
 
 **A word the draft *defines* keeps its name; a word it does not define is not used.**

@@ -8,7 +8,7 @@ block field that is a list, without saying in which order. A deterministic rende
 have to invent a resolution for both — an assumption the draft does not make, and one every
 theorem downstream would silently depend on.
 
-`Spec/Consensus1/` renders these choices as genuine nondeterminism. A routine that makes a
+`Spec/` renders these choices as genuine nondeterminism. A routine that makes a
 choice returns the **set of all its possible outcomes**, one outcome per combination of
 choices. No representative is ever picked, so no theorem can depend on one. "The choice
 does not matter" stops being an assumption and becomes a provable statement: the outcome

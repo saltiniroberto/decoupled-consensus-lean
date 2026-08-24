@@ -1,6 +1,6 @@
 import Mathlib.Data.Finset.Union
-import Spec.Consensus1.Fig3AvailableConfirmation
-import Spec.Consensus1.Duty
+import Spec.Fig3AvailableConfirmation
+import Spec.Defs.Duty
 
 /-!
 # Figure 2 — the Goldfish duties and store handlers

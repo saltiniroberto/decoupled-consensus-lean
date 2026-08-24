@@ -1,6 +1,6 @@
 # `extract/` — the document-extraction workstream
 
-The goal (Roberto, 2026-08-23): a script that extracts, out of the `Spec/Consensus1/`
+The goal (Roberto, 2026-08-23): a script that extracts, out of the `Spec/`
 Lean files, a document similar to the source `consensus-1.pdf`.
 
 ## Prose is opt-in: the `## Extract` marker
@@ -21,7 +21,7 @@ rewriter as the figures, and fall back to mono exactly when they quote Lean.
 
 **The `## Extract` sections live in the frozen copy** (Roberto, 2026-08-24): the
 extraction workstream edits the frozen copies under `extract/` only, never
-`lean/Spec/Consensus1/`, and a new freeze carries the sections forward rather than
+`lean/Spec/`, and a new freeze carries the sections forward rather than
 wiping them.
 All nine module headers carry their section, adapted from the draft's own prose. (The
 live headers hold a 2026-08-24 mirror of the sections, made on the earlier, withdrawn
@@ -123,7 +123,7 @@ after a callable is its argument list, so prose writes calls in paper form.
 ## The frozen copies
 
 **`Consensus1-frozen-2/` is the extractor's input**: the `.lean` files of
-`lean/Spec/Consensus1/` (without `doc/`), frozen at commit `b145f3c` on 2026-08-24 —
+`lean/Spec/` (without `doc/`), frozen at commit `b145f3c` on 2026-08-24 —
 the NDREB revision, where a duty broadcasts as a statement — with the extraction-side
 docstring changes applied on top (the `[fig:…]` symbolic references, and the Figure 2
 duty sentence updated to the broadcast shape).
@@ -133,7 +133,7 @@ duties), kept as that iteration's record; nothing reads it.
 
 Rules:
 
-- **The live spec is `lean/Spec/Consensus1/`.** Nothing imports a frozen copy, no build
+- **The live spec is `lean/Spec/`.** Nothing imports a frozen copy, no build
   target reads one (`lake`'s globs claim only `lean/`, and `make orphans` scans only
   `lean/`), and no spec change is made here.
 - A new freeze is made deliberately, on instruction — copy the live `.lean` files and

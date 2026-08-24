@@ -1,6 +1,6 @@
-# Documentation for `Spec/Consensus1/`
+# Documentation for `Spec/`
 
-`Spec/Consensus1/` renders the draft `consensus-1.pdf` (kept locally at the repository
+`Spec/` renders the draft `consensus-1.pdf` (kept locally at the repository
 root; no PDF spec is committed).
 These pages document the design a reader meets on every page of the Lean:
 

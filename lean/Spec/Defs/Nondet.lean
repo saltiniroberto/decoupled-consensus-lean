@@ -1,5 +1,5 @@
 import Mathlib.Data.Set.Functor
-import Spec.Consensus1.Raise
+import Spec.Defs.Raise
 
 /-!
 # Nondeterminism: the two stacks, the pick, and the loop over a set

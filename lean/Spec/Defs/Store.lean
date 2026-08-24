@@ -1,6 +1,6 @@
-import Spec.Consensus1.Fig6StateTransition
-import Spec.Consensus1.Raise
-import Spec.Consensus1.SigningHistory
+import Spec.Fig6StateTransition
+import Spec.Defs.Raise
+import Spec.Defs.SigningHistory
 
 /-!
 # The store

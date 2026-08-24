@@ -1,5 +1,5 @@
-import Spec.Consensus1.Store
-import Spec.Consensus1.Nondet
+import Spec.Defs.Store
+import Spec.Defs.Nondet
 
 /-!
 # The duty monad: an ambient outbox over `NDRE`

@@ -1,5 +1,5 @@
-import Spec.Consensus1.Nondet
-import Spec.Consensus1.Store
+import Spec.Defs.Nondet
+import Spec.Defs.Store
 
 /-!
 # Parked definitions: compiled, unconsumed
@@ -7,7 +7,7 @@ import Spec.Consensus1.Store
 **This file is not a specification.** It holds machinery that lost its last consumer and is
 kept compiling here instead of deleted (Roberto, 2026-08-23), so reviving a piece is a move
 back to its home file rather than an excavation. Each entry says where it came from and what
-would revive it. Nothing under `Spec/Consensus1/` may import this file: a revived definition
+would revive it. Nothing under `Spec/` may import this file: a revived definition
 moves out first.
 -/
 

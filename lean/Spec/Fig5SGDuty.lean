@@ -1,6 +1,6 @@
-import Spec.Consensus1.Fig4SGForkChoice
-import Spec.Consensus1.Fig2GoldfishDuties
-import Spec.Consensus1.Duty
+import Spec.Fig4SGForkChoice
+import Spec.Fig2GoldfishDuties
+import Spec.Defs.Duty
 
 /-!
 # Figure 5 — the SG duty and store handler

@@ -1,5 +1,5 @@
-import Spec.Consensus1.Store
-import Spec.Consensus1.Duty
+import Spec.Defs.Store
+import Spec.Defs.Duty
 
 /-!
 # The finality-vote rules: how an attestation's pairs are determined

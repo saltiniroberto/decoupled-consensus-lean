@@ -1,4 +1,4 @@
-import Spec.Consensus1.Fig1GoldfishWalk
+import Spec.Fig1GoldfishWalk
 
 /-!
 # Figure 3 — available confirmation

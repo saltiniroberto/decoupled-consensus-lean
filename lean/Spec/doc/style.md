@@ -72,5 +72,5 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 ## Retired machinery
 
 - **`OldDefs.lean` parks what lost its consumers** (the `for all`-era macros, the `ForIn`
-  over `Finset`). Nothing under `Spec/Consensus1/` may import it; revive a definition by
+  over `Finset`). Nothing under `Spec/` may import it; revive a definition by
   moving it out.

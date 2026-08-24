@@ -1,5 +1,5 @@
-import Spec.Consensus1.Model
-import Spec.Consensus1.FinsetM
+import Spec.Defs.Model
+import Spec.Defs.FinsetM
 
 /-!
 # Failure: one `Error`, and `DRE`

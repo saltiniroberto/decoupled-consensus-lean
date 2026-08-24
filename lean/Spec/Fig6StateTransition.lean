@@ -1,4 +1,4 @@
-import Spec.Consensus1.Notation
+import Spec.Defs.Notation
 
 /-!
 # Figure 6 — the deterministic finality-gadget state transition
