@@ -27,10 +27,12 @@ are not standard pseudocode — the failure-propagating `←`, the nondeterminis
 - [`lean/Analysis/`](lean/Analysis/) — results stated against the spec (accountable
   safety, so far as a statement).
 
-Also here: [`extract/`](extract/README.md) — `make extract` renders the spec into a
-paper-shaped PDF, `extract/out/dc.pdf` — and [`deps/lean-sts`](https://github.com/saltiniroberto/lean-sts),
-the transition-system framework the spec's duty boundary is shaped for; nothing imports
-it yet.
+Also here:
+
+- [`extract/`](extract/README.md) — `make extract` renders the spec into a paper-shaped
+  PDF, `extract/out/dc.pdf`.
+- [`deps/lean-sts`](https://github.com/saltiniroberto/lean-sts) — the transition-system
+  framework the spec's duty boundary is shaped for; nothing imports it yet.
 
 ## Building
 
