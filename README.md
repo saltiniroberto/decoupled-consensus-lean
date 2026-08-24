@@ -1,177 +1,56 @@
 # decoupled-consensus-lean
 
-A Lean 4 formalization of *Height Filtering and Healing for a Simplex-Style Finality
-Variant*, built section by section and audited as it goes.
+A Lean 4 formalization of `consensus-1.pdf` — a human-controlled draft of a Simplex-style
+finality protocol — together with an extractor that renders the Lean back into a document
+shaped like the draft.
 
-## Where the Lean specification is
+The draft itself is a local file at the repository root and is **not committed**: no PDF
+spec is. A fresh clone builds and reads the Lean on its own; the Lean's docstrings are
+self-contained.
 
-Everything is under `lean/`. The Lake library is called `Spec`, `srcDir` is `lean`, and the
-module root is `Spec`, so a module `Spec.Defs.Basic` is the file `lean/Spec/Defs/Basic.lean`.
+## The specification
 
-**`lean/Spec/` holds the figure translations and nothing else**, so listing it is the list of
-figures rendered so far:
+Everything is under `lean/`. The Lake library is `Spec`, `srcDir` is `lean`, and the module
+root is `Spec`, so `Spec.Consensus1.Model` is `lean/Spec/Consensus1/Model.lean`. The one
+subtree is `lean/Spec/Consensus1/`, namespace `Consensus1`:
 
-    lean/Spec/Fig1SlotReplay.lean
-    lean/Spec/Fig2AttestationProcessing.lean
+- `Fig<n><Subject>.lean` — one file per figure of the draft, `<n>` the draft's own figure
+  number, the `-- line n` comments its own line numbering. The draft defines some routines
+  incrementally; the last reading of each bears the plain `Store` name and the superseded
+  readings are figure-named (`Fig1.getHead`, …).
+- `Model.lean`, `Store.lean`, `SigningHistory.lean`, `FinalityVote.lean` — the substrate,
+  the store, and the imported finality-vote strategy (the draft never defines how the
+  attestation pairs are filled; `FinalityVote.lean` says where its logic comes from).
+- `Notation.lean`, `Raise.lean`, `FinsetM.lean`, `Nondet.lean`, `Duty.lean`,
+  `OldDefs.lean` — the vocabulary layers: the draft's spellings, the failure monad `DRE`,
+  monadic set operations, the nondeterminism monads `NDR`/`NDRE` and the pick `←ᵖ`, the
+  duty monad `NDREB` with `broadcast`, and parked definitions.
+- `doc/` — reader-facing pages on the design: nondeterminism, naming, the style rulings.
 
-Each renders one of the paper's five algorithm figures and is named `Fig<n><Subject>`, where
-`<n>` is the figure's printed number at the pinned revision of the paper.
+## The extractor
 
-| File | Module | What it renders |
-| --- | --- | --- |
-| `lean/Spec/Fig1SlotReplay.lean` | `Spec.Fig1SlotReplay` | Figure 1, `alg:state-replay` — `stateTransition`, `processSlots`, `processSlot` |
-| `lean/Spec/Fig2AttestationProcessing.lean` | `Spec.Fig2AttestationProcessing` | Figure 2, `alg:attestation-processing` — `processBlock`, `processAttestation`, `processAttestations`, `advanceHeight`, `processHeightEvents` |
+`extract/` renders the frozen copy of the spec (`extract/Consensus1-frozen/`) into a PDF
+shaped like the draft: `python3 extract/extract.py` writes and compiles
+`extract/out/consensus1.pdf` (LuaLaTeX). `extract/README.md` carries the conventions the
+script harvests from the Lean and the rewrite rules, and the rule for refreshing the
+frozen copy.
 
-What the figures are written in terms of sits one level down, and the library root ties the
-whole thing together:
+## Commands
 
-| File | Module | What it holds |
-| --- | --- | --- |
-| `lean/Spec.lean` | `Spec` | the library root: one import per file, and nothing else |
-| `lean/Spec/Defs/Basic.lean` | `Spec.Defs.Basic` | the paper's numbered definitions the two figures read — Definitions 3, 4, 5, 8, 9, 13, 14, 15, and the "a state or `invalid`" of 24 |
-| `lean/Spec/Defs/Notation.lean` | `Spec.Defs.Notation` | notation only, no protocol content: the three assignment macros that let a figure file carry the paper's own `σ.h ← σ.h + 1` |
+    make            # list the available targets
+    make cache      # fetch prebuilt Mathlib artifacts -- do this before a first build
+    make dev        # working target: allows sorry, counts what is outstanding
+    make check      # strict target: any sorry/admit fails it
+    make build      # build the library
 
-`Spec/Defs/` is where the definitions of Section 6 onward will go as they land, which is why it
-is a directory rather than two files beside the figures.
+The toolchain is pinned in `lean-toolchain` (Lean 4.32.2); Mathlib's rev in
+`lakefile.toml` and the rev `deps/lean-sts` requires must match it. `deps/lean-sts` is a
+git submodule (the state-transition-system framework the eventual wiring will target).
 
-Module names and declaration names are separate. Every file opens `namespace Decoupled`, so
-the declarations are `Decoupled.processSlot`, `Decoupled.Blk` and so on regardless of which
-module they live in. `INDEX.tsv` lists all of them.
+## History
 
-### What is rendered, and what is not
-
-Figures 1 and 2, and the numbered definitions those two read. Figures 3, 4 and 5 are absent,
-as is everything from Section 6 onward.
-
-**Nothing is proved, and nothing is stated.** No numbered lemma, theorem or corollary of the
-paper has a Lean statement yet.
-
-`MAPPING.md` is the authority on what exists. It carries three tables: the paper's 5 algorithm
-figures, of which 2 have Lean files; its 49 definitions and assumptions, of which 11 are
-rendered; and its 92 numbered results, every one of them still absent.
-
-The 11 are the 8 in `Basic.lean` above, plus Definitions 10, 16 and 18, which have no separate
-declaration because the figure routines *are* their rendering — `processAttestation` is
-Definition 16's fold and Definition 10's two height tests, and `processHeightEvents` with
-`advanceHeight` is Definition 18's three cases.
-
-Nothing in the specification is `noncomputable`, which means the figures can be executed on
-concrete input rather than only reasoned about. Getting there needed decidable equality on
-blocks written out by hand, because `deriving DecidableEq` does not reach the mutual family;
-`CONTEXT.md` records why and what the alternatives were.
-
-## Where the analysis is
-
-The paper's numbered results, stated against the specification above. Its own library, root
-`Analysis`, same `srcDir`:
-
-| File | Module | What it holds |
-| --- | --- | --- |
-| `lean/Analysis.lean` | `Analysis` | the library root: one import per file below |
-| `lean/Analysis/Lemmas.lean` | `Analysis.Lemmas` | statements of record, one per numbered lemma. Empty so far: it holds the groundwork for Sections 3 and 4 and no statement |
-
-Two libraries rather than one because the two halves have no shared module prefix — the
-specification is rooted at `Spec` and the analysis at `Analysis`, and `tools/decl_index.lean`
-names both in its `modRoots`.
-
-**Nothing is stated yet.** `Analysis/Lemmas.lean` declares nothing; it carries the groundwork
-for the nine lemmas of Sections 3 and 4 — which are statable in today's vocabulary, which wait on
-a definition the specification does not have, and where the chain replay should live. The
-statements are being added one at a time, each audited against the paper on its own.
-
-When they do land, each is one of two Lean shapes, forced by how much vocabulary exists rather
-than by any difference in progress. `MAPPING.md` marks both 🔨 *stated*:
-
-- `theorem … := sorry`, where the paper's sentence is expressible today.
-- `def … : Prop` taking the absent notion as an argument, where it is not. It has to be a `def`
-  rather than a `theorem` because over an unconstrained argument the claim would be *false*
-  rather than unproved, and a `sorry` would hide that.
-
-**`make check` only catches the first shape.** A `def … : Prop` contains no `sorry`, so the
-strict target passes it. Green therefore means "no `sorry`", not "the paper's results are
-proved" — `MAPPING.md`'s status column is what answers the second question.
-
-## The rest of the layout
-
-| Path | What |
-| --- | --- |
-| `latex-specs/` | the paper, a pinned submodule (`e4375c5`) of <https://github.com/saltiniroberto/decoupled-consensus-latex-specs>. The numbered definitions, the figures and the lemma statements are the contract; most of the prose around them is AI-generated and is not. |
-| `deps/lean-sts/` | the STS framework, a pinned submodule (`870c535`) of <https://github.com/saltiniroberto/lean-sts>. This project uses its `StsMultisetLog` flavour. **Never pushed to** — see below. |
-| `lean/Analysis/` | the paper's numbered results — see above. Its own `lean_lib`, root `Analysis`. |
-| `MAPPING.md` | paper ↔ Lean, keyed on the paper's `\label` because that is what survives renumbering. One row per numbered result the paper has. |
-| `mapping.html` | a sortable, filterable view of `MAPPING.md`'s results table, generated by `make mapping`. |
-| `INDEX.tsv` | one row per declaration in *this* project — kind, name, `file:line`, conclusion, hypotheses. Generated by `make index`. |
-| `CONTEXT.md` | the durable record: decisions, the alternatives rejected, dead ends, what is proved and what is not. Read it before starting work. |
-| `tools/` | `check_citations.py`, `mapping_html.py`, `decl_index.lean`. Tooling, in no `lean_lib`. |
-| `CLAUDE.md` | the rules this project works under, including its proof discipline. |
-| `.claude/` | the hook that refuses pushes to the framework submodule, and a skill holding Lean proof techniques for definitions written in the paper's imperative shape. |
-
-## Getting started
-
-    git clone --recurse-submodules <this repo>
-    make cache          # prebuilt Mathlib artefacts; without this Mathlib compiles from source
-    make dev            # the working target: builds, and counts what is unproved
-
-Both submodules are public, so a recursive clone needs no credentials. Tested with terminal
-prompts disabled: it brings down the paper at `e4375c5` and the framework at `870c535`.
-
-There are two build targets, and which one you want depends on whether a proof is finished:
-
-| Target | `native_decide` | `sorry` / `admit` | Citations | Build |
-| --- | --- | --- | --- | --- |
-| `make dev` | fails | allowed, counted | checked | yes |
-| `make check` | fails | fails | checked | yes |
-
-`make dev` is the working target while a proof is being written, which is why the quickstart
-above uses it. `make check` is what says the work is done. Both are green today, there being no
-statement yet to prove; `make check` will start failing with the first `theorem … := sorry`.
-`make sorries` lists every outstanding one with `file:line` and does not fail, so it answers
-"what is left".
-
-`make` on its own lists every target. The others worth knowing are `make index` and
-`make mapping`, which regenerate `INDEX.tsv` and `mapping.html`, and `make cites`, which checks
-every `\label` and printed number in this repository against the paper.
-
-`make cites` needs the paper built, because the printed numbers come from
-`height_filter_healing.aux`, a LaTeX artefact the submodule does not carry. It skips with a
-notice when that file is absent. To produce it:
-
-    make paper
-
-The toolchain is pinned in `lean-toolchain` (Lean 4.32.2). Mathlib's rev in `lakefile.toml`
-must match it and must match the rev `deps/lean-sts` requires: Lake resolves one rev per
-dependency name across a whole build graph. All three are `v4.32.2`.
-
-## What this repository refuses to do
-
-**Push to lean-sts.** `deps/lean-sts` is a submodule of a separate project, so a push from
-inside it publishes there rather than here. `.claude/hooks/protect-lean-sts.py` denies the
-attempt, and also denies writes under that directory. To change which revision this project
-builds against, check out the commit in the submodule and commit the pointer here — that needs
-no push.
-
-**Move a claim off the kernel.** No added `axiom` and no `native_decide`, ever; both `make dev`
-and `make check` grep for the latter and fail. Neither is something later work can discharge.
-
-`sorry` and `admit` are treated differently, because a missing proof is a normal intermediate
-state. They are allowed while a proof is being written, and they are counted rather than
-tolerated silently — see the two targets below. A result whose *statement* cannot yet be written,
-because it quantifies over something this project has not modelled, is a separate case: that one
-stays a `def … : Prop`, so nothing claims a shape the paper has not been checked to support.
-
-## License
-
-Apache License 2.0 — see [LICENSE](LICENSE). Same as `deps/lean-sts`, and as Mathlib.
-
-The license covers this repository's own contents. It does not cover the submodules: the paper
-in `latex-specs` and the framework in `deps/lean-sts` each carry their own terms.
-
-## The first attempt
-
-There is a complete earlier formalization of the same paper, in a different repository. Nothing
-from it lives here: not its Lean, and no copies of its notes either. Its conclusions are
-unverified from this project's point of view, and a copy sitting in this tree would read as
-this project's own material, so an inherited mistake would be believed rather than checked.
-
-It is consulted on request, and read where it lives. This repository records no path to it,
-because where a sibling checkout sits is a fact about one machine rather than about the project.
+Two older renderings — the `latex-specs` papers (with a proved `Analysis/` layer and a
+citation apparatus) and `consensus.pdf` — lived in this repository until 2026-08-24, when
+it narrowed to the scope above. The branch `pre-consensus1-purge` holds the last commit
+carrying them, full history included. `CONTEXT.md` is the running record of decisions
+since; the `latex-specs` checkout survives locally, untracked.
