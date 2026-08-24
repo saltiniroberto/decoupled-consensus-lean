@@ -137,8 +137,8 @@ def W (Validator : Type) [Electorate Validator] : Nat :=
 /-- `q = ⌈2W/3⌉`, the finality layer's quorum threshold, written in `Nat` arithmetic. A set is a
     quorum when its weight is at least `q`.
 
-    The protocol's other thresholds are not constants: Goldfish's gate is `2·score > voters` and
-    the SG gate is `2·support > W_r`, each a strict majority of a *denominator the rule
+    The vote rules' thresholds are not constants: Goldfish's is `2·score > voters` and the
+    SG rule's is `2·support > W_r`, each a strict majority of a *denominator the rule
     computes*, so each is written where it is used. -/
 def q (Validator : Type) [Electorate Validator] : Nat := (2 * W Validator + 2) / 3
 
@@ -153,6 +153,11 @@ def Quorum (S : Finset Validator) : Prop := w(S) ≥ q Validator
 @[inherit_doc] scoped notation:50 "w(" S ")≥q" => Quorum S
 
 instance (S : Finset Validator) : Decidable (Quorum S) := inferInstanceAs (Decidable (_ ≥ _))
+
+/-- `m = ⌊W/2⌋ + 1`, the majority threshold, written in `Nat` arithmetic: a weight of at
+    least `m` is a strict majority of the total weight `W`. The healing layer's grades
+    (`09_Healing.lean`) compare support scores against it. -/
+def m (Validator : Type) [Electorate Validator] : Nat := W Validator / 2 + 1
 
 end Electorate
 
@@ -207,6 +212,12 @@ def round [Params] (s : Nat) : Nat := s / Params.R
 
 /-- The start of round `r`: the start of its opening slot, `t_{rR}`. -/
 def roundStart [Params] (r : Nat) : Int := slotStart (r * Params.R)
+
+/-- `Γ_j`, the grade instants of round `r`: `Γ_j = roundStart r + jΔ`. Round `r` grades
+    the received round-`(r−1)` attestations at its four grade instants, `j ∈ {−1, 0, 1, 2}`
+    (`09_Healing.lean`); the definition is total over `j`, and only those four are the
+    protocol's. -/
+def Γ [Params] (j : Int) (r : Nat) : Int := roundStart r + j * (Params.Δ : Int)
 
 /-- `a_r`, each round's SG vote time: `6Δ` after the beginning of the round,
     `a_r = roundStart r + 6Δ`. That instant is also `t_{rR+1} + 2Δ`, the tick at which

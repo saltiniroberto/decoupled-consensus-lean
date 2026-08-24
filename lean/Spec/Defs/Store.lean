@@ -13,6 +13,7 @@ naming the layer it arrives in.
     Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)   availability
       + sg_votes[·]                                                              SG
       + σ[·], F, h_F, J, h_j, h_max                                              finality
+      + head[·], equiv[·], root_proposal[·], sg_root[·]                          healing
       + H, i                                                                     this spec's own
 
 ## The protocol's `Σ` is written `S`
@@ -78,9 +79,11 @@ The store is
 
 `Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)`
 
-and the later layers add their fields to it — `sg_votes[·]` with the SG layer, and the
+and the later layers add their fields to it — `sg_votes[·]` with the SG layer, the
 state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)` with the finality
-layer. Later layers only ever add fields and lines; they never rename either.
+layer, and the per-round bookkeeping `head[·]`, `equiv[·]`, `root_proposal[·]`,
+`sg_root[·]` with the healing layer. Later layers only ever add fields and lines; they
+never rename either.
 
 ## Extract
 
@@ -159,6 +162,16 @@ scoped instance stateMapGetElem :
       (DRE (ChainState Validator)) (fun _ _ => True) where
   getElem σ B _ := if h : B ∈ σ then .ok ((σ B).get h) else .error .error
 
+/-- A head record of the healing layer's per-round bookkeeping `Σ.head[·]`: the head block
+    an attestation named, and the time the store processed it. A named structure, where a
+    bare product would name nothing. -/
+structure HeadEntry (Validator : Type) where
+  /-- The head block. -/
+  H : Block Validator
+  /-- When it was processed. -/
+  t : Int
+deriving DecidableEq
+
 /-- The store, every layer's fields at once.
 
     "The store keeps messages and their arrival times, and nothing else. Every rule below is
@@ -203,6 +216,21 @@ structure Store (Validator : Type) where
   /-- `Σ.h_max`, the greatest state height in the live tree. It "otherwise only grows", and
       is recomputed inside the new live tree whenever `Σ.F` advances. -/
   h_max : Nat
+  /-- `Σ.head[r][i]` (healing layer): the first nonempty head processed from validator `i`'s
+      round-`r` attestations, with its processing time; absent while none. Indexed by `Int`:
+      round `r` grades its round-`(r−1)` entries (`09_Healing.lean`), and round `0` must
+      find round `−1` empty — a `Nat` index would truncate `0 − 1` back to `0`. -/
+  head : Int → Validator → Option (HeadEntry Validator)
+  /-- `Σ.equiv[r][i]` (healing layer): the time at which a head different from
+      `Σ.head[r][i]`'s was first processed from validator `i` in round `r`; absent while
+      none. Indexed by `Int` for the same reason as `head`. -/
+  equiv : Int → Validator → Option Int
+  /-- `Σ.root_proposal[r]` (healing layer): the proposal root carried by the first round-`r`
+      opening block processed, `⊥` while no opening block has arrived. -/
+  rootProposal : Nat → Option (Block Validator)
+  /-- `Σ.sg_root[r]` (healing layer): the round's stored SG root (`get_sg_root`,
+      `09_Healing.lean`), `⊥` before the scheduled write. -/
+  sgRoot : Nat → Option (Block Validator)
   /-- `Σ.H`, the validator's durable signing record — **not a field of the protocol's store**:
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
       its use in `08_FinalityVote.lean`. Written only by those rules. -/
@@ -243,6 +271,10 @@ def Store.gen (i : Validator) : Store Validator where
   J := .genesis
   h_j := 0
   h_max := 1
+  head := fun _ _ => none
+  equiv := fun _ _ => none
+  rootProposal := fun _ => none
+  sgRoot := fun _ => none
   H := SigningHistory.gen
   i := i
 
