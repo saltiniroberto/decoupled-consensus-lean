@@ -74,12 +74,15 @@ All of this is the arrangement the previous rendering arrived at over 2026-08-21
 map type because instances resolve on a type's head constant, and a bare function type has
 none.
 
-## Extract
+## Extract — Definition (Store)
 
 The store is `Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed,
-latest_confirmed)`, and the later layers add their fields to it: `sg_votes[·]` at
-Section 3, and the state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)`
-at Section 5. Later sections only ever add fields and lines; they never rename either.
+latest_confirmed)`; the later layers add their fields to it — `sg_votes[·]` with the SG
+layer, and the state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)` with
+the finality layer. Later layers only ever add fields and lines; they never rename
+either.
+
+## Extract
 
 `Σ.T` is the tree of processed blocks and `Σ.gf_votes[k]` the set of processed slot-`k`
 votes; both are timestamped, `Σ.timestamp(x)` being the time at which object `x` was

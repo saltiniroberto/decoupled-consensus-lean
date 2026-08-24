@@ -55,7 +55,11 @@ per slot, one Goldfish vote per slot, and one combined attestation per round.
 
 Every block is evaluated from its parent's immutable post-state,
 `σ[B] = state_transition(σ[B.parent], B)`, and the result is a deterministic function
-of the chain ending at `B`. A chain state is
+of the chain ending at `B`.
+
+## Extract — Definition (Chain state)
+
+A chain state is
 `σ = (L, s, h, T_h, nj, target_participation, progress, finalize, J, h_j, F, h_F)`:
 `L` is the latest block, `s = L.slot`, `h` the current height, and `T_h` the block that
 carried the transition into height `h`. The arrays `target_participation`, `progress`

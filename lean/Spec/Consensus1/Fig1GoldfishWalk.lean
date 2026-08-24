@@ -70,7 +70,7 @@ can neither create nor block a descent". That is why line 2 collects them separa
 4 adds both cardinalities: a validator with two votes is added to every block's score without
 its target being read at all.
 
-## Extract
+## Extract — Definition (Goldfish score and walk)
 
 Fix a vote slot `s` and a set `votes` of slot-`s` votes. Validator `v ∈ K_s`
 equivocates when `votes` holds two of its distinct votes, and participates when it
@@ -78,6 +78,8 @@ holds at least one. `goldfish_score(votes, s, B)` counts every equivocator plus 
 non-equivocating participant whose target descends from `B`. An equivocator counts for
 every block and stays among the participants, so it can neither create nor block a
 descent; a non-equivocating validator counts once, in one subtree.
+
+## Extract
 
 Throughout this document, `ghost(anchor, tree, score, eligible)` is used as a building
 block, where `score` is a function on blocks and `eligible` a predicate on blocks. It
