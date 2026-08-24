@@ -12,8 +12,10 @@ tail, or a unique harvested paper symbol. A paragraph consisting of nothing but
 backticked spans and/or `[eq:…]` refs renders as a displayed line: centered, items
 separated by quad space — the draft's own equation rows.
 
-v5: the sources drive the structure. Files render in alphabetical order of their path
-under SRC, a file emitting a section only when something in it is marked `## Extract`.
+v5: the sources drive the structure. Files in a subdirectory render before the files
+at SRC's root (the vocabulary a spec is written in terms of precedes its algorithms),
+alphabetically within each, a file emitting a section only when something in it is
+marked `## Extract`.
 A `def` whose own docstring carries an `## Extract` section is *figured* — rendered as
 pseudocode in the file's figure, in the file's declaration order. The paper form
 derives from the Lean signature (`goldfishScore (votes …) (s …) (B …)` renders
@@ -2096,11 +2098,15 @@ def main():
     args = ap.parse_args()
     OUT.mkdir(exist_ok=True)
 
-    # harvest over every file, vocabulary included; files render in alphabetical
-    # order of their path under SRC
+    # harvest over every file, vocabulary included. Files in a subdirectory render
+    # before the files at SRC's root — the vocabulary a spec is written in terms of
+    # precedes its algorithms — and alphabetically within each.
     all_items = []
     parsed = []
-    for path in sorted(SRC.rglob("*.lean")):
+    files = sorted(SRC.rglob("*.lean"),
+                   key=lambda p: (len(p.relative_to(SRC).parts) == 1,
+                                  str(p.relative_to(SRC))))
+    for path in files:
         header, items = parse_file(path)
         parsed.append((path, header, items))
         all_items.extend(items)

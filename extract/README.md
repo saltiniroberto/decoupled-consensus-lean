@@ -18,9 +18,11 @@ the draft, and new commentary stays out without anyone remembering to fence it.
   with no prose still figures the def.
 - In any other declaration's docstring: the section follows the figure.
 
-The marker also drives the document's structure (Roberto, 2026-08-24): **files render
-in alphabetical order of their path under `lean/Spec/`**, a file with nothing marked
-emitting no section, and **a file's figured routines render in declaration order**.
+The marker also drives the document's structure (Roberto, 2026-08-24): **files in a
+subdirectory render before the files at the root** — the vocabulary a spec is written
+in terms of precedes its algorithms — **alphabetically within each**, a file with
+nothing marked emitting no section, and **a file's figured routines render in
+declaration order**. So `Defs/Model`, `Defs/Store`, then `01_…` through `08_…`.
 
 Marked prose renders in the draft's typography: backticked spans go through the same
 rewriter as the figures, and fall back to mono exactly when they quote Lean.
