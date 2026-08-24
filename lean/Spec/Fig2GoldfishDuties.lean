@@ -1,6 +1,6 @@
 import Mathlib.Data.Finset.Union
 import Spec.Fig3AvailableConfirmation
-import Spec.Defs.Duty
+import Spec.Defs.Nondet
 
 /-!
 # Figure 2 — the Goldfish duties and store handlers
@@ -31,7 +31,7 @@ to run it* that is not.
 
 The protocol's duties broadcast and then process their own object: `broadcast B;
 process_block(Σ, B)`. That line renders verbatim: a duty runs in
-`NDREB` (`Duty.lean`) — the outbox threaded over `NDRE` — taking the store and returning
+`NDREB` (`Nondet.lean`) — the outbox threaded over `NDRE` — taking the store and returning
 the store, with `broadcast` the protocol's own verb. No caller unions sends: an earlier
 duty's broadcasts are already in the outbox when a later one runs. The boundary object
 `DutyResult` survives only in `NDREB.outcomes`, where the sts wiring consumes a duty as a

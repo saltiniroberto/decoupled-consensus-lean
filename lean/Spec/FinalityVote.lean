@@ -1,5 +1,5 @@
 import Spec.Defs.Store
-import Spec.Defs.Duty
+import Spec.Defs.Nondet
 
 /-!
 # The finality-vote rules: how an attestation's pairs are determined

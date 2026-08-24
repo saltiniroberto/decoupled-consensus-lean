@@ -1,6 +1,6 @@
 import Spec.Fig4SGForkChoice
 import Spec.Fig2GoldfishDuties
-import Spec.Defs.Duty
+import Spec.Defs.Nondet
 
 /-!
 # Figure 5 — the SG duty and store handler

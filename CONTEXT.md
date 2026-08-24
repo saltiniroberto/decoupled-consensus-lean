@@ -545,7 +545,8 @@ what was. Historical searches need both names.
 The trail: `DutyResult.withSend` (the tick's send union) prompted "any alternatives"; the
 duty-monad option was probed twice — store and outbox both ambient, **declined**
 (Roberto: the functions must keep their input `Store`; ambient identity also cost the
-instant autoparams) — and outbox only, adopted ("ok"). `Duty.lean` is the machinery (a not-a-specification file): `NDREB α
+instant autoparams) — and outbox only, adopted ("ok"). The machinery landed in its own
+`Duty.lean`, merged into `Nondet.lean` later on 2026-08-24 (entry below): `NDREB α
 = StateT (Finset (Message _)) NDRE α` — nondeterministic result with exception and
 broadcasts, the effect-inventory name continuing `DRE`/`NDRE` (Roberto; the first name,
 `DutyM`, lasted an hour — the `-M` suffix here marks monadic variants of named pure
@@ -626,8 +627,8 @@ this list when a new call lands.
   type parameter, confirmed 2026-08-23. Two former members dissolved into nondeterminism the
   same day: `TieBreak` (the tie is a pick) and `[LinearOrder (GoldfishVote Validator)]`
   (the carried list is a picked listing).
-- **Duties run in `NDREB`** (`Duty.lean`, 2026-08-24; entry above): the outbox threaded
-  over `NDRE`, `broadcast` the draft's own verb, the store an explicit input and output —
+- **Duties run in `NDREB`** (`Nondet.lean`, 2026-08-24; entry above): the outbox threaded
+  over `NDRE`, `broadcast` the protocol's own verb, the store an explicit input and output —
   no caller unions sends. `DutyResult` survives at the boundary only, `NDREB.outcomes`
   being what the sts wiring and `Analysis/` consume; `on_tick` returns from each action
   branch directly.

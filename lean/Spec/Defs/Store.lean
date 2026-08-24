@@ -250,7 +250,7 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 /-! ## The duty boundary object
 
 Not protocol content: the protocol's duties `broadcast` and return nothing. Duties run in
-`NDREB` (`Duty.lean`) — they broadcast into the monad's outbox and return the store — and
+`NDREB` (`Nondet.lean`) — they broadcast into the monad's outbox and return the store — and
 this structure survives at the consumption boundary alone: `NDREB.outcomes` packages a
 run's store and outbox as one value, the state-and-send shape of a lean-sts step result
 (`NodeStepResult` in the framework), so the wiring layer consumes a duty without
