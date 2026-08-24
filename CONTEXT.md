@@ -311,6 +311,33 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   certificate-knowledge to model. A store-free `fgVote` layer between the rules and the
   wiring was folded away — it added only a name, and the name collided (the bare-name
   trap below).
+- **The healing layer** (`09_Healing.lean`, imported 2026-08-25 from the earlier draft's
+  Figures 4 and 5, on Roberto's word — the draft `consensus.pdf`, local; not
+  `consensus-1.pdf`, whose Figures 4–5 are the SG files). The support scores and grades
+  over the store's new per-round bookkeeping (`head`/`equiv`/`root_proposal`/`sg_root`,
+  `Store.lean`), and the five round-root functions. The vocabulary landed with it:
+  `m = ⌊W/2⌋ + 1` beside `q`, and the grade instants `Γ j r = roundStart r + jΔ` beside
+  `roundStart` (both `Model.lean`, where the source's own model and schedule sections put
+  them). The crossing decisions, each to revisit:
+  - the per-round maps are `Int`-indexed: round `r` reads its round-`(r − 1)` entries and
+    round `0` must find round `−1` empty, where a `Nat` index would truncate `0 − 1` to `0`;
+  - `HeadEntry` is a named structure (`H`, `t`), `deriving DecidableEq` — a plain
+    structure, so the mutual-family deriving limit does not apply;
+  - "the deepest block in `G`" is a pick from `deepest G`, the `⪯`-maximal blocks; the
+    one-chain claim that makes the pick a singleton is `Analysis/` matter, not assumed;
+  - the source's `C(Σ)` and `fork choice root(Σ)` are the existing
+    `get_filtered_block_tree` and `fork_choice_root` (`07_FGStore.lean`) — the two
+    documents define them the same way, so no new view was added;
+  - `H_j`/`E_j` filter over `V` where the source filters the map's domain — an entry
+    outside `V` would carry no weight either way;
+  - `get_walk_root` reads `Σ.sg_root[r]` by the raising extraction — the source assumes
+    the entry is set, the protocol calling it only after the round's write;
+  - `G0` is imported with the other grades though nothing reads it yet.
+  Skipped, deliberately, each to land with its own figure: the writers (the source's
+  `on_tick`/`on_attestation` lines and the `on_block` proposal-root registration), the
+  block's proposal-root field, and the `action_root[·]` store field. The source's
+  schedule note — "this schedule requires `R ≥ 2`", `a_r + Δ ≤ t_{r+1} − Δ` — bears on
+  the open `R = 1` question (Next).
 
 ### Naming and layout
 
@@ -422,6 +449,18 @@ works but duplicates the sequence in a `def`.
   bare name `fgVote` resolves to the def itself.
 - Digit-leading module names take guillemets: `import Spec.«01_GoldfishWalk»`.
 
+### Set-builders over `Option` entries (2026-08-25)
+
+- **An inline `∃ e ∈ (o : Option α), …` condition fails in a `def`-level set-builder**:
+  the sep notation's `DecidablePred` synthesis dies on it inside a `def`, even though the
+  identical goal synthesizes as an `example`'s stated type or through a `haveI` in the
+  same body (measured, `scratch/HealingFilterProbe.lean`). Fix: name the condition as a
+  `Prop` with a keyed `Decidable` instance — `Store.headSupports`, `Store.equivBefore`.
+  Over a `Finset`, the inline `∃` works (`sgSupport`).
+- **A `let`-bound set-builder over `Electorate.V` needs the instance pinned**:
+  `{i ∈ Electorate.V (Validator := Validator) | …}`; unpinned, elaboration sticks on
+  `Electorate ?m` (`W`'s definition set the spelling).
+
 ### `do` blocks over `Set`
 
 - A `do` block's result type must *name* the stack (`NDR`/`NDRE`): declared as bare
@@ -439,8 +478,13 @@ works but duplicates the sequence in a `def`.
 ## Next
 
 0. **The spec is the source of truth, complete over its seven figures plus the
-   finality-vote rules, and everything builds** (`make check` green). Open, in order of
-   readiness:
+   finality-vote rules and the healing functions, and everything builds** (`make check`
+   green). Open, in order of readiness:
+   - **the healing writers** (2026-08-25): `09_Healing.lean` holds the scores, grades and
+     round-root functions, but the four store fields they read are written by no routine —
+     the `on_tick`/`on_attestation` handler lines, the `on_block` proposal-root
+     registration, the block's proposal-root field, and the `action_root[·]` field all
+     await their figures (see the healing entry under Decisions).
    - **the sts wiring**: a step consumes a duty as `res ∈ (….outcomes)`; `deps/lean-sts`'s
      `StsMultisetLog` is the target, and the framework-layer audit (its `Execution.lean`
      and `Schedule.lean`) is owed before trusting it.
@@ -448,9 +492,10 @@ works but duplicates the sequence in a `def`.
      as `.error ∉ …` on coherent stores, "the walk does not depend on its picks" as a
      singleton outcome set. The old `coherence-invariant` branch predates this store and
      does not transfer.
-   - **Open questions awaiting Roberto's call**: `a_r` vs `R = 1` (above); renaming the
-     `Fig<n>.…` declaration prefixes; the duties taking `Σ.i` instead of an `i`
-     parameter.
+   - **Open questions awaiting Roberto's call**: `a_r` vs `R = 1` (above; the healing
+     source's schedule states outright that it requires `R ≥ 2`, where `Params` requires
+     only `R ≥ 1`); renaming the `Fig<n>.…` declaration prefixes; the duties taking
+     `Σ.i` instead of an `i` parameter.
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
      and the formula is deferred on Roberto's word.

@@ -13,7 +13,7 @@ part of the protocol; read them in this order, which is dependency order:
 | [`05_SGDuty.lean`](../05_SGDuty.lean) | `sg_vote`, its handler, and the protocol's `on_tick` |
 | [`07_FGStore.lean`](../07_FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, the protocol's `get_head` |
 | [`08_FinalityVote.lean`](../08_FinalityVote.lean) | how a validator fills the attestation it signs |
-| [`09_Healing.lean`](../09_Healing.lean) | healing — a stub, nothing defined yet |
+| [`09_Healing.lean`](../09_Healing.lean) | healing: the support scores and grades, and the round-root functions (proposal, lower, SG, walk, action) |
 
 What the algorithms are written in terms of sits in [`Defs/`](../Defs):
 
