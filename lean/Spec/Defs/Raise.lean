@@ -5,13 +5,13 @@ import Spec.Defs.FinsetM
 # Failure: one `Error`, and `DRE`
 
 **This file is not a specification.** It holds no protocol content — nothing here renders a
-definition or a figure of the draft. It is the failure vocabulary the whole rendering shares,
-kept out of the figure files so that each of those states what the draft says and nothing
+definition or a figure of the protocol. It is the failure vocabulary the whole rendering shares,
+kept out of the figure files so that each of those states what the protocol says and nothing
 else.
 
-The draft has no failures. Its state map is defined on every accepted block and its routines
+The protocol has no failures. Its state map is defined on every accepted block and its routines
 run at the instants the schedule names, so every raise below is a rendering artifact: it marks
-a place where this Lean cannot see what the draft's prose knows. The theorem worth having is
+a place where this Lean cannot see what the protocol's prose knows. The theorem worth having is
 therefore that **nothing ever raises** on a store that keeps the coherence invariant, and that
 belongs to `Analysis/`.
 
@@ -44,7 +44,7 @@ namespace Consensus1
     nothing. `Σ.σ[B]` raises it when the map does not record `B`; anything added later raises
     the same value. See the module header for why it has no payload.
 
-    Timing is deliberately not a failure. In this draft nothing tests its own instant:
+    Timing is deliberately not a failure. In this protocol nothing tests its own instant:
     `on_tick` dispatches on the clock it was handed, and every routine it calls runs because
     the tick said so. -/
 inductive Error where

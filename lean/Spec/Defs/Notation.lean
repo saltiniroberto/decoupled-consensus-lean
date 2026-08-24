@@ -3,15 +3,15 @@ import Spec.Defs.FinsetM
 import Spec.Defs.Raise
 
 /-!
-# Notation for rendering the draft's figures as pseudocode
+# Notation for rendering the protocol's figures as pseudocode
 
 **This file is not a specification.** It holds no protocol content — no state, no routine,
-nothing that can be checked against the draft. It is the notation layer that lets the
-figure files carry the draft's own assignment statements — `σ.h ← σ.h + 1`,
+nothing that can be checked against the protocol. It is the notation layer that lets the
+figure files carry the protocol's own assignment statements — `σ.h ← σ.h + 1`,
 `σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, and its
 set-builders whose condition raises, `{x ∈ᴹ s | p}`.
 
-The macros are protocol-free — nothing here names anything from the draft — and
+The macros are protocol-free — nothing here names anything from the protocol — and
 `scoped`, active only inside this namespace. The decisions:
 
 **A routine is a plain `def … : T := Id.run do`.** No `function` command that would default
@@ -32,7 +32,7 @@ another monad is untouched. A mistake is a type error, never a silent one.
 
 ## `←` renders as `←` only where it re-assigns
 
-The draft writes `←` both for introducing a name and for overwriting one. Lean
+The protocol writes `←` both for introducing a name and for overwriting one. Lean
 distinguishes them, and so do the figure files:
 
 * **introduces** a name → `let x := e`, or `let mut x := e` when a later line overwrites it;
@@ -69,7 +69,7 @@ macro_rules
         let f := mkIdent (Name.mkSimple n.getString!)
         `(doElem| $v:ident := { $v with $f:ident := $e })
 
-/-- `σ.f, σ.g ← e`, the draft's simultaneous assignment, as in `advance_height`'s
+/-- `σ.f, σ.g ← e`, the protocol's simultaneous assignment, as in `advance_height`'s
     `σ.target_participation, σ.progress ← false^V`. Both sides get the same `e`, which is
     what that line means. -/
 scoped syntax (name := pairAssign) (priority := high) ident ", " ident " ← " term : doElem
@@ -130,8 +130,7 @@ macro_rules
       `(doElem| let mut $y:ident ←
           (Finset.filterM (fun $x => do return $p) $s : DRE _))
 
-/-- `|s|` for `Finset.card s`, as the draft writes it: `|equivocators| + |supporters|`
-    (Figure 1, line 4). Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so
+/-- `|s|` for `Finset.card s`, as the protocol writes it: `|equivocators| + |supporters|`. Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so
     `|{v ∈ K | p v}|` parses with the set-builder's own `|` inside, and a bar in a `match`
     alternative is untouched (both measured).
 

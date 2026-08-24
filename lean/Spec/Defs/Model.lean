@@ -6,41 +6,33 @@ import Mathlib.Data.Finset.Lattice.Basic
 /-!
 # The common substrate, and the wire objects
 
-This is the rendering of `consensus-1.pdf`, the protocol's human-controlled working
-draft (not distributed with this repository), under namespace `Consensus1`.
+The substrate of the specification: everything the algorithm files read and no
+algorithm of their own. A definition lands here at the moment an algorithm file first
+consumes it, so everything below has a consumer under `Spec/`. Docstrings are
+self-contained: each definition's own text is what it means.
 
-The file holds the model vocabulary the figure files read, and nothing else: a definition
-lands here at the moment a figure first consumes it, so everything below has a consumer under
-`Spec/`.
-
-**`consensus-1.pdf` has no stable labels or line numbers and is under revision**, so nothing
-here cites it in the checked sense. A docstring saying "Definition 1 of the draft" names the
-draft's numbering as of 2026-08-22, and the docstring's own text is what the Lean is read
-against.
-
-## What Section 1 fixes, and this file renders
+## What this file fixes
 
 A fixed validator set `V`; slot `s` starts at `t_s = 4Δs` and has an assigned proposer and a
 fixed committee `K_s ⊆ V`. Every block has a root, a slot and a parent, and processed blocks
 form a parent-closed tree rooted at `B_gen`. `B ⪯ C` is ancestry, `B ≺ C` strict ancestry,
 and two blocks are *compatible* when one is an ancestor of the other.
 
-Three things Section 1 states that are **not** rendered, each for a reason:
+Three things deliberately **not** rendered, each for a reason:
 
-* the assigned proposer. Which validator proposes in a slot is outside the draft's scope, so
+* the assigned proposer. Which validator proposes in a slot is outside the protocol's scope, so
   `on_tick` takes the test as a parameter (Figure 2);
 * `t_GST` and the delivery bound as a *property*. `Δ` is a constant here; that objects arrive
   within it is a fact about executions, and there is no execution layer yet;
-* depth. Section 1 defines it and, in this draft, no figure reads it — `ghost` breaks ties by
-  root order, not by depth.
+* depth — no algorithm reads it: `ghost` breaks ties by root order, not by depth.
 
 ## `B.root` is a field of an abstract type `Root`
 
-The draft gives every block a root — the post-state root of Section 4 — and this rendering
+The protocol gives every block a root — the finality layer's post-state root — and this rendering
 reads it in one place: `update_finality` compares justifications in the lex order
-`(h_j, J.root)`. What a root *is* the draft never says, so the type is abstract: the `Roots`
+`(h_j, J.root)`. What a root *is* the protocol never says, so the type is abstract: the `Roots`
 class carries the type, the linear order the lex comparison needs, and the root `B_gen`
-carries — the draft says "every block `B` has a root" and its genesis is a block. The
+carries — the protocol says "every block `B` has a root" and its genesis is a block. The
 walk's tie-break is **not** read off the root: the tie is a nondeterministic pick in
 `Fig1GoldfishWalk.lean`, every resolution among the outcomes, a root order being one.
 
@@ -62,9 +54,9 @@ kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `non
 
 ## `⊥`
 
-The draft writes `⊥` for an absent block or height: the empty target, the empty head, the
+The protocol writes `⊥` for an absent block or height: the empty target, the empty head, the
 absent latest round. That is `Option.none` here, given the `⊥` spelling by a scoped `Bot`
-instance. Spec bodies test absence as the draft writes it — `x ≠ ⊥`, never `.isSome` —
+instance. Spec bodies test absence as the protocol writes it — `x ≠ ⊥`, never `.isSome` —
 and a raising body extracts by the lift in `Raise.lean`, `let y ← x`.
 
 ## Extract
@@ -98,16 +90,16 @@ set_option autoImplicit false
 
 namespace Consensus1
 
-/-- `⊥` for an absent block, height or head, as the draft writes it. Scoped, so it cannot
+/-- `⊥` for an absent block, height or head, as the protocol writes it. Scoped, so it cannot
     leak into a file that means something else by `⊥`. -/
 scoped instance {α : Type} : Bot (Option α) := ⟨none⟩
 
 /-! ## Validators and weights -/
 
-/-- The draft's model of validators: a fixed set `V`, and a fixed positive integer weight
+/-- The protocol's model of validators: a fixed set `V`, and a fixed positive integer weight
     `w(i)` for each member.
 
-    A class, so that `w(·)`, `W` and `q` read as the draft writes them with no parameter
+    A class, so that `w(·)`, `W` and `q` read as the protocol writes them with no parameter
     threaded through every signature. -/
 class Electorate (Validator : Type) where
   /-- The validator set `V`. -/
@@ -134,10 +126,10 @@ def weight (S : Finset Validator) : Nat := ∑ i ∈ S, Electorate.w i
 def W (Validator : Type) [Electorate Validator] : Nat :=
   w(Electorate.V (Validator := Validator))
 
-/-- `q = ⌈2W/3⌉`, the quorum threshold of Section 4, written in `Nat` arithmetic. A set is a
+/-- `q = ⌈2W/3⌉`, the finality layer's quorum threshold, written in `Nat` arithmetic. A set is a
     quorum when its weight is at least `q`.
 
-    The draft's other thresholds are not constants: Goldfish's gate is `2·score > voters` and
+    The protocol's other thresholds are not constants: Goldfish's gate is `2·score > voters` and
     the SG gate is `2·support > W_r`, each a strict majority of a *denominator the rule
     computes*, so each is written where it is used. -/
 def q (Validator : Type) [Electorate Validator] : Nat := (2 * W Validator + 2) / 3
@@ -146,7 +138,7 @@ def q (Validator : Type) [Electorate Validator] : Nat := (2 * W Validator + 2) /
 
     A predicate taking the set, rather than a bare `q`: `W` and `q` are constants of the
     electorate and nothing in their types mentions `Validator`, so written bare they leave
-    the electorate undetermined. The notation below restores the draft's spelling at the use
+    the electorate undetermined. The notation below restores the protocol's spelling at the use
     site. -/
 def Quorum (S : Finset Validator) : Prop := w(S) ≥ q Validator
 
@@ -157,8 +149,8 @@ instance (S : Finset Validator) : Decidable (Quorum S) := inferInstanceAs (Decid
 end Electorate
 
 
-/-- Each slot's committee `K_s ⊆ V` (Section 1), whose members cast that slot's Goldfish
-    votes. How committees are drawn is outside the draft's scope — a VRF, a public shuffle,
+/-- Each slot's committee `K_s ⊆ V`, whose members cast that slot's Goldfish
+    votes. How committees are drawn is outside the protocol's scope — a VRF, a public shuffle,
     anything — so the assignment is a class, the way `Electorate` is.
 
     That `K_s ⊆ V` is not enforced by the type. It is a fact about the assignment, and no
@@ -169,13 +161,12 @@ class Committees (Validator : Type) where
 
 /-! ## The protocol constants, the schedule, and rounds -/
 
-/-- The draft's constants.
+/-- The protocol's constants.
 
     `Δ` is the delivery bound, and every scheduled instant is a multiple of it. `R` is the
-    round length. `K` and `D` are the nonjustifiability constants of Section 4: on entry into
-    a height, `nj ← (K ∣ h) ∧ (h − h_F > D)` — in this draft a *stored* flag on the chain
-    state, where the older one recomputed the test inline. `ηSG` is the SG expiry window of
-    Definition 3, in rounds. -/
+    round length. `K` and `D` are the finality layer's nonjustifiability constants: on entry into
+    a height, `nj ← (K ∣ h) ∧ (h − h_F > D)` — in this protocol a *stored* flag on the chain
+    state. `ηSG` is the SG expiry window `latest` reads, in rounds. -/
 class Params where
   /-- The delivery bound. -/
   Δ : Nat
@@ -198,18 +189,18 @@ class Params where
   /-- `ηSG ≥ 1`. -/
   ηSG_ge : 1 ≤ ηSG
 
-/-- `t_s = 4Δs`, the start of slot `s` (Section 1). An `Int`, because these instants are
+/-- `t_s = 4Δs`, the start of slot `s`. An `Int`, because these instants are
     compared against the store's clock, which starts below zero. -/
 def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
 
-/-- `round(s) = ⌊s/R⌋`, the round of slot `s` (Section 3.1). Round `r` consists of slots
+/-- `round(s) = ⌊s/R⌋`, the round of slot `s`. Round `r` consists of slots
     `rR, …, rR + R − 1`, and slot `rR` is its *opening slot*. -/
 def round [Params] (s : Nat) : Nat := s / Params.R
 
-/-- `a_r`, each round's SG vote time: "a public parameter in this intermediate protocol"
-    (Section 3.1). A public parameter is exactly an ambient class — the `Committees` move —
-    so `on_tick` can dispatch on it and `sg_vote` can require it, with the draft fixing no
-    formula. Nothing relates it to the slot schedule; that the draft's instants are distinct
+/-- `a_r`, each round's SG vote time: a public parameter of the protocol, no formula
+    fixed. A public parameter is exactly an ambient class — the `Committees` move —
+    so `on_tick` can dispatch on it and `sg_vote` can require it, with the protocol fixing no
+    formula. Nothing relates it to the slot schedule; that the protocol's instants are distinct
     is a convention this rendering inherits (see `on_tick`). -/
 class SGSchedule where
   /-- `a_r`, the SG vote time of round `r`. -/
@@ -217,10 +208,10 @@ class SGSchedule where
 
 /-! ## Roots -/
 
-/-- The vocabulary of roots. `Root` is the type of the draft's
-    post-state roots, abstract — the draft never says what a root is or how one is computed.
+/-- The vocabulary of roots. `Root` is the type of the protocol's
+    post-state roots, abstract — the protocol never says what a root is or how one is computed.
     `ord` is the linear order `update_finality`'s lex comparison `(h_j, J.root)` reads.
-    `genesisRoot` is `B_gen`'s: the draft says every block has a root, and its genesis is a
+    `genesisRoot` is `B_gen`'s: the protocol says every block has a root, and its genesis is a
     block. The module header says what a root does and does not promise. -/
 class Roots where
   /-- The type of roots. -/
@@ -237,25 +228,25 @@ scoped instance [Roots] : LinearOrder Root := Roots.ord
 
 /-! ## The wire objects, as one mutual family
 
-Three of the draft's objects name each other. A block carries Goldfish votes and
+Three of the protocol's objects name each other. A block carries Goldfish votes and
 attestations; a Goldfish vote names its target block; an attestation names blocks in its head
 and in both of its pairs. -/
 
 mutual
 
-/-- A block (Sections 1, 2.1 and 4 of the draft). Genesis has no parent, slot `0`, the
+/-- A block (Sections 1, 2.1 and 4 of the protocol). Genesis has no parent, slot `0`, the
     `Roots.genesisRoot` and nothing carried; every other block has a parent, a slot, a root —
     the post-state root, see the module header — a list of Goldfish votes of the *previous*
     slot, and a list of combined attestations. Chains are in bijection with their tips and
-    the draft identifies the two, so this type is both.
+    the protocol identifies the two, so this type is both.
 
-    `B.gf_votes` is the draft's only relay channel: "there is no proposal envelope: the block
+    `B.gf_votes` is the protocol's only relay channel: "there is no proposal envelope: the block
     is the only wire object a proposer emits".
 
-    Three deliberate gaps against the draft's sentences, each a fact about validity rather
+    Three deliberate gaps against the protocol's sentences, each a fact about validity rather
     than about the datatype, and so not enforced here: a block's slot is not forced to exceed
     its parent's; the carried votes are not forced to be of slot `B.slot − 1`; and the
-    proposer's signature is not modelled — proposer assignment is outside the draft's scope,
+    proposer's signature is not modelled — proposer assignment is outside the protocol's scope,
     and whether a block was signed by its slot's proposer is a fact for the execution layer,
     when one exists. -/
 inductive Block (Validator : Type) [Roots] where
@@ -266,7 +257,7 @@ inductive Block (Validator : Type) [Roots] where
       (gfVotes : List (GoldfishVote Validator))
       (attestations : List (Attestation Validator))
 
-/-- A Goldfish vote (Section 2.1): the tuple `(v, s, B)` from a validator `v ∈ K_s` with
+/-- A Goldfish vote: the tuple `(v, s, B)` from a validator `v ∈ K_s` with
     target `B`, where `B.slot ≤ s`.
 
     Neither `v ∈ K_s` nor `B.slot ≤ s` is a fact of the type: they are conditions on a
@@ -281,10 +272,10 @@ structure GoldfishVote (Validator : Type) [Roots] where
   /-- The block the vote targets. -/
   target : Block Validator
 
-/-- A combined attestation (Section 4.1 of the draft): the tuple
+/-- A combined attestation: the tuple
     `(validator, round, head, height, target, finalize_height, finalize_target)` — the SG
     vote extended with the four finality-relevant fields, signed by `validator`. The height
-    and finality components are carried as the draft's two pairs, which is what makes the
+    and finality components are carried as the protocol's two pairs, which is what makes the
     unwritable combination — a height `⊥` under a named target — unrepresentable. The
     signature itself is not modelled; the `validator` field stands in for it, as in `Block`. -/
 structure Attestation (Validator : Type) [Roots] where
@@ -321,9 +312,9 @@ end
 
 variable [Roots]
 
-/-- An SG vote (Section 3.1): the tuple `(v, r, H)` from a validator `v ∈ V` with head `H`,
+/-- An SG vote: the tuple `(v, r, H)` from a validator `v ∈ V` with head `H`,
     a block or `⊥`. Not part of the mutual family above, and it needs no hand-written
-    equality: no block carries SG votes, so nothing nests. The draft is explicit that they
+    equality: no block carries SG votes, so nothing nests. The protocol is explicit that they
     travel only on the wire — "blocks do not carry them, and they never enter a Goldfish vote
     set". -/
 structure SGVote (Validator : Type) where
@@ -332,7 +323,7 @@ structure SGVote (Validator : Type) where
   /-- The round the vote belongs to. -/
   round : Nat
   /-- The head: a block, or `⊥` in an adversarial vote — and in the timeout votes of the
-      graded protocol, which this draft does not reach. -/
+      graded protocol, which this protocol does not reach. -/
   head : Option (Block Validator)
 
 /-! ### Decidable equality, written out
@@ -503,12 +494,12 @@ instance : DecidableEq (SGVote Validator) := fun a b =>
   decidable_of_iff (a.validator = b.validator ∧ a.round = b.round ∧ a.head = b.head)
     (by cases a; cases b; simp)
 
-/-- A wire message: what a duty broadcasts. The draft's wire objects as one type — the
+/-- A wire message: what a duty broadcasts. The protocol's wire objects as one type — the
     shape a lean-sts protocol wants, one message type per protocol — so a duty's step result
     can name what it sends. The equality instance is derived, sitting below the
     hand-written ones it needs.
 
-    The `attestation` constructor is **not the draft's**: the draft's
+    The `attestation` constructor is **not the protocol's**: the protocol's
     blocks carry attestations but it never says how one travels from signer to proposer,
     because it never defines the signing layer at all. The first specification's
     attestation is a wire message, and `FinalityVote.lean` imports that answer with the
@@ -520,7 +511,7 @@ inductive Message (Validator : Type) [Roots] where
   | gfVote (v : GoldfishVote Validator)
   /-- An SG vote. -/
   | sgVote (v : SGVote Validator)
-  /-- An attestation — not one of the draft's messages; see above. -/
+  /-- An attestation — not one of the protocol's messages; see above. -/
   | attestation (a : Attestation Validator)
 deriving DecidableEq
 
@@ -563,8 +554,8 @@ def ancestors : Block Validator → List (Block Validator)
   | .genesis => [.genesis]
   | .mk p s rt vs as => .mk p s rt vs as :: ancestors p
 
-/-- `B ⪯ C`: `B = C`, or `B` is an ancestor of `C`. The draft's reflexive ancestry, from
-    Section 1. -/
+/-- `B ⪯ C`: `B = C`, or `B` is an ancestor of `C` — the protocol's reflexive
+    ancestry. -/
 def Preceq (a b : Block Validator) : Prop := a ∈ ancestors b
 
 @[inherit_doc] scoped infix:50 " ⪯ " => Preceq
@@ -581,7 +572,7 @@ def Prec (a b : Block Validator) : Prop := a ⪯ b ∧ a ≠ b
 instance : DecidableRel (Prec (Validator := Validator)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∧ _))
 
-/-- `B ∼ C`: *compatible* — `B ⪯ C` or `C ⪯ B`, the two lie on one chain. The draft's
+/-- `B ∼ C`: *compatible* — `B ⪯ C` or `C ⪯ B`, the two lie on one chain. The protocol's
     blocks *conflict* otherwise; no named relation renders that, `¬ ∼` sufficing so far. -/
 def Compatible (a b : Block Validator) : Prop := a ⪯ b ∨ b ⪯ a
 

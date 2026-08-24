@@ -5,7 +5,7 @@ import Spec.Defs.Raise
 # Nondeterminism: the two stacks and the pick
 
 **This file is not a specification.** It holds no protocol content — nothing here renders a
-definition or a figure of the draft. It is the rendering's nondeterminism vocabulary;
+definition or a figure of the protocol. It is the rendering's nondeterminism vocabulary;
 `CONTEXT.md` carries the decision trail.
 
 ## The two stacks

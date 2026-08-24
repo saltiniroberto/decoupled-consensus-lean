@@ -5,8 +5,8 @@ import Spec.Defs.Nondet
 # The duty monad: an ambient outbox over `NDRE`
 
 **This file is not a specification.** It holds no protocol content — nothing here renders
-a definition or a figure of the draft. It is the vocabulary that lets a duty *broadcast*
-— the draft's own verb — instead of returning its messages.
+a definition or a figure of the protocol. It is the vocabulary that lets a duty *broadcast*
+— the protocol's own verb — instead of returning its messages.
 
 ## The design
 
@@ -47,7 +47,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator]
 abbrev NDREB (Validator : Type) (α : Type) :=
   StateT (Finset (Message Validator)) NDRE α
 
-/-- The draft's own verb: put a message in the outbox. -/
+/-- The protocol's own verb: put a message in the outbox. -/
 def broadcast (m : Message Validator) : NDREB Validator Unit :=
   modify (· ∪ {m})
 

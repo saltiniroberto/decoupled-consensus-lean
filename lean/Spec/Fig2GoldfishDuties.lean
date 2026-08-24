@@ -7,36 +7,36 @@ import Spec.Defs.Duty
 
 `on_tick`, `process_block`, `process_goldfish_vote`, `propose_block` and `goldfish_vote`. The
 handlers change the store in place; only the two duties concern the validator running the
-node, written `ℓ` in the draft and `i` here — a node whose `ℓ` holds no duty for the slot
+node, written `ℓ` in the protocol and `i` here — a node whose `ℓ` holds no duty for the slot
 simply does not run them.
 
-The `-- line n` comments use Figure 2's own line numbering, in the draft as of 2026-08-22.
+The `-- line n` comments number the algorithm's lines.
 The routines appear callee-first; the figure's order is `on_tick`, `process_block`,
 `process_goldfish_vote`, `propose_block`, `goldfish_vote`.
 
 **Figure 3 comes first in the import order** although it is the later figure: `on_tick`
-line 8 calls `update_confirmation`. The file names keep the draft's numbers.
+line 8 calls `update_confirmation`. The file names keep the protocol's numbers.
 
 ## `ℓ` is `i`, and the proposer test is a parameter
 
-The draft writes `ℓ` for the validator running the node. This subtree writes `i`, as the
+The protocol writes `ℓ` for the validator running the node. This subtree writes `i`, as the
 previous rendering did, and nothing else in it uses that letter.
 
-Line 3 asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside the
-draft's scope — Section 1 says only that a slot "has an assigned proposer" — so `on_tick`
+Line 3 asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside this
+specification's scope — a slot simply *has* an assigned proposer — so `on_tick`
 takes the test as a parameter. `propose_block` itself is fully rendered; it is only *whether
 to run it* that is not.
 
 ## How a duty broadcasts
 
-The draft's duties broadcast and then process their own object: `broadcast B;
+The protocol's duties broadcast and then process their own object: `broadcast B;
 process_block(Σ, B)`. That line renders verbatim: a duty runs in
 `NDREB` (`Duty.lean`) — the outbox threaded over `NDRE` — taking the store and returning
-the store, with `broadcast` the draft's own verb. No caller unions sends: an earlier
+the store, with `broadcast` the protocol's own verb. No caller unions sends: an earlier
 duty's broadcasts are already in the outbox when a later one runs. The boundary object
 `DutyResult` survives only in `NDREB.outcomes`, where the sts wiring consumes a duty as a
 relation. The two handlers stay
-`Store → Store`: the figure gives them no broadcast line, and Section 1's "an honest node
+`Store → Store`: the algorithm gives them no broadcast line, and "an honest node
 relays every object it processes" is network behaviour, the wiring layer's to render.
 
 ## Two collisions with `Finset`, and where each lands
@@ -50,8 +50,8 @@ order among the outcomes.
 **Line 25 crosses from `Finset` to `List` by a pick.** The block's carried votes are a
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
 constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as
-the draft says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
-is a genuine nondeterministic choice, since the draft fixes none. The alternative —
+the protocol says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
+is a genuine nondeterministic choice, since the protocol fixes none. The alternative —
 holding the store's votes as lists — would make
 "at most two distinct votes per validator" a property of a list and put a `toFinset` at
 every counting site.
@@ -59,8 +59,8 @@ every counting site.
 ## `process_block` and `on_tick` here are Figure 2's
 
 Figure 7 extends `process_block` with two lines: the post-state and `update_finality`. That
-reading, `S.processBlock`, is the protocol's; this one is what Section 2 defines — hence
-`Fig2.processBlock`. Likewise `on_tick`: Section 3.4 extends it with one line — at
+reading, `S.processBlock`, is the protocol's; this one is the availability layer's —
+hence `Fig2.processBlock`. Likewise `on_tick`: the SG layer extends it with one line — at
 `t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`Fig5SGDuty.lean`), is the
 protocol's; this one is the figure's, hence `Fig2.onTick`. See `Fig1GoldfishWalk.lean` on
 the figure-named readings.
@@ -90,8 +90,9 @@ set_option autoImplicit false
 namespace Consensus1
 
 /-- The root a proposer writes into its block, as an assumed function of the block's parent
-    and its slot. The draft calls a block's root its post-state root, and the post-state only
-    becomes defined at Section 5 — so this layer can only assume the function exists, and
+    and its slot. The protocol calls a block's root its post-state root, and the
+    post-state belongs to the finality layer — so this layer can only assume the function
+    exists, and
     nothing constrains its answer, exactly as nothing constrains the root a received block
     claims (`Model.lean`, the `B.root` section). -/
 class RootComputation (Validator : Type) [Roots] where
@@ -103,11 +104,11 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-/-- `process_goldfish_vote(Σ, vote)` (Figure 2, lines 15–20): record a slot-`k` vote with its
+/-- `process_goldfish_vote(Σ, vote)`: record a slot-`k` vote with its
     processing time, unless it is from the future, already held, or a third vote by a
     validator already seen equivocating.
 
-    Line 18 is where the draft's "at most two distinct votes per validator" is maintained:
+    Line 18 is where the protocol's "at most two distinct votes per validator" is maintained:
     "two witness the equivocation; nothing reads a third". -/
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
@@ -123,10 +124,10 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
   S.gfVoteTime[vote] ← some S.t
   return S
 
-/-- `process_block(Σ, B)` (Figure 2, lines 9–14): accept a block whose slot has started,
+/-- `process_block(Σ, B)`: accept a block whose slot has started,
     stamp it, and fold in every Goldfish vote it carries.
 
-    A block from the future is dropped and nothing else is checked: the draft's admission at
+    A block from the future is dropped and nothing else is checked: the protocol's admission at
     this layer is the slot test alone. The carried votes go through
     `process_goldfish_vote`, so each is subject to that routine's own three tests. -/
 def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Validator :=
@@ -140,21 +141,21 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     S ← S.processGoldfishVote vote                             -- line 14
   return S
 
-/-- `propose_block(Σ)` (Figure 2, lines 21–26), run at `t_s`: take every held slot-`(s−1)`
+/-- `propose_block(Σ)`, run at `t_s`: take every held slot-`(s−1)`
     vote, run the fork choice on it, and build a block on the head carrying **all** of those
     votes.
 
-    Two things the draft points out at the line. The proposer applies no freeze — "everything
+    Two things the protocol points out at the line. The proposer applies no freeze — "everything
     held: the tick precedes anything timestamped `t_s`" — and it carries "everything, not only
     the pre-freeze part", which is what makes the block a view-merge channel for its
     receivers.
 
     The block's root is computed, not chosen: `RootComputation.compute H s`, the assumed
-    function of the block's parent and its slot — the draft does not say what the proposer
+    function of the block's parent and its slot — the protocol does not say what the proposer
     puts there, so the function's answer is unconstrained.
 
     `NDREB` as every duty; the walk and the picked listing of `votes` — its order a
-    nondeterministic choice the draft leaves open — live underneath it.
+    nondeterministic choice the protocol leaves open — live underneath it.
 
     "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
     the duty tests. The autoparam tactic is `solve_by_elim` over the `And` projections rather
@@ -174,7 +175,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   broadcast (Message.block B)                                  -- line 26
   return Fig2.processBlock S B
 
-/-- `goldfish_vote(Σ)` (Figure 2, lines 27–34), run at `t_s + Δ`: vote for the head of the
+/-- `goldfish_vote(Σ)`, run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
     The merge is lines 29–31: the slot-`(s−1)` votes held before the *previous* slot's view
@@ -204,14 +205,14 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     return S.processGoldfishVote vote
   return S
 
-/-- `on_tick(Σ, t)` (Figure 2, lines 1–8): set the clock and the slot, then run whichever of
+/-- `on_tick(Σ, t)`: set the clock and the slot, then run whichever of
     the slot's actions this instant is.
 
-    This is the figure's reading. Section 3.4 extends it with one line — at `t = a_r`, run
+    This is the availability layer's reading. The SG layer extends it with one line — at `t = a_r`, run
     `sg_vote` — and that reading, `S.onTick` (`Fig5SGDuty.lean`), is the protocol's.
 
     `isProposer` is the parameter of line 3; see the module header. The three actions are
-    exclusive because the draft's instants are distinct: a proposal at `t_s`, a vote at
+    exclusive because the protocol's instants are distinct: a proposal at `t_s`, a vote at
     `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
     evaluation of the *previous* slot, and that is the slot line 8 passes.
 

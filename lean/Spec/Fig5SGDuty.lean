@@ -6,33 +6,32 @@ import Spec.Defs.Duty
 # Figure 5 — the SG duty and store handler
 
 `sg_vote`, run at the round's vote time `a_r`, and `process_sg_vote` — and the protocol's
-`on_tick`, Section 3.4's extension of Figure 2's.
+`on_tick`, the SG layer's extension of Figure 2's.
 
-The `-- line n` comments use Figure 5's own line numbering, in the draft as of 2026-08-22.
+The `-- line n` comments number the algorithm's lines.
 
-## What Section 3.4 changes in Figure 2, and what this file does about it
+## What the SG layer adds to `on_tick`
 
-"`on_tick` gains one line: at `t = a_r` for the current round `r`, run `sg_vote`. The proposer
-and voter of Figure 2 call the `get_head` of Figure 4; nothing else in their duties changes.
-Available confirmation is unchanged."
+One line: at `t = a_r` for the current round `r`, run `sg_vote`. The proposer and voter of
+Figure 2 then call Figure 4's `get_head`; nothing else in their duties changes, and
+available confirmation is unchanged.
 
-The extra `on_tick` line **is** rendered, as this file's `Store.onTick`: run Figure 2's
-reading, `Fig2.onTick`, and then the one line. Section 5 never touches `on_tick`, so that
-composition is the protocol's tick. The redirected `get_head` is not rendered: Section 5 redefines
-it again, and that version, `Store.getHead`, is the protocol's. So this file holds the two
-routines Figure 5 itself introduces — which Section 5 does not touch — and the protocol's
-`on_tick`.
+The added line is this file's `Store.onTick`: run Figure 2's reading, `Fig2.onTick`, and
+then the one line. The finality layer never touches `on_tick`, so that composition is the
+protocol's tick. The redirected `get_head` is not written out: the finality layer
+redefines it again, and that version, `Store.getHead`, is the protocol's. So this file
+holds the two routines Figure 5 itself introduces and the protocol's `on_tick`.
 
-`a_r` is "a public parameter in this intermediate protocol", not a formula the draft fixes —
-which is the `SGSchedule` class in `Model.lean`, the `Committees` move: assumed, so `on_tick`
-can dispatch on it and `sg_vote` can require it.
+`a_r` is a public parameter, no formula fixed — the `SGSchedule` class in `Model.lean`,
+the `Committees` move: assumed, so `on_tick` can dispatch on it and `sg_vote` can require
+it.
 
 ## An honest vote is never empty
 
-"At `a_r`, an honest validator votes its current `live_confirmed`, which is a block; the empty
-head appears only in adversarial votes here, and in the timeout votes of the graded protocol."
-So line 3 always names a block, and `SGVote.head` is an `Option` only because the wire object
-admits `⊥` — nothing an honest duty produces uses it.
+At `a_r` an honest validator votes its current `live_confirmed`, which is a block; an
+empty head can appear only in adversarial votes. So line 3 always names a block, and
+`SGVote.head` is an `Option` only because the wire object admits `⊥` — nothing an honest
+duty produces uses it.
 
 ## Extract
 
@@ -56,7 +55,7 @@ namespace Consensus1
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
   [RootComputation Validator] [SGSchedule]
 
-/-- `process_sg_vote(Σ, vote)` (Figure 5, lines 5–10): record a round-`r` SG vote with its
+/-- `process_sg_vote(Σ, vote)`: record a round-`r` SG vote with its
     processing time, unless it is from a future round, already held, or a third vote by a
     validator already seen equivocating.
 
@@ -77,10 +76,10 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
   S.sgVoteTime[vote] ← S.t
   return S
 
-/-- `sg_vote(Σ)` (Figure 5, lines 1–4), run at `a_r`: vote the store's current
+/-- `sg_vote(Σ)`, run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 
-    A `NDREB` duty, as the Goldfish duties are: line 4 is the draft's two verbs. Total —
+    A `NDREB` duty, as the Goldfish duties are: line 4 is the protocol's two verbs. Total —
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
     are, over the assumed `SGSchedule`. -/
@@ -93,24 +92,23 @@ def Store.sgVote (i : Validator) (S : Store Validator)
   broadcast (Message.sgVote vote)                              -- line 4
   return S.processSGVote vote
 
-/-- `on_tick(Σ, t)`, the protocol's reading. Section 3.4: "`on_tick` gains one line: at
-    `t = a_r` for the current round `r`, run `sg_vote`." Rendered as the extension it is:
-    Figure 2's `on_tick`, then the one line. Section 5 never touches `on_tick`, so no later
-    reading exists.
+/-- `on_tick(Σ, t)`, the protocol's reading: Figure 2's `on_tick`, then the SG layer's
+    one line — at `t = a_r` for the current round, run `sg_vote`. No later layer touches
+    `on_tick`.
 
     `Fig2.onTick` has already written the clock into the store it returns, so the
     dependent `if` hands `sg_vote` its instant precondition, exactly as Figure 2's own
     branches do.
 
-    The draft fixes no relation between `a_r` and the Goldfish instants. On a schedule
+    The protocol fixes no relation between `a_r` and the Goldfish instants. On a schedule
     where `a_r` coincided with one, the two actions compose: `sg_vote` runs on the
     Goldfish duty's post-state, and both broadcasts are in the outbox — no union is
-    written anywhere, the monad carrying the earlier sends past the `if`. On the draft's
+    written anywhere, the monad carrying the earlier sends past the `if`. On the protocol's
     own schedules the instants are distinct (`Fig2.onTick`'s docstring). -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let S ← Fig2.onTick i S t isProposer
-  -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
+  -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
   if _ : S.t = SGSchedule.a (round S.s) then
     return ← S.sgVote i
   return S

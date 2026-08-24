@@ -14,23 +14,23 @@ import Spec.Fig2GoldfishDuties
 import Spec.Fig4SGForkChoice
 import Spec.Fig5SGDuty
 import Spec.Fig7FGStore
-import Spec.Defs.FinalityVote
+import Spec.FinalityVote
 
 /-!
 # The specification
 
 One import per file. **This library is the specification of Ethereum decoupled
-consensus**, rendered from the protocol's working draft (`consensus-1.pdf`,
-human-controlled, not distributed with this repository) under namespace `Consensus1`,
-figure by figure from 2026-08-22. The figure files sit directly under
-`Spec/`, and everything they are written in terms of sits in `Spec/Defs/`. The draft is
-block-only Goldfish: one store built up in three layers, `ghost` as a named building
-block, per-slot committees, block-carried Goldfish votes as the only relay channel,
-timestamps on every object, and a relative-majority SG fork choice.
+consensus**, under namespace `Consensus1`. The algorithm files sit directly under
+`Spec/`, and everything they are written in terms of sits in `Spec/Defs/`. The protocol
+is block-only Goldfish: one store built up in three layers — availability, SG, finality —
+with `ghost` as a named building block, per-slot committees, block-carried Goldfish votes
+as the only relay channel, timestamps on every object, and a relative-majority SG fork
+choice.
 
-**The draft defines incrementally, and the old readings are figure-named.** Sections 2, 3
-and 5 each redefine `get_head`, and Section 5 redefines `process_block` and
-`goldfish_eligible` as well; a draft can replace a reading and Lean cannot. The last reading
+**The layers define incrementally, and the old readings are figure-named.** Each layer
+redefines `get_head`, and the finality layer redefines `process_block` and
+`goldfish_eligible` as well; a paper-style presentation replaces a reading, and Lean
+cannot. The last reading
 of each is the protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
 `S.goldfishEligible`); each superseded reading is named by its figure — `Fig1.getHead`,
 `Fig4.getHead`, `Fig2.processBlock`, `Fig1.goldfishEligible`. Store-taking routines sit in
@@ -38,8 +38,8 @@ of each is the protocol's and bears the plain `Store` name (`S.getHead`, `S.proc
 `goldfishScore`); there are no namespace blocks, every definition carrying its full name at
 its own `def`.
 
-`Spec/Defs/` holds the non-figure files: `Model.lean` (Section 1's substrate and the
-wire objects), `Store.lean` (Definition 1 and the fields Sections 3.2 and 5.1 add),
+`Spec/Defs/` holds the non-algorithm files: `Model.lean` (the substrate and the wire
+objects), `Store.lean` (the store, with the fields each layer adds),
 `SigningHistory.lean` (the signing record of the imported voting strategy — see
 `FinalityVote.lean`), `Notation.lean` (the assignment macros and the raising set-builder),
 `Raise.lean` (the failure vocabulary: `Error` and `DRE`), `FinsetM.lean` (monadic filter
@@ -49,9 +49,6 @@ the pick), `Duty.lean` (the duty monad `NDREB` and `broadcast`), and `OldDefs.le
 order rather than figure order: Figure 6's chain state is what the store's `Σ.σ[·]` maps
 into, and Figure 3's confirmation is what Figure 2's `on_tick` calls.
 
-**Two older renderings preceded this one** — the `latex-specs` papers (namespace
-`Decoupled`, with its `Analysis/` and citation apparatus) and `consensus.pdf` (namespace
-`Consensus`) — and were removed on 2026-08-24, the repository narrowing to this rendering
-and the PDF extractor under `extract/`. The branch `pre-consensus1-purge` holds the last
-commit that carries them.
+An earlier, wider scope of this repository — two other renderings and their analysis
+and tooling — lives on the branch `pre-consensus1-purge`.
 -/

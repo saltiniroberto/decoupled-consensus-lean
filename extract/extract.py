@@ -2,7 +2,7 @@
 """Extract a consensus-1-like document out of the frozen Lean files.
 
 Reads the frozen copy named by SRC below (currently extract/Consensus1-frozen-2/),
-writes extract/out/consensus1.tex, and (unless --no-pdf) compiles it with
+writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
 latexmk -lualatex.
 
 v4: definition blocks. An `## Extract — Definition (Title)` section renders as the
@@ -2085,7 +2085,7 @@ def main():
         for doc, _name in others:
             emit_sections(tex, extract_sections(doc), prose_rw)
     tex.append(r"\end{document}")
-    texfile = OUT / "consensus1.tex"
+    texfile = OUT / "dc.tex"
     texfile.write_text("\n".join(tex), encoding="utf-8")
     print(f"wrote {texfile}")
     if not args.no_pdf:
@@ -2097,7 +2097,7 @@ def main():
             tail = "\n".join(r.stdout.split("\n")[-40:])
             print(tail, file=sys.stderr)
             sys.exit(1)
-        print(f"wrote {OUT / 'consensus1.pdf'}")
+        print(f"wrote {OUT / 'dc.pdf'}")
 
 
 if __name__ == "__main__":

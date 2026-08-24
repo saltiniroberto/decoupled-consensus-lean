@@ -1,4 +1,4 @@
-.PHONY: help check dev sorry sorries nodecide orphans build cache submodules
+.PHONY: help check dev sorry sorries nodecide orphans build cache extract submodules
 
 # `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
 # which no amount of later work discharges. Every target refuses it.
@@ -25,6 +25,7 @@ help:
 	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
 	@echo 'make orphans    - find .lean files under lean/ that no lean_lib glob claims'
 	@echo 'make build      - build this project'
+	@echo 'make extract    - render the spec into a paper-shaped PDF (extract/out/dc.pdf)'
 	@echo 'make submodules - report the pinned revision of each submodule'
 
 # The strict target: no sorry, no admit, no native_decide, build is green.
@@ -80,6 +81,9 @@ build:
 
 cache:
 	lake exe cache get
+
+extract:
+	python3 extract/extract.py
 
 submodules:
 	@git submodule status

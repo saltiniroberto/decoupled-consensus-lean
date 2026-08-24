@@ -3,12 +3,11 @@ import Spec.Fig1GoldfishWalk
 /-!
 # Figure 4 — the SG fork choice
 
-Definition 3 and Figure 4: `latest`, `sg_support`, `majority_fork_choice`, and the SG layer's
-`get_head`. "This intermediate protocol adds one message layer to Goldfish: a
-relative-majority fork choice over the latest SG votes selects the root from which the
-Goldfish walk starts."
+`latest`, `sg_support`, `majority_fork_choice`, and the SG layer's `get_head`. The SG
+layer adds one message layer to Goldfish: a relative-majority fork choice over the latest
+SG votes selects the root from which the Goldfish walk starts.
 
-The `-- line n` comments use Figure 4's own line numbering, in the draft as of 2026-08-22.
+The `-- line n` comments number the algorithm's lines.
 
 ## The two walks are one function
 
@@ -19,13 +18,13 @@ walks are the same function with different scores and gates" — so this file in
 
 ## What "represented" means, and why an equivocator raises the bar
 
-Definition 3, in its own words. A validator with a latest round is *represented*: "it counts
+A validator with a latest round is *represented*: "it counts
 in the denominator whatever its votes say". It *supports* a block only when its latest round
 holds exactly one distinct vote by it and that vote's head is a block. So an empty or
 equivocating latest round supplies no support and, because only the latest round is read,
 "also silences every older head; a later clean round restores support".
 
-The consequence the draft draws: an equivocator supplies no support but stays in the
+The consequence the protocol draws: an equivocator supplies no support but stays in the
 denominator, so equivocating weight can only raise the bar, and two conflicting children
 cannot both pass. That is what makes the descent uniquely determined, and it is a fact about
 the definition rather than a hypothesis of it.
@@ -76,7 +75,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
 
 open Params
 
-/-- `latest(Σ, v, r)` (Figure 4, lines 1–5): the greatest round in
+/-- `latest(Σ, v, r)`: the greatest round in
     `[max{0, r − ηSG}, r)` whose SG votes hold one by `v`, or `⊥` when there is none.
 
     The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on". -/
@@ -86,7 +85,7 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
   eligible.max
 
-/-- `sg_support(Σ, r, B)` (Figure 4, lines 6–12): the represented weight supporting `B`.
+/-- `sg_support(Σ, r, B)`: the represented weight supporting `B`.
 
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
     that vote's head is a block, and `B` precedes the head.
@@ -103,7 +102,7 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
           (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
           ∃ H, a.head = some H ∧ B ⪯ H})
 
-/-- `majority_fork_choice(Σ, anchor, tree, r)` (Figure 4, lines 13–16): the shared walk with
+/-- `majority_fork_choice(Σ, anchor, tree, r)`: the shared walk with
     the SG support as its score, gated on a strict majority of the represented weight. -/
 def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
@@ -112,7 +111,7 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
   -- line 16; the pure condition offered to the walk's raising slot with `pure`
   ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
 
-/-- `get_head(Σ, votes, s)` (Figure 4, lines 17–19): the SG walk selects the anchor from
+/-- `get_head(Σ, votes, s)`: the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
     Figure 7 redefines it again, over the filtered tree and from the fork-choice root — that
     reading, `S.getHead`, is the protocol's, and this one is Figure 4's. -/

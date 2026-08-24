@@ -4,11 +4,11 @@ import Mathlib.Data.Finset.Fold
 # Monadic filter and image over a `Finset`
 
 **This file is not a specification.** It holds no protocol content, and nothing in it names
-anything from the draft. It is general Lean machinery in the root `Finset` namespace.
+anything from the protocol. It is general Lean machinery in the root `Finset` namespace.
 
 `Finset.filter` and `Finset.image` are pure, so a predicate or function that can fail has
 nowhere to put the failure. These are the versions that do. The callers are the set
-operations over raising reads: `ghost`'s eligibility filter (Figure 1, line 8),
+operations over raising reads: `ghost`'s eligibility filter,
 `Store.viable` and `Store.updateFinality` (Figure 7), each reading the state map per
 member, where a missing entry has to reach whoever asked.
 

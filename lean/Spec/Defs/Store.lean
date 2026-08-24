@@ -5,18 +5,17 @@ import Spec.Defs.SigningHistory
 /-!
 # The store
 
-Definition 1 of the draft, together with the two fields later sections add to it. The draft
-builds the store in three layers and is explicit that the layers only ever *add*: "later
-sections add fields to this store and add lines to these handlers; they never rename either."
-So there is one `Store` here, with each field's docstring naming the layer it arrives in.
+What a node keeps: messages and their arrival times, and the caches the layers
+maintain over them. The store grows in three layers, each only ever *adding* fields and
+handler lines, never renaming — so there is one `Store` here, with each field's docstring
+naming the layer it arrives in.
 
-    Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)   § 2.2
-      + sg_votes[·]                                                             § 3.2
-      + σ[·], F, h_F, J, h_j, h_max                                             § 5.1
-      + H                                       not the draft's — see `FinalityVote.lean`
-      + i                                       not the draft's — the node's own validator
+    Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)   availability
+      + sg_votes[·]                                                              SG
+      + σ[·], F, h_F, J, h_j, h_max                                              finality
+      + H, i                                                                     this spec's own
 
-## The draft's `Σ` is written `S`
+## The protocol's `Σ` is written `S`
 
 `Σ` is a reserved token in Lean (the dependent-pair binder), not a usable identifier.
 Store-valued variables are named `S` throughout, and nothing else in this subtree uses that
@@ -24,16 +23,16 @@ letter for a Lean binder.
 
 ## Timestamps are three maps, not one
 
-The draft writes one `Σ.timestamp(x)` over every kind of object. Lean has no such sum here,
+The protocol writes one `Σ.timestamp(x)` over every kind of object. Lean has no such sum here,
 so there is one map per kind — blocks, Goldfish votes, SG votes — and `Σ.timestamp(x)` is
 rendered as whichever one `x` belongs to. Nothing is lost: every rule reads the timestamp of
 an object whose kind is fixed by the line it appears on.
 
 Each map is a `TimeMap`, `Option Int` under the hood, `none` meaning "not processed". That
-also stands in for the draft's `Σ.timestamp(B_gen) = −∞`: genesis is in `Σ.T` from the start
+also stands in for the protocol's `Σ.timestamp(B_gen) = −∞`: genesis is in `Σ.T` from the start
 with no stamp, and the two readings agree because **no rendered rule reads a block's
 timestamp at all** — the block map is written by `process_block` and read by nothing,
-exactly as in the draft. Vote timestamps are read, always on a vote drawn from a
+exactly as in the protocol. Vote timestamps are read, always on a vote drawn from a
 `gf_votes[·]` or `sg_votes[·]` set, so always on a processed one — which is why the bracket
 read `Σ.timestamp[x]` **raises**, exactly as `Σ.σ[B]` does: an
 unstamped held vote marks a store the handlers cannot build, and the failure reaches the
@@ -42,7 +41,7 @@ application, `S.gfVoteTime vote`.
 
 ## What the type does not enforce
 
-The draft says `gf_votes[k]` and `sg_votes[r]` each "keep at most two distinct votes per
+The protocol says `gf_votes[k]` and `sg_votes[r]` each "keep at most two distinct votes per
 validator, which is all any rule reads". That is a property of the handlers, which drop a
 third, and not of the type: a `Finset` cannot express it. `process_goldfish_vote` and
 `process_sg_vote` are where it is maintained, and each says so.
@@ -53,7 +52,7 @@ facts of this structure.
 
 ## How the three indexed fields are read
 
-`Σ.gf_votes[k]`, `Σ.sg_votes[r]` and `Σ.σ[B]` are all written with the draft's brackets, and
+`Σ.gf_votes[k]`, `Σ.sg_votes[r]` and `Σ.σ[B]` are all written with the protocol's brackets, and
 each gets there differently.
 
 The two vote tables are **total**: every index has a set, empty if nothing was processed. So
@@ -127,7 +126,7 @@ scoped instance timeMapGetElem {α : Type} :
     GetElem (TimeMap α) α (DRE Int) (fun _ _ => True) where
   getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
 
-/-- The block-state map of Section 5.1. Named for the same reason as `VoteTable`. -/
+/-- The finality layer's block-state map. Named for the same reason as `VoteTable`. -/
 def StateMap (Validator : Type) := Block Validator → Option (ChainState Validator)
 
 /-- `B ∈ σ`: the map records a state for `B`. -/
@@ -147,12 +146,12 @@ scoped instance stateMapGetElem :
       (DRE (ChainState Validator)) (fun _ _ => True) where
   getElem σ B _ := if h : B ∈ σ then .ok ((σ B).get h) else .error .error
 
-/-- The store (Definition 1 of the draft, with the fields Sections 3.2 and 5.1 add).
+/-- The store, every layer's fields at once.
 
     "The store keeps messages and their arrival times, and nothing else. Every rule below is
     a timestamp comparison on this one pool." -/
 structure Store (Validator : Type) where
-  /-- `Σ.t`, the clock: the time the last `on_tick` set. Starts below `0` — the draft leaves
+  /-- `Σ.t`, the clock: the time the last `on_tick` set. Starts below `0` — the protocol leaves
       the initial value unstated, and every scheduled instant is at least `0` — at `-1`. -/
   t : Int
   /-- `Σ.s`, the current slot, set by the same `on_tick`. -/
@@ -160,7 +159,7 @@ structure Store (Validator : Type) where
   /-- `Σ.T`, the tree of processed blocks. -/
   T : Finset (Block Validator)
   /-- `Σ.timestamp(B)` for a block: when it was processed, `none` if it was not. Written by
-      `process_block`; read by nothing, in this draft. See the module header. -/
+      `process_block`; read by nothing, in this protocol. See the module header. -/
   blockTime : TimeMap (Block Validator)
   /-- `Σ.gf_votes[k]`, the processed slot-`k` Goldfish votes. -/
   gfVotes : VoteTable (GoldfishVote Validator)
@@ -172,31 +171,31 @@ structure Store (Validator : Type) where
   /-- `Σ.latest_confirmed`, the monotone record the node exposes. "No rule in this protocol
       reads it" — it is written by `update_confirmation` and nothing else touches it. -/
   latestConfirmed : Block Validator
-  /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (Section 3.2). -/
+  /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer). -/
   sgVotes : VoteTable (SGVote Validator)
-  /-- `Σ.timestamp(vote)` for an SG vote (Section 3.2). Written by `process_sg_vote`; no
+  /-- `Σ.timestamp(vote)` for an SG vote (SG layer). Written by `process_sg_vote`; no
       rendered rule reads it, `latest` selecting by round rather than by time. -/
   sgVoteTime : TimeMap (SGVote Validator)
-  /-- `Σ.σ[B]`, the stored post-state of each processed block (Section 5.1). Absent outside
+  /-- `Σ.σ[B]`, the stored post-state of each processed block (finality layer). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/
   σ : StateMap Validator
-  /-- `Σ.F`, the finalized block (Section 5.1). -/
+  /-- `Σ.F`, the finalized block (finality layer). -/
   F : Block Validator
   /-- `Σ.h_F`, its height. -/
   h_F : Nat
-  /-- `Σ.J`, the justified block rooting the fork choice (Section 5.1). -/
+  /-- `Σ.J`, the justified block rooting the fork choice (finality layer). -/
   J : Block Validator
   /-- `Σ.h_j`, its height. -/
   h_j : Nat
   /-- `Σ.h_max`, the greatest state height in the live tree. It "otherwise only grows", and
       is recomputed inside the new live tree whenever `Σ.F` advances. -/
   h_max : Nat
-  /-- `Σ.H`, the validator's durable signing record — **not a field of the draft's store**:
+  /-- `Σ.H`, the validator's durable signing record — **not a field of the protocol's store**:
       the record of the imported voting strategy, its type and story in
       `SigningHistory.lean` and `FinalityVote.lean`. Written only by that strategy's
       rules. -/
   H : SigningHistory Validator
-  /-- `Σ.i`, the validator running this node — the draft's `ℓ`, which its figures treat
+  /-- `Σ.i`, the validator running this node — the protocol's `ℓ`, which its figures treat
       as ambient and **its store does not list**. A field here, so a duty can read its
       own identity instead of taking it as a parameter. Written by nothing: fixed at
       `gen`. -/
@@ -205,13 +204,13 @@ structure Store (Validator : Type) where
 /-- The initial store: `Σ.T = {B_gen}`, `Σ.live_confirmed = Σ.latest_confirmed = B_gen`,
     "other fields are empty".
 
-    Three values the draft fixes elsewhere, or by "empty", and this has to write out: the
+    Three values the protocol fixes elsewhere, or by "empty", and this has to write out: the
     clock starts at `-1`, below every scheduled instant, since `on_tick` is what sets it; the
-    genesis block's state is the initial chain state of Definition 4; and the finality caches
+    genesis block's state is the initial chain state (`ChainState.gen`); and the finality caches
     start where that state does, `(B_gen, 0)` for both pairs with `h_max = 1`, since genesis
     "is justified and finalized at height 0, and every chain starts at height 1".
 
-    Genesis has no timestamp: the draft's `−∞` and this `none` agree, nothing reading a
+    Genesis has no timestamp: the protocol's `−∞` and this `none` agree, nothing reading a
     block's timestamp.
 
     Takes the one thing "empty" cannot supply: whose node this store is. -/
@@ -237,7 +236,7 @@ def Store.gen (i : Validator) : Store Validator where
 
 /-! ## The live tree
 
-Section 5.1's other derived set, the processed finality evidence
+The finality layer's other derived set, the processed finality evidence
 `E_F(Σ) = {(Σ.σ[B].F, Σ.σ[B].h_F) : B ∈ Σ.T}`, is **not** rendered: no figure reads it, and
 under this subtree's rule a definition lands with its first consumer. -/
 
@@ -251,7 +250,7 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 
 /-! ## The duty boundary object
 
-Not draft content: the draft's duties `broadcast` and return nothing. Duties run in
+Not draft content: the protocol's duties `broadcast` and return nothing. Duties run in
 `NDREB` (`Duty.lean`) — they broadcast into the monad's outbox and return the store — and
 this structure survives at the consumption boundary alone: `NDREB.outcomes` packages a
 run's store and outbox as one value, the state-and-send shape of a lean-sts step result

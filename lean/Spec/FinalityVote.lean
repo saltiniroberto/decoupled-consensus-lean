@@ -4,12 +4,9 @@ import Spec.Defs.Duty
 /-!
 # The finality-vote rules: how an attestation's pairs are determined
 
-`consensus-1.pdf` gives the attestation its shape (`Attestation` in `Model.lean`) and says
-how processed attestations move the chain state (Figure 6), but it does not say how a
-validator *fills* the height pair and the finality pair it signs. This file carries that
-logic over from the first specification's voting strategy; its Lean rendering —
-`Voting.lean`, namespace `Decoupled`, on the `pre-consensus1-purge` branch — maps every
-definition back to that paper.
+The attestation's shape is `Model.lean`'s, and Figure 6 says how processed attestations
+move the chain state; this file holds the rule a validator uses to *fill* the height pair
+and the finality pair it signs.
 
 The strategy, in plain words. A validator keeps a durable per-height record of what it has
 signed — `Σ.H`, a `SigningHistory` (the field in `Store.lean`): whether it signed an
@@ -66,7 +63,7 @@ Each of these is a decision this file makes, listed so it can be revisited:
   producing the SG head is a separate concern (this subtree's confirmation rule), so the
   head the attestation carries is passed in. The source's `hasJC` — "it knows the
   justification certificate `JC(h_j, J)`", a `Bool` input there — is not carried over: in
-  this draft justification is an on-chain fact,
+  this protocol justification is an on-chain fact,
   `Σ.J` and `Σ.h_j` read off replayed states whose justifying attestations sit inside
   blocks the validator has processed, so a coherent store's own chain is the evidence
   and there is no separate knowledge to model.

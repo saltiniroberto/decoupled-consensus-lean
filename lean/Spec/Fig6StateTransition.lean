@@ -3,19 +3,19 @@ import Spec.Defs.Notation
 /-!
 # Figure 6 — the deterministic finality-gadget state transition
 
-Definition 4's chain state and Figure 6's four routines: `state_transition`,
+The chain state and its four routines: `state_transition`,
 `process_attestation`, `process_height_events` and `advance_height`. Every block is evaluated
 from its parent's immutable post-state, `σ[B] = state_transition(σ[B.parent], B)`, and the
 result is a deterministic function of the chain ending at `B`.
 
-The `-- line n` comments use Figure 6's own line numbering, in the draft as of 2026-08-22.
+The `-- line n` comments number the algorithm's lines.
 The routines appear callee-first, because Lean wants a definition before its use; the
 figure's order is `state_transition`, `process_attestation`, `process_height_events`,
 `advance_height`.
 
 **It comes before the store in the import order**, though it is Figure 6 of seven: the store
-holds `Σ.σ[·]`, a map into the chain state, so Definition 4 has to exist first. The file
-names keep the draft's figure numbers; the import order is dependency order.
+holds `Σ.σ[·]`, a map into the chain state, so the chain state has to exist first; the
+import order is dependency order.
 
 ## Four things to know while reading
 
@@ -31,7 +31,7 @@ only after the loop, so an attestation is classified against the height and targ
 *parent's* post-state carried — which is what makes a block's own attestations unable to use
 that block as evidence.
 
-**`nj` is a stored field.** The draft computes it on entry into a height, "after the same
+**`nj` is a stored field.** The protocol computes it on entry into a height, "after the same
 transition has applied any finalization", and keeps it until the height changes: `advance
 height` writes it at line 29, and the justify event reads it at line 20. The previous draft
 recomputed the same test inline at the justify event, which is not the same rule — this one
@@ -39,7 +39,7 @@ reads the `h_F` of the height's *entry*, not of the moment the justification fir
 
 ## `(K ∣ h)` is written `h % K = 0`
 
-The draft writes the divisibility as `(K | h)`. Lean's `∣` reads as a pipe to anyone who has
+The protocol writes the divisibility as `(K | h)`. Lean's `∣` reads as a pipe to anyone who has
 not met it, so this subtree writes `h % Params.K = 0`, as the previous rendering did.
 
 ## Extract
@@ -81,9 +81,9 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
 
 open Params
 
-/-! ## Definition 4 — the chain state -/
+/-! ## The chain state -/
 
-/-- The chain state (Definition 4 of the draft), in the draft's field order:
+/-- The chain state, in the pseudocode's field order:
     `σ = (L, s, h, T_h, nj, target_participation, progress, finalize, J, h_j, F, h_F)`.
 
     The three arrays hold one bit per validator; the quorum sets `Qtarget`, `Qprog` and
@@ -91,7 +91,7 @@ open Params
 structure ChainState (Validator : Type) where
   /-- `L`, the latest block. -/
   L : Block Validator
-  /-- `s`, the current slot; the draft notes `s = L.slot`. -/
+  /-- `s`, the current slot; the protocol notes `s = L.slot`. -/
   s : Nat
   /-- `h`, the current height — the finality counter, separate from slot. It advances by
       exactly one, at a justification or a progress event. -/
@@ -151,7 +151,7 @@ def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
 
 /-! ## The four routines -/
 
-/-- `process_attestation(σ, a)` (Figure 6, lines 7–16): classify one attestation and set the
+/-- `process_attestation(σ, a)`: classify one attestation and set the
     bits it earns.
 
     The finality test wants three things at once (line 9): an unfinalized justification,
@@ -176,7 +176,7 @@ def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     σ.progress[i] ← true                                      -- line 15
   return σ                                                    -- line 16
 
-/-- `advance_height(σ)` (Figure 6, lines 27–31): increment the height, record the advancing
+/-- `advance_height(σ)`: increment the height, record the advancing
     block — `σ.L`, already the block being processed — recompute `nj` for the height just
     entered, and clear both height-participation arrays.
 
@@ -191,7 +191,7 @@ def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run d
   σ.targetParticipation, σ.progress ← fun _ => false          -- line 30: `false^V`
   return σ                                                    -- line 31
 
-/-- `process_height_events(σ)` (Figure 6, lines 17–26): after a block's attestations are
+/-- `process_height_events(σ)`: after a block's attestations are
     folded in, the height events are checked once, in order — *finalize*, then *justify*,
     then *progress*.
 
@@ -216,10 +216,10 @@ def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id
     return advanceHeight σ                                    -- line 25
   return σ                                                    -- line 26
 
-/-- `state_transition(σ, B)` (Figure 6, lines 1–6), with `σ = σ[B.parent]`: fold `B`'s
+/-- `state_transition(σ, B)`, with `σ = σ[B.parent]`: fold `B`'s
     attestations into the parent's post-state, install `B` as the latest block, and check the
-    height events once. The *state height* of `B` is `σ[B].h`, which is what Definition 5's
-    viability and Figure 7's height filter read. -/
+    height events once. The *state height* of `B` is `σ[B].h`, which is what Figure 7's
+    viability and height filter read. -/
 def stateTransition (σ : ChainState Validator) (B : Block Validator) :
     ChainState Validator := Id.run do
   let mut σ := σ

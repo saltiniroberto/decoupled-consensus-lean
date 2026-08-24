@@ -1,22 +1,40 @@
-# Documentation for `Spec/`
+# The spec, file by file
 
-`lean/Spec/` is the specification of Ethereum decoupled consensus, rendered from the
-protocol's working draft (`consensus-1.pdf`, not distributed with this repository).
-These pages document the design a reader meets on every page of the Lean:
+`lean/Spec/` is the specification of Ethereum decoupled consensus. One algorithm file per
+part of the protocol; read them in this order, which is dependency order:
+
+| File | What it specifies |
+| --- | --- |
+| [`Fig1GoldfishWalk.lean`](../Fig1GoldfishWalk.lean) | the fork-choice walk: `best_child`, `ghost`, the Goldfish fork choice |
+| [`Fig6StateTransition.lean`](../Fig6StateTransition.lean) | the chain state: how processed attestations justify and finalize heights |
+| [`Fig3AvailableConfirmation.lean`](../Fig3AvailableConfirmation.lean) | `update_confirmation`: what a slot confirms |
+| [`Fig2GoldfishDuties.lean`](../Fig2GoldfishDuties.lean) | the slot duties: `on_tick`, `propose_block`, `goldfish_vote`, the block and vote handlers |
+| [`Fig4SGForkChoice.lean`](../Fig4SGForkChoice.lean) | `latest`, `sg_support`, the majority fork choice |
+| [`Fig5SGDuty.lean`](../Fig5SGDuty.lean) | `sg_vote`, its handler, and the protocol's `on_tick` |
+| [`Fig7FGStore.lean`](../Fig7FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, the protocol's `get_head` |
+
+What the algorithms are written in terms of sits in [`Defs/`](../Defs):
+
+| File | What it holds |
+| --- | --- |
+| [`Model.lean`](../Defs/Model.lean) | the substrate: validators and weights, committees, blocks and ancestry, the wire objects |
+| [`Store.lean`](../Defs/Store.lean) | the store — what a node keeps — and the duty boundary object |
+| [`SigningHistory.lean`](../Defs/SigningHistory.lean) | the durable signing record behind the attestation rules |
+| [`FinalityVote.lean`](../Defs/FinalityVote.lean) | how a validator fills the attestation it signs |
+| [`Notation.lean`](../Defs/Notation.lean), [`Raise.lean`](../Defs/Raise.lean), [`FinsetM.lean`](../Defs/FinsetM.lean), [`Nondet.lean`](../Defs/Nondet.lean), [`Duty.lean`](../Defs/Duty.lean) | the vocabulary: pseudocode spellings, the failure monad `DRE`, monadic set operations, the nondeterminism monads `NDR`/`NDRE`, the duty monad `NDREB` with `broadcast` |
+| [`OldDefs.lean`](../Defs/OldDefs.lean) | parked definitions, kept compiling; nothing imports it |
+
+## The design pages
 
 - [guide.md](guide.md) — **start here if you don't know Lean**: how to read this spec
   knowing only how to code and how to read paper pseudocode.
-- [nondeterminism.md](nondeterminism.md) — how the pseudocode's arbitrary choices are
-  rendered: the `NDR`/`NDRE` monads, the pick arrow `←ᵖ`, and how a result is consumed.
+- [nondeterminism.md](nondeterminism.md) — how unspecified choices are rendered: the
+  `NDR`/`NDRE` monads, the pick arrow `←ᵖ`, and how a result is consumed.
 - [naming.md](naming.md) — how definitions are named: `Store.…`, `Fig<n>.…`, bare names,
   and why the files have no `namespace` blocks.
-- [style.md](style.md) — the remaining style rulings, one line each, with pointers to
-  where the mechanics live.
+- [style.md](style.md) — the style rulings, one line each, with pointers to where the
+  mechanics live.
 
 The running record behind these pages is `CONTEXT.md` at the repository root — the dated
-2026-08-22/23 entries and the section "The `Consensus1` style sheet". Where a page here and
+entries and the section "The `Consensus1` style sheet". Where a page here and
 `CONTEXT.md` disagree, `CONTEXT.md` is the record: fix the page.
-
-All decisions documented here are Roberto's. The pages state the decisions and how to read
-the code under them; the decision trails — what was tried and declined — stay in
-`CONTEXT.md`.

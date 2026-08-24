@@ -6,7 +6,7 @@ import Spec.Fig1GoldfishWalk
 `update_confirmation(Σ, s)`, run once per slot at `t_s + 6Δ`. "Confirmation is the same walk
 over a stricter vote set and a larger denominator."
 
-The `-- line n` comments use Figure 3's own line numbering, in the draft as of 2026-08-22.
+The `-- line n` comments number the algorithm's lines.
 
 ## What makes it stricter
 
@@ -16,7 +16,7 @@ whose validator has not been *caught equivocating by* `late`, and divides by the
 of `late`: "a validator counts when it voted in time and no second vote of its has appeared
 since; the denominator counts everyone who voted at all".
 
-Two consequences the draft draws, and neither is rendered as a hypothesis because both are
+Two consequences the protocol draws, and neither is rendered as a hypothesis because both are
 facts about the sets rather than about this routine. Because `early ⊆ late`, a validator
 equivocating in `early` equivocates in `late` too, so the scored set holds at most one vote
 per validator and `goldfish_score`'s equivocator clause never fires here. And at most one
@@ -29,11 +29,11 @@ The gate at line 6 is the majority test *without* the current-slot escape: the w
 confirmed for free. So line 6 defines its own `eligible` inline, as the figure does, and the
 routine passes it to `ghost` directly rather than going through `goldfish_fork_choice`.
 
-The walk starts at genesis over `Σ.T` — "from genesis over the live tree". At Section 5 the
-live tree is `T_F(Σ)`; at this layer nothing has been finalized yet and `Σ.T` is all there
-is. Section 5.2 says available confirmation "runs its own walk from `Σ.F` over `T_F(Σ)`", so
-the anchor and the tree are the ones this layer has, and the later layer's version of that
-sentence is a change to `Σ.F` and `T_F`, not to this routine.
+The walk starts at genesis over `Σ.T` — from genesis over the live tree. Once the
+finality layer exists the live tree is `T_F(Σ)`; at this layer nothing has been finalized
+yet and `Σ.T` is all there is. The finality layer runs available confirmation's walk from
+`Σ.F` over `T_F(Σ)`, so its version of this rule is a change to `Σ.F` and `T_F`, not to
+this routine.
 
 ## Extract
 
@@ -63,7 +63,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-/-- `update_confirmation(Σ, s)` (Figure 3, lines 1–10), run at `t_s + 6Δ`: evaluate slot `s`
+/-- `update_confirmation(Σ, s)`, run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
 
     `Σ.live_confirmed` takes the result unconditionally — it is "the block the last evaluated

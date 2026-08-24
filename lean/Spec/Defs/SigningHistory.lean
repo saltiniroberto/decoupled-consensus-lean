@@ -3,13 +3,10 @@ import Spec.Defs.Model
 /-!
 # The signing record
 
-Not draft content: `consensus-1.pdf` never says how a validator fills the attestation
-pairs it signs. The filling rules are imported from the first specification's voting
-strategy — `FinalityVote.lean` carries them and the import's story — and this record is
-theirs: the durable per-height memory those rules read and write. The store holds one as
-its field `Σ.H` (`Store.lean`), because the store is one validator's state and the rules
-are store rules; this file exists so the record's type and writes live outside the
-draft's own store file.
+The durable per-height memory behind the attestation rules: `FinalityVote.lean` holds
+the rules that fill the pairs a validator signs, and this record is what those rules read
+and write. The store holds one as its field `Σ.H` (`Store.lean`), because the store is
+one validator's state and the rules are store rules.
 -/
 
 set_option autoImplicit false
