@@ -40,7 +40,7 @@ its own `def`.
 
 `Spec/Defs/` holds the non-algorithm files: `Model.lean` (the substrate and the wire
 objects), `Store.lean` (the store, with the fields each layer adds),
-`SigningHistory.lean` (the signing record of the imported voting strategy — see
+`SigningHistory.lean` (the signing record behind the finality-vote rules — see
 `FinalityVote.lean`), `Notation.lean` (the assignment macros and the raising set-builder),
 `Raise.lean` (the failure vocabulary: `Error` and `DRE`), `FinsetM.lean` (monadic filter
 and image over a `Finset`), `Nondet.lean` (the nondeterminism vocabulary: `NDR`, `NDRE`,
@@ -48,7 +48,4 @@ the pick), `Duty.lean` (the duty monad `NDREB` and `broadcast`), and `OldDefs.le
 (parked definitions kept compiling; nothing may import it). The import order is dependency
 order rather than figure order: Figure 6's chain state is what the store's `Σ.σ[·]` maps
 into, and Figure 3's confirmation is what Figure 2's `on_tick` calls.
-
-An earlier, wider scope of this repository — two other renderings and their analysis
-and tooling — lives on the branch `pre-consensus1-purge`.
 -/

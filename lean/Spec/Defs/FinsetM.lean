@@ -12,11 +12,6 @@ operations over raising reads: `ghost`'s eligibility filter,
 `Store.viable` and `Store.updateFinality` (Figure 7), each reading the state map per
 member, where a missing entry has to reach whoever asked.
 
-(Until the 2026-08-24 purge of the older renderings, `unionM` and `filterM` lived in the
-second rendering's `FinsetM.lean` and this file imported them — a root-namespace
-declaration cannot be copied without a name collision. With that subtree gone, the three
-combinators live together here.)
-
 ## `Finset.fold` is the only route, and its two instance arguments are the whole design
 
 A `Finset` is a `Multiset` with a nodup proof, and a `Multiset` is a list up to permutation,

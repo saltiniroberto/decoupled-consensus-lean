@@ -191,9 +191,8 @@ structure Store (Validator : Type) where
       is recomputed inside the new live tree whenever `Σ.F` advances. -/
   h_max : Nat
   /-- `Σ.H`, the validator's durable signing record — **not a field of the protocol's store**:
-      the record of the imported voting strategy, its type and story in
-      `SigningHistory.lean` and `FinalityVote.lean`. Written only by that strategy's
-      rules. -/
+      the record behind the finality-vote rules, its type in `SigningHistory.lean` and
+      its use in `FinalityVote.lean`. Written only by those rules. -/
   H : SigningHistory Validator
   /-- `Σ.i`, the validator running this node — the protocol's `ℓ`, which its figures treat
       as ambient and **its store does not list**. A field here, so a duty can read its
@@ -250,7 +249,7 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
 
 /-! ## The duty boundary object
 
-Not draft content: the protocol's duties `broadcast` and return nothing. Duties run in
+Not protocol content: the protocol's duties `broadcast` and return nothing. Duties run in
 `NDREB` (`Duty.lean`) — they broadcast into the monad's outbox and return the store — and
 this structure survives at the consumption boundary alone: `NDREB.outcomes` packages a
 run's store and outbox as one value, the state-and-send shape of a lean-sts step result

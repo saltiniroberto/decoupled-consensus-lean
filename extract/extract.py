@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Extract a consensus-1-like document out of the frozen Lean files.
+"""Extract a consensus-1-like document out of the Lean specification.
 
-Reads the frozen copy named by SRC below (currently extract/Consensus1-frozen-2/),
+Reads the live spec named by SRC below (lean/Spec/, subdirectories included),
 writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
 latexmk -lualatex.
 
@@ -58,7 +58,7 @@ import unicodedata
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SRC = HERE / "Consensus1-frozen-2"
+SRC = HERE.parent / "lean" / "Spec"
 OUT = HERE / "out"
 
 # Section order: file stem -> None (use the module header's own title).
@@ -1877,15 +1877,15 @@ def frontmatter():
             ["git", "-C", str(HERE), "status", "--porcelain", "--", str(SRC)],
             capture_output=True, text=True).stdout.strip()
         if dirty:
-            commit += " (frozen copy has uncommitted changes)"
+            commit += " (spec has uncommitted changes)"
     except OSError:
         commit = "unknown"
     stamp = datetime.date.today().isoformat()
     return "\n".join([
         r"\begin{center}",
         r"{\LARGE Consensus-1}\\[2mm]",
-        r"{\small generated from the Lean specification, \codett{extract/" +
-        esc(SRC.name) + r"/}}\\[1mm]",
+        r"{\small generated from the Lean specification, \codett{" +
+        esc(str(SRC.relative_to(HERE.parent))) + r"/}}\\[1mm]",
         r"{\small " + esc(commit) + r" · " + esc(stamp) + "}",
         r"\end{center}",
         r"\tableofcontents",
@@ -2022,7 +2022,7 @@ def main():
     # harvest over every file, vocabulary included
     all_items = []
     parsed = {}
-    for path in sorted(SRC.glob("*.lean")):
+    for path in sorted(SRC.rglob("*.lean")):
         header, items = parse_file(path)
         parsed[path.stem] = (header, items)
         all_items.extend(items)

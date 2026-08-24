@@ -33,14 +33,13 @@ that block as evidence.
 
 **`nj` is a stored field.** The protocol computes it on entry into a height, "after the same
 transition has applied any finalization", and keeps it until the height changes: `advance
-height` writes it at line 29, and the justify event reads it at line 20. The previous draft
-recomputed the same test inline at the justify event, which is not the same rule — this one
-reads the `h_F` of the height's *entry*, not of the moment the justification fires.
+height` writes it at line 29, and the justify event reads it at line 20 — so the test reads
+the `h_F` of the height's *entry*, not of the moment the justification fires.
 
 ## `(K ∣ h)` is written `h % K = 0`
 
 The protocol writes the divisibility as `(K | h)`. Lean's `∣` reads as a pipe to anyone who has
-not met it, so this subtree writes `h % Params.K = 0`, as the previous rendering did.
+not met it, so this subtree writes `h % Params.K = 0`.
 
 ## Extract
 

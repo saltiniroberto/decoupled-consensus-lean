@@ -499,11 +499,9 @@ instance : DecidableEq (SGVote Validator) := fun a b =>
     can name what it sends. The equality instance is derived, sitting below the
     hand-written ones it needs.
 
-    The `attestation` constructor is **not the protocol's**: the protocol's
-    blocks carry attestations but it never says how one travels from signer to proposer,
-    because it never defines the signing layer at all. The first specification's
-    attestation is a wire message, and `FinalityVote.lean` imports that answer with the
-    rest of the strategy, so `Store.fgVote` can be a duty. -/
+    Attestations travel on the wire: a signed attestation goes from signer to proposer,
+    so `Store.fgVote` can be a duty that broadcasts what it signs, and a block carries
+    the ones its proposer includes. -/
 inductive Message (Validator : Type) [Roots] where
   /-- A proposed block. -/
   | block (B : Block Validator)
@@ -511,7 +509,7 @@ inductive Message (Validator : Type) [Roots] where
   | gfVote (v : GoldfishVote Validator)
   /-- An SG vote. -/
   | sgVote (v : SGVote Validator)
-  /-- An attestation — not one of the protocol's messages; see above. -/
+  /-- An attestation, traveling from signer to proposer. -/
   | attestation (a : Attestation Validator)
 deriving DecidableEq
 

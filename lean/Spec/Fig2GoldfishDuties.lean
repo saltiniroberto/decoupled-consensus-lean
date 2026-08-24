@@ -19,8 +19,8 @@ line 8 calls `update_confirmation`. The file names keep the protocol's numbers.
 
 ## `ℓ` is `i`, and the proposer test is a parameter
 
-The protocol writes `ℓ` for the validator running the node. This subtree writes `i`, as the
-previous rendering did, and nothing else in it uses that letter.
+The protocol writes `ℓ` for the validator running the node. This subtree writes `i`, and
+nothing else in it uses that letter.
 
 Line 3 asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside this
 specification's scope — a slot simply *has* an assigned proposer — so `on_tick`

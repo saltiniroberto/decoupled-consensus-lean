@@ -28,45 +28,6 @@ no signature is released before its record is durable:
 
 `Store.fgVote` composes them, finality first, so the finality target written by the
 finality rule is visible to the height rule's record read within the same attestation.
-
-## What changed in the crossing
-
-Each of these is a decision this file makes, listed so it can be revisited:
-
-* **The rules are store rules, and the record is a store field** (the source stated them
-  over explicit inputs, the record threaded through). What each rule reads from the store
-  is named in its docstring; the record write is the `Σ.H` write in the store it returns,
-  and `Store.fgVote`'s body is the composition.
-* **The pair encodings are this subtree's.** The first rendering's `.timeout k` is
-  `HeightPair.emptyTarget k` here, and its `.commit h J` is `FinalityPair.pair h J`; the
-  record write `saveTimeout` is renamed `saveEmptyTarget` to match.
-* **The ceiling is `Σ.live_confirmed`, and it always exists.** The first rendering's
-  confirmed block was an `Option` — with none confirmed, the height rule signed nothing.
-  This store's `live_confirmed` is a block from genesis on, so that case is
-  unrepresentable and gone.
-* **The context is the confirmed block's stored state, and the read raises.** The first
-  rendering advanced that state to the action's slot (its `process_slots`) and answered
-  with an empty pair when no state was recorded. This subtree stores post-states only and
-  has no slot-advance on states, so the stored state is read as it is; and a confirmed
-  block without a recorded state marks a store the handlers cannot build, so the read
-  raises — the subtree's rule — instead of degrading to an empty pair.
-* **The context target is always a block.** This subtree's `ChainState.T_h` is never `⊥`,
-  so the first rendering's empty-target-field arm of its last case has nothing to match
-  and is gone.
-* **The two heights coincide, so their comparisons are gone.** The first rendering
-  distinguished the current height `k` from the height `hC` of the confirmed block's own
-  state only for a branch it never rendered; over the store both are the confirmed state's
-  height, so its `hC ≥ k` conditions hold outright and are not written.
-* **The round is the store's.** `r = round(Σ.s)`, as the SG duty derives it; the first
-  rendering took `r` as an argument.
-* **One input stays explicit, and one condition is dropped.** `head` stays: the rule
-  producing the SG head is a separate concern (this subtree's confirmation rule), so the
-  head the attestation carries is passed in. The source's `hasJC` — "it knows the
-  justification certificate `JC(h_j, J)`", a `Bool` input there — is not carried over: in
-  this protocol justification is an on-chain fact,
-  `Σ.J` and `Σ.h_j` read off replayed states whose justifying attestations sit inside
-  blocks the validator has processed, so a coherent store's own chain is the evidence
-  and there is no separate knowledge to model.
 -/
 
 set_option autoImplicit false
@@ -136,8 +97,10 @@ def Store.heightVote (S : Store Validator) :
     the validator already signed `J` as its target at `h_j`, signed no empty target
     there, and its recorded finality target there is empty or `J` itself. That record is
     written into the returned store on first release; the rule is total — every branch
-    returns. The source's certificate-knowledge condition is not carried over — see the
-    module header. -/
+    returns. No separate knowledge of the justification is asked for: justification is an
+    on-chain fact — `Σ.J` and `Σ.h_j` read off replayed states whose justifying
+    attestations sit inside blocks the validator has processed — so a coherent store's
+    own chain is the evidence. -/
 def Store.finalityVote (S : Store Validator) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
@@ -156,8 +119,9 @@ def Store.finalityVote (S : Store Validator) :
     A `NDREB` duty, as every duty: the attestation leaves by `broadcast` —
     `Message.attestation`, the wire decision recorded on that constructor — and the
     returned store carries both record writes. The signer is the store's own `Σ.i`; the
-    round is `round(Σ.s)`; `head` stays explicit — see the module header. The head is
-    carried, not derived. -/
+    round is `round(Σ.s)`; `head` stays explicit — producing the SG head is the
+    confirmation rule's concern, so the attestation carries the head it is given rather
+    than deriving one. -/
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     NDREB Validator (Store Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair

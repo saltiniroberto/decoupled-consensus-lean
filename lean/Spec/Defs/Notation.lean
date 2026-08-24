@@ -18,8 +18,8 @@ The macros are protocol-free — nothing here names anything from the protocol �
 the result type from the state binder: the type is worth having visible at the declaration.
 
 **No `while` or `repeat` macro.** Lean 4.32.2's `Lean.Loop.forIn` is `whileM`
-(`Init/While.lean`), a least fixed point, so a draft `while` would be written directly with
-no bound. Proving anything about a routine written that way needs the `lean-proof-idioms`
+(`Init/While.lean`), a least fixed point, so a figure's `while` would be written directly
+with no bound. Proving anything about a routine written that way needs the `lean-proof-idioms`
 skill; writing one does not.
 
 **The assignment macros claim bare identifiers as well as dotted ones.** So a figure's
@@ -98,8 +98,8 @@ macro_rules
         `(doElem| $v:ident :=
             { $v with $f:ident := Function.update (($v).$f:ident) $i $e })
 
-/-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in the
-    draft's own clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads
+/-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in
+    set-builder clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads
     a store map with the raising bracket has no monad to fail into; this form expands to
     `s.filterM (fun x => do return p)`, and a `(← …)` inside `p` lifts into that inner `do`
     `ᴹ` says monadic. The spelling is distinct from the pure builder's on purpose:

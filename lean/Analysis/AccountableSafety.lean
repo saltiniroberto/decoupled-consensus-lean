@@ -1,33 +1,14 @@
 import Spec.Fig6StateTransition
 
 /-!
-# Accountable safety — the statement, imported
+# Accountable safety — the statement
 
-The statement of the first specification's accountable-safety theorem ("conflicting
-blocks cannot both finalize unless, for some height `h`, at least `2q − W` weight is
-provably E1- or E2-slashable"), adapted to this rendering. **Statements only** (Roberto,
-2026-08-24): each result is a named `Prop`, so nothing claims a proof and `make check`
-stays green; proving one later means adding `theorem … : AccountableSafety …` beside it.
-The source — `Analysis/Theorems.lean` and `Analysis/Vocabulary.lean` of the removed
-rendering, on the `pre-consensus1-purge` branch — carries the proof this statement had
-there, from its Lemma 11.
-
-What the adaptation changed, each a decision to revisit:
-
-* **The `≠ invalid` hypotheses are gone.** This draft's transition is total — every block
-  replays to a state, there is no invalid — so the source's two well-formedness
-  hypotheses have nothing to say.
-* **`replay` is defined here.** In this draft a block's state lives in stores
-  (`Σ.σ[B]`), but the statement must be store-free: a block carries its whole chain
-  through the parent link, so its state is the fold of `state_transition` along it —
-  exactly what `process_block` writes into every coherent store, block by block.
-* **"Conflicting" is `¬ Compatible`.** The draft defines *compatible* (`∼`) and says
-  blocks conflict otherwise, naming no relation for it.
-* **The pair encodings are this rendering's** — `FinalityPair.pair` for the source's
-  `.commit`, `HeightPair.emptyTarget` for its `.timeout`.
-* **The heights are not separately quantified.** The paper's "for some height `h`" lives
-  inside E1 and E2's own pairs, as the source statement already noted; the two named
-  height binders it kept anyway are dropped.
+Conflicting blocks cannot both finalize unless at least `2q − W` weight is provably E1-
+or E2-slashable. **Statements only**: each result is a named `Prop`, so nothing claims a
+proof and `make check` stays green; proving one later means adding
+`theorem … : AccountableSafety …` beside it. A proof of this statement over an earlier,
+removed formalization lives on the `pre-consensus1-purge` branch
+(`Analysis/Theorems.lean`, its Lemma 11) — a starting point, not a citation.
 -/
 
 set_option autoImplicit false

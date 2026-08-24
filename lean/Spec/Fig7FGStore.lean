@@ -7,7 +7,7 @@ import Spec.Fig2GoldfishDuties
 Viability, and the finality layer's routines: `process_block` extended, `update_finality`, `fork_choice_root`,
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
-**This is the protocol.** Where a routine here shares a draft name with an earlier figure,
+**This is the protocol.** Where a routine here shares a name with an earlier figure,
 this is the reading a caller wants, and it bears the plain `Store` name: `S.processBlock`,
 `S.goldfishEligible`, and the fork choice `S.getHead`. The superseded readings are
 figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`.
