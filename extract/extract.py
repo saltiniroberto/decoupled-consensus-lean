@@ -1595,8 +1595,7 @@ def fix_spaces(spans):
                 sep = not (isinstance(rt, str) and rt in ",;()[]")
             elif lword and rword:
                 sep = True
-            elif lk == "sym" and isinstance(lt, str) and lt in "\u2203\u2200" and rk in WORDY:
-                sep = True
+            # no space after a quantifier: math typesetting joins the binder tight
             if sep:
                 out.append(("space", " "))
         out.append(span)
