@@ -58,7 +58,7 @@ script:
   likewise stripped in the PDF; the figure is captioned and numbered by LaTeX, with
   label `fig:<file stem>`.
 - **Prose never writes a generated number.** `## Extract` prose references figures and
-  definitions symbolically — `[fig:02GoldfishDuties]`, `[def:store]` — and the
+  definitions symbolically — `[fig:02_GoldfishDuties]`, `[def:store]` — and the
   extractor emits `Figure~\ref{…}` / `Definition~\ref{…}`, hyperlinked. A dangling
   reference is a LaTeX warning.
 - **A structure whose field docstrings open `X.…` is the paper's `X`.** The store's

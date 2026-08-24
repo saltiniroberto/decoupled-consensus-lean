@@ -8,7 +8,7 @@ write proofs.
 
 ## The shape of a file
 
-A figure file (`02GoldfishDuties.lean`, say) contains one routine per pseudocode
+A figure file (`02_GoldfishDuties.lean`, say) contains one routine per pseudocode
 routine. Everything between `/--` and `-/` is documentation for the definition below it;
 `--` starts a line comment, and the `-- line 12` comments number the algorithm's lines.
 The files under `Defs/` hold the data types and the plumbing; the ones whose

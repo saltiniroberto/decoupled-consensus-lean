@@ -1,4 +1,4 @@
-import Spec.«01GoldfishWalk»
+import Spec.«01_GoldfishWalk»
 
 /-!
 # Figure 3 — available confirmation

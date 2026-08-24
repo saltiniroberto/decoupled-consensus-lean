@@ -1,7 +1,5 @@
 # decoupled-consensus-lean
 
-The Lean 4 specification of **Ethereum decoupled consensus**.
-
 ## The spec
 
 It lives in [`lean/Spec/`](lean/Spec/) — one algorithm file per part of the protocol, and

@@ -34,7 +34,7 @@ reads it in one place: `update_finality` compares justifications in the lex orde
 class carries the type, the linear order the lex comparison needs, and the root `B_gen`
 carries — the protocol says "every block `B` has a root" and its genesis is a block. The
 walk's tie-break is **not** read off the root: the tie is a nondeterministic pick in
-`01GoldfishWalk.lean`, every resolution among the outcomes, a root order being one.
+`01_GoldfishWalk.lean`, every resolution among the outcomes, a root order being one.
 
 Nothing constrains a block's root to match the post-state it would compute: the block
 *claims* a root — the proposer's own claim is the assumed `RootComputation` of Figure 2 —

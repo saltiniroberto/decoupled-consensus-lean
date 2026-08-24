@@ -33,7 +33,7 @@ the plain `Store` name**; the superseded readings are figure-named.
 | `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `Store.getHead` (Figure 7)          |
 | `process_block`     | `Fig2.processBlock`            | `Store.processBlock` (Figure 7)     |
 | `goldfish_eligible` | `Fig1.goldfishEligible`        | `Store.goldfishEligible` (Figure 7) |
-| `on_tick`           | `Fig2.onTick`                  | `Store.onTick` (`05SGDuty.lean`)  |
+| `on_tick`           | `Fig2.onTick`                  | `Store.onTick` (`05_SGDuty.lean`)  |
 
 `on_tick` is the one whose extension is rendered as a call rather than a rewrite: Section
 3.4 says "`on_tick` gains one line", and `Store.onTick` is exactly that — it runs

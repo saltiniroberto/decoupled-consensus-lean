@@ -51,10 +51,10 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
   later one runs. `DutyResult` survives only at the boundary: `NDREB.outcomes` is the
   outcome set the sts wiring and `Analysis/` consume a duty as. The tick still returns
   from each action branch directly (`Fig2.onTick`; the protocol's `Store.onTick` runs it
-  and then the SG layer's added line, `05SGDuty.lean`).
+  and then the SG layer's added line, `05_SGDuty.lean`).
 - **Scheduled routines carry their instant as an anonymous autoparam**, discharged by
   `solve_by_elim [And.left, And.right]`, so `Store.onTick`'s dependent `if`s satisfy them
-  with no `have`s (`02GoldfishDuties.lean` explains the tactic choice).
+  with no `have`s (`02_GoldfishDuties.lean` explains the tactic choice).
 
 ## The ambient environment
 

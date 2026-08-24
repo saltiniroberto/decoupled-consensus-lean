@@ -1,5 +1,5 @@
 import Mathlib.Data.Finset.Union
-import Spec.«03AvailableConfirmation»
+import Spec.«03_AvailableConfirmation»
 import Spec.Defs.Nondet
 
 /-!
@@ -61,13 +61,13 @@ every counting site.
 Figure 7 extends `process_block` with two lines: the post-state and `update_finality`. That
 reading, `S.processBlock`, is the protocol's; this one is the availability layer's —
 hence `Fig2.processBlock`. Likewise `on_tick`: the SG layer extends it with one line — at
-`t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`05SGDuty.lean`), is the
-protocol's; this one is the figure's, hence `Fig2.onTick`. See `01GoldfishWalk.lean` on
+`t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`05_SGDuty.lean`), is the
+protocol's; this one is the figure's, hence `Fig2.onTick`. See `01_GoldfishWalk.lean` on
 the figure-named readings.
 
 ## Extract
 
-[fig:02GoldfishDuties] defines the store handlers and the two duties. The handlers
+[fig:02_GoldfishDuties] defines the store handlers and the two duties. The handlers
 take the store and change it in place. Only the two duties concern the validator
 running the node, written `i`; a node whose `i` holds no duty for the slot simply does
 not run them. A duty broadcasts its own object and returns the store with that object
@@ -217,7 +217,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     the slot's actions this instant is.
 
     This is the availability layer's reading. The SG layer extends it with one line — at `t = a_r`, run
-    `sg_vote` — and that reading, `S.onTick` (`05SGDuty.lean`), is the protocol's.
+    `sg_vote` — and that reading, `S.onTick` (`05_SGDuty.lean`), is the protocol's.
 
     `isProposer` is the parameter of line 3; see the module header. A `NDREB` duty too,
     so whatever an action broadcasts is in the outbox. Each action branch returns its

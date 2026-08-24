@@ -5,15 +5,15 @@ import Spec.Defs.Raise
 import Spec.Defs.Nondet
 import Spec.Defs.OldDefs
 import Spec.Defs.SigningHistory
-import Spec.«06StateTransition»
+import Spec.«06_StateTransition»
 import Spec.Defs.Store
-import Spec.«01GoldfishWalk»
-import Spec.«03AvailableConfirmation»
-import Spec.«02GoldfishDuties»
-import Spec.«04SGForkChoice»
-import Spec.«05SGDuty»
-import Spec.«07FGStore»
-import Spec.«08FinalityVote»
+import Spec.«01_GoldfishWalk»
+import Spec.«03_AvailableConfirmation»
+import Spec.«02_GoldfishDuties»
+import Spec.«04_SGForkChoice»
+import Spec.«05_SGDuty»
+import Spec.«07_FGStore»
+import Spec.«08_FinalityVote»
 
 /-!
 # The specification
@@ -40,7 +40,7 @@ its own `def`.
 `Spec/Defs/` holds the non-algorithm files: `Model.lean` (the substrate and the wire
 objects), `Store.lean` (the store, with the fields each layer adds),
 `SigningHistory.lean` (the signing record behind the finality-vote rules — see
-`08FinalityVote.lean`), `Notation.lean` (the assignment macros and the raising set-builder),
+`08_FinalityVote.lean`), `Notation.lean` (the assignment macros and the raising set-builder),
 `Raise.lean` (the failure vocabulary: `Error` and `DRE`), `FinsetM.lean` (monadic filter
 and image over a `Finset`), `Nondet.lean` (the nondeterminism vocabulary: `NDR`, `NDRE`,
 the pick, and the duty monad `NDREB` with `broadcast`), and `OldDefs.lean`
