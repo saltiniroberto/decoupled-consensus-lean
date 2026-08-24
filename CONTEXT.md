@@ -640,8 +640,26 @@ or unique harvested paper symbol — and a paragraph of nothing but backticked s
 and/or `[eq:…]` refs renders as a centered display line, items quad-separated.
 Placement stays authored: the reference is written where the equation should appear.
 Typography same day: symbol glyphs fall back to Latin Modern Math before DejaVu
-(weight-matched, no more bold-looking `⪯`/`∈`), and no space after a quantifier
-(`∃a ∈ votes`, as math sets it).
+(weight-matched, no more bold-looking `⪯`/`∈`), no space after a quantifier
+(`∃a ∈ votes`, as math sets it), each figure's algorithm block boxed as the source
+document boxes its figures, a numeral joined to a short symbol by thin space (`2W`),
+a primed letter (`T'`) kept out of the mono fallback, and a bare argument-less mention
+of a callable rendered as the name, not a padded call.
+
+Evening, on instruction ("apply the above to the live spec so that it looks like the
+source document as much as possible"): the `-- line N` comments are gone from the spec
+(bare markers deleted, prefixed text kept, the header sentence describing the
+convention deleted); files in a subdirectory render before the root files (the
+numeric renames had pushed `Defs/Model` and `Defs/Store` after `08_` in a plain path
+sort, and the document opens with substrate and store); and the marked prose was
+brought up to the source document section by section — displays and `[eq:…]` refs
+throughout, the slot-action schedule table, E1/E2, and the wire objects introduced
+per layer (SG vote in `04_`, attestation in `06_`) instead of all in Model. The
+document now tracks the source's five-section structure with matching definition
+numbering (1 Store, 2 Goldfish score and walk, 3 Latest vote, 4 Chain state,
+5 Viability). Not carried over: the source's `E_F(Σ)` evidence-set display (nothing
+in this document consumes it) and `Σ.timestamp(B_gen) = −∞` in the store's initial
+values (not checked against the Lean).
 
 ### The identity is the protocol, and the spec speaks as the source of truth — 2026-08-24
 
