@@ -29,8 +29,8 @@ what the paper leaves open: unspecified orders and tie-breaks are genuine nondet
 ## Where everything is
 
 The spec is `lean/Spec/`, one file per algorithm figure of the protocol's working draft
-(the draft, `consensus-1.pdf`, is a local file and not committed; the Lean stands alone,
-every definition documented in place):
+(the draft, `consensus-1.pdf`, is not distributed with this repository; the Lean stands
+alone, every definition documented in place):
 
 | File | What it specifies |
 | --- | --- |

@@ -9,7 +9,7 @@ how processed attestations move the chain state (Figure 6), but it does not say 
 validator *fills* the height pair and the finality pair it signs. This file carries that
 logic over from the first specification's voting strategy; its Lean rendering —
 `Voting.lean`, namespace `Decoupled`, on the `pre-consensus1-purge` branch — maps every
-definition back to that paper (itself local-only, in `latex-specs/`).
+definition back to that paper.
 
 The strategy, in plain words. A validator keeps a durable per-height record of what it has
 signed — `Σ.H`, a `SigningHistory` (the field in `Store.lean`): whether it signed an

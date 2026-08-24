@@ -6,8 +6,8 @@ import Mathlib.Data.Finset.Lattice.Basic
 /-!
 # The common substrate, and the wire objects
 
-This is the rendering of `consensus-1.pdf`, the human-controlled draft kept locally at
-the repository root (no PDF spec is committed), under namespace `Consensus1`.
+This is the rendering of `consensus-1.pdf`, the protocol's human-controlled working
+draft (not distributed with this repository), under namespace `Consensus1`.
 
 The file holds the model vocabulary the figure files read, and nothing else: a definition
 lands here at the moment a figure first consumes it, so everything below has a consumer under

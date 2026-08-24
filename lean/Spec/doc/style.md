@@ -65,9 +65,9 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 ## Comments and citations
 
 - **Line comments cite the figure's own line numbers** (`-- line 25`).
-- **Docstrings are self-contained and cite nothing** — no `latex-specs` citations in this
-  subtree (the 2026-08-19 pivot: correctness is the contract, the paper apparatus is
-  frozen).
+- **Docstrings are self-contained and cite nothing** — no checked citations of any
+  source document (correctness is the contract, and the draft has no stable labels to
+  cite).
 
 ## Retired machinery
 

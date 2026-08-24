@@ -2,8 +2,9 @@
 
 The Lean 4 specification of **Ethereum decoupled consensus**, as `lean/Spec/`, plus the
 extractor under `extract/` that renders the Lean back into a paper-shaped document. The
-protocol's working draft is `consensus-1.pdf`, a human-controlled local file — the spec
-renders it, but the project is the protocol's formalization, not the document's.
+protocol's working draft is `consensus-1.pdf`, human-controlled and not distributed with
+this repository — the spec renders it, but the project is the protocol's formalization,
+not the document's.
 
 @CLAUDE.local.md
 
@@ -17,12 +18,11 @@ every definition is correct, and Roberto is the judge of what correct means. Pra
 
 - **Strictly reactive.** Semantics change only on Roberto's explicit call, and correctness
   work happens where he points. No uninvited correctness audits.
-- **`consensus-1.pdf`** is the draft being rendered: a local file at the repository root,
-  **never committed** — no PDF spec is. It has no stable labels or line numbers and is
-  under revision, so nothing cites it in a checked sense; a docstring saying "Definition 1
-  of the draft" names the draft's numbering as of the date the docstring records, and the
-  docstring's own text is what the Lean is read against. `pdftoppm` and `pdftotext` are
-  installed, so the Read tool renders its pages directly.
+- **`consensus-1.pdf`** is the draft being rendered, and it is **never committed** — no
+  PDF spec is; `CONTEXT_LOCAL.md` says where to read it. It has no stable labels or line
+  numbers and is under revision, so nothing cites it in a checked sense; a docstring
+  saying "Definition 1 of the draft" names the draft's numbering as of the date the
+  docstring records, and the docstring's own text is what the Lean is read against.
 - **Definitions carry self-contained docstrings** that say what the definition means, and
   cite nothing.
 
@@ -32,10 +32,8 @@ Two older renderings — the `latex-specs` papers (namespace `Decoupled`, with `
 and a citation apparatus) and `consensus.pdf` (namespace `Consensus`) — were removed on
 2026-08-24 (Roberto: keep only what `Spec/` and the extractor need). **The
 branch `pre-consensus1-purge` holds the last commit carrying all of it**, history
-included; docstrings that name a removed file point there. The `latex-specs` checkout
-survives locally as a plain untracked clone (it was a submodule), and the local
-`REFERENCES_LOCAL.md` says where the still-earlier first attempt lives. Treat everything
-from those layers as unverified until re-checked here.
+included; docstrings that name a removed file point there. Treat everything from those
+layers as unverified until re-checked here.
 
 ## The framework is a submodule, and must not be pushed to
 

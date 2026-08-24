@@ -7,12 +7,13 @@ gitignored. Keep both current as work happens; delete what becomes wrong.
 ## What this is
 
 The Lean 4 specification of Ethereum decoupled consensus, as `lean/Spec/` — rendered
-from the protocol's working draft, `consensus-1.pdf`, a human-controlled local file —
-plus `extract/`, a script that renders the Lean back into a paper-shaped document. The
-draft is kept locally at the repository root and never committed; no PDF spec is
-(Roberto, 2026-08-24, twice: the identity is the protocol's formalization, and nothing
-in the tracked tree is a PDF — history before `4630c05` still carries the ones then
-tracked, the safety branch included).
+from the protocol's working draft, `consensus-1.pdf`, human-controlled and not
+distributed with this repository — plus `extract/`, a script that renders the Lean back
+into a paper-shaped document. No PDF spec is committed, and committed files do not name
+local-only files (Roberto, 2026-08-24, all three: the identity is the protocol's
+formalization; nothing in the tracked tree is a PDF — history before `4630c05` still
+carries the ones then tracked, the safety branch included; and where local material
+lives is `CONTEXT_LOCAL.md`'s to say).
 
 **Two older renderings and their apparatus preceded this scope and were removed on
 2026-08-24** (Roberto: keep only what `Spec/` and the extractor need): the
@@ -20,9 +21,8 @@ tracked, the safety branch included).
 `Decoupled`, with `Analysis/`, the citation checker, `MAPPING.md` and its tooling) and
 `consensus.pdf`'s (`Spec/Consensus/`, namespace `Consensus`). **The branch
 `pre-consensus1-purge` holds the last commit carrying all of it**, history included — the
-entries below that cite removed files or their decision trails resolve there. The
-`latex-specs` checkout survives locally, untracked (it was a submodule; `deps/lean-sts`
-is still one).
+entries below that cite removed files or their decision trails resolve there.
+(`deps/lean-sts` remains the one submodule.)
 
 Toolchain: pinned in `lean-toolchain` (Lean 4.32.2); Mathlib rev in `lakefile.toml` and
 the rev `deps/lean-sts` requires must both match it — bump all three together.
@@ -221,11 +221,11 @@ chooser raises.
 - **The notation cost `Notation.lean` predicted is now paid**: the assignment macro claims
   `x ← e` for pure re-assignment, so a monadic bind onto a `mut` variable is written
   `H := (← bestChild …)`, `S := (← proposeBlock i S root).2`.
-- **Subtype-coercion facts, measured** (`scratch/SubtypeCoe.lean`): the `Subtype.val`
+- **Subtype-coercion facts, measured**: the `Subtype.val`
   coercion fires at expected-type positions — `return b`, `return (← e)`, and `:=` onto a
   typed `mut` variable — but never at field access (`b.slot` fails) nor in an application
   whose implicit is still open (`Block.slot b` fails); `let ⟨B, hB⟩ ← e` destructures past
-  the question entirely. Related, from the same sitting (`scratch/CoeEqOption.lean`, commit
+  the question entirely. Related, from the same sitting (commit
   `c2238d1`): the `=` elaborator does not insert a coercion around a `mut`-variable read —
   bare `B.parent = H` elaborates against a plain binder and fails against a `mut` one — so
   Figure 1's line 8 writes the coercion explicitly, `B.parent = ↑H`.
@@ -328,7 +328,7 @@ Roberto's two calls, ending the root-as-`Nat` rendering.
 ### The walk goes nondeterministic: `NDR`/`NDRE` adopted — 2026-08-23
 
 Roberto: implement the scoped-out solution. This resolves the parked `for all` decision by
-its fourth exit, measured in `scratch/SetMonadProbe.lean` and `scratch/SetExceptProbe.lean`
+its fourth exit, measured on two probes
 (kept). `Nondet.lean` is the machinery: `NDR α := Set α` (picks only, Mathlib's opt-in
 `Set.monad` activated scoped), `NDRE α := ExceptT Error Set α` (picks and raising reads,
 `Set (ResultOrExcept α)` under `.run`), the missing `Except`-into-`ExceptT` lift, the pick
@@ -543,10 +543,9 @@ what was. Historical searches need both names.
 ### Duties go monadic: `DutyM` adopted — 2026-08-24
 
 The trail: `DutyResult.withSend` (the tick's send union) prompted "any alternatives"; the
-duty-monad option was probed twice — `scratch/DutyMonadProbe.lean`, store and outbox both
-ambient, **declined** (Roberto: the functions must keep their input `Store`; ambient
-identity also cost the instant autoparams) — and `scratch/DutyWriterProbe.lean`, outbox
-only, adopted ("ok"). `Duty.lean` is the machinery (a not-a-specification file): `NDREB α
+duty-monad option was probed twice — store and outbox both ambient, **declined**
+(Roberto: the functions must keep their input `Store`; ambient identity also cost the
+instant autoparams) — and outbox only, adopted ("ok"). `Duty.lean` is the machinery (a not-a-specification file): `NDREB α
 = StateT (Finset (Message _)) NDRE α` — nondeterministic result with exception and
 broadcasts, the effect-inventory name continuing `DRE`/`NDRE` (Roberto; the first name,
 `DutyM`, lasted an hour — the `-M` suffix here marks monadic variants of named pure
@@ -595,7 +594,7 @@ this list when a new call lands.
   `x ≠ ⊥`, never `.isSome`** (Roberto, 2026-08-23), and in a raising body extraction is
   the lift: `let y ← x` binds the value or raises, via the scoped
   `MonadLift Option DRE` in `Raise.lean` (Roberto, 2026-08-24, "do that, also
-  wherever applicable"; probe `scratch/OptionLiftProbe.lean`). Behind a plain
+  wherever applicable"). Behind a plain
   `if x ≠ ⊥` the raise is unreachable; the accepted cost, stated at the instance, is
   that dropping the test leaves compiling code that raises where a rule meant to fall
   through. The autoparam extraction that did check at the site, `Option.value`, lost its
@@ -691,5 +690,4 @@ assumptions, instant autoparams). Linked first from `doc/README.md`.
      not transfer.
 1. **The extractor workstream** (`extract/`): the conventions and rewrite rules are in
    `extract/README.md`; the frozen copy refreshes only on instruction.
-2. `README.md` is refreshed before a push, not per commit (`CLAUDE.local.md`); a push is
-   long overdue.
+2. `README.md` is refreshed before a push, not per commit; a push is long overdue.
