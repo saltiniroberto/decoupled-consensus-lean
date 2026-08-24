@@ -1,0 +1,17 @@
+# Configuration of the generated document. Read by extract.py.
+
+[document]
+# The document's title, set on the title page.
+title = "Decoupled Consensus"
+
+# The order files render in, one key per directory of lean/Spec/ ("." is the root).
+# Directories themselves come vocabulary-first: subdirectories before the root.
+# A value is:
+#   ["*"]              alphabetical — also the default when a directory has no key;
+#   ["A", "B", "C"]    the defined order, exhaustive — a file the list does not name
+#                      is an error;
+#   ["A", "B", "*"]    the listed files in place, every other file alphabetically at
+#                      the "*".
+[order]
+Defs = ["Model", "Store", "*"]
+"." = ["*"]

@@ -3,7 +3,7 @@
 
 Reads the live spec named by SRC below (lean/Spec/, subdirectories included),
 writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
-latexmk -lualatex. The document's title comes from extract/config.ini
+latexmk -lualatex. The document's title comes from extract/config.toml
 (`title` under `[document]`).
 
 v6: prose can quote a definition instead of restating it. `[eq:name]` in `## Extract`
@@ -15,7 +15,7 @@ separated by quad space — the draft's own equation rows.
 
 v5: the sources drive the structure. Files in a subdirectory render before the files
 at SRC's root (the vocabulary a spec is written in terms of precedes its algorithms);
-within a directory, config.ini's [order] key for it decides — alphabetical by default,
+within a directory, config.toml's [order] key for it decides — alphabetical by default,
 or a defined order, with `*` standing for the unlisted files alphabetically. A file
 emits a section only when something in it is marked `## Extract`.
 A `def` whose own docstring carries an `## Extract` section is *figured* — rendered as
@@ -73,7 +73,6 @@ set-builders and a big union.
 """
 
 import argparse
-import configparser
 import datetime
 import re
 import subprocess
@@ -81,36 +80,43 @@ import sys
 import unicodedata
 from pathlib import Path
 
+try:
+    import tomllib  # Python ≥ 3.11
+except ImportError:
+    import tomli as tomllib  # the library tomllib was adopted from, API-identical
+
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent / "lean" / "Spec"
 OUT = HERE / "out"
-CONFIG = HERE / "config.ini"
+CONFIG = HERE / "config.toml"
 
 
-def load_config() -> configparser.ConfigParser:
+def load_config() -> dict:
     """The config file beside this script: the document's title, and the per-directory
     file order."""
-    cp = configparser.ConfigParser()
-    cp.optionxform = str  # directory names are case-sensitive keys
-    if not cp.read(CONFIG):
+    try:
+        with open(CONFIG, "rb") as f:
+            return tomllib.load(f)
+    except FileNotFoundError:
         sys.exit(f"error: {CONFIG} is missing — it sets the document's title")
-    return cp
+    except tomllib.TOMLDecodeError as e:
+        sys.exit(f"error: {CONFIG}: {e}")
 
 
-def document_title(cp: configparser.ConfigParser) -> str:
-    title = cp.get("document", "title", fallback=None)
+def document_title(cfg: dict) -> str:
+    title = cfg.get("document", {}).get("title")
     if not title:
         sys.exit(f"error: {CONFIG} sets no title — add `title = …` under [document]")
     return title
 
 
-def ordered_files(cp: configparser.ConfigParser):
+def ordered_files(cfg: dict):
     """The .lean files of SRC in render order. Directories come vocabulary-first
     (subdirectories before the root); within a directory, the [order] key for it
-    (its path relative to SRC, `.` for the root) decides: `*` or no key renders
+    (its path relative to SRC, `"."` for the root) decides: `["*"]` or no key renders
     alphabetically; an exhaustive list of file stems is the defined order, a file it
-    does not name an error; a list containing one `*` renders the listed files in
-    place and the rest alphabetically at the `*`."""
+    does not name an error; a list containing one `"*"` renders the listed files in
+    place and the rest alphabetically at the `"*"`."""
     by_dir: dict = {}
     for p in SRC.rglob("*.lean"):
         by_dir.setdefault(p.parent, []).append(p)
@@ -118,14 +124,16 @@ def ordered_files(cp: configparser.ConfigParser):
     out = []
     for d in dirs:
         rel = str(d.relative_to(SRC)) if d != SRC else "."
-        spec = cp.get("order", rel, fallback="*")
+        spec = cfg.get("order", {}).get(rel, ["*"])
+        if not isinstance(spec, list) or not all(isinstance(t, str) for t in spec):
+            sys.exit(f"error: [order] {rel} must be a list of file stems")
         out.extend(order_directory(by_dir[d], spec, rel))
     return out
 
 
-def order_directory(paths, spec: str, rel: str):
+def order_directory(paths, spec: list, rel: str):
     stems = {p.stem: p for p in paths}
-    items = [t.strip() for t in spec.split(",") if t.strip()]
+    items = [t.strip() for t in spec if t.strip()]
     if items.count("*") > 1:
         sys.exit(f"error: [order] {rel} holds more than one `*`")
     listed = [t for t in items if t != "*"]
@@ -2172,7 +2180,7 @@ def main():
 
     # harvest over every file, vocabulary included. Files in a subdirectory render
     # before the files at SRC's root — the vocabulary a spec is written in terms of
-    # precedes its algorithms; within a directory, config.ini's [order] decides.
+    # precedes its algorithms; within a directory, config.toml's [order] decides.
     cfg = load_config()
     all_items = []
     parsed = []
