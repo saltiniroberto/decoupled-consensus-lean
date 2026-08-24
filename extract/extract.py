@@ -14,9 +14,10 @@ backticked spans and/or `[eq:…]` refs renders as a displayed line: centered, i
 separated by quad space — the draft's own equation rows.
 
 v5: the sources drive the structure. Files in a subdirectory render before the files
-at SRC's root (the vocabulary a spec is written in terms of precedes its algorithms),
-alphabetically within each, a file emitting a section only when something in it is
-marked `## Extract`.
+at SRC's root (the vocabulary a spec is written in terms of precedes its algorithms);
+within a directory, config.ini's [order] key for it decides — alphabetical by default,
+or a defined order, with `*` standing for the unlisted files alphabetically. A file
+emits a section only when something in it is marked `## Extract`.
 A `def` whose own docstring carries an `## Extract` section is *figured* — rendered as
 pseudocode in the file's figure, in the file's declaration order. The paper form
 derives from the Lean signature (`goldfishScore (votes …) (s …) (B …)` renders
@@ -86,15 +87,64 @@ OUT = HERE / "out"
 CONFIG = HERE / "config.ini"
 
 
-def document_title() -> str:
-    """The document's title, from the config file beside this script."""
+def load_config() -> configparser.ConfigParser:
+    """The config file beside this script: the document's title, and the per-directory
+    file order."""
     cp = configparser.ConfigParser()
+    cp.optionxform = str  # directory names are case-sensitive keys
     if not cp.read(CONFIG):
         sys.exit(f"error: {CONFIG} is missing — it sets the document's title")
+    return cp
+
+
+def document_title(cp: configparser.ConfigParser) -> str:
     title = cp.get("document", "title", fallback=None)
     if not title:
         sys.exit(f"error: {CONFIG} sets no title — add `title = …` under [document]")
     return title
+
+
+def ordered_files(cp: configparser.ConfigParser):
+    """The .lean files of SRC in render order. Directories come vocabulary-first
+    (subdirectories before the root); within a directory, the [order] key for it
+    (its path relative to SRC, `.` for the root) decides: `*` or no key renders
+    alphabetically; an exhaustive list of file stems is the defined order, a file it
+    does not name an error; a list containing one `*` renders the listed files in
+    place and the rest alphabetically at the `*`."""
+    by_dir: dict = {}
+    for p in SRC.rglob("*.lean"):
+        by_dir.setdefault(p.parent, []).append(p)
+    dirs = sorted(by_dir, key=lambda d: (d == SRC, str(d)))
+    out = []
+    for d in dirs:
+        rel = str(d.relative_to(SRC)) if d != SRC else "."
+        spec = cp.get("order", rel, fallback="*")
+        out.extend(order_directory(by_dir[d], spec, rel))
+    return out
+
+
+def order_directory(paths, spec: str, rel: str):
+    stems = {p.stem: p for p in paths}
+    items = [t.strip() for t in spec.split(",") if t.strip()]
+    if items.count("*") > 1:
+        sys.exit(f"error: [order] {rel} holds more than one `*`")
+    listed = [t for t in items if t != "*"]
+    for t in listed:
+        if t not in stems:
+            sys.exit(f"error: [order] {rel} names `{t}`, but no such file is in {rel}/")
+    rest = sorted(s for s in stems if s not in listed)
+    if "*" not in items:
+        if rest:
+            sys.exit(f"error: [order] {rel} is a defined order but does not place "
+                     f"{', '.join(rest)} — name them, or add `*` for the rest")
+        return [stems[t] for t in listed]
+    out = []
+    for t in items:
+        if t == "*":
+            out.extend(stems[s] for s in rest)
+        else:
+            out.append(stems[t])
+    return out
 
 # Files render in alphabetical order of their path under SRC; a file with nothing
 # marked `## Extract` emits no section but is still harvested for renames.
@@ -2122,19 +2172,17 @@ def main():
 
     # harvest over every file, vocabulary included. Files in a subdirectory render
     # before the files at SRC's root — the vocabulary a spec is written in terms of
-    # precedes its algorithms — and alphabetically within each.
+    # precedes its algorithms; within a directory, config.ini's [order] decides.
+    cfg = load_config()
     all_items = []
     parsed = []
-    files = sorted(SRC.rglob("*.lean"),
-                   key=lambda p: (len(p.relative_to(SRC).parts) == 1,
-                                  str(p.relative_to(SRC))))
-    for path in files:
+    for path in ordered_files(cfg):
         header, items = parse_file(path)
         parsed.append((path, header, items))
         all_items.extend(items)
     tables = harvest(all_items)
 
-    tex = [PREAMBLE, frontmatter(document_title())]
+    tex = [PREAMBLE, frontmatter(document_title(cfg))]
     for path, header, items in parsed:
         stem = path.stem
         title = stem

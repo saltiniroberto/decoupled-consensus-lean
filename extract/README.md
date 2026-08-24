@@ -8,10 +8,16 @@ Run `python3 extract/extract.py` (add `--no-pdf` to stop at the TeX). It reads
 `latexmk -lualatex`. `extract/out/` is gitignored and also holds the throwaway test
 fixtures (`_test_src/`, `_run_test.py` and friends).
 
-**The document's title comes from `extract/config.ini`** (Roberto, 2026-08-24): the
-`title` key under `[document]`, set on the title page. The file is tracked; a missing
-file or an empty title stops the run with an error rather than producing an untitled
-document.
+**`extract/config.ini` configures the document** (Roberto, 2026-08-24). The file is
+tracked; a missing file or an empty title stops the run with an error. Two sections:
+
+- `[document]` — `title`, set on the title page.
+- `[order]` — the order files render in, one key per directory of `lean/Spec/` (`.` is
+  the root). A value is `*` (alphabetical, also the default when a directory has no
+  key), an exhaustive comma-separated list of file stems (the defined order — a file
+  the list does not name is an error), or a list containing one `*` (the listed files
+  in place, every other file alphabetically at the `*`). The directories themselves
+  keep the vocabulary-first rule below.
 
 ## Prose is opt-in: the `## Extract` marker
 
@@ -30,9 +36,10 @@ the draft, and new commentary stays out without anyone remembering to fence it.
 
 The marker also drives the document's structure (Roberto, 2026-08-24): **files in a
 subdirectory render before the files at the root** — the vocabulary a spec is written
-in terms of precedes its algorithms — **alphabetically within each**, a file with
-nothing marked emitting no section, and **a file's figured routines render in
-declaration order**. So `Defs/Model`, `Defs/Store`, then `01_…` through `08_…`.
+in terms of precedes its algorithms — and **within a directory, `config.ini`'s
+`[order]` key for it decides** (alphabetical by default; see the config section
+above). A file with nothing marked emits no section, and **a file's figured routines
+render in declaration order**. So `Defs/Model`, `Defs/Store`, then `01_…` on.
 
 Marked prose renders in the draft's typography: backticked spans go through the same
 rewriter as the figures, and fall back to mono exactly when they quote Lean.
