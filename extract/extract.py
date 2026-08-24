@@ -958,11 +958,12 @@ class Rewriter:
             return [("fn", name)]
         # Lean-only vocabulary marks the span as code (consulted by the prose pass):
         # a camelCase name, or a Type/Namespace-looking one — not a paper spelling
+        base = name.rstrip("'")  # a primed letter (`T'`, `S'`) is paper vocabulary
         if snake(name) != name:
             self.miss = True
-        elif len(name) > 1 and name[0].isupper() and not is_greek(name) \
-                and not is_greek(name[0]) and not SUBSCRIPT_ID.match(name) \
-                and (any(c.islower() for c in name[1:]) or name.isupper()):
+        elif len(base) > 1 and base[0].isupper() and not is_greek(base) \
+                and not is_greek(base[0]) and not SUBSCRIPT_ID.match(base) \
+                and (any(c.islower() for c in base[1:]) or base.isupper()):
             # greek-initial names (`Δs`, `ηSG`) are paper vocabulary, not Lean types
             self.miss = True
         return [("id", snake(name))]
@@ -1109,10 +1110,14 @@ class Rewriter:
             vals = [self.render_atom(a) for a in args]
             if recv_spans is not None:
                 vals = [recv_spans] + vals
+            kind = "fn" if sym.smallcaps else "id"
+            # a bare mention with no arguments at all is the name, not a padded call —
+            # `round` as a tuple field stays `round`
+            if not vals:
+                return [(kind, sym.name)], i
             arity = len(sym.args) if sym.args else None
             if arity and len(vals) < arity:
                 vals += [[("sym", "·")]] * (arity - len(vals))
-            kind = "fn" if sym.smallcaps else "id"
             return [(kind, sym.name), ("sym", "(")] + join_sp(vals, COMMA) \
                 + [("sym", ")")], i
         return [("id", sym.name)], i
@@ -1613,7 +1618,10 @@ def fix_spaces(spans):
                 sep = True
             # no space after a quantifier: math typesetting joins the binder tight
             if sep:
-                out.append(("space", " "))
+                # a numeral times a short symbol is a juxtaposed product: 2W, 4Δs
+                thin = lk == "num" and rk == "id" and isinstance(rt, str) \
+                    and (len(rt) == 1 or is_greek(rt[0]))
+                out.append(("space", " " if thin else " "))
         out.append(span)
     return out
 
