@@ -8,6 +8,11 @@ Run `python3 extract/extract.py` (add `--no-pdf` to stop at the TeX). It reads
 `latexmk -lualatex`. `extract/out/` is gitignored and also holds the throwaway test
 fixtures (`_test_src/`, `_run_test.py` and friends).
 
+**The document's title comes from `extract/config.ini`** (Roberto, 2026-08-24): the
+`title` key under `[document]`, set on the title page. The file is tracked; a missing
+file or an empty title stops the run with an error rather than producing an untitled
+document.
+
 ## Prose is opt-in: the `## Extract` marker
 
 Roberto, 2026-08-24. A module header or docstring section headed `## Extract` is document

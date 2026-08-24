@@ -3,7 +3,8 @@
 
 Reads the live spec named by SRC below (lean/Spec/, subdirectories included),
 writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
-latexmk -lualatex.
+latexmk -lualatex. The document's title comes from extract/config.ini
+(`title` under `[document]`).
 
 v6: prose can quote a definition instead of restating it. `[eq:name]` in `## Extract`
 prose expands to the named declaration's docstring opening span — the formula is
@@ -71,6 +72,7 @@ set-builders and a big union.
 """
 
 import argparse
+import configparser
 import datetime
 import re
 import subprocess
@@ -81,6 +83,18 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent / "lean" / "Spec"
 OUT = HERE / "out"
+CONFIG = HERE / "config.ini"
+
+
+def document_title() -> str:
+    """The document's title, from the config file beside this script."""
+    cp = configparser.ConfigParser()
+    if not cp.read(CONFIG):
+        sys.exit(f"error: {CONFIG} is missing — it sets the document's title")
+    title = cp.get("document", "title", fallback=None)
+    if not title:
+        sys.exit(f"error: {CONFIG} sets no title — add `title = …` under [document]")
+    return title
 
 # Files render in alphabetical order of their path under SRC; a file with nothing
 # marked `## Extract` emits no section but is still harvested for renames.
@@ -1950,7 +1964,7 @@ PREAMBLE = r"""\documentclass[10pt]{article}
 """
 
 
-def frontmatter():
+def frontmatter(title: str):
     """Title page material: the document's provenance is machine-stamped."""
     try:
         commit = subprocess.run(
@@ -1966,7 +1980,7 @@ def frontmatter():
     stamp = datetime.date.today().isoformat()
     return "\n".join([
         r"\begin{center}",
-        r"{\LARGE Consensus-1}\\[2mm]",
+        r"{\LARGE " + esc(title) + r"}\\[2mm]",
         r"{\small generated from the Lean specification, \codett{" +
         esc(str(SRC.relative_to(HERE.parent))) + r"/}}\\[1mm]",
         r"{\small " + esc(commit) + r" · " + esc(stamp) + "}",
@@ -2120,7 +2134,7 @@ def main():
         all_items.extend(items)
     tables = harvest(all_items)
 
-    tex = [PREAMBLE, frontmatter()]
+    tex = [PREAMBLE, frontmatter(document_title())]
     for path, header, items in parsed:
         stem = path.stem
         title = stem
