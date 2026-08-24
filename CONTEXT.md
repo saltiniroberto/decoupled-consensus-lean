@@ -496,7 +496,10 @@ works but duplicates the sequence in a `def`.
      2. respell `get_walk_root`'s read as the bracket `S.sgRoot[r]` (raising semantics
         confirmed; needs a named map type or `GetElem` instance);
      3. re-render `E_j` as the source writes it — over the `equiv` map's domain, not a
-        filter of `V` (rendering question noted in the Decisions entry).
+        filter of `V` (rendering question noted in the Decisions entry);
+     4. rename the raising set-builder's `∈ᴹ` to `∈ᵉ` — `e` for exception (`Notation.lean`;
+        the typing table in `doc/guide.md`, `doc/style.md`, `doc/nondeterminism.md` and
+        the style sheet here mention the old spelling).
    - **the healing writers** (2026-08-25): `09_Healing.lean` holds the scores, grades and
      round-root functions, but the four store fields they read are written by no routine —
      the `on_tick`/`on_attestation` handler lines, the `on_block` proposal-root
