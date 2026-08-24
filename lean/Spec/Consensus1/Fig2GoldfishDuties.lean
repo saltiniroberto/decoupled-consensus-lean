@@ -1,5 +1,6 @@
 import Mathlib.Data.Finset.Union
 import Spec.Consensus1.Fig3AvailableConfirmation
+import Spec.Consensus1.Duty
 
 /-!
 # Figure 2 — the Goldfish duties and store handlers
@@ -26,17 +27,18 @@ draft's scope — Section 1 says only that a slot "has an assigned proposer" —
 takes the test as a parameter. `propose_block` itself is fully rendered; it is only *whether
 to run it* that is not.
 
-## What a duty returns
+## How a duty broadcasts
 
 The draft's duties broadcast and then process their own object: `broadcast B;
-process_block(Σ, B)`. Broadcasting is a send, and there is no network layer here, so a duty
-returns a `DutyResult` — the store with the object already processed, and the messages to
-broadcast — the state-and-send shape of a lean-sts step result (`NodeStepResult` in the
-framework, `DutyResult` in `Store.lean`), so the wiring layer can consume a duty without
-reshaping it (Roberto, 2026-08-23). Nothing is lost and the send is left to whoever wires
-this up. The two handlers stay `Store → Store`: the figure gives them no broadcast line, and
-Section 1's "an honest node relays every object it processes" is network behaviour, the
-wiring layer's to render.
+process_block(Σ, B)`. That line renders verbatim (Roberto, 2026-08-24): a duty runs in
+`DutyM` (`Duty.lean`) — the outbox threaded over `NDRE` — taking the store and returning
+the store, with `broadcast` the draft's own verb. No caller unions sends: an earlier
+duty's broadcasts are already in the outbox when a later one runs. The boundary object
+`DutyResult` survives only in `DutyM.outcomes`, where the sts wiring consumes a duty as a
+relation. (From 2026-08-23 to the adoption a duty *returned* its `DutyResult`; git
+history has that form, and `CONTEXT.md` the decision trail.) The two handlers stay
+`Store → Store`: the figure gives them no broadcast line, and Section 1's "an honest node
+relays every object it processes" is network behaviour, the wiring layer's to render.
 
 ## Two collisions with `Finset`, and where each lands
 
@@ -156,8 +158,8 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     function of the block's parent and its slot — the draft does not say what the proposer
     puts there, so the function's answer is unconstrained.
 
-    `NDRE` because the walk is, and the carried list is a picked listing of `votes` — its
-    order a nondeterministic choice the draft leaves open; see the module header on both.
+    `DutyM` as every duty; the walk and the picked listing of `votes` — its order a
+    nondeterministic choice the draft leaves open — live underneath it.
 
     "Run at `t_s`" is an input precondition, a hypothesis the caller supplies, not something
     the duty tests (Roberto, 2026-08-23; `onSGFGVotingAction` in the second rendering is the
@@ -167,7 +169,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     `have` (Roberto, 2026-08-23, second pass). -/
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
-    NDRE (DutyResult Validator) := do
+    DutyM Validator (Store Validator) := do
   let s := S.s                                                 -- line 22
   let votes := S.gfVotes[s - 1]                                -- line 23
   let H ← Fig1.getHead S votes (s - 1)                         -- line 24
@@ -175,8 +177,8 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   let gfList ←ᵖ listings votes
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := gfList) (attestations := [])
-  -- line 26: `broadcast B; process_block(Σ, B)` — see the module header on the return
-  return { state := Fig2.processBlock S B, send := {Message.block B} }
+  broadcast (Message.block B)                                  -- line 26
+  return Fig2.processBlock S B
 
 /-- `goldfish_vote(Σ)` (Figure 2, lines 27–34), run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
@@ -186,14 +188,14 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     processed so far. That second part is the view merge — the proposal supplies its own view
     rather than a forced target.
 
-    A validator off the slot's committee sends nothing, which the empty `send` says — no
-    `Option` needed.
+    A validator off the slot's committee broadcasts nothing and returns the store
+    unchanged.
 
     "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
     same conjunction-projecting tactic. -/
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
-    NDRE (DutyResult Validator) := do
+    DutyM Validator (Store Validator) := do
   let s := S.s                                                 -- line 28
   -- line 29: held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
   let mut votes ← {vote ∈ᴹ S.gfVotes[s - 1] |
@@ -201,11 +203,12 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   -- lines 30–31, the view merge: the loop is an order-free union — see the module header
   votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
   let H ← Fig1.getHead S votes (s - 1)                         -- line 32
-  if i ∈ Committees.K s then              -- line 33
+  if i ∈ Committees.K s then                                   -- line 33
     -- line 34: `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
-    return { state := S.processGoldfishVote vote, send := {Message.gfVote vote} }
-  return { state := S, send := ∅ }
+    broadcast (Message.gfVote vote)
+    return S.processGoldfishVote vote
+  return S
 
 /-- `on_tick(Σ, t)` (Figure 2, lines 1–8): set the clock and the slot, then run whichever of
     the slot's actions this instant is.
@@ -218,21 +221,19 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     `t_s + Δ`, a confirmation evaluation at `t_s + 2Δ` — which is also `t_{s−1} + 6Δ`, the
     evaluation of the *previous* slot, and that is the slot line 8 passes.
 
-    A `DutyResult` too, so nothing a tick emits is lost to the caller. Each action branch
-    returns its result directly (Roberto, 2026-08-23): the three instants are mutually
-    exclusive — distinct multiples of `Δ` — so at most one branch runs, and a tick at no
-    action instant returns the re-clocked store with nothing to send.
+    A `DutyM` duty too, so whatever an action broadcasts is in the outbox. Each action
+    branch returns its store directly (Roberto, 2026-08-23): the three instants are
+    mutually exclusive — distinct multiples of `Δ` — so at most one branch runs, and a
+    tick at no action instant returns the re-clocked store having broadcast nothing.
 
     Each branch discharges its action's instant precondition from its own dependent `if`:
     the clock was written just above, so `S.t` reduces to `t` whatever came before, and the
     duties' autoparam tactic projects the instant out of the branch's conjunction, so no
     branch restates anything. Line 7 writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal
     whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
-    already said the two coincide.
-
-    `DRE` because all three actions are. -/
+    already said the two coincide. -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
+    (isProposer : Nat → Validator → Bool) : DutyM Validator (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- line 2: `s ← ⌊t/(4Δ)⌋`
   S.t ← t
@@ -243,8 +244,7 @@ def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     return ← S.goldfishVote i                                  -- line 6
   -- line 7: the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
   if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
-    let S' ← S.updateConfirmation (s - 1)                      -- line 8
-    return { state := S', send := ∅ }
-  return { state := S, send := ∅ }
+    return ← S.updateConfirmation (s - 1)                      -- line 8
+  return S
 
 end Consensus1

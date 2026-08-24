@@ -28,6 +28,7 @@ import Spec.Consensus1.OldDefs
 import Spec.Consensus1.SigningHistory
 import Spec.Consensus1.Fig6StateTransition
 import Spec.Consensus1.Store
+import Spec.Consensus1.Duty
 import Spec.Consensus1.Fig1GoldfishWalk
 import Spec.Consensus1.Fig3AvailableConfirmation
 import Spec.Consensus1.Fig2GoldfishDuties

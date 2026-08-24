@@ -42,7 +42,10 @@ A routine takes the weakest type that fits what it does:
 | neither raises nor chooses | plain value        | `Store.processGoldfishVote`, `Store.sgVote` |
 | raises, never chooses      | `DRE α` | `Store.viable`, `Store.processBlock` |
 | chooses, never raises      | `NDR α`            | `bestChild` |
-| both                       | `NDRE α`           | `ghost`, `Store.getHead`, the duties, `Store.onTick` |
+| both                       | `NDRE α`           | `ghost`, `Store.getHead` |
+
+The duties sit one layer up: `DutyM α` (`Duty.lean`) is the broadcast outbox threaded
+over `NDRE`, so a duty picks, raises, *and* broadcasts — see [style.md](style.md).
 
 Inside a `do` block at a higher tier, a call at any lower tier binds with the ordinary `←`.
 The lifts do the plumbing invisibly: core lifts `Set` into `NDRE`, and `Nondet.lean` adds
@@ -82,12 +85,14 @@ single answer would be exactly the arbitrary choice this vocabulary exists to av
 A result is consumed as a **relation**:
 
 ```lean
-res ∈ (S.onTick i t).run
+res ∈ (S.onTick i t p).outcomes
 ```
 
-read: `res` is one possible outcome of the duty. This is the shape a state-transition-system
-step wants — the eventual lean-sts wiring relates pre-state to post-state through that
-membership. Statements *about all outcomes* are `Analysis/` matter, over `.run`:
+read: `res` is one possible outcome of the duty — a failure, or the store afterwards with
+everything broadcast (`DutyM.outcomes`, `Duty.lean`, packaging a run started with an
+empty outbox). This is the shape a state-transition-system step wants — the eventual
+lean-sts wiring relates pre-state to post-state through that membership. Statements
+*about all outcomes* are `Analysis/` matter, over the same set:
 
 - "the exception never fires on a coherent store" is `.error ∉ (…).run`;
 - "the walk does not depend on its picks" is `(…).run` a singleton.

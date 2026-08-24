@@ -1,5 +1,6 @@
 import Spec.Consensus1.Fig4SGForkChoice
 import Spec.Consensus1.Fig2GoldfishDuties
+import Spec.Consensus1.Duty
 
 /-!
 # Figure 5 — the SG duty and store handler
@@ -81,39 +82,39 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
 /-- `sg_vote(Σ)` (Figure 5, lines 1–4), run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 
-    Returns a `DutyResult`, as the Goldfish duties do; see `Fig2GoldfishDuties.lean` on why
-    the broadcast is a returned message rather than a send. Total: this duty runs no walk.
-    "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants are, over the
-    assumed `SGSchedule`. -/
+    A `DutyM` duty, as the Goldfish duties are: line 4 is the draft's two verbs. Total —
+    this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
+    monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
+    are, over the assumed `SGSchedule`. -/
 def Store.sgVote (i : Validator) (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
-    DutyResult Validator := Id.run do
+    DutyM Validator (Store Validator) := do
   let r := round S.s                                           -- line 2
   -- line 3
   let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
-  -- line 4: `broadcast vote; process_sg_vote(Σ, vote)`
-  return { state := S.processSGVote vote, send := {Message.sgVote vote} }
+  broadcast (Message.sgVote vote)                              -- line 4
+  return S.processSGVote vote
 
 /-- `on_tick(Σ, t)`, the protocol's reading. Section 3.4: "`on_tick` gains one line: at
     `t = a_r` for the current round `r`, run `sg_vote`." Rendered as the extension it is:
     Figure 2's `on_tick`, then the one line. Section 5 never touches `on_tick`, so no later
     reading exists.
 
-    `Fig2.onTick` has already written the clock, so its result's `state.t` is `t` and
-    `state.s` its slot, and the dependent `if` hands `sg_vote` its instant precondition,
-    exactly as Figure 2's own branches do.
+    `Fig2.onTick` has already written the clock into the store it returns, so the
+    dependent `if` hands `sg_vote` its instant precondition, exactly as Figure 2's own
+    branches do.
 
     The draft fixes no relation between `a_r` and the Goldfish instants. On a schedule
-    where `a_r` coincided with one, the two actions compose: `sg_vote` runs on the Goldfish
-    duty's post-state, and the return keeps both sends — the union. On the draft's own
-    schedules the instants are distinct (`Fig2.onTick`'s docstring), so the Goldfish send
-    there is `∅`. -/
+    where `a_r` coincided with one, the two actions compose: `sg_vote` runs on the
+    Goldfish duty's post-state, and both broadcasts are in the outbox — no union is
+    written anywhere, the monad carrying the earlier sends past the `if`. On the draft's
+    own schedules the instants are distinct (`Fig2.onTick`'s docstring). -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : NDRE (DutyResult Validator) := do
-  let { state := S, send := send } ← Fig2.onTick i S t isProposer
+    (isProposer : Nat → Validator → Bool) : DutyM Validator (Store Validator) := do
+  let S ← Fig2.onTick i S t isProposer
   -- Section 3.4's line: at `t = a_r` for the current round, run `sg_vote`
   if _ : S.t = SGSchedule.a (round S.s) then
-    return (S.sgVote i).withSend send
-  return { state := S, send := send }
+    return ← S.sgVote i
+  return S
 
 end Consensus1

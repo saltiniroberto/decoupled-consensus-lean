@@ -1,4 +1,5 @@
 import Spec.Consensus1.Nondet
+import Spec.Consensus1.Store
 
 /-!
 # Parked definitions: compiled, unconsumed
@@ -37,6 +38,16 @@ macro_rules
             { $v with $f:ident :=
                 (Function.update (($v).$f:ident) $i
                   (Function.update ((($v).$f:ident) $i) $j $e)) })
+
+/-- `d.withSend prior`: a `DutyResult` with an earlier duty's broadcasts unioned into
+    its own. From `Store.lean`; its one consumer was `Store.onTick`'s composition, which
+    the `DutyM` adoption (2026-08-24, `Duty.lean`) dissolved — the outbox carries earlier
+    sends, so nothing unions. Revived by any composition done on `DutyResult` values
+    rather than in the monad. -/
+def DutyResult.withSend {Validator : Type} [Roots] [DecidableEq Validator]
+    (d : DutyResult Validator) (prior : Finset (Message Validator)) :
+    DutyResult Validator :=
+  { d with send := prior ∪ d.send }
 
 /-- The autoparam extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis
     discharged from a dependent `if _ : x ≠ ⊥` by the instants' own tactic. From

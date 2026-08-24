@@ -250,26 +250,22 @@ def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
   {B ∈ S.T | S.F ⪯ B}
 
 
-/-! ## What a duty returns
+/-! ## The duty boundary object
 
-Not draft content: the draft's duties `broadcast` and return nothing. There is no network
-layer here, so a duty returns this instead — the state-and-send shape of a lean-sts step
-result (`NodeStepResult` in the framework), so the wiring layer can consume a duty without
-reshaping it (Roberto, 2026-08-23). It lives in this file because Figure 2's and Figure 5's
-duties both return it, and Figure 5 does not import Figure 2. -/
+Not draft content: the draft's duties `broadcast` and return nothing. Duties run in
+`DutyM` (`Duty.lean`, Roberto 2026-08-24) — they broadcast into the monad's outbox and
+return the store — and this structure survives at the consumption boundary alone:
+`DutyM.outcomes` packages a run's store and outbox as one value, the state-and-send shape
+of a lean-sts step result (`NodeStepResult` in the framework), so the wiring layer
+consumes a duty without reshaping it. (From 2026-08-23 to the adoption the duties
+returned this structure themselves; git history has that form.) -/
 
-/-- What a duty produces: the store afterwards, and the messages it broadcasts. -/
+/-- What a duty's run produces, at the boundary: the store afterwards, and everything it
+    broadcast. Built only by `DutyM.outcomes`; no duty returns one. -/
 structure DutyResult (Validator : Type) [Roots] where
   /-- The store afterwards. -/
   state : Store Validator
   /-- The messages broadcast, for the network to deliver. -/
   send : Finset (Message Validator)
-
-/-- `d.withSend prior`: `d` with an earlier duty's broadcasts unioned into its own — for a
-    caller that ran `d`'s duty on that earlier result's store and owes both sends
-    (Roberto, 2026-08-24; `Store.onTick`'s composition is the consumer). -/
-def DutyResult.withSend (d : DutyResult Validator)
-    (prior : Finset (Message Validator)) : DutyResult Validator :=
-  { d with send := prior ∪ d.send }
 
 end Consensus1

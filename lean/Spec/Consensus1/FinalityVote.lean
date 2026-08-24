@@ -1,4 +1,5 @@
 import Spec.Consensus1.Store
+import Spec.Consensus1.Duty
 
 /-!
 # The finality-vote rules: how an attestation's pairs are determined
@@ -156,17 +157,17 @@ def Store.finalityVote (S : Store Validator) :
     is what keeps the two pairs of one attestation from contradicting each other; the
     claim itself is `Analysis/` matter.
 
-    A `DutyResult`, as every duty (Roberto, 2026-08-24): the attestation travels as the
-    broadcast — `Message.attestation`, the wire decision recorded on that constructor —
-    and the returned store carries both record writes. The signer is the store's own
-    `Σ.i` (Roberto, 2026-08-24 — no identity parameter); the round is `round(Σ.s)`;
-    `head` stays explicit — see the module header. The head is carried, not derived. -/
+    A `DutyM` duty, as every duty: the attestation leaves by `broadcast` —
+    `Message.attestation`, the wire decision recorded on that constructor — and the
+    returned store carries both record writes. The signer is the store's own `Σ.i`
+    (Roberto, 2026-08-24 — no identity parameter); the round is `round(Σ.s)`; `head`
+    stays explicit — see the module header. The head is carried, not derived. -/
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
-    DRE (DutyResult Validator) := do
+    DutyM Validator (Store Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair
   let { pair := hp, state := S } ← S.heightVote     -- then the current-height pair
-  let a := Attestation.mk (validator := S.i) (round := round S.s) (head := head)
-    (heightPair := hp) (finalityPair := fp)
-  return { state := S, send := {Message.attestation a} }
+  broadcast (Message.attestation (Attestation.mk (validator := S.i)
+    (round := round S.s) (head := head) (heightPair := hp) (finalityPair := fp)))
+  return S
 
 end Consensus1

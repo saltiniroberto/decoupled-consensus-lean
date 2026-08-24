@@ -3885,6 +3885,33 @@ name `Result` was never taken. **Only this subtree**: the second rendering's
 `Consensus.ResultOrExcept` keeps its name, as does every dated entry below — they record
 what was. Historical searches need both names.
 
+### Duties go monadic: `DutyM` adopted — 2026-08-24
+
+The trail: `DutyResult.withSend` (the tick's send union) prompted "any alternatives"; the
+duty-monad option was probed twice — `scratch/DutyMonadProbe.lean`, store and outbox both
+ambient, **declined** (Roberto: the functions must keep their input `Store`; ambient
+identity also cost the instant autoparams) — and `scratch/DutyWriterProbe.lean`, outbox
+only, adopted ("ok"). `Duty.lean` is the machinery (a not-a-specification file): `DutyM α
+= StateT (Finset (Message _)) NDRE α`, `broadcast`, and `DutyM.outcomes`. The named
+`runDuty` of the probes does not exist — Roberto: it "reads off compared to the paper" —
+its content folded into `outcomes`, the one boundary, so no `run` appears anywhere in
+`Spec/` and the wiring will read `res ∈ (…).outcomes`.
+
+What moved: the five duties (`proposeBlock`, `goldfishVote`, `sgVote`, `fgVote`, both
+`onTick`s) are `… → DutyM (Store _)` — store in, store out, instant autoparams untouched
+since the store stayed a term — with `broadcast` at the draft's own broadcast lines and
+`return S.process… vote` closing each. The ticks compose by calling: Figure 2's sends
+cross the `if` inside the outbox, so `withSend` lost its consumer and is parked in
+`OldDefs.lean`; `sgVote` stopped being pure (`Id.run do` → the monad). `DutyResult` stays
+in `Store.lean` as the boundary object nothing returns. The pair rules are untouched —
+they broadcast nothing.
+
+Measured on the way: the outbox sits *inside* the nondeterminism (`StateT` over `NDRE` =
+`outbox → NDRE (α × outbox)`), so each outcome carries its own sends — necessary, a
+picking duty broadcasting differently per pick; and the store-ambient variant's autoparam
+loss is a general fact — a precondition needs the store as a *term*, which is the
+recorded reason the store stays explicit.
+
 ### The `Consensus1` style sheet — running list, updated 2026-08-23
 
 Every stylistic call Roberto has made for this subtree, in one place; the dated entries
@@ -3942,8 +3969,11 @@ this list when a new call lands.
   type parameter, confirmed 2026-08-23. Two former members dissolved into nondeterminism the
   same day: `TieBreak` (the tie is a pick) and `[LinearOrder (GoldfishVote Validator)]`
   (the carried list is a picked listing).
-- **Duties return `DutyResult`** (`state`, `send` — the lean-sts step shape); `on_tick`
-  returns from each action branch directly.
+- **Duties run in `DutyM`** (`Duty.lean`, 2026-08-24; entry above): the outbox threaded
+  over `NDRE`, `broadcast` the draft's own verb, the store an explicit input and output —
+  no caller unions sends. `DutyResult` survives at the boundary only, `DutyM.outcomes`
+  being what the sts wiring and `Analysis/` consume; `on_tick` returns from each action
+  branch directly.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H`.
 - **Line comments cite the figure's own numbering**; docstrings are self-contained and cite
   nothing (the 2026-08-19 pivot).
