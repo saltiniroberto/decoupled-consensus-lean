@@ -4,6 +4,8 @@
 root; no PDF spec is committed).
 These pages document the design a reader meets on every page of the Lean:
 
+- [guide.md](guide.md) — **start here if you don't know Lean**: how to read this spec
+  knowing only how to code and how to read paper pseudocode.
 - [nondeterminism.md](nondeterminism.md) — how the pseudocode's arbitrary choices are
   rendered: the `NDR`/`NDRE` monads, the pick arrow `←ᵖ`, and how a result is consumed.
 - [naming.md](naming.md) — how definitions are named: `Store.…`, `Fig<n>.…`, bare names,

@@ -665,6 +665,14 @@ hypotheses, "conflicting" is `¬ Compatible`, the height binders the source itse
 redundant are dropped. The source statement and its proof live on the
 `pre-consensus1-purge` branch (`Analysis/Theorems.lean`, its Lemma 11 chain).
 
+### `doc/guide.md`: reading the spec without Lean — 2026-08-24
+
+Roberto: a concise, human-written reading guide for people who know code and paper
+pseudocode but not Lean, explaining only what is unfamiliar. `lean/Spec/doc/guide.md`:
+the shape of a file, the effect scale read off return types (plain/`DRE`/`NDR`/`NDRE`/
+`NDREB`), the pick and the outbox, and the small bumps (`⊥`, `Finset`, records, class
+assumptions, instant autoparams). Linked first from `doc/README.md`.
+
 ## Next
 
 0. **`consensus-1.pdf` is rendered as `Spec/`, and everything builds.** All
