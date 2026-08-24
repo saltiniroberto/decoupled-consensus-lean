@@ -1,8 +1,9 @@
 # Documentation for `Spec/`
 
-`Spec/` renders the draft `consensus-1.pdf` (kept locally at the repository
-root; no PDF spec is committed).
-These pages document the design a reader meets on every page of the Lean:
+`lean/Spec/` is the specification of Ethereum decoupled consensus, rendered from the
+protocol's working draft (`consensus-1.pdf`, kept locally at the repository root; no PDF
+spec is committed). These pages document the design a reader meets on every page of the
+Lean:
 
 - [guide.md](guide.md) — **start here if you don't know Lean**: how to read this spec
   knowing only how to code and how to read paper pseudocode.

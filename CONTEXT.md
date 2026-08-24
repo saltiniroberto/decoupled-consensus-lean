@@ -6,10 +6,13 @@ gitignored. Keep both current as work happens; delete what becomes wrong.
 
 ## What this is
 
-A Lean 4 formalization of `consensus-1.pdf`, a human-controlled draft of a
-Simplex-style finality protocol, as `lean/Spec/` — plus `extract/`, a script
-that renders the Lean back into a document shaped like the draft. The draft itself is
-kept locally at the repository root and never committed; no PDF spec is.
+The Lean 4 specification of Ethereum decoupled consensus, as `lean/Spec/` — rendered
+from the protocol's working draft, `consensus-1.pdf`, a human-controlled local file —
+plus `extract/`, a script that renders the Lean back into a paper-shaped document. The
+draft is kept locally at the repository root and never committed; no PDF spec is
+(Roberto, 2026-08-24, twice: the identity is the protocol's formalization, and nothing
+in the tracked tree is a PDF — history before `4630c05` still carries the ones then
+tracked, the safety branch included).
 
 **Two older renderings and their apparatus preceded this scope and were removed on
 2026-08-24** (Roberto: keep only what `Spec/` and the extractor need): the

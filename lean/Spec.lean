@@ -19,9 +19,10 @@ import Spec.Defs.FinalityVote
 /-!
 # The specification
 
-One import per file. **This library renders `consensus-1.pdf`** — the human-controlled
-draft, kept locally at the repository root and never committed — under namespace
-`Consensus1`, figure by figure from 2026-08-22. The figure files sit directly under
+One import per file. **This library is the specification of Ethereum decoupled
+consensus**, rendered from the protocol's working draft (`consensus-1.pdf`, a
+human-controlled local file, never committed) under namespace `Consensus1`, figure by
+figure from 2026-08-22. The figure files sit directly under
 `Spec/`, and everything they are written in terms of sits in `Spec/Defs/`. The draft is
 block-only Goldfish: one store built up in three layers, `ghost` as a named building
 block, per-slot committees, block-carried Goldfish votes as the only relay channel,

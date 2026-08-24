@@ -1,8 +1,9 @@
 # decoupled-consensus-lean
 
-A formalization of `consensus-1.pdf` — a human-controlled draft of a Simplex-style finality
-protocol — in Lean 4, as `lean/Spec/`, plus the extractor under `extract/` that
-renders the Lean back into a document shaped like the draft.
+The Lean 4 specification of **Ethereum decoupled consensus**, as `lean/Spec/`, plus the
+extractor under `extract/` that renders the Lean back into a paper-shaped document. The
+protocol's working draft is `consensus-1.pdf`, a human-controlled local file — the spec
+renders it, but the project is the protocol's formalization, not the document's.
 
 @CLAUDE.local.md
 
