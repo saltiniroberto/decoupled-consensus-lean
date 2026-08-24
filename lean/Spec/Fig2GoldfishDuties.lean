@@ -109,7 +109,9 @@ open Params
     validator already seen equivocating.
 
     Line 18 is where the protocol's "at most two distinct votes per validator" is maintained:
-    "two witness the equivocation; nothing reads a third". -/
+    "two witness the equivocation; nothing reads a third".
+
+    ## Extract -/
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
   let mut S := S
@@ -129,7 +131,9 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
 
     A block from the future is dropped and nothing else is checked: the protocol's admission at
     this layer is the slot test alone. The carried votes go through
-    `process_goldfish_vote`, so each is subject to that routine's own three tests. -/
+    `process_goldfish_vote`, so each is subject to that routine's own three tests.
+
+    ## Extract -/
 def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Validator :=
     Id.run do
   let mut S := S
@@ -161,7 +165,9 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     the duty tests. The autoparam tactic is `solve_by_elim` over the `And` projections rather
     than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
-    `have`. -/
+    `have`.
+
+    ## Extract -/
 def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
@@ -187,7 +193,9 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     unchanged.
 
     "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
-    same conjunction-projecting tactic. -/
+    same conjunction-projecting tactic.
+
+    ## Extract -/
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
@@ -226,7 +234,9 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     duties' autoparam tactic projects the instant out of the branch's conjunction, so no
     branch restates anything. Line 7 writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ`, equal
     whenever `s > 0` and the form line 8's precondition wants; the docstring above line 8
-    already said the two coincide. -/
+    already said the two coincide.
+
+    ## Extract -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let mut S := S

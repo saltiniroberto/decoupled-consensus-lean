@@ -719,12 +719,14 @@ module docstring's v5 note and `extract/README.md` carry the conventions):
 - **The frozen copies moved to `archive/`** — kept as records, outside `extract/` so
   the extractor cannot reach them; nothing reads them.
 
-As of this entry no live `def` is marked yet — all fifteen `## Extract` markers sit in
-module headers — so `dc.pdf` is still prose-only; figures fill in as the spec marks its
-routines. The machinery is verified against a marked fixture (gitignored,
-`extract/out/_test_src/` built by `_mark_test.py`, run by `_run_test.py`): explicit-span
-and derived paths both render, `goldfish_score(votes, s, B)` deriving from
-`def goldfishScore (votes …) (s …) (B …)`.
+Same day, on instruction ("add Extract to the files so the output prints all the
+figures + the finality vote"): the 30 figured defs are marked — the 27 that carried
+citations in the frozen copy (Fig5's `Store.onTick` stays unmarked, the draft giving it
+as prose, "gains one line", not figure lines) plus `FinalityVote.lean`'s three rules
+(`Store.heightVote`, `Store.finalityVote`, `Store.fgVote`, paper forms derived:
+`height_vote(Σ)`, `finality_vote(Σ)`, `fg_vote(Σ, head)`). `dc.pdf` renders all eight
+figure blocks; `make check` green. The marking script and the fixture are gitignored
+under `extract/out/` (`_add_marks.py`, `_mark_test.py`, `_run_test.py`).
 
 ### The identity is the protocol, and the spec speaks as the source of truth — 2026-08-24
 
@@ -797,7 +799,6 @@ it now speaks of paper pseudocode and the protocol, no external document.
      singleton outcome set. The `coherence-invariant` branch predates this store and does
      not transfer.
 1. **The extractor workstream** (`extract/`): the conventions and rewrite rules are in
-   `extract/README.md`; the input is the live `lean/Spec/` (2026-08-24), and the spec
-   drives the structure (entry above). Owed: `## Extract` marks on the figured defs
-   themselves — until then `dc.pdf` renders prose only.
+   `extract/README.md`; the input is the live `lean/Spec/` (2026-08-24), the spec
+   drives the structure, and all eight figure blocks render (entry above).
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.

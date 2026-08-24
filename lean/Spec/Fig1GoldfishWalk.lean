@@ -115,7 +115,9 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
     may raise. See the module header on both, and on why `eligible` is `DRE`
     rather than the full stack.
 
-    The figure's `loop` is bounded by `|tree|`. -/
+    The figure's `loop` is bounded by `|tree|`.
+
+    ## Extract -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     (score : Block Validator → Nat) (eligible : Block Validator → DRE Bool) :
     NDRE (Block Validator) := do
@@ -138,7 +140,9 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     non-equivocating participant whose target descends from `B`. The equivocator set is a
     `let`, as line 2 writes it — the protocol defines no standalone function.
 
-    An equivocator is counted without its target being read — see the module header. -/
+    An equivocator is counted without its target being read — see the module header.
+
+    ## Extract -/
 def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :
     Nat :=
   -- line 2: `{v ∈ K_s : votes holds two distinct votes by v}`
@@ -159,7 +163,9 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
     sets.
 
     The second disjunct is why a fresh proposal can be walked onto at all: "it only does not
-    apply to proposals from the current slot, which cannot yet have votes". -/
+    apply to proposals from the current slot, which cannot yet have votes".
+
+    ## Extract -/
 def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : Bool :=
   -- line 13: `voters_count ← |{v ∈ K_s : votes holds a vote by v}|`
@@ -167,7 +173,9 @@ def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
   2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s   -- line 14
 
 /-- `goldfish_fork_choice(Σ, anchor, tree, votes, s)`: the shared
-    walk, instantiated with the Goldfish score and eligibility condition. -/
+    walk, instantiated with the Goldfish score and eligibility condition.
+
+    ## Extract -/
 def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
@@ -177,7 +185,9 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
 /-- `get_head(Σ, votes, s)`: the walk from genesis over the whole
     processed tree. Figure 4 redefines it to start from the SG root, and Figure 7 again to
     start from the fork-choice root over the filtered tree — that reading, `S.getHead`, is
-    the protocol's, and this one is Figure 1's. -/
+    the protocol's, and this one is Figure 1's.
+
+    ## Extract -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   S.goldfishForkChoice .genesis S.T votes s                    -- line 18

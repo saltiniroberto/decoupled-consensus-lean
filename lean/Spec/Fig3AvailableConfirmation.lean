@@ -76,7 +76,9 @@ open Params
     marks a store the handlers cannot build — a coherence fact for `Analysis/`.
 
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the Figure 2
-    duties' instants are. -/
+    duties' instants are.
+
+    ## Extract -/
 def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do

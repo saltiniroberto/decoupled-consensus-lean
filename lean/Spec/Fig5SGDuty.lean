@@ -61,7 +61,9 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
     `process_goldfish_vote`'s shape exactly, one field over: the round test is against
     `round(Σ.s)` rather than `Σ.s`, and line 8 is where "at most two distinct votes per
-    validator" is maintained — "two witness the equivocation; nothing reads a third". -/
+    validator" is maintained — "two witness the equivocation; nothing reads a third".
+
+    ## Extract -/
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     Store Validator := Id.run do
   let mut S := S
@@ -82,7 +84,9 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     A `NDREB` duty, as the Goldfish duties are: line 4 is the protocol's two verbs. Total —
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
-    are, over the assumed `SGSchedule`. -/
+    are, over the assumed `SGSchedule`.
+
+    ## Extract -/
 def Store.sgVote (i : Validator) (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do

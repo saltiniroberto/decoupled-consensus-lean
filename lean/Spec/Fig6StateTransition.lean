@@ -160,7 +160,9 @@ def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
     target vote proves progress as well, `T_h` being on the chain by construction. An exact
     empty-target vote proves only progress.
 
-    `σ.L` is the including block's parent here; see the module header. -/
+    `σ.L` is the including block's parent here; see the module header.
+
+    ## Extract -/
 def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     ChainState Validator := Id.run do
   let mut σ := σ
@@ -180,7 +182,9 @@ def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     entered, and clear both height-participation arrays.
 
     The `finalize` array is *not* cleared here: the justify event clears it before calling
-    this, at line 22, and the progress event does not clear it at all. -/
+    this, at line 22, and the progress event does not clear it at all.
+
+    ## Extract -/
 def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run do
   let mut σ := σ
   σ.h ← σ.h + 1                                               -- line 28
@@ -199,7 +203,9 @@ def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run d
     is not exclusive with the other two: it fires and falls through, so one transition can
     finalize and then advance.
 
-    `σ.nj` is read, not recomputed — see the module header. -/
+    `σ.nj` is read, not recomputed — see the module header.
+
+    ## Extract -/
 def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id.run do
   let mut σ := σ
   -- line 18
@@ -218,7 +224,9 @@ def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id
 /-- `state_transition(σ, B)`, with `σ = σ[B.parent]`: fold `B`'s
     attestations into the parent's post-state, install `B` as the latest block, and check the
     height events once. The *state height* of `B` is `σ[B].h`, which is what Figure 7's
-    viability and height filter read. -/
+    viability and height filter read.
+
+    ## Extract -/
 def stateTransition (σ : ChainState Validator) (B : Block Validator) :
     ChainState Validator := Id.run do
   let mut σ := σ

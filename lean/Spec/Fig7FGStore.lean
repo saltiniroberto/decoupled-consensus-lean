@@ -122,7 +122,9 @@ def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
     a placeholder.
 
     Line 15's maximum is over the recorded heights of the *new* live tree, so it can go down;
-    line 10's cannot. -/
+    line 10's cannot.
+
+    ## Extract -/
 def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     DRE (Store Validator) := do
   let mut S := S
@@ -149,7 +151,9 @@ def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
 
     A parentless block — genesis — has no parent state to read, and the figure does not cover
     it: genesis is in `Σ.T` from the start and is never processed. This rendering rejects it,
-    leaving the store unchanged, which is the same thing every other admission failure does. -/
+    leaving the store unchanged, which is the same thing every other admission failure does.
+
+    ## Extract -/
 def Store.processBlock (S : Store Validator) (B : Block Validator) :
     DRE (Store Validator) := do
   let mut S := S
@@ -172,7 +176,9 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
 
 /-- `fork_choice_root(Σ)`: `Σ.J` while the justified pair sits one
     height under the store's frontier, and `Σ.F` otherwise. The only routine of this layer
-    that reads no state map, and so the only one that does not raise. -/
+    that reads no state map, and so the only one that does not raise.
+
+    ## Extract -/
 def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
   if S.h_max = S.h_j + 1 then                                  -- line 17
     return S.J                                                 -- line 18
@@ -183,7 +189,9 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
 
     "Goldfish starts at the root even if the root is not in the filtered tree" — so this set
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
-    separately at line 27. It raises exactly where `viable` does. -/
+    separately at line 27. It raises exactly where `viable` does.
+
+    ## Extract -/
 def Store.getFilteredBlockTree (S : Store Validator) :
     DRE (Finset (Block Validator)) := do
   let root := S.forkChoiceRoot                                 -- line 21
@@ -198,7 +206,9 @@ def Store.getFilteredBlockTree (S : Store Validator) :
 
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
     none — and it is what line 29 hands the walk, `ghost`'s condition slot being
-    `DRE`. In `Store` for dot notation, its bare name unique to this layer. -/
+    `DRE`. In `Store` for dot notation, its bare name unique to this layer.
+
+    ## Extract -/
 def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : DRE Bool := do
   let σB ← S.σ[B]
@@ -218,7 +228,9 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
     directly.
 
     It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
-    caller wants; the superseded ones are `Fig1.getHead` and `Fig4.getHead`. -/
+    caller wants; the superseded ones are `Fig1.getHead` and `Fig4.getHead`.
+
+    ## Extract -/
 def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
   let root := S.forkChoiceRoot                                 -- line 27

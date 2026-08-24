@@ -61,7 +61,9 @@ structure SigningResult (Validator : Type) [Roots] (α : Type) where
     record and the height nonjustifiable, an empty target is signed; (5) with a silent
     record otherwise, the state's target is signed when it sits below the ceiling, else an
     empty target. A case that signs something new writes the record in the store it
-    returns; a repeat returns the store untouched. -/
+    returns; a repeat returns the store untouched.
+
+    ## Extract -/
 def Store.heightVote (S : Store Validator) :
     DRE (SigningResult Validator (HeightPair Validator)) := do
   let mut S := S
@@ -100,7 +102,9 @@ def Store.heightVote (S : Store Validator) :
     returns. No separate knowledge of the justification is asked for: justification is an
     on-chain fact — `Σ.J` and `Σ.h_j` read off replayed states whose justifying
     attestations sit inside blocks the validator has processed — so a coherent store's
-    own chain is the evidence. -/
+    own chain is the evidence.
+
+    ## Extract -/
 def Store.finalityVote (S : Store Validator) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
@@ -121,7 +125,9 @@ def Store.finalityVote (S : Store Validator) :
     returned store carries both record writes. The signer is the store's own `Σ.i`; the
     round is `round(Σ.s)`; `head` stays explicit — producing the SG head is the
     confirmation rule's concern, so the attestation carries the head it is given rather
-    than deriving one. -/
+    than deriving one.
+
+    ## Extract -/
 def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     NDREB Validator (Store Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair

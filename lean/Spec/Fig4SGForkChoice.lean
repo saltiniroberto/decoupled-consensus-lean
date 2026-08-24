@@ -78,7 +78,9 @@ open Params
 /-- `latest(Σ, v, r)`: the greatest round in
     `[max{0, r − ηSG}, r)` whose SG votes hold one by `v`, or `⊥` when there is none.
 
-    The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on". -/
+    The window is half-open at `r`: "a round-`r` vote is read from round `r + 1` on".
+
+    ## Extract -/
 def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
   -- lines 2-5: the greatest eligible round; `Finset.max` answers `⊥` when there is none
   let eligible := ({k ∈ Finset.range r |
@@ -93,7 +95,9 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     Lines 7–12 build a set by an order-free conditional add, so the loop *is* the set it
     builds, written as the set-builder. Line 9's `k ← latest(Σ, v, r)` binds out of an
     `Option` the line-8 test has vouched for; the `∃ k, … = some k` form says it without a
-    dependent `if`. -/
+    dependent `if`.
+
+    ## Extract -/
 def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
   -- lines 7–12, as the set the loop builds
   w({v ∈ Electorate.V |
@@ -103,7 +107,9 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
           ∃ H, a.head = some H ∧ B ⪯ H})
 
 /-- `majority_fork_choice(Σ, anchor, tree, r)`: the shared walk with
-    the SG support as its score, gated on a strict majority of the represented weight. -/
+    the SG support as its score, gated on a strict majority of the represented weight.
+
+    ## Extract -/
 def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})       -- line 14
@@ -114,7 +120,9 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
 /-- `get_head(Σ, votes, s)`: the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
     Figure 7 redefines it again, over the filtered tree and from the fork-choice root — that
-    reading, `S.getHead`, is the protocol's, and this one is Figure 4's. -/
+    reading, `S.getHead`, is the protocol's, and this one is Figure 4's.
+
+    ## Extract -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)    -- line 18
