@@ -61,9 +61,15 @@ advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯
 always holds and finalization never reverts. When it advances, `Σ.h_max` is recomputed
 inside the new live tree; it otherwise only grows.
 
+## Extract — Definition (Viability)
+
 A live block is viable when it has a live descendant whose state height is at most one
 below the current maximum:
-`V(Σ) = {B ∈ T_F(Σ) : ∃ W ∈ T_F(Σ), B ⪯ W, Σ.σ[W].h ≥ Σ.h_max − 1}`. Fork choice uses
+`V(Σ) = {B ∈ T_F(Σ) : ∃ W ∈ T_F(Σ), B ⪯ W, Σ.σ[W].h ≥ Σ.h_max − 1}`.
+
+## Extract
+
+Fork choice uses
 two derived views: `fork_choice_root(Σ)`, the block the walk starts from, and
 `get_filtered_block_tree(Σ)`, the viable blocks below it, which limit the selectable
 children. Goldfish starts at the root even if the root is not in the filtered tree.

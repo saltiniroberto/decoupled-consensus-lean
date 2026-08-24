@@ -47,6 +47,8 @@ For a fixed integer `R ≥ 1`, round r consists of the R slots from rR on, and
 `round(s) = ⌊s/R⌋`. Each round has one SG vote time `a_r`, a public parameter in this
 intermediate protocol. A round-`r` vote is read from round `r + 1` on.
 
+## Extract — Definition (Latest vote, support, and majority root)
+
 Fix an expiry window `ηSG ≥ 1` in rounds. `latest(Σ, v, r)` is the greatest round `k`
 with `max(0, r − ηSG) ≤ k < r` whose `sg_votes[k]` holds a vote by `v`, or `⊥` when
 there is none. A validator with a latest round is represented: it counts in the

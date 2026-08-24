@@ -39,8 +39,8 @@ admits `⊥` — nothing an honest duty produces uses it.
 
 `on_tick` gains one line: at `t = a_r` for the current round `r`, run `sg_vote`. In the
 draft, the proposer and voter of Figure 2 then call the `get_head` of Figure 4; that
-redirected reading is not written out here, because Section 5 redefines `get_head`
-again and the final reading is the protocol's. Available confirmation is unchanged.
+redirected reading is not written out here, because the finality layer redefines
+`get_head` again and that final reading is the protocol's. Available confirmation is unchanged.
 
 At `a_r`, an honest validator votes its current `live_confirmed`, which is a block; the
 empty head appears only in adversarial votes here. `process_sg_vote(Σ, vote)` is
