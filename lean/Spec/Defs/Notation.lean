@@ -81,8 +81,8 @@ macro_rules
           $y:ident ← $e)
 
 /-- `σ.arr[i] ← e`, an indexed write to a function-valued field, and `x[i] ← e` to a
-    function-valued local. `σ.target_participation[i] ← true` is the case Figure 1
-    needs. -/
+    function-valued local. `σ.target_participation[i] ← true` is the case
+    `process_attestation` needs. -/
 scoped syntax (name := idxAssign) (priority := high) ident noWs "[" term "]" " ← " term :
   doElem
 
@@ -118,7 +118,8 @@ macro_rules
 scoped syntax (name := filterMBind) (priority := high)
   "let " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
 
-/-- The `let mut` form of the raising set-builder; `goldfish_vote`'s line 29 is the case. -/
+/-- The `let mut` form of the raising set-builder; `goldfish_vote`'s freeze filter is the
+    case. -/
 scoped syntax (name := filterMBindMut) (priority := high)
   "let " "mut " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
 

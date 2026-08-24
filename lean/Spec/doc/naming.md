@@ -24,16 +24,17 @@ routine's own prefix is spelled in the name: `goldfishScore`, not `score`.
 
 ## The incrementally-redefined routines
 
-Four routines are defined more than once, a later figure extending or
+Four routines are defined more than once, a later file extending or
 replacing the earlier reading. The rule: **the last reading is the protocol's, and it bears
-the plain `Store` name**; the superseded readings are figure-named.
+the plain `Store` name**; each superseded reading is named `Fig<n>` by the number of the
+file that defined it.
 
 | routine             | superseded readings            | the protocol's                      |
 | ------------------- | ------------------------------ | ----------------------------------- |
-| `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `Store.getHead` (Figure 7)          |
-| `process_block`     | `Fig2.processBlock`            | `Store.processBlock` (Figure 7)     |
-| `goldfish_eligible` | `Fig1.goldfishEligible`        | `Store.goldfishEligible` (Figure 7) |
-| `on_tick`           | `Fig2.onTick`                  | `Store.onTick` (`05_SGDuty.lean`)  |
+| `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `Store.getHead` (`07_FGStore.lean`)          |
+| `process_block`     | `Fig2.processBlock`            | `Store.processBlock` (`07_FGStore.lean`)     |
+| `goldfish_eligible` | `Fig1.goldfishEligible`        | `Store.goldfishEligible` (`07_FGStore.lean`) |
+| `on_tick`           | `Fig2.onTick`                  | `Store.onTick` (`05_SGDuty.lean`)            |
 
 `on_tick` is the one whose extension is rendered as a call rather than a rewrite: Section
 3.4 says "`on_tick` gains one line", and `Store.onTick` is exactly that — it runs
@@ -41,7 +42,7 @@ the plain `Store` name**; the superseded readings are figure-named.
 
 So a caller who writes `S.getHead` gets the protocol's fork choice without thinking about
 layers, and a reader who sees `Fig2.processBlock` inside `Store.proposeBlock` knows that
-duty predates Figure 7's extension.
+duty predates the finality extension.
 
 ## What this replaced
 

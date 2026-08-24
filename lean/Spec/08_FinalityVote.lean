@@ -4,7 +4,7 @@ import Spec.Defs.Nondet
 /-!
 # The finality-vote rules: how an attestation's pairs are determined
 
-The attestation's shape is `Model.lean`'s, and Figure 6 says how processed attestations
+The attestation's shape is `Model.lean`'s, and `06_StateTransition.lean` says how processed attestations
 move the chain state; this file holds the rule a validator uses to *fill* the height pair
 and the finality pair it signs.
 

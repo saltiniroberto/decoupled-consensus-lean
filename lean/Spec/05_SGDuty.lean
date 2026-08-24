@@ -3,22 +3,22 @@ import Spec.«02_GoldfishDuties»
 import Spec.Defs.Nondet
 
 /-!
-# Figure 5 — the SG duty and store handler
+# The SG duty and store handler
 
 `sg_vote`, run at the round's vote time `a_r`, and `process_sg_vote` — and the protocol's
-`on_tick`, the SG layer's extension of Figure 2's.
+`on_tick`, the SG layer's extension of the Goldfish one.
 
 ## What the SG layer adds to `on_tick`
 
-One line: at `t = a_r` for the current round `r`, run `sg_vote`. The proposer and voter of
-Figure 2 then call Figure 4's `get_head`; nothing else in their duties changes, and
-available confirmation is unchanged.
+One line: at `t = a_r` for the current round `r`, run `sg_vote`. The Goldfish proposer
+and voter then call `Fig4.getHead`; nothing else in their duties changes, and available
+confirmation is unchanged.
 
-The added line is this file's `Store.onTick`: run Figure 2's reading, `Fig2.onTick`, and
-then the one line. The finality layer never touches `on_tick`, so that composition is the
-protocol's tick. The redirected `get_head` is not written out: the finality layer
+The added line is this file's `Store.onTick`: run the Goldfish reading, `Fig2.onTick`,
+and then the one line. The finality layer never touches `on_tick`, so that composition is
+the protocol's tick. The redirected `get_head` is not written out: the finality layer
 redefines it again, and that version, `Store.getHead`, is the protocol's. So this file
-holds the two routines Figure 5 itself introduces and the protocol's `on_tick`.
+holds the two routines it itself introduces and the protocol's `on_tick`.
 
 `a_r = t_{rR} + 6Δ`, `6Δ` after the beginning of the round — `SGSchedule.a` in
 `Model.lean`. That instant is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s
@@ -28,7 +28,7 @@ how they compose.
 ## An honest vote is never empty
 
 At `a_r` an honest validator votes its current `live_confirmed`, which is a block; an
-empty head can appear only in adversarial votes. So line 3 always names a block, and
+empty head can appear only in adversarial votes. So an honest vote always names a block, and
 `SGVote.head` is an `Option` only because the wire object admits `⊥` — nothing an honest
 duty produces uses it.
 
@@ -59,8 +59,9 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
     validator already seen equivocating.
 
     `process_goldfish_vote`'s shape exactly, one field over: the round test is against
-    `round(Σ.s)` rather than `Σ.s`, and line 8 is where "at most two distinct votes per
-    validator" is maintained — "two witness the equivocation; nothing reads a third".
+    `round(Σ.s)` rather than `Σ.s`, and the two-votes test is where "at most two distinct
+    votes per validator" is maintained — "two witness the equivocation; nothing reads a
+    third".
 
     ## Extract -/
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
@@ -79,7 +80,8 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
 /-- `sg_vote(Σ)`, run at `a_r`: vote the store's current
     `live_confirmed` for the current round.
 
-    A `NDREB` duty, as the Goldfish duties are: line 4 is the protocol's two verbs. Total —
+    A `NDREB` duty, as the Goldfish duties are: `broadcast vote; process_sg_vote(Σ, vote)`
+    is the protocol's two verbs. Total —
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
     are.
@@ -93,13 +95,13 @@ def Store.sgVote (i : Validator) (S : Store Validator)
   broadcast (Message.sgVote vote)
   return S.processSGVote vote
 
-/-- `on_tick(Σ, t)`, the protocol's reading: Figure 2's `on_tick`, then the SG layer's
+/-- `on_tick(Σ, t)`, the protocol's reading: the Goldfish `on_tick`, then the SG layer's
     one line — at `t = a_r` for the current round, run `sg_vote`. No later layer touches
     `on_tick`.
 
     `Fig2.onTick` has already written the clock into the store it returns, so the
-    dependent `if` hands `sg_vote` its instant precondition, exactly as Figure 2's own
-    branches do.
+    dependent `if` hands `sg_vote` its instant precondition, exactly as `Fig2.onTick`'s
+    own branches do.
 
     `a_r = t_{rR} + 6Δ` coincides with a Goldfish instant: it is `t_{rR+1} + 2Δ`, the
     tick at which `Fig2.onTick` evaluates slot `rR`'s confirmation. On that tick the two

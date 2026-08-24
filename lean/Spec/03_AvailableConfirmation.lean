@@ -1,7 +1,7 @@
 import Spec.«01_GoldfishWalk»
 
 /-!
-# Figure 3 — available confirmation
+# Available confirmation
 
 `update_confirmation(Σ, s)`, run once per slot at `t_s + 6Δ`. "Confirmation is the same walk
 over a stricter vote set and a larger denominator."
@@ -17,10 +17,11 @@ neither is rendered as a hypothesis.
 
 ## Why it does not reuse `goldfish_eligible`
 
-The gate at line 6 is the majority test *without* the current-slot escape: the walk runs at
-`t_s + 6Δ` over slot-`s` votes, and a block of the current slot has no business being
-confirmed for free. So line 6 defines its own `eligible` inline, as the figure does, and the
-routine passes it to `ghost` directly rather than going through `goldfish_fork_choice`.
+Confirmation's eligibility condition is the majority test *without* the current-slot
+escape: the walk runs at `t_s + 6Δ` over slot-`s` votes, and a block of the current slot
+has no business being confirmed for free. So the routine defines its own `eligible`
+inline, as the figure does, and passes it to `ghost` directly rather than going through
+`goldfish_fork_choice`.
 
 The walk starts at genesis over `Σ.T` — from genesis over the live tree. Once the
 finality layer exists the live tree is `T_F(Σ)`; at this layer nothing has been finalized
@@ -64,15 +65,16 @@ open Params
 
     `Σ.live_confirmed` takes the result unconditionally — it is "the block the last evaluated
     slot confirmed", and an evaluation that walks nowhere leaves genesis, never nothing.
-    `Σ.latest_confirmed` only ever moves forward, line 9 testing `Σ.latest_confirmed ⪯ H`.
+    `Σ.latest_confirmed` only ever moves forward, its write behind the test
+    `Σ.latest_confirmed ⪯ H`.
 
     Both cutoffs read the timestamps with the raising bracket, through `Finset.filterM`
 : a held vote the store never stamped raises rather than silently
     failing the cutoff. `process_goldfish_vote` stamps everything it stores, so the raise
     marks a store the handlers cannot build — a coherence fact for `Analysis/`.
 
-    "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the Figure 2
-    duties' instants are.
+    "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the
+    Goldfish duties' instants are.
 
     ## Extract -/
 def Store.updateConfirmation (S : Store Validator) (s : Nat)

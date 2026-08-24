@@ -9,7 +9,7 @@ anything from the protocol. It is general Lean machinery in the root `Finset` na
 `Finset.filter` and `Finset.image` are pure, so a predicate or function that can fail has
 nowhere to put the failure. These are the versions that do. The callers are the set
 operations over raising reads: `ghost`'s eligibility filter,
-`Store.viable` and `Store.updateFinality` (Figure 7), each reading the state map per
+`Store.viable` and `Store.updateFinality`, each reading the state map per
 member, where a missing entry has to reach whoever asked.
 
 ## `Finset.fold` is the only route, and its two instance arguments are the whole design

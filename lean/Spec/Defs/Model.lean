@@ -21,7 +21,7 @@ and two blocks are *compatible* when one is an ancestor of the other.
 Three things deliberately **not** rendered, each for a reason:
 
 * the assigned proposer. Which validator proposes in a slot is outside the protocol's scope, so
-  `on_tick` takes the test as a parameter (Figure 2);
+  `on_tick` takes the test as a parameter (`02_GoldfishDuties.lean`);
 * `t_GST` and the delivery bound as a *property*. `Δ` is a constant here; that objects arrive
   within it is a fact about executions, and there is no execution layer yet;
 * depth — no algorithm reads it: `ghost` breaks ties by root order, not by depth.
@@ -37,7 +37,8 @@ walk's tie-break is **not** read off the root: the tie is a nondeterministic pic
 `01_GoldfishWalk.lean`, every resolution among the outcomes, a root order being one.
 
 Nothing constrains a block's root to match the post-state it would compute: the block
-*claims* a root — the proposer's own claim is the assumed `RootComputation` of Figure 2 —
+*claims* a root — the proposer's own claim is the assumed `RootComputation` of
+`propose_block` —
 and whether the claim is true is a validity question this rendering does not ask, exactly as
 it does not ask whether a block was signed by its slot's proposer.
 

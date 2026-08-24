@@ -2,8 +2,8 @@
 
 ## The problem
 
-The protocol makes choices it does not determine. `best_child` (Figure 1) breaks
-a score tie arbitrarily. `propose_block` (Figure 2, line 25) writes a set of votes into a
+The protocol makes choices it does not determine. `best_child` (`01_GoldfishWalk.lean`)
+breaks a score tie arbitrarily. `propose_block` (`02_GoldfishDuties.lean`) writes a set of votes into a
 block field that is a list, without saying in which order. A deterministic rendering would
 have to invent a resolution for both — an assumption the protocol does not make, and one
 every theorem downstream would silently depend on.
@@ -57,7 +57,7 @@ spells the same in an `NDRE` routine as in a `DRE` one.
 A nondeterministic choice wears its own arrow, so it never looks like an ordinary bind:
 
 ```lean
-let W ←ᵖ top          -- best_child, line 4: any highest-scoring child
+let W ←ᵖ top          -- best_child: any highest-scoring child
 ```
 
 The right-hand side is anything `Pickable`: a `Set` or a `Finset`, so set-builders and
@@ -75,7 +75,7 @@ all duplicate-free lists whose elements are exactly `s` — written as a predica
 list is ever built and none is ever preferred. The routine picks one:
 
 ```lean
-let gfList ←ᵖ listings votes                       -- line 25: any order
+let gfList ←ᵖ listings votes                       -- any order
 ```
 
 ## Consuming a result
@@ -108,8 +108,8 @@ motion (git history has each):
 - the `for all` macros — the two order-free loops are written as the sets they build
   (a `biUnion` for the view merge, a set-builder for `sg_support`);
 - the rendering's one named deviation — `ghost`'s condition parameter is
-  `Block Validator → DRE Bool`, so Figure 7's raising `goldfish_eligible`
-  passes to it directly at line 29, and the pure layers offer their conditions with `pure`.
+  `Block Validator → DRE Bool`, so the finality layer's raising `goldfish_eligible`
+  passes to it directly, and the pure layers offer their conditions with `pure`.
 
 ## Traps
 

@@ -2,27 +2,27 @@ import Spec.Defs.Store
 import Spec.Defs.Nondet
 
 /-!
-# Figure 1 — the Goldfish score and the walk
+# The Goldfish score and the walk
 
 `goldfish_score`, `ghost`, `goldfish_eligible`, `goldfish_fork_choice` and `get_head`.
 `ghost` is the protocol's one building block: every later fork choice is the same walk
 with a different score and eligibility condition.
 
-## The protocol defines incrementally; the old readings are figure-named
+## The protocol defines incrementally; the old readings are numbered
 
-Later figures redefine three routines — `get_head` (Figures 1, 4, 7), `process_block`
-(Figures 2, 7), `goldfish_eligible` (Figures 1, 7). The last reading of each is the
-protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
-`S.goldfishEligible`, all Figure 7's); each superseded reading is named by the figure that
-defined it — `Fig1.getHead`, `Fig1.goldfishEligible`, `Fig4.getHead`, `Fig2.processBlock` —
-so a call to an old reading says so in the protocol's own coordinates.
+Later files redefine three routines — `get_head` (files `01`, `04`, `07`),
+`process_block` (`02`, `07`), `goldfish_eligible` (`01`, `07`). The last reading of each
+is the protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
+`S.goldfishEligible`, all `07_FGStore.lean`'s); each superseded reading is named by the
+number of the file that defined it — `Fig1.getHead`, `Fig1.goldfishEligible`,
+`Fig4.getHead`, `Fig2.processBlock` — so a call to an old reading says so.
 
 There are no namespace blocks: every definition carries its full name at its own `def`.
 The full naming scheme is `doc/naming.md`.
 
 ## The arg-max step: the tie is a pick
 
-Line 11 is `arg max score`, "ties by root order". The maximal-score children are a filter;
+The walk's step is `H ← arg max score`, "ties by root order". The maximal-score children are a filter;
 the tie is a **nondeterministic pick**, `←ᵖ`. The protocol never says what a root is or how one
 is computed — only that the tie-break be fixed — so nothing is assumed at all:
 every resolution is among the outcomes, a root order being one of them, and "the walk does
@@ -30,10 +30,10 @@ not depend on the tie" is a provable singleton statement, not a precondition.
 
 ## The walk is `NDRE`
 
-The tie-break picks and the eligibility condition may raise — Figure 7's reads `Σ.σ[B].h` —
-so the walk carries `NDRE`, and its `eligible` parameter is `Block → DRE Bool`:
-the raising layer passes its condition directly, and the pure layers offer theirs with
-`pure`. Line 8 filters the children
+The tie-break picks and the eligibility condition may raise — the finality layer's reads
+`Σ.σ[B].h` — so the walk carries `NDRE`, and its `eligible` parameter is
+`Block → DRE Bool`: the raising layer passes its condition directly, and the pure layers
+offer theirs with `pure`. The children filter runs
 through `Finset.filterM` at `DRE`, whose fold instances exist; a per-child
 condition in `NDRE` itself would not commute (a pick with no outcomes annihilates where an
 error survives), which is why the parameter type is the raising monad, not the full stack.
@@ -46,7 +46,7 @@ the assignment macro claims for pure re-assignment, so the monadic bind is writt
 The figure writes `loop … return H`, which terminates because each step moves to a child and
 `tree` is finite. That argument is about the tree being a tree — parent-closed and acyclic —
 which is an invariant of `Σ.T` rather than a fact about the `Finset` this routine takes. So
-line 7's `loop` is written `for _ in [:|tree|]`: a descent through distinct blocks of
+the `loop` is written `for _ in [:|tree|]`: a descent through distinct blocks of
 `tree` visits at most `|tree|` of them, so on anything that really is a tree the bound is
 never reached and the `for` runs exactly the figure's `loop`.
 
@@ -60,9 +60,9 @@ place to assume it.
 ## The score counts equivocators for every block
 
 An equivocator "counts for every block and stays among the participants, so it
-can neither create nor block a descent". That is why line 2 collects them separately and line
-4 adds both cardinalities: a validator with two votes is added to every block's score without
-its target being read at all.
+can neither create nor block a descent". That is why `equivocators` is collected
+separately and the score adds both cardinalities: a validator with two votes is added to
+every block's score without its target being read at all.
 
 ## Extract — Definition (Goldfish score and walk)
 
@@ -103,9 +103,9 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 /-! ## The shared walk -/
 
-/-- Line 11's `arg max score`: the maximal-score members, the tie a genuine pick — every
+/-- The walk's `arg max score`: the maximal-score members, the tie a genuine pick — every
     resolution among the outcomes, a root order being one. On empty `children` there are no
-    outcomes at all, an answer `ghost`'s line 9 never asks for. -/
+    outcomes at all, an answer `ghost`'s emptiness test never lets it ask for. -/
 def bestChild (children : Finset (Block Validator)) (score : Block Validator → Nat) :
     NDR (Block Validator) := do
   let top := {B ∈ children | ∀ C ∈ children, score C ≤ score B}
@@ -141,7 +141,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
 
 /-- `goldfish_score(votes, s, B)`: every equivocator, plus every
     non-equivocating participant whose target descends from `B`. The equivocator set is a
-    `let`, as line 2 writes it — the protocol defines no standalone function.
+    `let`, as the figure writes it — the protocol defines no standalone function.
 
     An equivocator is counted without its target being read — see the module header.
 
@@ -157,13 +157,13 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block
   |equivocators| + |supporters|
 
 /-- `goldfish_eligible(Σ, votes, s, B)`: a strict majority of the
-    participants support `B`, or `B` is a block of the current slot. Figure 7 redefines it
-    with a height clause; that reading, `S.goldfishEligible`, is the protocol's, and this one
-    is Figure 1's — hence the name.
+    participants support `B`, or `B` is a block of the current slot. The finality layer
+    redefines it with a height clause; that reading, `S.goldfishEligible`, is the
+    protocol's, and this one is this file's — hence the `Fig1` name.
 
-    Line 13's `voters_count` is a `let`, as the figure writes it — the protocol defines no such
-    function, only this local and its Figure 3 and Figure 7 analogues over their own vote
-    sets.
+    `voters_count` is a `let`, as the figure writes it — the protocol defines no such
+    function, only this local and its analogues in `update_confirmation` and
+    `S.goldfishEligible`, each over its own vote set.
 
     The second disjunct is why a fresh proposal can be walked onto at all: "it only does not
     apply to proposals from the current slot, which cannot yet have votes".
@@ -186,9 +186,9 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
   ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
 /-- `get_head(Σ, votes, s)`: the walk from genesis over the whole
-    processed tree. Figure 4 redefines it to start from the SG root, and Figure 7 again to
-    start from the fork-choice root over the filtered tree — that reading, `S.getHead`, is
-    the protocol's, and this one is Figure 1's.
+    processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
+    and the finality layer again, from the fork-choice root over the filtered tree — that
+    reading, `S.getHead`, is the protocol's, and this one is this file's.
 
     ## Extract -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :

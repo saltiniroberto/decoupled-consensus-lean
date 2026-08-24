@@ -43,7 +43,7 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 ## Messages and duties
 
 - **Messages are built by named `mk`**: `GoldfishVote.mk (validator := i) …`, and
-  `Block.mk` likewise names its fields (Figure 2, line 25). `DutyResult` keeps the brace
+  `Block.mk` likewise names its fields (`Store.proposeBlock`). `DutyResult` keeps the brace
   form `{ state := …, send := … }`.
 - **Duties run in `NDREB`** (`Nondet.lean`): the outbox threaded over `NDRE`,
   `broadcast` the protocol's own verb, the store an explicit input and output — no caller
@@ -65,7 +65,8 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 
 ## Comments and citations
 
-- **Line comments cite the figure's own line numbers** (`-- line 25`).
+- **Line comments say what a statement does, not where it sits** — the rendered figure
+  shows them as margin notes, and nothing numbers the lines.
 - **Docstrings are self-contained and cite nothing** — every docstring says what its
   definition means on its own (correctness is the contract).
 

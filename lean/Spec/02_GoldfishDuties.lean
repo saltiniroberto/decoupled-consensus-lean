@@ -3,7 +3,7 @@ import Spec.«03_AvailableConfirmation»
 import Spec.Defs.Nondet
 
 /-!
-# Figure 2 — the Goldfish duties and store handlers
+# The Goldfish duties and store handlers
 
 `on_tick`, `process_block`, `process_goldfish_vote`, `propose_block` and `goldfish_vote`. The
 handlers change the store in place; only the two duties concern the validator running the
@@ -13,15 +13,15 @@ simply does not run them.
 The routines appear callee-first; the figure's order is `on_tick`, `process_block`,
 `process_goldfish_vote`, `propose_block`, `goldfish_vote`.
 
-**Figure 3 comes first in the import order** although it is the later figure: `on_tick`
-line 8 calls `update_confirmation`. The file names keep the protocol's numbers.
+**`03_AvailableConfirmation.lean` comes first in the import order** although it is the
+later file: `on_tick` calls `update_confirmation`.
 
 ## `ℓ` is `i`, and the proposer test is a parameter
 
 The protocol writes `ℓ` for the validator running the node. This subtree writes `i`, and
 nothing else in it uses that letter.
 
-Line 3 asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside this
+`on_tick` asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside this
 specification's scope — a slot simply *has* an assigned proposer — so `on_tick`
 takes the test as a parameter. `propose_block` itself is fully rendered; it is only *whether
 to run it* that is not.
@@ -40,13 +40,13 @@ relays every object it processes" is network behaviour, the wiring layer's to re
 
 ## Two collisions with `Finset`, and where each lands
 
-**Line 30's `for all B ∈ Σ.T` is an order-free union, written as one.** Line 31
+**The view merge's `for all B ∈ Σ.T` is an order-free union, written as one.** Its body
 accumulates a union, so the loop's whole effect is `biUnion` — the standard name for it —
 and the loop spelling adds nothing. A loop that were *not*
 order-free would use the nondeterministic `for` of `Nondet.lean` instead, every visitation
 order among the outcomes.
 
-**Line 25 crosses from `Finset` to `List` by a pick.** The block's carried votes are a
+**The proposal's vote set crosses from `Finset` to `List` by a pick.** The block's carried votes are a
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
 constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as
 the protocol says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
@@ -55,14 +55,14 @@ holding the store's votes as lists — would make
 "at most two distinct votes per validator" a property of a list and put a `toFinset` at
 every counting site.
 
-## `process_block` and `on_tick` here are Figure 2's
+## `process_block` and `on_tick` here are this file's readings
 
-Figure 7 extends `process_block` with two lines: the post-state and `update_finality`. That
-reading, `S.processBlock`, is the protocol's; this one is the availability layer's —
-hence `Fig2.processBlock`. Likewise `on_tick`: the SG layer extends it with one line — at
-`t = a_r`, run `sg_vote` — and that reading, `S.onTick` (`05_SGDuty.lean`), is the
-protocol's; this one is the figure's, hence `Fig2.onTick`. See `01_GoldfishWalk.lean` on
-the figure-named readings.
+The finality layer extends `process_block` with two lines: the post-state and
+`update_finality`. That reading, `S.processBlock`, is the protocol's; this one is the
+availability layer's — hence `Fig2.processBlock`. Likewise `on_tick`: the SG layer
+extends it with one line — at `t = a_r`, run `sg_vote` — and that reading, `S.onTick`
+(`05_SGDuty.lean`), is the protocol's; this one is this file's, hence `Fig2.onTick`. See
+`01_GoldfishWalk.lean` on the numbered readings.
 
 ## Extract
 
@@ -103,8 +103,8 @@ open Params
     processing time, unless it is from the future, already held, or a third vote by a
     validator already seen equivocating.
 
-    Line 18 is where the protocol's "at most two distinct votes per validator" is maintained:
-    "two witness the equivocation; nothing reads a third".
+    The two-votes test is where the protocol's "at most two distinct votes per validator"
+    is maintained: "two witness the equivocation; nothing reads a third".
 
     ## Extract -/
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
@@ -178,7 +178,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 /-- `goldfish_vote(Σ)`, run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
-    The merge is lines 29–31: the slot-`(s−1)` votes held before the *previous* slot's view
+    The merge: the slot-`(s−1)` votes held before the *previous* slot's view
     freeze at `t_{s−1} + 3Δ`, together with everything carried by any slot-`s` block
     processed so far. That second part is the view merge — the proposal supplies its own view
     rather than a forced target.
@@ -213,7 +213,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     This is the availability layer's reading. The SG layer extends it with one line — at `t = a_r`, run
     `sg_vote` — and that reading, `S.onTick` (`05_SGDuty.lean`), is the protocol's.
 
-    `isProposer` is the parameter of line 3; see the module header. A `NDREB` duty too,
+    `isProposer` is the proposer test taken as a parameter; see the module header. A `NDREB` duty too,
     so whatever an action broadcasts is in the outbox. Each action branch returns its
     store directly: the three instants are mutually exclusive — distinct multiples of
     `Δ`: a proposal at `t_s`, a vote at `t_s + Δ`, a confirmation evaluation at
@@ -221,9 +221,10 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     re-clocked store having broadcast nothing.
 
     Each branch discharges its action's instant precondition from its own dependent `if` —
-    the clock was written just above, so `S.t` reduces to `t` whatever came before. Line 7
-    writes the figure's `t_s + 2Δ` as `t_{s−1} + 6Δ` — equal whenever `s > 0`, the
-    evaluation of the *previous* slot, and the form line 8's precondition wants.
+    the clock was written just above, so `S.t` reduces to `t` whatever came before. The
+    confirmation branch writes its `t_s + 2Δ` instant as `t_{s−1} + 6Δ` — equal whenever
+    `s > 0`, the evaluation of the *previous* slot, and the form `update_confirmation`'s
+    precondition wants.
 
     ## Extract -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)

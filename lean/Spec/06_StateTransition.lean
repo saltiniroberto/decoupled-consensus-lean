@@ -1,7 +1,7 @@
 import Spec.Defs.Notation
 
 /-!
-# Figure 6 — the deterministic finality-gadget state transition
+# The deterministic finality-gadget state transition
 
 The chain state and its four routines: `state_transition`,
 `process_attestation`, `process_height_events` and `advance_height`. Every block is evaluated
@@ -12,28 +12,28 @@ The routines appear callee-first, because Lean wants a definition before its use
 figure's order is `state_transition`, `process_attestation`, `process_height_events`,
 `advance_height`.
 
-**It comes before the store in the import order**, though it is Figure 6 of seven: the store
-holds `Σ.σ[·]`, a map into the chain state, so the chain state has to exist first; the
-import order is dependency order.
+**It comes before the store in the import order**: the store holds `Σ.σ[·]`, a map into
+the chain state, so the chain state has to exist first; the import order is dependency
+order.
 
 ## Four things to know while reading
 
 **The transition is total.** Every routine returns a state; there is no `invalid`. Whether a
-block is accepted at all is the store's business (Figure 7), not this figure's.
+block is accepted at all is the store's business (`07_FGStore.lean`), not this file's.
 
 **`σ` on a right-hand side is the state at that statement.** The assignment macros expand to
 `σ := { σ with … }`, so consecutive lines read each other's effects, exactly as the figure's
 imperative text does.
 
-**`σ.L` is still the parent block while attestations are processed.** Line 5 writes `σ.L ← B`
-only after the loop, so an attestation is classified against the height and target the
+**`σ.L` is still the parent block while attestations are processed.** `state_transition`
+writes `σ.L ← B` only after the loop, so an attestation is classified against the height and target the
 *parent's* post-state carried — which is what makes a block's own attestations unable to use
 that block as evidence.
 
 **`nj` is a stored field.** The protocol computes it on entry into a height, "after the same
-transition has applied any finalization", and keeps it until the height changes: `advance
-height` writes it at line 29, and the justify event reads it at line 20 — so the test reads
-the `h_F` of the height's *entry*, not of the moment the justification fires.
+transition has applied any finalization", and keeps it until the height changes:
+`advance_height` writes it, and the justify event reads it — so the test reads the `h_F`
+of the height's *entry*, not of the moment the justification fires.
 
 ## `(K ∣ h)` is written `h % K = 0`
 
@@ -187,7 +187,7 @@ def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
 /-- `process_attestation(σ, a)`: classify one attestation and set the
     bits it earns.
 
-    The finality test wants three things at once (line 9): an unfinalized justification,
+    The finality test wants three things at once: an unfinalized justification,
     `σ.F ⪯ σ.J`, and a finality pair naming that justification exactly.
 
     The height tests are an `if`/`else if`, and the first branch sets **both** bits: an exact
@@ -215,7 +215,7 @@ def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     entered, and clear both height-participation arrays.
 
     The `finalize` array is *not* cleared here: the justify event clears it before calling
-    this, at line 22, and the progress event does not clear it at all.
+    this, and the progress event does not clear it at all.
 
     ## Extract -/
 def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run do
@@ -255,8 +255,8 @@ def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id
 
 /-- `state_transition(σ, B)`, with `σ = σ[B.parent]`: fold `B`'s
     attestations into the parent's post-state, install `B` as the latest block, and check the
-    height events once. The *state height* of `B` is `σ[B].h`, which is what Figure 7's
-    viability and height filter read.
+    height events once. The *state height* of `B` is `σ[B].h`, which is what the finality
+    layer's viability and height filter read.
 
     ## Extract -/
 def stateTransition (σ : ChainState Validator) (B : Block Validator) :

@@ -1,7 +1,7 @@
 import Spec.«01_GoldfishWalk»
 
 /-!
-# Figure 4 — the SG fork choice
+# The SG fork choice
 
 `latest`, `sg_support`, `majority_fork_choice`, and the SG layer's `get_head`. The SG
 layer adds one message layer to Goldfish: a relative-majority fork choice over the latest
@@ -11,8 +11,8 @@ SG votes selects the root from which the Goldfish walk starts.
 
 `majority_fork_choice` is `ghost` again, with the SG support as the score and a strict
 majority of the represented weight as the gate. Nothing about the walk changes — "the two
-walks are the same function with different scores and gates" — so this file instantiates the
-`ghost` of Figure 1 and defines no walk of its own.
+walks are the same function with different scores and gates" — so this file instantiates
+the shared `ghost` and defines no walk of its own.
 
 ## The equivocator consequence is a fact, not a hypothesis
 
@@ -96,10 +96,10 @@ def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
     A validator supports `B` when its latest round holds *exactly one* distinct vote by it,
     that vote's head is a block, and `B` precedes the head.
 
-    Lines 7–12 build a set by an order-free conditional add, so the loop *is* the set it
-    builds, written as the set-builder. Line 9's `k ← latest(Σ, v, r)` binds out of an
-    `Option` the line-8 test has vouched for; the `∃ k, … = some k` form says it without a
-    dependent `if`.
+    The figure's loop builds a set by an order-free conditional add, so the loop *is* the
+    set it builds, written as the set-builder. Its `k ← latest(Σ, v, r)` binds out of an
+    `Option` that the loop's own `latest(Σ, v, r) ≠ ⊥` test has vouched for; the
+    `∃ k, … = some k` form says it without a dependent `if`.
 
     ## Extract -/
 def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
@@ -123,8 +123,8 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
 
 /-- `get_head(Σ, votes, s)`: the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
-    Figure 7 redefines it again, over the filtered tree and from the fork-choice root — that
-    reading, `S.getHead`, is the protocol's, and this one is Figure 4's.
+    The finality layer redefines it again, over the filtered tree and from the fork-choice
+    root — that reading, `S.getHead`, is the protocol's, and this one is this file's.
 
     ## Extract -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :

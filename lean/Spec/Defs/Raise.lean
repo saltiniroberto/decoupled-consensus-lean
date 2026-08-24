@@ -27,7 +27,7 @@ belongs to `Analysis/`.
   need their combining operation commutative, and the failure-failure case needs the two
   failures to be *equal* — which is `Subsingleton Error`. Give `Error` a payload and
   `Std.Commutative` becomes false, not merely unproved, because the result would then depend
-  on which failure the traversal met first. Figure 7's `viable` and `update_finality` are
+  on which failure the traversal met first. `Store.viable` and `Store.updateFinality` are
   the consumers — a raw-`Option` read would answer silently where these raise.
 
 `DRE α` is `Except Error α` — a *deterministic* result or exception, named as the

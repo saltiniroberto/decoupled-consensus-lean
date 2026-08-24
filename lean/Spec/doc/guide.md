@@ -10,7 +10,7 @@ write proofs.
 
 A figure file (`02_GoldfishDuties.lean`, say) contains one routine per pseudocode
 routine. Everything between `/--` and `-/` is documentation for the definition below it;
-`--` starts a line comment, and the `-- line 12` comments number the algorithm's lines.
+`--` starts a line comment, which the rendered figure shows as a margin note.
 The files under `Defs/` hold the data types and the plumbing; the ones whose
 header says "this file is not a specification" define notation and can be skipped — they
 exist so the figure files can read like pseudocode.
@@ -155,6 +155,6 @@ store as `S`.)
 
 The pages beside this one cover the two designs with real depth:
 [nondeterminism.md](nondeterminism.md) for the choice machinery and how results are
-consumed, [naming.md](naming.md) for the figure-named readings, and
+consumed, [naming.md](naming.md) for the numbered readings, and
 [style.md](style.md) for the full list of conventions. Every definition's own docstring
 states what it means without assuming you have read anything else.

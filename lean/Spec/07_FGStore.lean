@@ -2,23 +2,23 @@ import Spec.«05_SGDuty»
 import Spec.«02_GoldfishDuties»
 
 /-!
-# Figure 7 — the finality gadget in the fork choice
+# The finality gadget in the fork choice
 
 Viability, and the finality layer's routines: `process_block` extended, `update_finality`, `fork_choice_root`,
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
-**This is the protocol.** Where a routine here shares a name with an earlier figure,
+**This is the protocol.** Where a routine here shares a name with an earlier file's,
 this is the reading a caller wants, and it bears the plain `Store` name: `S.processBlock`,
 `S.goldfishEligible`, and the fork choice `S.getHead`. The superseded readings are
-figure-named — `Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead`, `Fig4.getHead`.
-See `01_GoldfishWalk.lean` on the scheme.
+named by their file's number — `Fig2.processBlock`, `Fig1.goldfishEligible`,
+`Fig1.getHead`, `Fig4.getHead`. See `01_GoldfishWalk.lean` on the scheme.
 
 ## What this layer adds
 
 The store gains `Σ.σ[·]` and the finality state `(Σ.F, Σ.h_F, Σ.J, Σ.h_j,
 Σ.h_max)` — all already fields of `Store`, which carries every layer's at once. Two lines join
-`process_block`: the post-state at line 4, and `update_finality` at line 8, each marked "new
-at this layer" in the figure and here.
+`process_block`: the post-state write, and `update_finality`, each marked "new at this
+layer" in the figure and here.
 
 And the walk no longer starts at genesis over everything. It starts at
 `fork_choice_root(Σ)` over `get_filtered_block_tree(Σ)`, and the Goldfish gate gains a third
@@ -27,13 +27,14 @@ disjunct — a child whose state height is below `Σ.h_max − 1` is eligible wi
 ## `Σ.F ⪯ Σ.J` is claimed, not enforced
 
 "`Σ.F` advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯ Σ.J`
-always holds and finalization never reverts." That is a property of `update_finality`, which
-tests exactly those three things at line 13, and an invariant of the reachable stores — not a
-fact of the `Store` type. `Analysis/` is where it belongs.
+always holds and finalization never reverts." That is a property of `update_finality`,
+whose advance test asks exactly those three things, and an invariant of the reachable
+stores — not a fact of the `Store` type. `Analysis/` is where it belongs.
 
 ## Reading the state map, and where that lands
 
-Viability and lines 15 and 25 read `Σ.σ[W].h` and `Σ.σ[B].h`. The bracket raises when the
+Viability, `update_finality`'s recomputation of `Σ.h_max` and the eligibility condition's
+height clause read `Σ.σ[W].h` and `Σ.σ[B].h`. The bracket raises when the
 map does not record the block, so a routine reading it carries `DRE` —
 `processBlock`, `updateFinality`, `viable`, `getFilteredBlockTree`, `goldfishEligible` and
 `getHead` all do, and `forkChoiceRoot` alone does not, reading no map. A missing entry
@@ -41,9 +42,10 @@ reaches the caller instead of becoming a silent answer; on a store whose `Σ.σ`
 nothing raises at all, and that theorem belongs to `Analysis/`.
 
 A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
-`Finset.filterM` collects viability's witnesses, and `Finset.imageM` collects line 15's
-heights. `ghost`'s condition slot is `DRE`, so line 29 passes `goldfish_eligible` itself,
-raising reads included — the rendering carries no deviation there.
+`Finset.filterM` collects viability's witnesses, and `Finset.imageM` collects the
+recomputation's heights. `ghost`'s condition slot is `DRE`, so `get_head` passes
+`goldfish_eligible` itself, raising reads included — the rendering carries no deviation
+there.
 
 ## Extract
 
@@ -115,15 +117,15 @@ def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
     descendant of itself below `Σ.J`, and `Σ.h_max` is recomputed inside the live tree the
     advance just shrank.
 
-    Two reads raise. Line 13's viability, whose `(← viable S)` is evaluated before the
-    conjunction is tested — the `←` lifts above the `if` — so the routine raises on a store
-    with an unrecorded live block even when `σ.F` offers no advance; on a store where nothing
-    raises the two readings agree. And line 15's heights, collected through `Finset.imageM`,
-    so a live block the map does not record fails the recomputation rather than contributing
-    a placeholder.
+    Two reads raise. The advance test's viability, whose `(← viable S)` is evaluated before
+    the conjunction is tested — the `←` lifts above the `if` — so the routine raises on a
+    store with an unrecorded live block even when `σ.F` offers no advance; on a store where
+    nothing raises the two readings agree. And the recomputation's heights, collected
+    through `Finset.imageM`, so a live block the map does not record fails the
+    recomputation rather than contributing a placeholder.
 
-    Line 15's maximum is over the recorded heights of the *new* live tree, so it can go down;
-    line 10's cannot.
+    The recomputed maximum is over the recorded heights of the *new* live tree, so it can
+    go down; the unconditional `max` at entry cannot.
 
     ## Extract -/
 def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
@@ -141,8 +143,8 @@ def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
 
-/-- `process_block(Σ, B)`: Figure 2's handler with the two lines this
-    layer adds — the post-state at line 4, and `update_finality` at line 8.
+/-- `process_block(Σ, B)`: the Goldfish handler (`Fig2.processBlock`) with the two lines
+    this layer adds — the post-state write, and `update_finality`.
 
     The post-state is computed from the parent's, and the parent's is read with the raising
     bracket: a block whose parent the map does not record cannot be evaluated. The protocol says
@@ -190,7 +192,7 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
 
     "Goldfish starts at the root even if the root is not in the filtered tree" — so this set
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
-    separately at line 27. It raises exactly where `viable` does.
+    separately by `get_head`. It raises exactly where `viable` does.
 
     ## Extract -/
 def Store.getFilteredBlockTree (S : Store Validator) :
@@ -198,15 +200,15 @@ def Store.getFilteredBlockTree (S : Store Validator) :
   let root := S.forkChoiceRoot
   return {B ∈ (← S.viable) | root ⪯ B}
 
-/-- `goldfish_eligible(Σ, votes, s, B)`: Figure 1's eligibility
-    condition with a third disjunct — "a child whose state height is below `Σ.h_max − 1` is
-    eligible without a majority".
+/-- `goldfish_eligible(Σ, votes, s, B)`: the Goldfish eligibility condition
+    (`Fig1.goldfishEligible`) with a third disjunct — "a child whose state height is below
+    `Σ.h_max − 1` is eligible without a majority".
 
     That clause is what lets the walk descend past blocks nobody has voted on yet, which is
     what makes the height filter a filter rather than a wall.
 
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
-    none — and it is what line 29 hands the walk, `ghost`'s condition slot being
+    none — and it is what `get_head` hands the walk, `ghost`'s condition slot being
     `DRE`. In `Store` for dot notation, its bare name unique to this layer.
 
     ## Extract -/
