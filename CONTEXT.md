@@ -318,26 +318,34 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `Store.lean`), and the five round-root functions. The vocabulary landed with it:
   `m = ⌊W/2⌋ + 1` beside `q`, and the grade instants `Γ j r = roundStart r + jΔ` beside
   `roundStart` (both `Model.lean`, where the source's own model and schedule sections put
-  them). The crossing decisions, each to revisit:
+  them). The crossing decisions, each ruled on by Roberto 2026-08-25 (confirmed unless
+  marked *to change*):
   - the per-round maps are `Int`-indexed: round `r` reads its round-`(r − 1)` entries and
-    round `0` must find round `−1` empty, where a `Nat` index would truncate `0 − 1` to `0`;
+    round `0` must find round `−1` empty, where a `Nat` index would truncate `0 − 1` to
+    `0` — confirmed;
   - `HeadEntry` is a named structure (`H`, `t`), `deriving DecidableEq` — a plain
-    structure, so the mutual-family deriving limit does not apply;
+    structure, so the mutual-family deriving limit does not apply (not raised with him);
   - "the deepest block in `G`" is a pick from `deepest G`, the `⪯`-maximal blocks; the
-    one-chain claim that makes the pick a singleton is `Analysis/` matter, not assumed;
+    one-chain claim that makes the pick a singleton is `Analysis/` matter, not assumed —
+    confirmed;
   - the source's `C(Σ)` and `fork choice root(Σ)` are the existing
     `get_filtered_block_tree` and `fork_choice_root` (`07_FGStore.lean`) — the two
-    documents define them the same way, so no new view was added;
-  - `H_j`/`E_j` filter over `V` where the source filters the map's domain — an entry
-    outside `V` would carry no weight either way;
-  - `get_walk_root` reads `Σ.sg_root[r]` by the raising extraction — the source assumes
-    the entry is set, the protocol calling it only after the round's write;
-  - `G0` is imported with the other grades though nothing reads it yet.
+    documents define them the same way, so no new view was added — confirmed;
+  - *to change*: `E_j` filters over `V` where the source ranges over the `equiv` map's
+    domain (`E_j = {i ∈ Σ.equiv[r−1] : Σ.equiv[r−1][i] < Γ_j}`) — Roberto: render it as
+    the source writes it. Open rendering question when executing: the map is a function,
+    so its domain is not a `Finset` of the type; either the field becomes a finite map,
+    or the domain set needs another spelling (`w(·)` takes a `Finset`);
+  - `get_walk_root` reads the stored SG root as set (raising on absence) — semantics
+    confirmed, but *to change* the spelling: Roberto wants the bracket read
+    `S.sgRoot[r]`, which needs a named map type (or `GetElem` instance) the way
+    `TimeMap`'s raising bracket is done;
+  - `G0` is imported with the other grades though nothing reads it yet — confirmed, keep.
   Skipped, deliberately, each to land with its own figure: the writers (the source's
   `on_tick`/`on_attestation` lines and the `on_block` proposal-root registration), the
   block's proposal-root field, and the `action_root[·]` store field. The source's
-  schedule note — "this schedule requires `R ≥ 2`", `a_r + Δ ≤ t_{r+1} − Δ` — bears on
-  the open `R = 1` question (Next).
+  schedule requires `R ≥ 2` (`a_r + Δ ≤ t_{r+1} − Δ`); Roberto ruled 2026-08-25 that
+  `Params` adopts it (pending, Next).
 
 ### Naming and layout
 
@@ -480,6 +488,15 @@ works but duplicates the sequence in a `def`.
 0. **The spec is the source of truth, complete over its seven figures plus the
    finality-vote rules and the healing functions, and everything builds** (`make check`
    green). Open, in order of readiness:
+   - **Instructed by Roberto 2026-08-25, not yet executed** (his rulings on the healing
+     import's crossing decisions — see the healing entry under Decisions):
+     1. raise `Params.R_ge` to `2 ≤ R` (the healing source's schedule requires it; it
+        also settles the `a_r`-outside-round-`r` pathology and `SGSchedule`'s
+        inhabitation);
+     2. respell `get_walk_root`'s read as the bracket `S.sgRoot[r]` (raising semantics
+        confirmed; needs a named map type or `GetElem` instance);
+     3. re-render `E_j` as the source writes it — over the `equiv` map's domain, not a
+        filter of `V` (rendering question noted in the Decisions entry).
    - **the healing writers** (2026-08-25): `09_Healing.lean` holds the scores, grades and
      round-root functions, but the four store fields they read are written by no routine —
      the `on_tick`/`on_attestation` handler lines, the `on_block` proposal-root
@@ -492,10 +509,9 @@ works but duplicates the sequence in a `def`.
      as `.error ∉ …` on coherent stores, "the walk does not depend on its picks" as a
      singleton outcome set. The old `coherence-invariant` branch predates this store and
      does not transfer.
-   - **Open questions awaiting Roberto's call**: `a_r` vs `R = 1` (above; the healing
-     source's schedule states outright that it requires `R ≥ 2`, where `Params` requires
-     only `R ≥ 1`); renaming the `Fig<n>.…` declaration prefixes; the duties taking
-     `Σ.i` instead of an `i` parameter.
+   - **Open questions awaiting Roberto's call**: renaming the `Fig<n>.…` declaration
+     prefixes; the duties taking `Σ.i` instead of an `i` parameter. (The `a_r` vs `R = 1`
+     question is ruled: `R ≥ 2`, pending above.)
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
      and the formula is deferred on Roberto's word.
