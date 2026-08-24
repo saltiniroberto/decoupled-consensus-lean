@@ -43,31 +43,67 @@ not met it, so this subtree writes `h % Params.K = 0`.
 ## Extract
 
 The finality gadget extends each non-genesis block with a list of combined attestations
-and a post-state root, and defines the weighted quorum threshold `q = ⌈2W/3⌉`; a quorum
-is a set of validators whose total weight is at least `q`.
+and a post-state root. It also defines the weighted quorum threshold
+
+[eq:q]
+
+A quorum is a set of validators whose total weight is at least `q`.
+
+## Extract — Combined attestations
 
 Height is a finality counter and is separate from slot. Genesis is justified and
 finalized at height 0, and every chain starts at height 1. A justification or a
-progress event increments height by one. An honest validator emits at most one proposal
-per slot, one Goldfish vote per slot, and one combined attestation per round.
+progress event increments height by one.
 
-Every block is evaluated from its parent's immutable post-state,
-`σ[B] = state_transition(σ[B.parent], B)`, and the result is a deterministic function
-of the chain ending at `B`.
+We extend the attestation to
+
+`a = (validator, round, head, height, target, finalize_height, finalize_target)`
+
+adding the finality-relevant fields to the SG vote, carried as two pairs. The height
+pair is a target vote `(h, T)` with `T ≠ ⊥`, an empty-target vote `(h, ⊥)`, or the
+empty pair `(⊥, ⊥)`; the finality pair is `(h_f, T_f)` with `T_f ≠ ⊥`, or the empty
+pair.
+
+Two pair occurrences from one validator are slashable under either condition:
+
+- **E1**: one finality pair is `(h, T)` with `T ≠ ⊥`, and one height pair is `(h, T')`
+  with `T' ≠ T`, including `T' = ⊥`;
+- **E2**: two height pairs are `(h, T)` and `(h, T')` with `T, T' ≠ ⊥` and `T ≠ T'`.
+
+The conflicting occurrences can be in one attestation. An empty height pair has height
+`⊥` and triggers neither condition. An honest validator emits at most one proposal per
+slot, one Goldfish vote per slot, and one combined attestation per round.
+
+## Extract — Chain state and transition
+
+Every block is evaluated from its parent's immutable post-state:
+
+`σ[B] = state_transition(σ[B.parent], B)`
+
+The result is a deterministic function of the chain ending at `B`.
 
 ## Extract — Definition (Chain state)
 
 A chain state is
-`σ = (L, s, h, T_h, nj, target_participation, progress, finalize, J, h_j, F, h_F)`:
+
+`σ = (L, s, h, T_h, nj, target_participation, progress, finalize, J, h_j, F, h_F)`
+
 `L` is the latest block, `s = L.slot`, `h` the current height, and `T_h` the block that
 carried the transition into height `h`. The arrays `target_participation`, `progress`
-and `finalize` contain one Boolean per validator; their quorum sets `Q_target(σ)`,
-`Q_prog(σ)` and `Q_finality(σ)` are derived when used. The pair `(J, h_j)` is the
-latest justification on the chain, and `(F, h_F)` its latest finalization.
+and `finalize` contain one Boolean per validator; their quorum sets are derived when
+used:
+
+[eq:Q_target] [eq:Q_prog] [eq:Q_finality]
+
+The pair `(J, h_j)` is the latest justification on the chain, and `(F, h_F)` its latest
+finalization. Initially `L = T_h = J = F = B_gen`, `s = 0`, `h = 1`, `h_j = h_F = 0`,
+`nj = false`, and every array entry is `false`.
 
 The Boolean `nj` is computed when the chain enters `h` and remains fixed until the
 height changes: fix constants `K ≥ 2` and `D ≥ 1`; on entry into a new height `h`,
-after the same transition has applied any finalization, `nj ← (K ∣ h) ∧ (h − h_F > D)`.
+after the same transition has applied any finalization, set
+
+`nj ← (K ∣ h) ∧ (h − h_F > D)`
 
 -/
 

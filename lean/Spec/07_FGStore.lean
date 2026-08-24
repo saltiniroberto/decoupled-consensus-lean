@@ -49,7 +49,9 @@ raising reads included — the rendering carries no deviation there.
 
 The store adds a block state map `Σ.σ[·]` and finality state
 `(Σ.F, Σ.h_F, Σ.J, Σ.h_j, Σ.h_max)`. It retains every processed block; the live tree is
-derived below the finalized block, `T_F(Σ) = {B ∈ Σ.T : Σ.F ⪯ B}`.
+derived below the finalized block,
+
+[eq:T_F]
 
 [fig:07_FGStore] extends the block handler: it computes and stores the post-state,
 then folds it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
@@ -62,7 +64,8 @@ inside the new live tree; it otherwise only grows.
 
 A live block is viable when it has a live descendant whose state height is at most one
 below the current maximum:
-`V(Σ) = {B ∈ T_F(Σ) : ∃ W ∈ T_F(Σ), B ⪯ W, Σ.σ[W].h ≥ Σ.h_max − 1}`.
+
+`V(Σ) = {B ∈ T_F(Σ) : ∃ W ∈ T_F(Σ), B ⪯ W, Σ.σ[W].h ≥ Σ.h_max − 1}`
 
 ## Extract
 

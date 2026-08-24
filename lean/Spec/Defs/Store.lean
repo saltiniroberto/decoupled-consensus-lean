@@ -74,11 +74,13 @@ none.
 
 ## Extract — Definition (Store)
 
-The store is `Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed,
-latest_confirmed)`; the later layers add their fields to it — `sg_votes[·]` with the SG
-layer, and the state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)` with
-the finality layer. Later layers only ever add fields and lines; they never rename
-either.
+The store is
+
+`Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)`
+
+and the later layers add their fields to it — `sg_votes[·]` with the SG layer, and the
+state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)` with the finality
+layer. Later layers only ever add fields and lines; they never rename either.
 
 ## Extract
 
@@ -86,13 +88,24 @@ either.
 votes; both are timestamped, `Σ.timestamp(x)` being the time at which object `x` was
 processed into the store. `Σ.gf_votes[k]` keeps at most two distinct votes per
 validator, which is all any rule reads; the same holds for `Σ.sg_votes[r]`, the
-processed round-`r` SG votes. `Σ.live_confirmed` is the block the last evaluated slot
-confirmed. `Σ.latest_confirmed` is the monotone record the node exposes; no rule in
-this protocol reads it.
+processed round-`r` SG votes, where two distinct heads from one validator in one round
+are an equivocation. SG votes travel only on the wire: blocks do not carry them, and
+they never enter a Goldfish vote set. `Σ.live_confirmed` is the block the last
+evaluated slot confirmed. `Σ.latest_confirmed` is the monotone record the node exposes;
+no rule in this protocol reads it.
 
 Initially `Σ.T = {B_gen}` and `Σ.live_confirmed = Σ.latest_confirmed = B_gen`; other
 fields are empty. The store keeps messages and their arrival times, and nothing else:
-every rule below is a timestamp comparison on this one pool.
+every rule below is a timestamp comparison on this one pool. A validator has
+equivocated as of `t` when `Σ.gf_votes[k]` holds two of its votes both timestamped
+before `t`, so its equivocation-detection time is the later of the two stamps, and one
+cutoff decides which votes are timely and which equivocations are.
+
+`process_block(Σ, B)` and `process_goldfish_vote(Σ, vote)` run once per object, after
+every dependency of that object is already in the store: a block's parent, and a vote's
+target block. A carried vote may name a block the receiver does not hold; acquiring it
+is outside the store, so that vote reaches the store when it is finally processed, not
+when its block did.
 
 -/
 

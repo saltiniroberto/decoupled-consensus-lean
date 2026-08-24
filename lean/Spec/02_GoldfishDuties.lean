@@ -78,10 +78,6 @@ slot-`s` block processed so far. That second part is the view merge: the proposa
 supplies its own view rather than a forced target. The proposer does not apply the
 freeze, and instead uses every held vote when running the fork choice at `t_s`.
 
-`process_block(Σ, B)` and `process_goldfish_vote(Σ, vote)` run once per object, after
-every dependency of that object is already in the store: a block's parent, and a vote's
-target block.
-
 -/
 
 set_option autoImplicit false

@@ -32,10 +32,13 @@ this routine.
 
 Confirmation is the same walk over a stricter vote set and a larger denominator. Let
 `early` and `late` be the slot-`s` votes timestamped before `t_s + 2Δ` and before
-`t_s + 6Δ`. The walk scores `votes = {vote ∈ early : vote.validator does not equivocate
-in late}` against the participant count of `late`: a validator counts when it voted in
-time and no second vote of its has appeared since, while the denominator counts
-everyone who voted at all.
+`t_s + 6Δ`. The walk scores
+
+`votes = {vote ∈ early : vote.validator does not equivocate in late}`
+
+against the participant count of `late`: a validator counts when it voted in time and
+no second vote of its has appeared since, while the denominator counts everyone who
+voted at all.
 
 Because `early ⊆ late`, a validator equivocating in `early` equivocates in `late` too,
 so `votes` holds at most one vote per validator and the score's equivocator clause

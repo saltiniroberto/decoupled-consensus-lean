@@ -75,17 +75,23 @@ descent; a non-equivocating validator counts once, in one subtree.
 
 ## Extract
 
-Throughout this document, `ghost(anchor, tree, score, eligible)` is used as a building
-block, where `score` is a function on blocks and `eligible` a predicate on blocks. It
-descends from `anchor` through eligible children in `tree`, taking the highest score at
-each step, and stops where no child is eligible.
+Throughout this document, we use this as a building block:
+
+`ghost(anchor, tree, score, eligible)`
+
+where `score` is a function on blocks and `eligible` a predicate on blocks. It descends
+from `anchor` through eligible children in `tree`, taking the highest score at each
+step, and stops where no child is eligible.
 
 Goldfish instantiates the walk with `goldfish_score(votes, s, ·)` and the eligibility
-condition `2 goldfish_score(votes, s, B) > voters_count or B.slot = Σ.s`, with
-`voters_count = |{v ∈ K_s : votes holds a vote by v}|`. The majority condition enforces
-timeliness; it only does not apply to proposals from the current slot, which cannot yet
-have votes. At slot 0 the vote set is empty, no child is eligible, and the head is
-genesis.
+condition
+
+`2 goldfish_score(votes, s, B) > voters_count or B.slot = Σ.s`
+
+with `voters_count = |{v ∈ K_s : votes holds a vote by v}|`. The majority condition
+enforces timeliness; it only does not apply to proposals from the current slot, which
+cannot yet have votes. At slot 0 the vote set is empty, no child is eligible, and the
+head is genesis.
 
 -/
 

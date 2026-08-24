@@ -36,7 +36,9 @@ from which the Goldfish walk starts.
 
 For a fixed integer `R ≥ 1`, round r consists of the R slots from rR on, and
 `round(s) = ⌊s/R⌋`. Each round has one SG vote time `a_r = t_{rR} + 6Δ`, `6Δ` after the
-beginning of the round. A round-`r` vote is read from round `r + 1` on.
+beginning of the round. An SG vote is a tuple `(v, r, H)` from validator `v ∈ V` with
+head `H`, a block or `⊥`; at `a_r`, an honest validator votes its current
+`live_confirmed`, which is a block. A round-`r` vote is read from round `r + 1` on.
 
 ## Extract — Definition (Latest vote, support, and majority root)
 
@@ -48,13 +50,23 @@ holds exactly one distinct vote by it and that vote's head is a block. An empty 
 equivocating latest round therefore supplies no support and, because only the latest
 round is read, also silences every older head; a later clean round restores support.
 
-`sg_support(Σ, r, B)` is the represented weight supporting `B`. Ancestry is read in the
-live tree `T`, so a head outside a restricted child tree still supports the child
-through which it descends. `majority_fork_choice` runs the walk with this score, the
-eligibility condition a strict majority of the entire represented weight. An
-equivocator supplies no support but stays in the denominator, so equivocating weight
-can only raise the bar, and two conflicting children cannot both pass: the descent is
-uniquely determined.
+`sg_support(Σ, r, B)` is the represented weight supporting `B`. The entire represented
+weight is
+
+`W_r = w({v ∈ V : latest(Σ, v, r) ≠ ⊥})`
+
+Ancestry is read in the live tree `T`, so a head outside a restricted child tree still
+supports the child through which it descends. `majority_fork_choice` runs the walk with
+this score, the eligibility condition a strict majority of `W_r`. An equivocator
+supplies no support but stays in the denominator, so equivocating weight can only raise
+the bar, and two conflicting children cannot both pass: the descent is uniquely
+determined.
+
+## Extract
+
+The composed head runs Goldfish from the majority root instead of genesis: the SG walk
+selects the anchor, and the Goldfish walk selects a descendant of it. The two walks are
+the same function with different scores and eligibility conditions.
 
 -/
 
