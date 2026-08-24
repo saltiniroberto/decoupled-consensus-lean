@@ -5,6 +5,13 @@ Reads the live spec named by SRC below (lean/Spec/, subdirectories included),
 writes extract/out/dc.tex, and (unless --no-pdf) compiles it with
 latexmk -lualatex.
 
+v6: prose can quote a definition instead of restating it. `[eq:name]` in `## Extract`
+prose expands to the named declaration's docstring opening span — the formula is
+written once, at the definition site; the key is the Lean name, a unique Lean-name
+tail, or a unique harvested paper symbol. A paragraph consisting of nothing but
+backticked spans and/or `[eq:…]` refs renders as a displayed line: centered, items
+separated by quad space — the draft's own equation rows.
+
 v5: the sources drive the structure. Files render in alphabetical order of their path
 under SRC, a file emitting a section only when something in it is marked `## Extract`.
 A `def` whose own docstring carries an `## Extract` section is *figured* — rendered as
@@ -331,6 +338,7 @@ class Tables:
         self.tuple_structs = set()
         self.ctors = {}          # ctor name -> (Sym or None, param_names)
         self.def_arity = {}      # lean qualified name -> explicit arity
+        self.raw_spans = {}      # lean name -> the docstring's full opening span
         self.paper_names = set() # routine names as the paper spells them
         self.duty_monad = None   # the monad `broadcast` writes into (NDREB)
 
@@ -378,6 +386,9 @@ def harvest(all_items):
             for fname, fdoc, ftyp in fields:
                 arity = type_arity(ftyp)
                 span = first_span(fdoc)
+                if span:
+                    t.raw_spans.setdefault(fname, span)
+                    t.raw_spans[f"{name}.{fname}"] = span
                 sym = None
                 if span:
                     parsed = parse_symbol(span, [])
@@ -423,6 +434,9 @@ def harvest(all_items):
             continue
         sig, _body = split_signature(src)
         params = [(n, ty) for n, ty, auto in parse_params(sig) if not auto]
+        raw = first_span(doc)
+        if raw:
+            t.raw_spans.setdefault(name, raw)
         if has_extract_section(doc):
             # the def is figured: paper name and signature derive from the Lean def;
             # an opening `name(args)` span overrides — the way the paper hides params
@@ -1641,8 +1655,9 @@ def md_inline(s: str) -> str:
     return "".join(out)
 
 
-def md_block(text: str, inline=None) -> str:
-    """Markdown-lite block conversion of a module header or docstring."""
+def md_block(text: str, inline=None, display=None) -> str:
+    """Markdown-lite block conversion of a module header or docstring. `display`, when
+    given, sees each paragraph first and may claim it whole (a displayed line)."""
     if inline is None:
         inline = md_inline
     out = []
@@ -1653,8 +1668,14 @@ def md_block(text: str, inline=None) -> str:
 
     def flush():
         if para:
-            out.append(inline(" ".join(para)) + "\n")
+            joined = " ".join(para)
             para.clear()
+            if display:
+                d = display(joined)
+                if d is not None:
+                    out.append(d)
+                    return
+            out.append(inline(joined) + "\n")
 
     while i < n:
         line = lines[i]
@@ -1774,18 +1795,50 @@ def prose_span(span: str, rw) -> str | None:
     return latex_spans(spans)
 
 
-REF_RE = re.compile(r"\[(fig|def):([A-Za-z0-9_-]+)\]")
+REF_RE = re.compile(r"\[(fig|def|eq):([A-Za-z0-9_.-]+)\]")
 REF_WORD = {"fig": "Figure", "def": "Definition"}
 
 
-def resolve_refs(s: str) -> str:
-    """`[fig:Name]` / `[def:slug]` in plain prose become \\ref links: the prose never
-    writes a generated number, so it cannot go stale."""
+def eq_span(t: Tables, key: str):
+    """The raw opening span behind `[eq:key]`: the Lean name exactly, else a unique
+    Lean-name tail (`[eq:q]` finds `Weights.q`), else a unique harvested paper symbol
+    (`[eq:Q_target]` finds `ChainState.Qtarget`, whose span opens `Q_target(σ) = …`)."""
+    if key in t.raw_spans:
+        return t.raw_spans[key]
+    hits = {v for k, v in t.raw_spans.items() if k.split(".")[-1] == key}
+    if len(hits) == 1:
+        return hits.pop()
+    named = dict(t.defs)
+    named.update(t.fields)
+    hits = {t.raw_spans[k] for k, sym in named.items()
+            if sym.name == key and k in t.raw_spans}
+    if len(hits) == 1:
+        return hits.pop()
+    return None
+
+
+def render_eq(key: str, rw) -> str:
+    """`[eq:key]` renders the referenced declaration's own opening span — the formula
+    is written once, at the definition site. A dangling key stays visible, in mono."""
+    span = eq_span(rw.t, key)
+    if span is None:
+        return r"\codett{" + esc(f"[eq:{key}]??") + "}"
+    styled = prose_span(span, rw)
+    return styled if styled is not None else r"\codett{" + esc(span) + "}"
+
+
+def resolve_refs(s: str, rw) -> str:
+    """`[fig:Name]` / `[def:slug]` in plain prose become \\ref links — the prose never
+    writes a generated number, so it cannot go stale; `[eq:name]` expands to the named
+    declaration's harvested opening span."""
     out = []
     pos = 0
     for m in REF_RE.finditer(s):
         out.append(esc(s[pos:m.start()]))
-        out.append(REF_WORD[m.group(1)] + r"~\ref{" + m.group(1) + ":" + m.group(2) + "}")
+        if m.group(1) == "eq":
+            out.append(render_eq(m.group(2), rw))
+        else:
+            out.append(REF_WORD[m.group(1)] + r"~\ref{" + m.group(1) + ":" + m.group(2) + "}")
         pos = m.end()
     out.append(esc(s[pos:]))
     return "".join(out)
@@ -1805,13 +1858,36 @@ def prose_inline(s: str, rw) -> str:
             styled = prose_span(part, rw)
             out.append(styled if styled is not None else r"\codett{" + esc(part) + "}")
         else:
-            out.append(resolve_refs(part))
+            out.append(resolve_refs(part, rw))
     return "".join(out)
 
 
+# a display paragraph: nothing but backticked spans and/or [eq:…] references
+DISPLAY_PARA = re.compile(r"\s*(?:(?:`[^`]+`|\[eq:[A-Za-z0-9_.-]+\])\s*)+")
+DISPLAY_ITEM = re.compile(r"`([^`]+)`|\[eq:([A-Za-z0-9_.-]+)\]")
+
+
+def prose_display(s: str, rw):
+    """A paragraph consisting only of spans/[eq:…] refs is a displayed line: centered,
+    each item through the rewriter, items separated by quad space. Returns None when
+    the paragraph is ordinary prose."""
+    if not DISPLAY_PARA.fullmatch(s):
+        return None
+    items = []
+    for span, key in DISPLAY_ITEM.findall(s):
+        if key:
+            items.append(render_eq(key, rw))
+        else:
+            styled = prose_span(span, rw)
+            items.append(styled if styled is not None
+                         else r"\codett{" + esc(span) + "}")
+    return "\\begin{center}\n" + "\\quad\n".join(items) + "\n\\end{center}"
+
+
 def prose_block(text: str, rw) -> str:
-    """md_block with the paper-typography inline pass."""
-    return md_block(text, inline=lambda s: prose_inline(s, rw))
+    """md_block with the paper-typography inline pass and the display-paragraph rule."""
+    return md_block(text, inline=lambda s: prose_inline(s, rw),
+                    display=lambda s: prose_display(s, rw))
 
 
 def slug(title: str) -> str:

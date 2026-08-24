@@ -61,6 +61,16 @@ script:
   definitions symbolically — `[fig:02_GoldfishDuties]`, `[def:store]` — and the
   extractor emits `Figure~\ref{…}` / `Definition~\ref{…}`, hyperlinked. A dangling
   reference is a LaTeX warning.
+- **Prose never duplicates a definition's formula** (Roberto, 2026-08-24). `[eq:name]`
+  expands to the named declaration's own docstring opening span — `[eq:q]` renders
+  `q = ⌈2W/3⌉` from `q`'s docstring, so the string lives once, at the definition site.
+  The key is the Lean name, a unique Lean-name tail, or a unique harvested paper
+  symbol (`[eq:Q_target]` finds the def whose span opens `Q_target(σ) = …`). A
+  dangling key renders visibly as mono `[eq:name]??`.
+- **A paragraph of nothing but backticked spans and/or `[eq:…]` refs is a displayed
+  line** — centered, items separated by quad space: the draft's own equation rows,
+  e.g. a paragraph `[eq:Q_target] [eq:Q_prog] [eq:Q_finality]`. Any word outside
+  backticks makes it an ordinary paragraph.
 - **A structure whose field docstrings open `X.…` is the paper's `X`.** The store's
   fields open `` `Σ.…` ``, so `Store` is `Σ` and every store-typed parameter renders
   `Σ`.
