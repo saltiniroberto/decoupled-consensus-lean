@@ -49,7 +49,7 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   `broadcast` the protocol's own verb, the store an explicit input and output — no caller
   ever unions sends, an earlier duty's broadcasts already sitting in the outbox when a
   later one runs. `DutyResult` survives only at the boundary: `NDREB.outcomes` is the
-  outcome set the sts wiring and `Analysis/` consume a duty as. The tick still returns
+  outcome set the sts wiring ([sts.md](sts.md)) and `Analysis/` consume a duty as. The tick still returns
   from each action branch directly (`Fig2.onTick`; the protocol's `Store.onTick` runs it
   and then the SG layer's added line, `05_SGDuty.lean`).
 - **Scheduled routines carry their instant as an anonymous autoparam**, discharged by

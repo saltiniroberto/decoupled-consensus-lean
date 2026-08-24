@@ -22,12 +22,15 @@ are not standard pseudocode — the failure-propagating `←`, the nondeterminis
   pseudocode, no Lean assumed. Start here.
 - **[The file map](lean/Spec/doc/README.md)** — what each file specifies, and the design
   pages: [nondeterminism](lean/Spec/doc/nondeterminism.md),
-  [naming](lean/Spec/doc/naming.md), [style](lean/Spec/doc/style.md).
+  [naming](lean/Spec/doc/naming.md), [style](lean/Spec/doc/style.md),
+  [sts](lean/Spec/doc/sts.md).
 - [`lean/Analysis/`](lean/Analysis/) — results stated against the spec (accountable
   safety, so far as a statement).
 
 Also here: [`extract/`](extract/README.md) — `make extract` renders the spec into a
-paper-shaped PDF, `extract/out/dc.pdf`.
+paper-shaped PDF, `extract/out/dc.pdf` — and [`deps/lean-sts`](https://github.com/saltiniroberto/lean-sts),
+the transition-system framework the spec's duty boundary is shaped for; nothing imports
+it yet.
 
 ## Building
 

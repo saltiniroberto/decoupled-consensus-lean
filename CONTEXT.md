@@ -751,6 +751,19 @@ the VS Code Lean abbreviations (`\l`, `\l\^p`, `\preceq`, `\bot`, …) with the 
 in the guide before "Where to go deeper"; the guide itself de-drafted in the same pass —
 it now speaks of paper pseudocode and the protocol, no external document.
 
+### `doc/sts.md`: the boundary gets a page — 2026-08-24
+
+Roberto (agreeing to the proposal): "sts" was named on three reader-facing pages with no
+definition anywhere. `doc/sts.md` now carries it: a protocol as a transition system
+(states are stores; a step is a duty run or a delivery), `deps/lean-sts` and its
+`StsMultisetLog` flavour, the four boundary shapes the code already holds (`outcomes` as
+a relation, `DutyResult` as the `NodeStepResult` shape, store-in/store-out duties, one
+`Message` type), and what the wiring will own. Deliberately absent, per the one-step
+rule: how the wiring will be written. The landing README gains the [sts] link and one
+line explaining `deps/lean-sts` (a visible directory it never mentioned); the
+Analysis-line touch was proposed and declined. `nondeterminism.md` and `style.md` point
+their existing "sts wiring" mentions at the page.
+
 ## Next
 
 0. **`consensus-1.pdf` is rendered as `Spec/`, and everything builds.** All

@@ -34,6 +34,8 @@ What the algorithms are written in terms of sits in [`Defs/`](../Defs):
   and why the files have no `namespace` blocks.
 - [style.md](style.md) — the style rulings, one line each, with pointers to where the
   mechanics live.
+- [sts.md](sts.md) — the duty boundary: the spec is shaped to be consumed as a state
+  transition system, and this page says by what and how.
 
 The running record behind these pages is `CONTEXT.md` at the repository root — the dated
 entries and the section "The `DC` style sheet". Where a page here and

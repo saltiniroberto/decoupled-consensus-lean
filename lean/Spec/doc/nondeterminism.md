@@ -91,7 +91,7 @@ res ∈ (S.onTick i t p).outcomes
 read: `res` is one possible outcome of the duty — a failure, or the store afterwards with
 everything broadcast (`NDREB.outcomes`, `Nondet.lean`, packaging a run started with an
 empty outbox). This is the shape a state-transition-system step wants — the eventual
-lean-sts wiring relates pre-state to post-state through that membership. Statements
+wiring relates pre-state to post-state through that membership ([sts.md](sts.md)). Statements
 *about all outcomes* are `Analysis/` matter, over the same set:
 
 - "the exception never fires on a coherent store" is `.error ∉ (…).run`;
