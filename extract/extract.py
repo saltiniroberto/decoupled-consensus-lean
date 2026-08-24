@@ -2034,11 +2034,11 @@ def classify_stmt(indent, spans):
     return "state", latex_spans(spans)
 
 
-def render_figure(tex, stem, fig_title, routines_lines, prose_rw):
+def render_figure(tex, stem, title, routines_lines, prose_rw):
     """One figure: a captioned, labelled float holding one algorithmic block whose
     line numbers are the rendering's own."""
     tex.append(r"\begin{figure}[H]")
-    tex.append(r"\caption{" + esc(fig_title or stem) + r"}\label{fig:" + stem + "}")
+    tex.append(r"\caption{" + esc(title) + r"}\label{fig:" + stem + "}")
     # the draft boxes each figure: a thin full frame around the algorithm block
     tex.append(r"\noindent\fbox{\begin{minipage}"
                r"{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}")
@@ -2129,13 +2129,6 @@ def main():
         if m:
             title = m.group(1)
             body = header[m.end():]
-        # figure numbers are the rendering's own, so a title's "Figure N — " prefix
-        # (the draft's coordinate) drops from the section heading
-        fig_title = None
-        mt = re.match(r"Figure\s+\d+\s*[—–-]+\s*(.*)", title)
-        if mt:
-            fig_title = mt.group(1)
-            title = fig_title[0].upper() + fig_title[1:]
         figured = []   # (routine, src, docstring), in the file's declaration order
         others = []    # (docstring, name)
         for doc, kind, name, src in items:
@@ -2173,7 +2166,7 @@ def main():
                         if ty.startswith(sname):
                             store_param = n
                 blocks.append(routine_lines(tables, r, src, store_param, ptypes))
-            render_figure(tex, stem, fig_title, blocks, prose_rw)
+            render_figure(tex, stem, title, blocks, prose_rw)
 
         # `## Extract` prose of the file's other declarations follows the figure
         for doc, _name in others:
