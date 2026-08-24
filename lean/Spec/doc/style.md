@@ -35,8 +35,8 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
   spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
   `OldDefs.lean`.)
 - **No `∣` (divides)**: write `% … = 0`.
-- **What the pdf writes inline stays inline.** `voters_count` and the equivocator set are
-  `let`s at each use site, because the pdf makes them locals, not definitions.
+- **What the protocol writes inline stays inline.** `voters_count` and the equivocator
+  set are `let`s at each use site — locals, not definitions.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H` — the `=`
   elaborator inserts no coercion around a mutable variable's read.
 
@@ -45,13 +45,13 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 - **Messages are built by named `mk`**: `GoldfishVote.mk (validator := i) …`, and
   `Block.mk` likewise names its fields (Figure 2, line 25). `DutyResult` keeps the brace
   form `{ state := …, send := … }`.
-- **Duties run in `NDREB`** (`Duty.lean`): the outbox threaded over `NDRE`,
-  `broadcast` the draft's own verb, the store an explicit input and output — no caller
+- **Duties run in `NDREB`** (`Nondet.lean`): the outbox threaded over `NDRE`,
+  `broadcast` the protocol's own verb, the store an explicit input and output — no caller
   ever unions sends, an earlier duty's broadcasts already sitting in the outbox when a
   later one runs. `DutyResult` survives only at the boundary: `NDREB.outcomes` is the
   outcome set the sts wiring and `Analysis/` consume a duty as. The tick still returns
   from each action branch directly (`Fig2.onTick`; the protocol's `Store.onTick` runs it
-  and then Section 3.4's added line).
+  and then the SG layer's added line, `Fig5SGDuty.lean`).
 - **Scheduled routines carry their instant as an anonymous autoparam**, discharged by
   `solve_by_elim [And.left, And.right]`, so `Store.onTick`'s dependent `if`s satisfy them
   with no `have`s (`Fig2GoldfishDuties.lean` explains the tactic choice).
@@ -65,9 +65,8 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 ## Comments and citations
 
 - **Line comments cite the figure's own line numbers** (`-- line 25`).
-- **Docstrings are self-contained and cite nothing** — no checked citations of any
-  source document (correctness is the contract, and the draft has no stable labels to
-  cite).
+- **Docstrings are self-contained and cite nothing** — every docstring says what its
+  definition means on its own (correctness is the contract).
 
 ## Retired machinery
 

@@ -12,6 +12,7 @@ part of the protocol; read them in this order, which is dependency order:
 | [`Fig4SGForkChoice.lean`](../Fig4SGForkChoice.lean) | `latest`, `sg_support`, the majority fork choice |
 | [`Fig5SGDuty.lean`](../Fig5SGDuty.lean) | `sg_vote`, its handler, and the protocol's `on_tick` |
 | [`Fig7FGStore.lean`](../Fig7FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, the protocol's `get_head` |
+| [`FinalityVote.lean`](../FinalityVote.lean) | how a validator fills the attestation it signs |
 
 What the algorithms are written in terms of sits in [`Defs/`](../Defs):
 
@@ -20,8 +21,7 @@ What the algorithms are written in terms of sits in [`Defs/`](../Defs):
 | [`Model.lean`](../Defs/Model.lean) | the substrate: validators and weights, committees, blocks and ancestry, the wire objects |
 | [`Store.lean`](../Defs/Store.lean) | the store — what a node keeps — and the duty boundary object |
 | [`SigningHistory.lean`](../Defs/SigningHistory.lean) | the durable signing record behind the attestation rules |
-| [`FinalityVote.lean`](../Defs/FinalityVote.lean) | how a validator fills the attestation it signs |
-| [`Notation.lean`](../Defs/Notation.lean), [`Raise.lean`](../Defs/Raise.lean), [`FinsetM.lean`](../Defs/FinsetM.lean), [`Nondet.lean`](../Defs/Nondet.lean), [`Duty.lean`](../Defs/Duty.lean) | the vocabulary: pseudocode spellings, the failure monad `DRE`, monadic set operations, the nondeterminism monads `NDR`/`NDRE`, the duty monad `NDREB` with `broadcast` |
+| [`Notation.lean`](../Defs/Notation.lean), [`Raise.lean`](../Defs/Raise.lean), [`FinsetM.lean`](../Defs/FinsetM.lean), [`Nondet.lean`](../Defs/Nondet.lean) | the vocabulary: pseudocode spellings, the failure monad `DRE`, monadic set operations, the nondeterminism monads `NDR`/`NDRE`, the duty monad `NDREB` with `broadcast` |
 | [`OldDefs.lean`](../Defs/OldDefs.lean) | parked definitions, kept compiling; nothing imports it |
 
 ## The design pages
