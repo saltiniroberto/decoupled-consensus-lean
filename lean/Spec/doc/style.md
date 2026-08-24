@@ -60,7 +60,7 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 
 - **Classes, not type parameters**: `Electorate`, `Committees`, `Params`, `Roots` (the
   abstract `Root` type, its order, genesis's root), `RootComputation` (a block's root from
-  its parent and slot), `FGSchedule` (the attestation times `b_{i,r}`, no formula fixed,
+  its parent and slot), `SGFGVoting` (the attestation times `b_{i,r}`, no formula fixed,
   constrained to `a_r ≤ b_{i,r}`). All in `Model.lean`; the SG vote time `a_r` is a
   definition there, not a class — `SGSchedule.a r = t_{rR} + 6Δ`.
 

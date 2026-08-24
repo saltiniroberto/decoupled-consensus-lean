@@ -217,7 +217,7 @@ def SGSchedule.a [Params] (r : Nat) : Int :=
     is exactly an ambient class, as `Committees` is. The assignment is total: every
     validator has an attestation time in every round. The one constraint is `b_ge`: no
     attestation time precedes the round's SG vote time, `a_r ≤ b_{i,r}`. -/
-class FGSchedule (Validator : Type) [Params] where
+class SGFGVoting (Validator : Type) [Params] where
   /-- `b_{i,r}`, validator `i`'s attestation time for round `r`. -/
   b : Validator → Nat → Int
   /-- `a_r ≤ b_{i,r}`: no attestation time precedes the round's SG vote time. -/
