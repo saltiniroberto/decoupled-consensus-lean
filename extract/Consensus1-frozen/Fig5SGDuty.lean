@@ -38,8 +38,9 @@ admits `⊥` — nothing an honest duty produces uses it.
 ## Extract
 
 `on_tick` gains one line: at `t = a_r` for the current round `r`, run `sg_vote`. In the
-draft, the proposer and voter of Figure 2 then call the `get_head` of Figure 4; that
-redirected reading is not written out here, because the finality layer redefines
+draft, the proposer and voter of [fig:Fig2GoldfishDuties] then call the `get_head` of
+[fig:Fig4SGForkChoice]; that redirected reading is not written out here, because the
+finality layer redefines
 `get_head` again and that final reading is the protocol's. Available confirmation is unchanged.
 
 At `a_r`, an honest validator votes its current `live_confirmed`, which is a block; the

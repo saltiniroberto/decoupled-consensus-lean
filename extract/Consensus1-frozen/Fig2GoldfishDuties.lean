@@ -69,7 +69,7 @@ the figure-named readings.
 
 ## Extract
 
-Figure 2 defines the store handlers and the two duties. The handlers take the store and
+[fig:Fig2GoldfishDuties] defines the store handlers and the two duties. The handlers take the store and
 change it in place. Only the two duties concern the validator running the node, written
 `i`; a node whose `i` holds no duty for the slot simply does not run them. A duty
 returns the store with its own object already processed, together with the messages to

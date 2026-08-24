@@ -54,8 +54,8 @@ The store adds a block state map `Σ.σ[·]` and finality state
 `(Σ.F, Σ.h_F, Σ.J, Σ.h_j, Σ.h_max)`. It retains every processed block; the live tree is
 derived below the finalized block, `T_F(Σ) = {B ∈ Σ.T : Σ.F ⪯ B}`.
 
-Figure 7 extends the block handler: it computes and stores the post-state, then folds
-it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
+[fig:Fig7FGStore] extends the block handler: it computes and stores the post-state,
+then folds it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
 tracks the lex-greatest justification event compatible with the finalized block. `Σ.F`
 advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯ Σ.J`
 always holds and finalization never reverts. When it advances, `Σ.h_max` is recomputed
