@@ -71,11 +71,11 @@ the figure-named readings.
 
 ## Extract
 
-Figure 2 defines the store handlers and the two duties. The handlers take the store and
-change it in place. Only the two duties concern the validator running the node, written
-`i`; a node whose `i` holds no duty for the slot simply does not run them. A duty
-returns the store with its own object already processed, together with the messages to
-broadcast, the send being left to whoever wires this up.
+[fig:Fig2GoldfishDuties] defines the store handlers and the two duties. The handlers
+take the store and change it in place. Only the two duties concern the validator
+running the node, written `i`; a node whose `i` holds no duty for the slot simply does
+not run them. A duty broadcasts its own object and returns the store with that object
+already processed; delivering the broadcasts is left to whoever wires this up.
 
 To run the fork choice in slot `s`, a voter at `t_s + Δ` uses the slot-`(s − 1)` votes
 it saw before the view freeze at `t_{s−1} + 3Δ`, together with the votes carried by any
