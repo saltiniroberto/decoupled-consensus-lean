@@ -100,8 +100,9 @@ Update this list when a new call lands.
   the anonymous hypothesis; a dependent `if` names its hypothesis only where the proof is
   used (`if hp :` at `07_FGStore.lean`'s `(B.parent).get hp`).
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
-  (abstract `Root`, its order, genesis's root), `RootComputation`. All in `Model.lean`;
-  the SG vote time is a definition there, not a class — `SGSchedule.a r = t_{rR} + 6Δ`.
+  (abstract `Root`, its order, genesis's root), `RootComputation`, `FGSchedule`. All in
+  `Model.lean`; the SG vote time is a definition there, not a class —
+  `SGSchedule.a r = t_{rR} + 6Δ`.
 - **Duties run in `NDREB`** (`Nondet.lean`): the outbox threaded over `NDRE`, `broadcast`
   the protocol's own verb, the store an explicit input and output — no caller unions
   sends. `DutyResult` survives at the boundary only, `NDREB.outcomes` being what the sts
@@ -141,6 +142,13 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   the two actions compose, `sg_vote` voting the fresh `live_confirmed`. Open: with
   `R = 1` the instant lies outside round `r` and `on_tick`, dispatching on the current
   round, never fires `sg_vote`; `Params` requires only `R ≥ 1` (flagged, not ruled on).
+- **The attestation times are assumed: `class FGSchedule`** (2026-08-25).
+  `b : Validator → Nat → Int` is when validator `i` sends its attestation for round `r` —
+  a public parameter with no formula fixed, the shape the pre-formula `SGSchedule` had.
+  Total on the validator set by being a function. The one constraint Roberto gave is a
+  proof field, `b_ge : ∀ i r, SGSchedule.a r ≤ b i r` — no attestation time precedes the
+  round's SG vote time. The letter `b` was Claude's pick (the successor of `a`; Roberto
+  gave none) — one line to rename. Nothing consumes the class yet.
 - **Block equality is decided by hand**: `deriving DecidableEq` does not reach a mutual
   family nested through `List` and `Option` (measured), so the `…Beq` functions and their
   `…Beq_iff` soundness theorems are written out — the one kind of proof a `Spec/` file
@@ -433,10 +441,9 @@ works but duplicates the sequence in a `def`.
    - **Open questions awaiting Roberto's call**: `a_r` vs `R = 1` (above); renaming the
      `Fig<n>.…` declaration prefixes; the duties taking `Σ.i` instead of an `i`
      parameter.
-   - **Sketched and interrupted, awaiting his word** (2026-08-24): a second schedule —
-     the time a given validator sends its attestation for round `r` — total on the
-     validator set, its actual definition deferred (the shape an assumed class fits, as
-     the pre-formula `SGSchedule` was).
+   - **The attestation schedule is stated but unconsumed** (2026-08-25): `FGSchedule`
+     exists (see Decisions); no duty dispatches on `b_{i,r}` yet, and the formula is
+     deferred on Roberto's word.
 1. **The extractor workstream** (`extract/`): conventions in `extract/README.md`; the
    spec drives the structure, all eight figure blocks render.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.
