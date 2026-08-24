@@ -212,16 +212,18 @@ def round [Params] (s : Nat) : Nat := s / Params.R
 def SGSchedule.a [Params] (r : Nat) : Int :=
   slotStart (r * Params.R) + 6 * (Params.Δ : Int)
 
-/-- `b_{i,r}`, the time validator `i` sends its attestation (`Attestation`, below) for
-    round `r`: a public parameter of the protocol, no formula fixed — a public parameter
-    is exactly an ambient class, as `Committees` is. The assignment is total: every
-    validator has an attestation time in every round. The one constraint is `b_ge`: no
-    attestation time precedes the round's SG vote time, `a_r ≤ b_{i,r}`. -/
-class SGFGVoting (Validator : Type) [Params] where
-  /-- `b_{i,r}`, validator `i`'s attestation time for round `r`. -/
-  b : Validator → Nat → Int
-  /-- `a_r ≤ b_{i,r}`: no attestation time precedes the round's SG vote time. -/
-  b_ge : ∀ (i : Validator) (r : Nat), SGSchedule.a r ≤ b i r
+/-- The assumed part of the round schedule (`a_r`, above, is the fixed part): the time
+    each validator sends its attestation (`Attestation`, below) for each round — a
+    public parameter of the protocol, no formula fixed, and a public parameter is
+    exactly an ambient class, as `Committees` is. The assignment is total: every
+    validator has an attestation time in every round. The one constraint is
+    `sgfgVoting_ge`: no attestation time precedes the round's SG vote time `a_r`. -/
+class SGSchedule (Validator : Type) [Params] where
+  /-- The time validator `i` sends its attestation for round `r`. -/
+  sgfgVoting : (i : Validator) → (r : Nat) → Int
+  /-- No attestation time precedes the round's SG vote time:
+      `a_r ≤ sgfgVoting i r`. -/
+  sgfgVoting_ge : ∀ (i : Validator) (r : Nat), SGSchedule.a r ≤ sgfgVoting i r
 
 /-! ## Roots -/
 
