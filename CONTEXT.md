@@ -3818,6 +3818,17 @@ written for it. Marked prose and the figures' margin notes render in the draft's
 typography: backticked spans go through the figure rewriter, falling back to mono exactly
 when a span quotes Lean (binder keywords, `:=`, camelCase or Type-looking names).
 
+**v5 (2026-08-24): the PDF becomes a real document, every number LaTeX's own.** On
+Roberto's instruction ("apply your four moves", live spec untouched): definitions are
+`amsthm` environments (`def:<slug>` labels), figures are captioned floats (`fig:<file
+stem>` labels) rendered with `algorithmicx` — whose automatic line numbers replace the
+draft's `-- line n` coordinates in the output, the comments staying as provenance and as
+the margin notes' source; sections are numbered with a table of contents, their "Figure
+N — " title prefixes stripped; the title page is stamped with the generating commit and
+date. Prose never writes a generated number: `[fig:Name]`/`[def:slug]` forms resolve to
+hyperlinked `\ref`s — the four hardcoded "Figure N" mentions in the frozen prose became
+symbolic the same day.
+
 **The extraction workstream edits only the frozen copy** (Roberto, 2026-08-24). The
 `## Extract` sections' home is `extract/Consensus1-frozen/`; a future frozen refresh
 carries them forward. On 2026-08-24 the sections and the Definition carve were also

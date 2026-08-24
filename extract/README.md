@@ -43,14 +43,21 @@ script:
   routine's pseudocode belongs to, and its position. Lean parameters absent from the
   cited signature (the validator `i`, the `isProposer` test) stay hidden at call sites,
   exactly as the draft's own calls hide them.
-- **A section headed `## Extract — Definition (Title)` is a definition block**, rendered
-  as the draft's definition environment: bold "Definition N (Title)." running into the
-  section's first paragraph, later paragraphs following as plain prose. **N is assigned
-  by the extractor, sequentially in document order** — the Lean is the source of truth
-  and the PDF is generated from it, so no number is read from a docstring (Roberto,
-  2026-08-24). The docstrings' "(Definition N of the draft)" citations are provenance,
-  pointing at the old source; the generated numbers coincide with the draft's today
-  because the document order matches, a consequence and not a contract.
+- **A section headed `## Extract — Definition (Title)` is a definition block**, emitted
+  as an `amsthm` environment with label `def:<slugified title>`. **Every number in the
+  document is LaTeX's own** — definitions, figures, sections, and, since 2026-08-24,
+  the figures' line numbers, which `algorithmicx` assigns to the rendered lines. The
+  Lean is the source of truth and the PDF is generated from it, so no number is read
+  from a docstring (Roberto, 2026-08-24): the "(Definition N of the draft)" citations
+  and the `-- line n` comments are provenance, pointing at the old source's
+  coordinates; the generated numbers coincide with the draft's where the content
+  matches, a consequence and not a contract. A section title's "Figure N — " prefix is
+  likewise stripped in the PDF; the figure is captioned and numbered by LaTeX, with
+  label `fig:<file stem>`.
+- **Prose never writes a generated number.** `## Extract` prose references figures and
+  definitions symbolically — `[fig:Fig2GoldfishDuties]`, `[def:store]` — and the
+  extractor emits `Figure~\ref{…}` / `Definition~\ref{…}`, hyperlinked. A dangling
+  reference is a LaTeX warning.
 - **A structure whose field docstrings open `X.…` is the paper's `X`.** The store's
   fields open `` `Σ.…` ``, so `Store` is `Σ` and every store-typed parameter renders
   `Σ`.
