@@ -1846,7 +1846,10 @@ PREAMBLE = r"""\documentclass[10pt]{article}
 \usepackage{amsthm}
 \usepackage{float}
 \usepackage[noend]{algpseudocode}
-\directlua{luaotfload.add_fallback("symfall", {"DejaVuSans:mode=node;"})}
+% symbol glyphs (⪯, ∈, ⊥, …) are absent from the text fonts: fall back to Latin
+% Modern Math first, so they match the text's stroke weight; DejaVu is last resort
+\directlua{luaotfload.add_fallback("symfall",
+  {"latinmodern-math:mode=node;", "DejaVuSans:mode=node;"})}
 \setmainfont{Latin Modern Roman}[RawFeature={fallback=symfall}]
 \setsansfont{Latin Modern Sans}[RawFeature={fallback=symfall}]
 \setmonofont{DejaVu Sans Mono}[Scale=0.82,RawFeature={fallback=symfall}]
