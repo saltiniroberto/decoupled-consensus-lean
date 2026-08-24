@@ -109,7 +109,7 @@ order nondeterministically, since the protocol doesn't fix one.
 which is what makes "the store before" and "the store after" both available to theorems.
 
 **Ambient parameters.** Things the protocol treats as globally fixed — the validator set and
-weights, `Δ`, the committees, the SG schedule — are declared once as *classes* and appear
+weights, `Δ`, the committees — are declared once as *classes* and appear
 in signatures as bracketed assumptions: `[Electorate Validator]`, `[Params]`. Read them
 as "given the protocol's parameters"; no caller passes them explicitly.
 

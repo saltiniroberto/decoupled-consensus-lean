@@ -60,7 +60,8 @@ reasoning, is `CONTEXT.md`'s "The `Consensus1` style sheet".
 
 - **Classes, not type parameters**: `Electorate`, `Committees`, `Params`, `Roots` (the
   abstract `Root` type, its order, genesis's root), `RootComputation` (a block's root from
-  its parent and slot), `SGSchedule` (the instants `a_r`). All in `Model.lean`.
+  its parent and slot). All in `Model.lean`; the SG vote time `a_r` is a definition there,
+  not a class — `SGSchedule.a r = t_{rR} + 6Δ`.
 
 ## Comments and citations
 

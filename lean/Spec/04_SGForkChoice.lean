@@ -37,8 +37,8 @@ Goldfish: a relative-majority fork choice over the latest SG votes selects the r
 from which the Goldfish walk starts.
 
 For a fixed integer `R ≥ 1`, round r consists of the R slots from rR on, and
-`round(s) = ⌊s/R⌋`. Each round has one SG vote time `a_r`, a public parameter in this
-intermediate protocol. A round-`r` vote is read from round `r + 1` on.
+`round(s) = ⌊s/R⌋`. Each round has one SG vote time `a_r = t_{rR} + 6Δ`, `6Δ` after the
+beginning of the round. A round-`r` vote is read from round `r + 1` on.
 
 ## Extract — Definition (Latest vote, support, and majority root)
 

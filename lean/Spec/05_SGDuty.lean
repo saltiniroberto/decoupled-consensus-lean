@@ -22,8 +22,10 @@ protocol's tick. The redirected `get_head` is not written out: the finality laye
 redefines it again, and that version, `Store.getHead`, is the protocol's. So this file
 holds the two routines Figure 5 itself introduces and the protocol's `on_tick`.
 
-`a_r` is a public parameter, no formula fixed — the `SGSchedule` class in `Model.lean`:
-assumed, so `on_tick` can dispatch on it and `sg_vote` can require it.
+`a_r = t_{rR} + 6Δ`, `6Δ` after the beginning of the round — `SGSchedule.a` in
+`Model.lean`. That instant is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s
+confirmation is evaluated, so the tick runs both actions; `Store.onTick`'s docstring says
+how they compose.
 
 ## An honest vote is never empty
 
@@ -52,7 +54,7 @@ set_option autoImplicit false
 namespace Consensus1
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [RootComputation Validator] [SGSchedule]
+  [RootComputation Validator]
 
 /-- `process_sg_vote(Σ, vote)`: record a round-`r` SG vote with its
     processing time, unless it is from a future round, already held, or a third vote by a
@@ -83,7 +85,7 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     A `NDREB` duty, as the Goldfish duties are: line 4 is the protocol's two verbs. Total —
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
-    are, over the assumed `SGSchedule`.
+    are.
 
     ## Extract -/
 def Store.sgVote (i : Validator) (S : Store Validator)
@@ -103,11 +105,12 @@ def Store.sgVote (i : Validator) (S : Store Validator)
     dependent `if` hands `sg_vote` its instant precondition, exactly as Figure 2's own
     branches do.
 
-    The protocol fixes no relation between `a_r` and the Goldfish instants. On a schedule
-    where `a_r` coincided with one, the two actions compose: `sg_vote` runs on the
-    Goldfish duty's post-state, and both broadcasts are in the outbox — no union is
-    written anywhere, the monad carrying the earlier sends past the `if`. On the protocol's
-    own schedules the instants are distinct (`Fig2.onTick`'s docstring). -/
+    `a_r = t_{rR} + 6Δ` coincides with a Goldfish instant: it is `t_{rR+1} + 2Δ`, the
+    tick at which `Fig2.onTick` evaluates slot `rR`'s confirmation. On that tick the two
+    actions compose: `sg_vote` runs on the post-confirmation store — so the
+    `live_confirmed` it votes is the round's fresh evaluation — and both broadcasts are
+    in the outbox, no union written anywhere, the monad carrying the earlier sends past
+    the `if`. -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
     (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
   let S ← Fig2.onTick i S t isProposer

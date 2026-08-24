@@ -197,13 +197,12 @@ def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
     `rR, …, rR + R − 1`, and slot `rR` is its *opening slot*. -/
 def round [Params] (s : Nat) : Nat := s / Params.R
 
-/-- `a_r`, each round's SG vote time: a public parameter of the protocol, no formula
-    fixed. A public parameter is exactly an ambient class, as `Committees` is, so
-    `on_tick` can dispatch on it and `sg_vote` can require it. Nothing relates it to the
-    slot schedule; `on_tick` composes the actions even where instants coincide. -/
-class SGSchedule where
-  /-- `a_r`, the SG vote time of round `r`. -/
-  a : Nat → Int
+/-- `a_r`, each round's SG vote time: `6Δ` after the beginning of the round — the round
+    begins at its opening slot `rR`, so `a_r = t_{rR} + 6Δ`. That instant is also
+    `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s confirmation is evaluated; the two
+    actions compose (`Store.onTick`, `05_SGDuty.lean`). -/
+def SGSchedule.a [Params] (r : Nat) : Int :=
+  slotStart (r * Params.R) + 6 * (Params.Δ : Int)
 
 /-! ## Roots -/
 
