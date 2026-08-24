@@ -657,7 +657,16 @@ throughout, the slot-action schedule table, E1/E2, and the wire objects introduc
 per layer (SG vote in `04_`, attestation in `06_`) instead of all in Model. The
 document now tracks the source's five-section structure with matching definition
 numbering (1 Store, 2 Goldfish score and walk, 3 Latest vote, 4 Chain state,
-5 Viability). Not carried over: the source's `E_F(Σ)` evidence-set display (nothing
+5 Viability).
+
+The last coordinates left the same evening (Roberto: "we should not have Figure N;
+makes no sense now"): module titles drop the `Figure N —` prefix (the extractor's
+caption is now the section title, its prefix-strip rule deleted), every `Figure N` and
+`line N` mention in docstrings, headers and `doc/` pages was reworded to layer
+language, a Lean name, or a file name, and `style.md`'s line-comment rule now says
+comments describe. The `Fig<n>` declaration names stay, re-read as "the number of the
+file that defined the superseded reading" — renaming them (e.g. to nothing, or to file
+names) is open, Roberto's call. Not carried over: the source's `E_F(Σ)` evidence-set display (nothing
 in this document consumes it) and `Σ.timestamp(B_gen) = −∞` in the store's initial
 values (not checked against the Lean).
 
