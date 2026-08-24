@@ -433,6 +433,10 @@ works but duplicates the sequence in a `def`.
    - **Open questions awaiting Roberto's call**: `a_r` vs `R = 1` (above); renaming the
      `Fig<n>.…` declaration prefixes; the duties taking `Σ.i` instead of an `i`
      parameter.
+   - **Sketched and interrupted, awaiting his word** (2026-08-24): a second schedule —
+     the time a given validator sends its attestation for round `r` — total on the
+     validator set, its actual definition deferred (the shape an assumed class fits, as
+     the pre-formula `SGSchedule` was).
 1. **The extractor workstream** (`extract/`): conventions in `extract/README.md`; the
    spec drives the structure, all eight figure blocks render.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.
