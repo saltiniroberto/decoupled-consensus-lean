@@ -1,6 +1,7 @@
 # Documentation for `Spec/Consensus1/`
 
-`Spec/Consensus1/` renders the draft `consensus-1.pdf` (committed at the repository root).
+`Spec/Consensus1/` renders the draft `consensus-1.pdf` (kept locally at the repository
+root; no PDF spec is committed).
 These pages document the design a reader meets on every page of the Lean:
 
 - [nondeterminism.md](nondeterminism.md) — how the pseudocode's arbitrary choices are

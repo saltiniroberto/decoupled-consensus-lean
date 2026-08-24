@@ -7,9 +7,11 @@ import Spec.Consensus1.Duty
 `consensus-1.pdf` gives the attestation its shape (`Attestation` in `Model.lean`) and says
 how processed attestations move the chain state (Figure 6), but it does not say how a
 validator *fills* the height pair and the finality pair it signs. This file carries that
-logic over from the first specification's voting strategy; the working source is its
-rendering, `Spec/Defs/Voting.lean` (namespace `Decoupled`), whose module header maps every
-definition back to that paper.
+logic over from the first specification's voting strategy. The working source was its
+rendering, `Spec/Defs/Voting.lean` (namespace `Decoupled`) — since the 2026-08-24 removal
+of the older renderings it lives on the `pre-consensus1-purge` branch, its module header
+mapping every definition back to that paper, which is itself local-only in
+`latex-specs/`.
 
 The strategy, in plain words. A validator keeps a durable per-height record of what it has
 signed — `Σ.H`, a `SigningHistory` (the field in `Store.lean`): whether it signed an

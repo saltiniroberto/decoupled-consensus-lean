@@ -9,9 +9,10 @@ definition or a figure of the draft. It is the failure vocabulary the whole rend
 kept out of the figure files so that each of those states what the draft says and nothing
 else (Roberto, 2026-08-21).
 
-A copy of `Spec/Consensus/Raise.lean` under this subtree's namespace, for the reason
-`Notation.lean` gives: the renderings share nothing. The fold instances below are the same
-copy's, at this subtree's own error type.
+A copy of the second rendering's `Raise.lean` (on the `pre-consensus1-purge` branch
+since the 2026-08-24 removal) under this subtree's namespace, for the reason
+`Notation.lean` gives: the renderings shared nothing. The fold instances below are the
+same copy's, at this subtree's own error type.
 
 The draft has no failures. Its state map is defined on every accepted block and its routines
 run at the instants the schedule names, so every raise below is a rendering artifact: it marks

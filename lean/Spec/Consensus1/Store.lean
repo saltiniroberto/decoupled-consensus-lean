@@ -70,7 +70,8 @@ inside `S.getHead`, which cannot carry the monad — set-builders raise instead,
 `FinsetM` fold machinery.
 
 All of this is the arrangement the previous rendering arrived at over 2026-08-21 and -22;
-`CONTEXT.md` records what else was tried and why each was set aside. A name is needed on each
+its decision trail left with that rendering in the 2026-08-24 purge and lives on the
+`pre-consensus1-purge` branch. A name is needed on each
 map type because instances resolve on a type's head constant, and a bare function type has
 none.
 

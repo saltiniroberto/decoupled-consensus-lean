@@ -6,16 +6,15 @@ import Mathlib.Data.Finset.Lattice.Basic
 /-!
 # The common substrate, and the wire objects
 
-This is the rendering of `consensus-1.pdf`, the human-controlled draft committed at the
-repository root, under namespace `Consensus1`.
+This is the rendering of `consensus-1.pdf`, the human-controlled draft kept locally at
+the repository root (no PDF spec is committed), under namespace `Consensus1`.
 
-**It is a third rendering, not a replacement.** `Spec/Defs/` (namespace `Decoupled`) renders
-`latex-specs` and is frozen as the record; `Spec/Consensus/` (namespace `Consensus`) renders
-`consensus.pdf` and stays as it was; this subtree renders the newer variant. The two drafts
-share a title and little else — the newer one is block-only Goldfish with one store built up
-in three layers, where the older has a candidate tree, grades and round roots — so nothing is
-shared between the subtrees, not the base types and not the notation, and each keeps its own
-copy of what it needs (Roberto, 2026-08-22).
+**Two older renderings preceded it** — `latex-specs` (namespace `Decoupled`) and
+`consensus.pdf` (namespace `Consensus`) — removed with their apparatus on 2026-08-24;
+branch `pre-consensus1-purge` holds the last commit carrying them. This subtree was built
+sharing nothing with them — not the base types and not the notation, each rendering
+keeping its own copy of what it needed (Roberto, 2026-08-22) — which is what made the
+removal a clean cut.
 
 The file holds the model vocabulary the figure files read, and nothing else: a definition
 lands here at the moment a figure first consumes it, so everything below has a consumer under
@@ -66,8 +65,8 @@ never mention a root carry the instance anyway.
 ## Block equality is decided by hand
 
 `deriving DecidableEq` does not reach a mutual family nested through `List` and `Option`;
-that was measured on the two earlier renderings' identical shape (`Spec/Defs/Basic.lean` and
-`Spec/Consensus/Model.lean`, and `CONTEXT.md` for what was tried). So the decision procedure is written out below, under
+that was measured on the two earlier renderings' identical shape (their files live on the
+`pre-consensus1-purge` branch; `CONTEXT.md` for what was tried). So the decision procedure is written out below, under
 "Decidable equality, written out", with the soundness theorems the instances need — the one
 kind of proof a `Spec/` file is allowed to hold. Nothing in this subtree is `noncomputable`.
 

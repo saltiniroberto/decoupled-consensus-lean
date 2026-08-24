@@ -11,7 +11,8 @@ figure files carry the draft's own assignment statements — `σ.h ← σ.h + 1`
 `σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, and its
 set-builders whose condition raises, `{x ∈ᴹ s | p}`.
 
-It is a duplicate — the third — of `Spec/Defs/Notation.lean`, under this subtree's own
+It began as a duplicate — the third — of the first rendering's notation file (on the
+`pre-consensus1-purge` branch since the 2026-08-24 removal), under this subtree's own
 namespace, because the renderings share nothing, not even by import, so each stays untouched
 by the others (2026-08-19, and again 2026-08-22 for this copy). The macros are protocol-free,
 so duplication carries no claim that could drift, and the scoped syntax is what makes three
