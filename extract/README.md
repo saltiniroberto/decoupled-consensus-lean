@@ -30,11 +30,16 @@ the draft, and new commentary stays out without anyone remembering to fence it.
 
 - In a module header: the section becomes the file's section prose. `## Extract — X`
   gives it subsection title `X`.
-- In a `def`'s docstring: **the marker is what makes the def figured** (Roberto,
-  2026-08-24) — rendered as pseudocode in the file's figure — and its prose leads the
-  figure in, the way the draft's prose introduces each figure. A bare `## Extract`
-  with no prose still figures the def.
-- In any other declaration's docstring: the section follows the figure.
+- **In its own `/-! ## Extract … -/` comment immediately before a `def`** (Roberto,
+  2026-08-24: the marker lives in its own comment, never in the docstring): the marker
+  is what makes the def figured — rendered as pseudocode in the file's figure — and
+  its prose leads the figure in, the way the draft's prose introduces each figure. A
+  bare `/-! ## Extract -/` with no prose still figures the def.
+- Before any other declaration: the comment's section follows the figure.
+
+Docstrings carry no document markup at all — a declaration's docstring is Lean-side
+documentation, and only its opening backticked span is harvested (the symbol/signature
+conventions below).
 
 The marker also drives the document's structure (Roberto, 2026-08-24): **files in a
 subdirectory render before the files at the root** — the vocabulary a spec is written

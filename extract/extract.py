@@ -17,7 +17,10 @@ v5: the sources drive the structure. Files in a subdirectory render before the f
 at SRC's root (the vocabulary a spec is written in terms of precedes its algorithms);
 within a directory, config.toml's [order] key for it decides — alphabetical by default,
 or a defined order, with `*` standing for the unlisted files alphabetically. A file
-emits a section only when something in it is marked `## Extract`.
+emits a section only when something in it is marked `## Extract`, and the mark lives in
+its own comment — a module header section, or a `/-! ## Extract … -/` block standing
+immediately before the declaration it marks (a def so marked is figured); docstrings
+carry no document markup.
 A `def` whose own docstring carries an `## Extract` section is *figured* — rendered as
 pseudocode in the file's figure, in the file's declaration order. The paper form
 derives from the Lean signature (`goldfishScore (votes …) (s …) (B …)` renders
@@ -168,12 +171,15 @@ SPAN_CALL_RE = re.compile(r"([A-Za-z_0-9]+)\(([^)]*)\)")
 # ---------------------------------------------------------------- Lean parsing
 
 def parse_file(path: Path):
-    """Return (module_header_text, [items]); an item is (docstring, decl_kind, decl_name,
-    source_lines)."""
+    """Return (module_header_text, [items]); an item is (pre, docstring, decl_kind,
+    decl_name, source_lines), where pre is the text of the `/-! … -/` blocks standing
+    immediately before the declaration — the document markup (`## Extract`) lives
+    there, in its own comment, never in the docstring."""
     text = path.read_text(encoding="utf-8")
     lines = text.split("\n")
     header = None
     items = []
+    pending: list[str] = []   # `/-! -/` blocks since the last declaration
     i = 0
     n = len(lines)
     while i < n:
@@ -191,6 +197,8 @@ def parse_file(path: Path):
             block = block.rstrip()[:-2].rstrip()  # strip -/
             if header is None:
                 header = block.strip("\n")
+            else:
+                pending.append(block.strip("\n").strip())
             i = j + 1
             continue
         if line.startswith("/--"):
@@ -217,7 +225,9 @@ def parse_file(path: Path):
             i += 1
             while i < n and not is_toplevel(lines[i]):
                 i += 1
-            items.append((doc, m.group(1), m.group(2), lines[start:i]))
+            items.append(("\n\n".join(pending), doc, m.group(1), m.group(2),
+                          lines[start:i]))
+            pending = []
             continue
         m = DECL_RE.match(line)
         if m:
@@ -225,7 +235,9 @@ def parse_file(path: Path):
             i += 1
             while i < n and not is_toplevel(lines[i]):
                 i += 1
-            items.append(("", m.group(1), m.group(2), lines[start:i]))
+            items.append(("\n\n".join(pending), "", m.group(1), m.group(2),
+                          lines[start:i]))
+            pending = []
             continue
         i += 1
     return header or "", items
@@ -448,7 +460,7 @@ def harvest(all_items):
     structures first, so a def's derived signature can render a store-typed parameter
     by its structure's paper symbol."""
     t = Tables()
-    for doc, kind, name, src in all_items:
+    for _pre, doc, kind, name, src in all_items:
         sig, _body = split_signature(src)
         params = [(n, ty) for n, ty, auto in parse_params(sig) if not auto]
         t.def_arity[name] = len(params)
@@ -503,7 +515,7 @@ def harvest(all_items):
                             sym = parsed[0]
                 t.ctors[cname] = (sym, cparams)
             continue
-    for doc, kind, name, src in all_items:
+    for pre, doc, kind, name, src in all_items:
         if kind != "def":
             continue
         sig, _body = split_signature(src)
@@ -511,9 +523,10 @@ def harvest(all_items):
         raw = first_span(doc)
         if raw:
             t.raw_spans.setdefault(name, raw)
-        if has_extract_section(doc):
-            # the def is figured: paper name and signature derive from the Lean def;
-            # an opening `name(args)` span overrides — the way the paper hides params
+        if has_extract_section(pre):
+            # the def is figured — its own `/-! ## Extract -/` comment stands before
+            # it. The paper name and signature derive from the Lean def; a docstring
+            # opening `name(args)` span overrides — the way the paper hides params
             span = first_span(doc)
             m = SPAN_CALL_RE.fullmatch(span) if span else None
             if m:
@@ -538,7 +551,7 @@ def harvest(all_items):
         {sym.name for sym in t.defs.values() if sym.smallcaps}
     # the duty monad: the head of `broadcast`'s result type. Routines typed in it are
     # duties — they broadcast as a statement and their tail call carries no `return`.
-    for doc, kind, name, src in all_items:
+    for _pre, _doc, kind, name, src in all_items:
         if kind == "def" and name == "broadcast":
             sig, _b = split_signature(src)
             m = re.search(r":\s*([A-Za-z]\w*)[^:()]*$", sig.strip())
@@ -2199,19 +2212,19 @@ def main():
         if m:
             title = m.group(1)
             body = header[m.end():]
-        figured = []   # (routine, src, docstring), in the file's declaration order
-        others = []    # (docstring, name)
-        for doc, kind, name, src in items:
+        figured = []   # (routine, src, pre-comment), in the file's declaration order
+        others = []    # (pre-comment, name)
+        for pre, _doc, kind, name, src in items:
             r = tables.routines.get(name)
             if r and kind == "def":
-                figured.append((r, src, doc))
-            elif doc:
-                others.append((doc, name))
+                figured.append((r, src, pre))
+            elif pre:
+                others.append((pre, name))
 
         # a file with nothing marked `## Extract` emits no section
         header_secs = extract_sections(body)
         if not header_secs and not figured \
-                and not any(extract_sections(doc) for doc, _n in others):
+                and not any(extract_sections(pre) for pre, _n in others):
             continue
 
         prose_rw = Rewriter(tables, None, None, {})
@@ -2221,10 +2234,10 @@ def main():
 
         if figured:
             blocks = []
-            for r, src, doc in figured:
+            for r, src, pre in figured:
                 # a figured routine's `## Extract` prose leads its figure in, the way
                 # the draft's prose introduces each figure
-                emit_sections(tex, extract_sections(doc), prose_rw)
+                emit_sections(tex, extract_sections(pre), prose_rw)
                 sig, _b = split_signature(src)
                 params = parse_params(sig)
                 ptypes = {n: ty for n, ty, _a2 in params}
@@ -2239,8 +2252,8 @@ def main():
             render_figure(tex, stem, title, blocks, prose_rw)
 
         # `## Extract` prose of the file's other declarations follows the figure
-        for doc, _name in others:
-            emit_sections(tex, extract_sections(doc), prose_rw)
+        for pre, _name in others:
+            emit_sections(tex, extract_sections(pre), prose_rw)
     tex.append(r"\end{document}")
     texfile = OUT / "dc.tex"
     texfile.write_text("\n".join(tex), encoding="utf-8")
