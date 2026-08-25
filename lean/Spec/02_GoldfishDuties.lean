@@ -109,14 +109,15 @@ open Params
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
   let mut S := S
-  if vote.slot > S.s ∨ vote ∈ S.gfVotes vote.slot then
+  if vote.slot > S.s ∨ ∃ e ∈ S.gfVotes vote.slot, e.vote = vote then
     return S
   -- two distinct votes by this validator are already held
   if ∃ a ∈ S.gfVotes vote.slot, ∃ b ∈ S.gfVotes vote.slot,
-      a.validator = vote.validator ∧ b.validator = vote.validator ∧ a ≠ b then
+      a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
+      a.vote ≠ b.vote then
     return S
-  S.gfVotes[vote.slot] ← S.gfVotes vote.slot ∪ {vote}
-  S.gfVoteTime[vote] ← some S.t
+  S.gfVotes[vote.slot] ← S.gfVotes vote.slot ∪
+    {TimestampedVote.mk (vote := vote) (time := S.t)}
   return S
 
 /-! ## Figure -/
@@ -163,7 +164,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s                                      -- runs at `t_s`
-  let votes := S.gfVotes (s - 1)
+  let votes := (S.gfVotes (s - 1)).map' fun e => e.vote
   let H ← Fig1.getHead S votes (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings votes
@@ -191,8 +192,8 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     NDREB Validator (Store Validator) := do
   let s := S.s
   -- held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
-  let mut votes ← {vote ∈ᴹ S.gfVotes (s - 1) |
-    (← S.gfVoteTime[vote]) < slotStart (s - 1) + 3 * (Δ : Int)}
+  let mut votes := ({e ∈ S.gfVotes (s - 1) |
+    e.time < slotStart (s - 1) + 3 * (Δ : Int)}).map' fun e => e.vote
   -- the view merge: each processed slot-`s` block offers its carried votes
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset

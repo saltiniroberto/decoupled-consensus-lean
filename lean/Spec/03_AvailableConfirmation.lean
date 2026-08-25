@@ -69,10 +69,9 @@ open Params
     `Σ.latest_confirmed` only ever moves forward, its write behind the test
     `Σ.latest_confirmed ⪯ H`.
 
-    Both cutoffs read the timestamps with the raising bracket, through `Finset.filterM`
-: a held vote the store never stamped raises rather than silently
-    failing the cutoff. `process_goldfish_vote` stamps everything it stores, so the raise
-    marks a store the handlers cannot build — a coherence fact for `Analysis/`.
+    Both cutoffs are pure filters on the stored elements: each carries the time it
+    was processed, so an unstamped stored vote is unrepresentable and nothing here can
+    raise but the walk itself.
 
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the
     Goldfish duties' instants are. -/
@@ -80,8 +79,10 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
-  let early ← {vote ∈ᴹ S.gfVotes s | (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)}
-  let late ← {vote ∈ᴹ S.gfVotes s | (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)}
+  let early := ({e ∈ S.gfVotes s | e.time < slotStart s + 2 * (Δ : Int)}).map'
+    fun e => e.vote
+  let late := ({e ∈ S.gfVotes s | e.time < slotStart s + 6 * (Δ : Int)}).map'
+    fun e => e.vote
   -- the early votes whose validator `late` does not catch equivocating
   let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
   -- the denominator is `late`'s participants

@@ -137,8 +137,9 @@ scoped macro (name := idxAssign2) (priority := 1100)
 scoped syntax (name := filterMBind) (priority := high)
   "let " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
 
-/-- The `let mut` form of the raising set-builder; `goldfish_vote`'s freeze filter is the
-    case. -/
+/-- The `let mut` form of the raising set-builder. No current use — `goldfish_vote`'s
+    freeze filter was the case until the stored votes carried their own times — kept as
+    part of the builder's vocabulary. -/
 scoped syntax (name := filterMBindMut) (priority := high)
   "let " "mut " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
 

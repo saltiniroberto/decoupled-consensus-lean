@@ -98,7 +98,7 @@ Update this list when a new call lands.
   explicit lambda; no `Finset.image` and no `biUnion` in spec bodies** (Roberto,
   2026-08-25; `Finset.map'` is `image` under the expected name, `FinsetM.lean` — the
   unprimed `map` takes an embedding and cannot project; `imageM`, the raising fold, is
-  unaffected; no spec body consumes `map'` on this branch yet).
+  unaffected; the vote projections out of the timestamped elements are the consumers).
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
   dependent `if`s alone, no `have`s. The `if`s bind `_`, not a name — the tactic reads
@@ -187,15 +187,18 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `optimized-goldfish`** (Roberto, 2026-08-25: "save this branch as optimized-goldfish;
   then branch off from where we diverged from the Goldfish in the paper, but incorporate
   all the other decisions"). Here: `gf_votes[k]` is the two-vote `Finset` with the
-  handler's at-most-two rule, `gfVoteTime` the timestamp map, the score deriving
-  equivocators from the vote set. On `optimized-goldfish` (head `2524b97`): one timed
-  vote per slot and validator (`VoteTime` entries), `gf_equiv` recording the first
+  handler's at-most-two rule, each stored vote timestamped in its own element
+  (`TimestampedVote`, fields `vote`/`time` — Roberto, 2026-08-25; `gfVoteTime` folded
+  away, the freeze and cutoff filters pure, `map'` projecting the votes), the score
+  deriving equivocators from the vote set. On `optimized-goldfish` (head `2524b97`): one
+  timed vote per slot and validator (`VoteTime` entries), `gf_equiv` recording the first
   equivocation, every fork-choice rule up to `get_head` consuming a `GoldfishView`
   (votes plus equivocators), and `merge_view` folding the block-carried votes in — its
   own decision trail in that branch's `CONTEXT.md`. (A first cut of that design was
   built and rolled back the same day — commits `bee9622`..`a67d1b0`, revert `89bd951`.)
-  **Incorporated here from that work, on his word**: the `VoteTime` rename of the
-  healing `HeadEntry` (fields `vote`/`time`); the two-level write macro `idxAssign2`
+  **Incorporated here from that work, on his word**: the healing `HeadEntry` renamed to
+  the shared entry structure (now `TimestampedVote`, fields `vote`/`time`); the
+  two-level write macro `idxAssign2`
   (`Notation.lean`, awaiting the healing writers); `VoteTable` dropped — the vote tables
   are bare function types read by application, written with the macro brackets; the
   nondeterministic `ForIn` living in `Nondet.lean` with the view merge as the figure's
@@ -357,7 +360,8 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     `0` — confirmed;
   - the head entry is a named structure, `deriving DecidableEq` — a plain structure, so
     the mutual-family deriving limit does not apply. It landed as `HeadEntry` (`H`, `t`)
-    and became `VoteTime (α : Type)` (`vote`, `t`) on Roberto's word (2026-08-25), one
+    and became the shared entry structure — today `TimestampedVote (α : Type)`
+    (`vote`, `time`) — on Roberto's word (2026-08-25), one
     entry type for the healing heads and the stored Goldfish votes;
   - "the deepest block in `G`" is a pick from `deepest G`, the `⪯`-maximal blocks; the
     one-chain claim that makes the pick a singleton is `Analysis/` matter, not assumed —

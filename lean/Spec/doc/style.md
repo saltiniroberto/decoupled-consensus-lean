@@ -43,8 +43,8 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 - **A projection is `map'` with an explicit lambda; no `Finset.image` and no `biUnion`
   in spec bodies** — `Finset.map'` (`FinsetM.lean`) is `image` under the name a
   programmer expects (`s.map' fun a => a.validator`); the unprimed `Finset.map` takes an
-  embedding and cannot project. The raising fold `imageM` is unaffected. No spec body
-  consumes `map'` on this branch yet.
+  embedding and cannot project. The raising fold `imageM` is unaffected. The vote
+  projections out of `Σ.gf_votes[·]`'s timestamped elements are the consumers.
 - **What the protocol writes inline stays inline.** `voters_count` and the equivocator
   set are `let`s at each use site — locals, not definitions.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H` — the `=`
