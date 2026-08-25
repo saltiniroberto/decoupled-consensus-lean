@@ -24,7 +24,8 @@ Three things deliberately **not** rendered, each for a reason:
   `on_tick` takes the test as a parameter (`02_GoldfishDuties.lean`);
 * `t_GST` and the delivery bound as a *property*. `Δ` is a constant here; that objects arrive
   within it is a fact about executions, and there is no execution layer yet;
-* depth — no algorithm reads it: `ghost` breaks ties by root order, not by depth.
+* depth — no algorithm reads it: the walk's tie is a pick, and "the deepest block" of a
+  set is its `⪯`-maximal one (`deepest`, `09_Healing.lean`), no depth measure involved.
 
 ## `B.root` is a field of an abstract type `Root`
 
@@ -71,9 +72,9 @@ processes. A scheduled action uses the store immediately before its public time.
 Every block `B` has a root `B.root`, slot `B.slot`, and parent `B.parent`. Processed
 blocks form a parent-closed tree rooted at `B_gen`. Write `B ⪯ C` when `B = C` or `B` is
 an ancestor of `C`, and `B ≺ C` for strict ancestry. Two blocks are compatible when one
-is an ancestor of the other, and they conflict otherwise. The depth of a block is the
-number of parent edges from genesis; "deepest" means maximum depth, ties by a fixed
-root order.
+is an ancestor of the other, and they conflict otherwise. The deepest block of a set is
+one with no strict descendant in it; where the protocol uses the phrase, the set lies on
+one chain, so there is exactly one.
 
 Slot `s` has these public actions:
 
