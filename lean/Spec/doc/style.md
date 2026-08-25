@@ -38,9 +38,10 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 - **Absence is tested `x ≠ ⊥`, never `.isSome`**, and in a raising body the branch
   extracts by the lift: `let y ← x`, value or raise (the scoped
   `MonadLift Option DRE`, `Raise.lean`) — behind the `≠ ⊥` test the raise is
-  unreachable. The store's map machinery keeps `.isSome` internally; the rule is about
-  spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
-  `OldDefs.lean`.)
+  unreachable. In a *pure* body the extraction is `Option.value` (`Raise.lean`), its
+  `≠ ⊥` hypothesis a dependent `if`'s, the extraction inside the then-branch
+  (`process_sg_vote`). The store's map machinery keeps `.isSome` internally; the rule is
+  about spec bodies.
 - **No `∣` (divides)**: write `% … = 0`.
 - **A projection is the image comprehension**: `{e.vote | e ∈ S.gfVotes s}`, and with
   a condition `{e.vote | e ∈ S.gfVotes s, e.time < c}` — Python's set comprehension

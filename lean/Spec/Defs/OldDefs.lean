@@ -30,15 +30,4 @@ def DutyResult.withSend {Validator : Type} [Roots] [DecidableEq Validator]
     DutyResult Validator :=
   { d with send := prior ∪ d.send }
 
-/-- The autoparam extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis
-    discharged from a dependent `if _ : x ≠ ⊥` by the instants' own tactic. The raising
-    lift in `Raise.lean` — `let y ← x` behind a plain `≠ ⊥` test — covers the monadic
-    bodies, so this has no consumer. Revived by a *pure* body that must extract, where no
-    lift can fire. The measured trap it carries:
-    dot notation resolves fields in the type's own namespace only, hence the `_root_.`
-    (a `DC.Option.value` is invisible to `x.value`). -/
-def _root_.Option.value {α : Type} (x : Option α)
-    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
-  x.get (Option.ne_none_iff_isSome.mp h)
-
 end DC

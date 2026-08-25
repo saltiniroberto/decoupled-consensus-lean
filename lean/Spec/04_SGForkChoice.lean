@@ -44,11 +44,12 @@ head `H`, a block or `⊥`; at `a_r`, an honest validator votes its current
 
 Fix an expiry window `ηSG ≥ 1` in rounds. `latest(Σ, v, r)` is the greatest round `k`
 with `max(0, r − ηSG) ≤ k < r` whose `sg_votes[k]` holds a vote by `v`, or `⊥` when
-there is none. A validator with a latest round is represented: it counts in the
+there is none. Only votes whose head is a block are stored, so an empty-headed vote
+leaves no trace. A validator with a latest round is represented: it counts in the
 denominator whatever its votes say. It supports a block only when its latest round
-holds exactly one distinct vote by it and that vote's head is a block. An empty or
-equivocating latest round therefore supplies no support and, because only the latest
-round is read, also silences every older head; a later clean round restores support.
+holds exactly one distinct vote by it. An equivocating latest round therefore supplies
+no support and, because only the latest round is read, also silences every older head;
+a later clean round restores support.
 
 `sg_support(Σ, r, B)` is the represented weight supporting `B`. The entire represented
 weight is
@@ -106,7 +107,7 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
       ∃ k, S.latest v r = some k ∧
         ∃ a ∈ S.sgVotes k, a.vote.validator = v ∧
           (∀ b ∈ S.sgVotes k, b.vote.validator = v → b.vote = a.vote) ∧
-          ∃ H, a.vote.head = some H ∧ B ⪯ H})
+          B ⪯ a.vote.head})
 
 /-! ## Figure -/
 /-- The shared walk with

@@ -80,8 +80,10 @@ Update this list when a new call lands.
   `Raise.lean`; Roberto: "do that, also wherever applicable"). Behind a plain
   `if x ≠ ⊥` the raise is unreachable; the accepted cost, stated at the instance, is that
   dropping the test leaves compiling code that raises where a rule meant to fall through.
-  The autoparam extraction that did check at the site, `Option.value`, is parked in
-  `OldDefs.lean` (revived by a *pure* body that must extract). The store's map machinery
+  In a *pure* body the extraction is `Option.value` (`Raise.lean`), its `≠ ⊥` hypothesis
+  a dependent `if`'s — the extraction must sit inside the `if`'s then-branch, the do
+  join point not carrying the hypothesis to the continuation (measured;
+  `process_sg_vote` is the consumer). The store's map machinery
   keeps `.isSome` internally — the rule is about spec bodies. **No `∣` (divides)**: write
   `% … = 0`.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`; `Block.mk`
@@ -352,6 +354,22 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   certificate-knowledge to model. A store-free `fgVote` layer between the rules and the
   wiring was folded away — it added only a name, and the name collided (the bare-name
   trap below).
+- **SG votes are stored only with block heads** (Roberto, 2026-08-25: "we only store
+  SGVotes where head is not bottom" — his different approach after probing raise-on-`⊥`
+  readings). `process_sg_vote` drops an empty-headed vote behind a dependent
+  `if _ : vote.head ≠ ⊥`; the stored element is a `HeadVote` (`validator`,
+  `head : Block`) inside a `TimestampedVote`, so every reader takes the head with no
+  `Option`: `sg_support`'s clause is `B ⪯ a.vote.head`, and healing's `headSupports`
+  reads the SG votes directly — `∃ vt ∈ Σ.sg_votes[k], vt.vote.validator = i ∧
+  vt.time < c ∧ B ⪯ vt.vote.head` (the head-votes-are-the-sgVotes unification's first
+  step; `sgVotes` is `Int`-indexed, Roberto's own edit, for healing's round-`(r−1)`
+  reads). `Option.value` is revived from `OldDefs.lean` into `Raise.lean` — the pure
+  extraction its docstring foresaw, hypothesis from the dependent `if`. **Semantic
+  change, Roberto's**: an empty-headed vote now leaves no trace — before, it was stored,
+  represented its sender in `W_r`, and could silence a head as half of an equivocation;
+  now it neither represents nor equivocates. **Pending**: the healing `head[·]` map is
+  now unconsumed (`equiv[·]` still feeds `equivBefore`); their fate awaits the rest of
+  the unification.
 - **The healing layer** (`09_Healing.lean`, imported 2026-08-25 from the earlier draft's
   Figures 4 and 5, on Roberto's word — the draft `consensus.pdf`, local; not
   `consensus-1.pdf`, whose Figures 4–5 are the SG files). The support scores and grades
@@ -500,6 +518,16 @@ works but duplicates the sequence in a `def`.
   is invisible to `x.value`, hence `_root_.` on such defs. Inside `def Store.fgVote`, the
   bare name `fgVote` resolves to the def itself.
 - Digit-leading module names take guillemets: `import Spec.«01_GoldfishWalk»`.
+
+### Notation overloads that do not work
+
+- **`⪯` cannot be overloaded for an optional operand** (measured 2026-08-25, kin to the
+  recorded `∈`-for-`Option` limit): at equal priority every plain `B ⪯ C` becomes
+  ambiguous — core's `Block → Option Block` coercion lets it elaborate as `B ⪯ some C`
+  too — and at lower priority the parser shadows the new form entirely. A
+  class-dispatched `⪯` would work but wraps the core ancestry relation in a class;
+  declined. Where a head is optional, the spelling is `∃ H ∈ o, B ⪯ H`; storing only
+  block heads (`HeadVote`) removes the need.
 
 ### Set-builders over `Option` entries (2026-08-25)
 

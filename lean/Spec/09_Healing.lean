@@ -96,15 +96,12 @@ namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params]
 
-/-- Validator `i`'s stored round-`k` head entry was processed before instant `c` and
-    supports `B`: the entry's head descends from `B`. An absent entry supports nothing.
-
-    A named predicate rather than the inline `∃ e ∈ Σ.head[k][i], …`: a set-builder's
-    decidability search fails on the anonymous form over an `Option` entry (measured),
-    and the keyed instance below is found where the anonymous one is not. -/
+/-- Validator `i` has a stored round-`k` SG vote, processed before instant `c`, whose
+    head descends from `B`. The stored head is a `Block` — an empty-headed vote is never
+    stored — so the ancestry test reads it directly. -/
 def Store.headSupports (S : Store Validator) (k : Int) (i : Validator) (c : Int)
     (B : Block Validator) : Prop :=
-  ∃ e ∈ S.head k i, e.time < c ∧ B ⪯ e.vote
+  ∃ vt ∈ S.sgVotes k, vt.vote.validator = i ∧ vt.time < c ∧ B ⪯ vt.vote.head
 
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) (B : Block Validator) :
     Decidable (S.headSupports k i c B) := inferInstanceAs (Decidable (∃ _ ∈ _, _))

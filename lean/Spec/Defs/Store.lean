@@ -153,6 +153,16 @@ structure TimestampedVote (α : Type) where
   time : Int
 deriving DecidableEq
 
+/-- A stored SG vote: who voted, and the block its head names. Only a vote whose head
+    is a block is stored — `process_sg_vote` drops an empty head — so the stored head is
+    a `Block`, not an `Option`; the wire object (`SGVote`, `Model.lean`) keeps `⊥`. -/
+structure HeadVote (Validator : Type) where
+  /-- The voting validator. -/
+  validator : Validator
+  /-- The block the vote's head names. -/
+  head : Block Validator
+deriving DecidableEq
+
 /-- The store, every layer's fields at once.
 
     "The store keeps messages and their arrival times, and nothing else. Every rule below is
@@ -177,10 +187,11 @@ structure Store (Validator : Type) where
   /-- `Σ.latest_confirmed`, the monotone record the node exposes. "No rule in this protocol
       reads it" — it is written by `update_confirmation` and nothing else touches it. -/
   latestConfirmed : Block Validator
-  /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer), each stored with
-      the time it was processed. No rendered rule reads the times, `latest` selecting
-      by round rather than by time. -/
-  sgVotes : (r : Nat) → Finset (TimestampedVote (SGVote Validator))
+  /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer), each a `HeadVote` —
+      only votes whose head is a block are stored — with the time it was processed.
+      `latest` selects by round rather than by time; the healing scores read the
+      times. -/
+  sgVotes : (r : Int) → Finset (TimestampedVote (HeadVote Validator))
   /-- `Σ.σ[B]`, the stored post-state of each processed block (finality layer). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/
   σ : StateMap Validator

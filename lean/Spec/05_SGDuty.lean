@@ -25,12 +25,15 @@ holds the two routines it itself introduces and the protocol's `on_tick`.
 confirmation is evaluated, so the tick runs both actions; `Store.onTick`'s docstring says
 how they compose.
 
-## An honest vote is never empty
+## An empty head is never stored
 
 At `a_r` an honest validator votes its current `live_confirmed`, which is a block; an
-empty head can appear only in adversarial votes. So an honest vote always names a block, and
-`SGVote.head` is an `Option` only because the wire object admits `⊥` — nothing an honest
-duty produces uses it.
+empty head can appear only in adversarial votes, and `SGVote.head` is an `Option` only
+because the wire object admits `⊥`. `process_sg_vote` drops an empty-headed vote at
+admission, so every stored vote's head is a `Block` (`HeadVote`, `Store.lean`) and every
+reader — `latest`, `sg_support`, the healing scores — reads heads with no `Option` in
+sight. Consequence: an empty-headed vote leaves no trace — it neither represents its
+sender nor counts toward an equivocation.
 
 ## Extract
 
@@ -42,8 +45,9 @@ finality layer redefines `get_head` again and that final reading is the protocol
 At `a_r`, an honest validator votes its current `live_confirmed`, which is a block; the
 empty head appears only in adversarial votes here. `process_sg_vote(Σ, vote)` is
 `process_goldfish_vote` one field over: it records a round-`r` vote with its processing
-time, unless it is from a future round, already held, or a third vote by a validator
-already seen equivocating.
+time, unless its head is empty, it is from a future round, already held, or a third vote
+by a validator already seen equivocating. An empty-headed vote is never stored, so every
+stored head is a block.
 
 -/
 
@@ -56,25 +60,32 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 /-! ## Figure `process_sg_vote(Σ, vote)` -/
 /-- Record a round-`r` SG vote with its
-    processing time, unless it is from a future round, already held, or a third vote by a
-    validator already seen equivocating.
+    processing time, unless its head is empty, it is from a future round, already held,
+    or a third vote by a validator already seen equivocating. Only votes whose head is a
+    block are stored, so the stored entry (`HeadVote`) carries the head as a `Block` —
+    the extraction is `Option.value`, its hypothesis the dependent `if`'s.
 
-    `process_goldfish_vote`'s shape exactly, one field over: the round test is against
+    `process_goldfish_vote`'s shape one field over: the round test is against
     `round(Σ.s)` rather than `Σ.s`, and the two-votes test is where "at most two distinct
     votes per validator" is maintained — "two witness the equivocation; nothing reads a
     third". -/
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     Store Validator := Id.run do
   let mut S := S
-  if vote.round > round S.s ∨ ∃ e ∈ S.sgVotes vote.round, e.vote = vote then
+  if vote.round > round S.s then
     return S
-  -- two distinct votes by this validator are already held
-  if ∃ a ∈ S.sgVotes vote.round, ∃ b ∈ S.sgVotes vote.round,
-      a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
-      a.vote ≠ b.vote then
-    return S
-  S.sgVotes[vote.round] ← S.sgVotes vote.round ∪
-    {TimestampedVote.mk (vote := vote) (time := S.t)}
+  -- an empty head is never stored; the extraction's hypothesis is this `if`'s
+  if _ : vote.head ≠ ⊥ then
+    let hv := HeadVote.mk (validator := vote.validator) (head := (vote.head).value)
+    if ∃ e ∈ S.sgVotes vote.round, e.vote = hv then
+      return S
+    -- two distinct votes by this validator are already held
+    if ∃ a ∈ S.sgVotes vote.round, ∃ b ∈ S.sgVotes vote.round,
+        a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
+        a.vote ≠ b.vote then
+      return S
+    S.sgVotes[vote.round] ← S.sgVotes vote.round ∪
+      {TimestampedVote.mk (vote := hv) (time := S.t)}
   return S
 
 /-! ## Figure `sg_vote(Σ)` — runs at `a_r` -/
