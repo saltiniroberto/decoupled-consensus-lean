@@ -14,29 +14,6 @@ set_option autoImplicit false
 
 namespace DC
 
-open Lean
-
-/-- `σ.arr[i][j] ← e`, a doubly indexed write to a map-of-maps field, and `x[i][j] ← e` to a
-    map-of-maps local. No `DC` figure writes a two-level map, so it has no
-    consumer. Revived by any store field of shape `Nat → κ → Option V`. -/
-scoped syntax (name := idx2Assign) (priority := high)
-  ident noWs "[" term "]" noWs "[" term "]" " ← " term : doElem
-
-macro_rules
-  | `(doElem| $x:ident[$i][$j] ← $e) => do
-      let n := x.getId
-      let pre := n.getPrefix
-      if pre.isAnonymous then
-        `(doElem| $x:ident :=
-            Function.update $x:ident $i (Function.update ($x:ident $i) $j $e))
-      else
-        let v := mkIdent pre
-        let f := mkIdent (Name.mkSimple n.getString!)
-        `(doElem| $v:ident :=
-            { $v with $f:ident :=
-                (Function.update (($v).$f:ident) $i
-                  (Function.update ((($v).$f:ident) $i) $j $e)) })
-
 /-- `d.withSend prior`: a `DutyResult` with an earlier duty's broadcasts unioned into
     its own. In the duty monad the outbox carries earlier sends, so nothing unions.
     Revived by any composition done on `DutyResult` values rather than in the monad. -/
@@ -55,16 +32,5 @@ def DutyResult.withSend {Validator : Type} [Roots] [DecidableEq Validator]
 def _root_.Option.value {α : Type} (x : Option α)
     (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
   x.get (Option.ne_none_iff_isSome.mp h)
-
-/-- `for x in (s : Finset α) do …`, in any monad `Set` lifts into: pick a listing, loop the
-    list — every visitation order among the outcomes. No spec routine loops over a
-    `Finset` (`ghost` loops a range, the handlers loop `List`s, the order-free loops are
-    written as the sets they build), so the instance has no consumer. Revived by the
-    first loop whose body is not order-free. -/
-scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [DecidableEq α] :
-    ForIn m (Finset α) α where
-  forIn s init body := do
-    let l ← liftM (listings s)
-    forIn l init body
 
 end DC

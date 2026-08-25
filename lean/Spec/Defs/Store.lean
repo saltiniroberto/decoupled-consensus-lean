@@ -51,14 +51,13 @@ Likewise `Σ.F ⪯ Σ.J`, that `Σ.T` is parent-closed, and that `Σ.σ` is defi
 `Σ.T` — all invariants of the reachable stores, and all facts for `Analysis/` rather than
 facts of this structure.
 
-## How the three indexed fields are read
+## How the indexed fields are read
 
-`Σ.gf_votes[k]`, `Σ.sg_votes[r]` and `Σ.σ[B]` are all written with the protocol's brackets, and
-each gets there differently.
-
-The two vote tables are **total**: every index has a set, empty if nothing was processed. So
-`VoteTable` carries a `GetElem` whose validity is `True`, closed by `get_elem_tactic`'s own
-`trivial`, and a read owes nothing.
+`Σ.σ[B]` and `Σ.timestamp[x]` wear the protocol's brackets and **raise** — the next
+paragraph. The vote tables are total maps read by application: `Σ.gf_votes k` and
+`Σ.sg_votes r` are sets, empty if nothing was processed. The indexed writes keep the
+protocol's brackets — `Σ.gf_votes[k] ← …` — through the assignment macros, which
+consult no instance.
 
 The state map is not total, and `Σ.σ[B]` **raises**: it returns
 `DRE (ChainState Validator)`, so `let σB ← Σ.σ[B]` propagates a block the map does
@@ -118,22 +117,12 @@ namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator]
 
-/-! ### The three map types, and how each is read -/
-
-/-- A per-index set of processed objects: `Σ.gf_votes[·]` and `Σ.sg_votes[·]`. A named type,
-    so that `Σ.gf_votes[k]` resolves — instances resolve on a type's head constant, and a
-    bare function type has none. A `def` and not an `abbrev`, or the name would unfold away
-    before the lookup. -/
-def VoteTable (α : Type) := (k : Nat) → Finset α
-
-/-- `table[k]`: the set at an index. Validity is `True` — every index has a set — so
-    `get_elem_tactic` closes it with `trivial` and a read owes nothing. -/
-scoped instance voteTableGetElem {α : Type} :
-    GetElem (VoteTable α) Nat (Finset α) (fun _ _ => True) where
-  getElem tbl k _ := tbl k
+/-! ### The two named map types, and how each is read -/
 
 /-- A processing-time map, one per kind of object: `Σ.timestamp(x)` restricted to that
-    kind. Named for the same reason as `VoteTable`. -/
+    kind. A named type, so that the raising bracket read below resolves — instances
+    resolve on a type's head constant, and a bare function type has none. A `def` and
+    not an `abbrev`, or the name would unfold away before the lookup. -/
 def TimeMap (α : Type) := (x : α) → Option Int
 
 /-- `times[x]`, the raising read: when `x` was processed, or the failure if it was not.
@@ -142,7 +131,7 @@ scoped instance timeMapGetElem {α : Type} :
     GetElem (TimeMap α) α (DRE Int) (fun _ _ => True) where
   getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
 
-/-- The finality layer's block-state map. Named for the same reason as `VoteTable`. -/
+/-- The finality layer's block-state map. Named for the same reason as `TimeMap`. -/
 def StateMap (Validator : Type) := (B : Block Validator) → Option (ChainState Validator)
 
 /-- `B ∈ σ`: the map records a state for `B`. -/
@@ -162,14 +151,15 @@ scoped instance stateMapGetElem :
       (DRE (ChainState Validator)) (fun _ _ => True) where
   getElem σ B _ := if h : B ∈ σ then .ok ((σ B).get h) else .error .error
 
-/-- A head record of the healing layer's per-round bookkeeping `Σ.head[·]`: the head block
-    an attestation named, and the time the store processed it. A named structure, where a
-    bare product would name nothing. -/
-structure HeadEntry (Validator : Type) where
-  /-- The head block. -/
-  H : Block Validator
+/-- A timed vote entry: a stored vote and the time the store processed it. A named
+    structure, where a bare product would name nothing. `α` is what was voted — a head
+    block in the healing bookkeeping `Σ.head[·]`; the name is general so other stored
+    votes can reuse it. -/
+structure VoteTime (α : Type) where
+  /-- The stored vote. -/
+  vote : α
   /-- When it was processed. -/
-  t : Int
+  time : Int
 deriving DecidableEq
 
 /-- The store, every layer's fields at once.
@@ -188,7 +178,7 @@ structure Store (Validator : Type) where
       `process_block`; read by nothing, in this protocol. See the module header. -/
   blockTime : TimeMap (Block Validator)
   /-- `Σ.gf_votes[k]`, the processed slot-`k` Goldfish votes. -/
-  gfVotes : VoteTable (GoldfishVote Validator)
+  gfVotes : (k : Nat) → Finset (GoldfishVote Validator)
   /-- `Σ.timestamp(vote)` for a Goldfish vote. This is the map every Goldfish rule reads:
       the freeze in `goldfish_vote`, and both cutoffs in `update_confirmation`. -/
   gfVoteTime : TimeMap (GoldfishVote Validator)
@@ -198,7 +188,7 @@ structure Store (Validator : Type) where
       reads it" — it is written by `update_confirmation` and nothing else touches it. -/
   latestConfirmed : Block Validator
   /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer). -/
-  sgVotes : VoteTable (SGVote Validator)
+  sgVotes : (r : Nat) → Finset (SGVote Validator)
   /-- `Σ.timestamp(vote)` for an SG vote (SG layer). Written by `process_sg_vote`; no
       rendered rule reads it, `latest` selecting by round rather than by time. -/
   sgVoteTime : TimeMap (SGVote Validator)
@@ -220,7 +210,7 @@ structure Store (Validator : Type) where
       round-`r` attestations, with its processing time; absent while none. Indexed by `Int`:
       round `r` grades its round-`(r−1)` entries (`09_Healing.lean`), and round `0` must
       find round `−1` empty — a `Nat` index would truncate `0 − 1` back to `0`. -/
-  head : (r : Int) → (i : Validator) → Option (HeadEntry Validator)
+  head : (r : Int) → (i : Validator) → Option (VoteTime (Block Validator))
   /-- `Σ.equiv[r][i]` (healing layer): the time at which a head different from
       `Σ.head[r][i]`'s was first processed from validator `i` in round `r`; absent while
       none. Indexed by `Int` for the same reason as `head`. -/

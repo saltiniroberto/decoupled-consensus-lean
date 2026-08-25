@@ -40,6 +40,11 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
   `OldDefs.lean`.)
 - **No `∣` (divides)**: write `% … = 0`.
+- **A projection is `map'` with an explicit lambda; no `Finset.image` and no `biUnion`
+  in spec bodies** — `Finset.map'` (`FinsetM.lean`) is `image` under the name a
+  programmer expects (`s.map' fun a => a.validator`); the unprimed `Finset.map` takes an
+  embedding and cannot project. The raising fold `imageM` is unaffected. No spec body
+  consumes `map'` on this branch yet.
 - **What the protocol writes inline stays inline.** `voters_count` and the equivocator
   set are `let`s at each use site — locals, not definitions.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H` — the `=`
