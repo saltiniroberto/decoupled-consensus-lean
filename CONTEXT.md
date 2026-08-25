@@ -357,7 +357,7 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 - **SG votes are stored only with block heads** (Roberto, 2026-08-25: "we only store
   SGVotes where head is not bottom" — his different approach after probing raise-on-`⊥`
   readings). `process_sg_vote` drops an empty-headed vote behind a dependent
-  `if _ : vote.head ≠ ⊥`; the stored element is a `HeadVote` (`validator`,
+  `if _ : vote.head ≠ ⊥`; the stored element is a `SGHeadVote` (`validator`,
   `head : Block`) inside a `TimestampedVote`, so every reader takes the head with no
   `Option`: `sg_support`'s clause is `B ⪯ a.vote.head`, and healing's `headSupports`
   reads the SG votes directly — `∃ vt ∈ Σ.sg_votes[k], vt.vote.validator = i ∧
@@ -527,7 +527,7 @@ works but duplicates the sequence in a `def`.
   too — and at lower priority the parser shadows the new form entirely. A
   class-dispatched `⪯` would work but wraps the core ancestry relation in a class;
   declined. Where a head is optional, the spelling is `∃ H ∈ o, B ⪯ H`; storing only
-  block heads (`HeadVote`) removes the need.
+  block heads (`SGHeadVote`) removes the need.
 
 ### Set-builders over `Option` entries (2026-08-25)
 

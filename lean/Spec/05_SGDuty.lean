@@ -30,7 +30,7 @@ how they compose.
 At `a_r` an honest validator votes its current `live_confirmed`, which is a block; an
 empty head can appear only in adversarial votes, and `SGVote.head` is an `Option` only
 because the wire object admits `⊥`. `process_sg_vote` drops an empty-headed vote at
-admission, so every stored vote's head is a `Block` (`HeadVote`, `Store.lean`) and every
+admission, so every stored vote's head is a `Block` (`SGHeadVote`, `Store.lean`) and every
 reader — `latest`, `sg_support`, the healing scores — reads heads with no `Option` in
 sight. Consequence: an empty-headed vote leaves no trace — it neither represents its
 sender nor counts toward an equivocation.
@@ -62,7 +62,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 /-- Record a round-`r` SG vote with its
     processing time, unless its head is empty, it is from a future round, already held,
     or a third vote by a validator already seen equivocating. Only votes whose head is a
-    block are stored, so the stored entry (`HeadVote`) carries the head as a `Block` —
+    block are stored, so the stored entry (`SGHeadVote`) carries the head as a `Block` —
     the extraction is `Option.value`, its hypothesis the dependent `if`'s.
 
     `process_goldfish_vote`'s shape one field over: the round test is against
@@ -76,7 +76,7 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     return S
   -- an empty head is never stored; the extraction's hypothesis is this `if`'s
   if _ : vote.head ≠ ⊥ then
-    let hv := HeadVote.mk (validator := vote.validator) (head := (vote.head).value)
+    let hv := SGHeadVote.mk (validator := vote.validator) (head := (vote.head).value)
     if ∃ e ∈ S.sgVotes vote.round, e.vote = hv then
       return S
     -- two distinct votes by this validator are already held
