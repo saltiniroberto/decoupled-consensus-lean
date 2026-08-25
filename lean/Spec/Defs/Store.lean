@@ -214,11 +214,11 @@ structure Store (Validator : Type) where
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
       its use in `08_FinalityVote.lean`. Written only by those rules. -/
   H : SigningHistory Validator
-  /-- `Σ.i`, the validator running this node — the protocol's `ℓ`, which its figures treat
+  /-- `Σ.id`, the validator running this node — the protocol's `ℓ`, which its figures treat
       as ambient and **its store does not list**. A field here, so a duty can read its
       own identity instead of taking it as a parameter. Written by nothing: fixed at
       `gen`. -/
-  i : Validator
+  id : Validator
 
 /-- The initial store: `Σ.T = {B_gen}`, `Σ.live_confirmed = Σ.latest_confirmed = B_gen`,
     "other fields are empty".
@@ -251,7 +251,7 @@ def Store.gen (i : Validator) : Store Validator where
   rootProposal := fun _ => none
   sgRoot := fun _ => none
   H := SigningHistory.gen
-  i := i
+  id := i
 
 /-! ## The live tree
 

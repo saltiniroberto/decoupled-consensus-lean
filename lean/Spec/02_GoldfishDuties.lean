@@ -16,10 +16,10 @@ The routines appear callee-first; the figure's order is `on_tick`, `process_bloc
 **`03_AvailableConfirmation.lean` comes first in the import order** although it is the
 later file: `on_tick` calls `update_confirmation`.
 
-## `ℓ` is `Σ.i`, and the proposer test is a parameter
+## `ℓ` is `Σ.id`, and the proposer test is a parameter
 
 The protocol writes `ℓ` for the validator running the node. This rendering reads it off
-the store — `Σ.i`, fixed at `gen` — so no duty takes an identity parameter.
+the store — `Σ.id`, fixed at `gen` — so no duty takes an identity parameter.
 
 `on_tick` asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside this
 specification's scope — a slot simply *has* an assigned proposer — so `on_tick`
@@ -198,9 +198,9 @@ def Store.goldfishVote (S : Store Validator)
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
   let H ← Fig1.getHead S votes (s - 1)
-  if S.i ∈ Committees.K s then
+  if S.id ∈ Committees.K s then
     -- `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
-    let vote := GoldfishVote.mk (validator := S.i) (slot := s) (target := H)
+    let vote := GoldfishVote.mk (validator := S.id) (slot := s) (target := H)
     broadcast (Message.gfVote vote)
     return S.processGoldfishVote vote
   return S
@@ -230,7 +230,7 @@ def Fig2.onTick (S : Store Validator) (t : Int)
   let s := (t / (4 * (Δ : Int))).toNat                         -- `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
-  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s S.i then
+  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s S.id then
     return ← S.proposeBlock
   if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then
     return ← S.goldfishVote

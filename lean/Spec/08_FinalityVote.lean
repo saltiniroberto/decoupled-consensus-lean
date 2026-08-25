@@ -119,7 +119,7 @@ def Store.finalityVote (S : Store Validator) :
 
     A `NDREB` duty, as every duty: the attestation leaves by `broadcast` —
     `Message.attestation`, the wire decision recorded on that constructor — and the
-    returned store carries both record writes. The signer is the store's own `Σ.i`; the
+    returned store carries both record writes. The signer is the store's own `Σ.id`; the
     round is `round(Σ.s)`; `head` stays explicit — producing the SG head is the
     confirmation rule's concern, so the attestation carries the head it is given rather
     than deriving one.
@@ -128,7 +128,7 @@ def Store.fgVote (S : Store Validator) (head : Option (Block Validator)) :
     NDREB Validator (Store Validator) := do
   let { pair := fp, state := S } := S.finalityVote  -- first the finality pair
   let { pair := hp, state := S } ← S.heightVote     -- then the current-height pair
-  broadcast (Message.attestation (Attestation.mk (validator := S.i)
+  broadcast (Message.attestation (Attestation.mk (validator := S.id)
     (round := round S.s) (head := head) (heightPair := hp) (finalityPair := fp)))
   return S
 

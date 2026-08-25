@@ -101,7 +101,7 @@ def Store.sgVote (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let r := round S.s
-  let vote := SGVote.mk (validator := S.i) (round := r) (head := some S.liveConfirmed)
+  let vote := SGVote.mk (validator := S.id) (round := r) (head := some S.liveConfirmed)
   broadcast (Message.sgVote vote)
   return S.processSGVote vote
 

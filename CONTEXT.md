@@ -221,11 +221,11 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   macros still write with brackets, consulting no instance.
 - **`E_F(Σ)` is not rendered** — no figure reads it, and a definition lands with its
   first consumer.
-- **`Σ.H` and `Σ.i` are this spec's own store fields.** `Σ.H` is the durable signing
-  record behind the finality-vote rules; `Σ.i` is the node's validator (2026-08-24:
-  `fgVote` takes no identity parameter), fixed at `Store.gen`, written by nothing. Open:
-  the other duties still take `i` as a parameter; whether they switch to `Σ.i` is
-  undecided.
+- **`Σ.H` and `Σ.id` are this spec's own store fields.** `Σ.H` is the durable signing
+  record behind the finality-vote rules; `Σ.id` is the node's validator — `i` until
+  Roberto's rename, 2026-08-25 — fixed at `Store.gen` and written by nothing. Since
+  2026-08-25 every duty reads it (`fgVote` did from the start, 2026-08-24); no duty takes
+  an identity parameter.
 - **`DutyResult` is the boundary object**: `state` and `send`, the field names of
   lean-sts's `NodeStepResult` (whose `send` is a `Multiset` for framework-internal
   reasons this layer does not have). Built only by `NDREB.outcomes`; no duty returns one.
@@ -596,7 +596,7 @@ works but duplicates the sequence in a `def`.
      singleton outcome set. The old `coherence-invariant` branch predates this store and
      does not transfer.
    - **Open questions awaiting Roberto's call**: renaming the `Fig<n>.…` declaration
-     prefixes. (Ruled: `R ≥ 2` — pending above; the duties read `Σ.i`, no identity
+     prefixes. (Ruled: `R ≥ 2` — pending above; the duties read `Σ.id`, no identity
      parameter — done 2026-08-25.)
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
