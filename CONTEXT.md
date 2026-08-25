@@ -94,11 +94,14 @@ Update this list when a new call lands.
   bears the plain `Store` name; `on_tick`'s is the SG layer's, rendered as a call); a
   bare name for everything defined once (`ghost`, `goldfishScore`, its prefix spelled
   since no namespace carries it). `voters_count` is a `let` at each of its three sites —
-  a local, like the equivocator set, not a definition. **A projection is `map'` with an
-  explicit lambda; no `Finset.image` and no `biUnion` in spec bodies** (Roberto,
-  2026-08-25; `Finset.map'` is `image` under the expected name, `FinsetM.lean` — the
-  unprimed `map` takes an embedding and cannot project; `imageM`, the raising fold, is
-  unaffected; the vote projections out of the timestamped elements are the consumers).
+  a local, like the equivocator set, not a definition. **A projection is the image comprehension**
+  (Roberto, 2026-08-25): `{e.vote | e ∈ S.gfVotes s}` and, conditioned,
+  `{e.vote | e ∈ S.gfVotes s, e.time < c}` — Python's set comprehension, a scoped term
+  macro in `Notation.lean` expanding to `Finset.map'` (`FinsetM.lean`, `image` under the
+  name a programmer expects; the unprimed `map` takes an embedding and cannot project).
+  Measured: it coexists with Mathlib's sep-builder and `Set` builders
+  (`scratch/FinsetComprehensionProbe.lean`). No bare `image` and no `biUnion` in spec
+  bodies; `imageM`, the raising fold, is unaffected.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
   dependent `if`s alone, no `have`s. The `if`s bind `_`, not a name — the tactic reads

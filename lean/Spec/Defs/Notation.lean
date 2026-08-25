@@ -151,6 +151,22 @@ macro_rules
       `(doElem| let mut $y:ident ←
           (Finset.filterM (fun $x => do return $p) $s : DRE _))
 
+/-- `{f x | x ∈ s}`, the image comprehension — `s.map' fun x => f x` — and its
+    conditioned form `{f x | x ∈ s, p x}`, filter then project: Python's
+    `{f(x) for x in s if p(x)}`. Mathlib's sep-builder `{x ∈ s | p}` and the `Set`
+    builders parse untouched beside them (measured). -/
+scoped syntax (name := finsetImg) (priority := high)
+  "{" term " | " ident " ∈ " term "}" : term
+
+/-- The conditioned form of the image comprehension above. -/
+scoped syntax (name := finsetImgCond) (priority := high)
+  "{" term " | " ident " ∈ " term ", " term "}" : term
+
+macro_rules
+  | `({$f | $x:ident ∈ $s}) => `(Finset.map' $s (fun $x => $f))
+  | `({$f | $x:ident ∈ $s, $p}) =>
+      `(Finset.map' (Finset.filter (fun $x => $p) $s) (fun $x => $f))
+
 /-- `|s|` for `Finset.card s`, as the protocol writes it: `|equivocators| + |supporters|`. Mathlib's shape for the `abs` bars — `atomic`, whitespace-free — so
     `|{v ∈ K | p v}|` parses with the set-builder's own `|` inside, and a bar in a `match`
     alternative is untouched (both measured).

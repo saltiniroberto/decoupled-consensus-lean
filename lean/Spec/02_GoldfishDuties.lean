@@ -164,7 +164,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s                                      -- runs at `t_s`
-  let votes := (S.gfVotes (s - 1)).map' fun e => e.vote
+  let votes := {e.vote | e ∈ S.gfVotes (s - 1)}
   let H ← Fig1.getHead S votes (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings votes
@@ -192,8 +192,8 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     NDREB Validator (Store Validator) := do
   let s := S.s
   -- held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
-  let mut votes := ({e ∈ S.gfVotes (s - 1) |
-    e.time < slotStart (s - 1) + 3 * (Δ : Int)}).map' fun e => e.vote
+  let mut votes := {e.vote | e ∈ S.gfVotes (s - 1),
+    e.time < slotStart (s - 1) + 3 * (Δ : Int)}
   -- the view merge: each processed slot-`s` block offers its carried votes
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
