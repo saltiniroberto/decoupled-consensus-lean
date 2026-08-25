@@ -133,10 +133,11 @@ def Store.mergeView (S : Store Validator) (s : Nat) (view : GoldfishView Validat
   -- every vote carried by a processed slot-`s` block
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
-  -- a validator with two distinct votes in the merged view equivocates
+  -- the validators who voted in the merged view
+  let voters := votes.image (·.validator)
+  -- a voter with two distinct votes in the merged view equivocates
   let equivocators := view.equivocators ∪
-    {v ∈ votes.image (·.validator) |
-      ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
+    {v ∈ voters | ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
   return { votes := votes, equivocators := equivocators }
 
 /-! ## Figure -/
