@@ -7,8 +7,10 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 ## Reads and failure
 
 - **Raise, never answer silently.** A map read whose key may be absent is a raising
-  bracket: `S.σ[B]`, and the three timestamp fields via `TimeMap` (`Store.lean`). The raw
-  `Option` stays reachable by applying the field directly.
+  bracket: `S.σ[B]` (`Store.lean`). The stored votes carry their own times
+  (`TimestampedVote`), so no rule reads a timestamp map any more — that bracket read is
+  parked in `OldDefs.lean`. The raw `Option` stays reachable by applying the field
+  directly.
 - **Set operations over raising reads go through `filterM`/`imageM`** (`FinsetM.lean`), or
   the raising set-builder below.
 

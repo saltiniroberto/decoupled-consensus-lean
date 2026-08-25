@@ -190,10 +190,12 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `optimized-goldfish`** (Roberto, 2026-08-25: "save this branch as optimized-goldfish;
   then branch off from where we diverged from the Goldfish in the paper, but incorporate
   all the other decisions"). Here: `gf_votes[k]` is the two-vote `Finset` with the
-  handler's at-most-two rule, each stored vote timestamped in its own element
-  (`TimestampedVote`, fields `vote`/`time` — Roberto, 2026-08-25; `gfVoteTime` folded
-  away, the freeze and cutoff filters pure, `map'` projecting the votes), the score
-  deriving equivocators from the vote set. On `optimized-goldfish` (head `2524b97`): one
+  handler's at-most-two rule, each stored vote — Goldfish and SG alike — timestamped in
+  its own element (`TimestampedVote`, fields `vote`/`time` — Roberto, 2026-08-25;
+  `gfVoteTime` and `sgVoteTime` folded away, the freeze and cutoff filters pure, the
+  comprehension projecting the votes), the score deriving equivocators from the vote
+  set. Blocks keep the one `TimeMap`, read by nothing; the raising `Σ.timestamp[x]`
+  bracket read lost all readers and is parked in `OldDefs.lean`. On `optimized-goldfish` (head `2524b97`): one
   timed vote per slot and validator (`VoteTime` entries), `gf_equiv` recording the first
   equivocation, every fork-choice rule up to `get_head` consuming a `GoldfishView`
   (votes plus equivocators), and `merge_view` folding the block-carried votes in — its

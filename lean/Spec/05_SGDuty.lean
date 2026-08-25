@@ -66,14 +66,15 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     Store Validator := Id.run do
   let mut S := S
-  if vote.round > round S.s ∨ vote ∈ S.sgVotes vote.round then
+  if vote.round > round S.s ∨ ∃ e ∈ S.sgVotes vote.round, e.vote = vote then
     return S
   -- two distinct votes by this validator are already held
   if ∃ a ∈ S.sgVotes vote.round, ∃ b ∈ S.sgVotes vote.round,
-      a.validator = vote.validator ∧ b.validator = vote.validator ∧ a ≠ b then
+      a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
+      a.vote ≠ b.vote then
     return S
-  S.sgVotes[vote.round] ← S.sgVotes vote.round ∪ {vote}
-  S.sgVoteTime[vote] ← S.t
+  S.sgVotes[vote.round] ← S.sgVotes vote.round ∪
+    {TimestampedVote.mk (vote := vote) (time := S.t)}
   return S
 
 /-! ## Figure `sg_vote(Σ)` — runs at `a_r` -/

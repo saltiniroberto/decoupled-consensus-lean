@@ -22,22 +22,19 @@ naming the layer it arrives in.
 Store-valued variables are named `S` throughout, and nothing else in this subtree uses that
 letter for a Lean binder.
 
-## Timestamps: two maps, and the timestamped Goldfish votes
+## Timestamps: the votes carry theirs, blocks keep the one map
 
 The protocol writes one `Σ.timestamp(x)` over every kind of object. Lean has no such sum
-here, so the stamp lives where the object does. A stored Goldfish vote carries its time
-in its own element — `Σ.gf_votes[k]` holds `TimestampedVote`s, vote and instant
-together, so a stored vote without a stamp is unrepresentable and the freeze and cutoff
-filters are pure. Blocks and SG votes keep a `TimeMap` each, `Option Int` under the
-hood, `none` meaning "not processed". That also stands in for the protocol's
+here, so the stamp lives where the object does. A stored vote — Goldfish or SG — carries
+its time in its own element: `Σ.gf_votes[k]` and `Σ.sg_votes[r]` hold `TimestampedVote`s,
+vote and instant together, so a stored vote without a stamp is unrepresentable and every
+timestamp comparison is a pure filter. Blocks keep the one `TimeMap`, `Option Int` under
+the hood, `none` meaning "not processed" — which also stands in for the protocol's
 `Σ.timestamp(B_gen) = −∞`: genesis is in `Σ.T` from the start with no stamp, and the two
-readings agree because **no rendered rule reads a block's timestamp at all** — the block
-map is written by `process_block` and read by nothing, exactly as in the protocol. An SG
-vote's timestamp is read on a vote drawn from a `sg_votes[·]` set, so always on a
-processed one — which is why the bracket read `Σ.timestamp[x]` **raises**, exactly as
-`Σ.σ[B]` does: an unstamped held vote marks a store the handlers cannot build, and the
-failure reaches the caller instead of the vote silently failing a cutoff. The raw
-`Option` stays reachable by application, `S.sgVoteTime vote`.
+readings agree because **no rendered rule reads a block's timestamp at all**, the map
+written by `process_block` and read by nothing, exactly as in the protocol. With no rule
+reading any `TimeMap`, the raising bracket read `Σ.timestamp[x]` lost its readers and is
+parked in `OldDefs.lean`.
 
 ## What the type does not enforce
 
@@ -52,7 +49,7 @@ facts of this structure.
 
 ## How the indexed fields are read
 
-`Σ.σ[B]` and `Σ.timestamp[x]` wear the protocol's brackets and **raise** — the next
+`Σ.σ[B]` wears the protocol's brackets and **raises** — the next
 paragraph. The vote tables are total maps read by application: `Σ.gf_votes k` and
 `Σ.sg_votes r` are sets, empty if nothing was processed. The indexed writes keep the
 protocol's brackets — `Σ.gf_votes[k] ← …` — through the assignment macros, which
@@ -86,11 +83,11 @@ never rename either.
 ## Extract
 
 `Σ.T` is the tree of processed blocks and `Σ.gf_votes[k]` the set of processed slot-`k`
-votes; both are timestamped, `Σ.timestamp(x)` being the time at which object `x` was
-processed into the store. `Σ.gf_votes[k]` keeps at most two distinct votes per
+votes, each vote stored with the time at which it was processed; `Σ.timestamp(x)` is
+that time. `Σ.gf_votes[k]` keeps at most two distinct votes per
 validator, which is all any rule reads; the same holds for `Σ.sg_votes[r]`, the
-processed round-`r` SG votes, where two distinct heads from one validator in one round
-are an equivocation. SG votes travel only on the wire: blocks do not carry them, and
+processed round-`r` SG votes — likewise timestamped — where two distinct heads from one
+validator in one round are an equivocation. SG votes travel only on the wire: blocks do not carry them, and
 they never enter a Goldfish vote set. `Σ.live_confirmed` is the block the last
 evaluated slot confirmed. `Σ.latest_confirmed` is the monotone record the node exposes;
 no rule in this protocol reads it.
@@ -118,17 +115,12 @@ variable {Validator : Type} [Roots] [DecidableEq Validator]
 
 /-! ### The two named map types, and how each is read -/
 
-/-- A processing-time map, one per kind of object: `Σ.timestamp(x)` restricted to that
-    kind. A named type, so that the raising bracket read below resolves — instances
-    resolve on a type's head constant, and a bare function type has none. A `def` and
-    not an `abbrev`, or the name would unfold away before the lookup. -/
+/-- A processing-time map: `Σ.timestamp(x)` restricted to one kind of object — the
+    blocks', the one remaining. A named type, so a raising bracket read can resolve on
+    it (the read itself is parked in `OldDefs.lean`, nothing reading a timestamp map any
+    more); a `def` and not an `abbrev`, or the name would unfold away before the
+    lookup. -/
 def TimeMap (α : Type) := (x : α) → Option Int
-
-/-- `times[x]`, the raising read: when `x` was processed, or the failure if it was not.
-    The raw `Option` stays reachable by application, the map being a function. -/
-scoped instance timeMapGetElem {α : Type} :
-    GetElem (TimeMap α) α (DRE Int) (fun _ _ => True) where
-  getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
 
 /-- The finality layer's block-state map. Named for the same reason as `TimeMap`. -/
 def StateMap (Validator : Type) := (B : Block Validator) → Option (ChainState Validator)
@@ -185,11 +177,10 @@ structure Store (Validator : Type) where
   /-- `Σ.latest_confirmed`, the monotone record the node exposes. "No rule in this protocol
       reads it" — it is written by `update_confirmation` and nothing else touches it. -/
   latestConfirmed : Block Validator
-  /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer). -/
-  sgVotes : (r : Nat) → Finset (SGVote Validator)
-  /-- `Σ.timestamp(vote)` for an SG vote (SG layer). Written by `process_sg_vote`; no
-      rendered rule reads it, `latest` selecting by round rather than by time. -/
-  sgVoteTime : TimeMap (SGVote Validator)
+  /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer), each stored with
+      the time it was processed. No rendered rule reads the times, `latest` selecting
+      by round rather than by time. -/
+  sgVotes : (r : Nat) → Finset (TimestampedVote (SGVote Validator))
   /-- `Σ.σ[B]`, the stored post-state of each processed block (finality layer). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/
   σ : StateMap Validator
@@ -251,7 +242,6 @@ def Store.gen (i : Validator) : Store Validator where
   liveConfirmed := .genesis
   latestConfirmed := .genesis
   sgVotes := fun _ => ∅
-  sgVoteTime := fun _ => none
   σ := fun B => if B = .genesis then some .gen else none
   F := .genesis
   h_F := 0
