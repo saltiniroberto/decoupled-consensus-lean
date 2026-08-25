@@ -112,7 +112,7 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
   if S.gfVotes vote.slot vote.validator = ⊥ then
     S.gfVotes[vote.slot][vote.validator] ← some (VoteTime.mk (vote := vote) (t := S.t))
   else if ∃ e ∈ S.gfVotes vote.slot vote.validator, e.vote ≠ vote then
-    S.gfEquiv[vote.slot] ← S.gfEquiv[vote.slot] ∪ {vote.validator}
+    S.gfEquiv[vote.slot] ← S.gfEquiv vote.slot ∪ {vote.validator}
   return S
 
 /-! ## Figure -/
@@ -161,7 +161,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   let s := S.s                                      -- runs at `t_s`
   let votes := (S.gfVotesAt (s - 1)).image (·.vote)
   -- the equivocator record, as of this run
-  let marked := S.gfEquiv[s - 1]
+  let marked := S.gfEquiv (s - 1)
   let H ← Fig1.getHead S votes marked (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings votes
@@ -194,7 +194,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   -- the view merge: the loop is an order-free union — see the module header
   votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
   -- the equivocator record, as of this run
-  let marked := S.gfEquiv[s - 1]
+  let marked := S.gfEquiv (s - 1)
   let H ← Fig1.getHead S votes marked (s - 1)
   if i ∈ Committees.K s then
     -- `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`

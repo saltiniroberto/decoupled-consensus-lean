@@ -81,7 +81,7 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
   let early := {e ∈ S.gfVotesAt s | e.t < slotStart s + 2 * (Δ : Int)}
   let late := {e ∈ S.gfVotesAt s | e.t < slotStart s + 6 * (Δ : Int)}
   -- the early votes whose validator the record does not mark, as of this run
-  let votes := ({e ∈ early | e.vote.validator ∉ S.gfEquiv[s]}).image (·.vote)
+  let votes := ({e ∈ early | e.vote.validator ∉ S.gfEquiv s}).image (·.vote)
   -- the denominator is `late`'s participants
   let votersCount := |{v ∈ Committees.K s | ∃ e ∈ late, e.vote.validator = v}|
   -- the majority condition, with no current-slot escape — see the module header;

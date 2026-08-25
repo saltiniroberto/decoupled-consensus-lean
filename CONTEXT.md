@@ -184,9 +184,9 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   slot-`k` vote processed from `i`; a later differing vote is never stored — it writes
   the equivocator record. Same day, all on Roberto's word: the entry is a `VoteTime` —
   vote and processing time together, `gfVoteTime` deleted — and the record is
-  `gfEquiv : VoteTable Validator`, the per-slot set of caught equivocators (first a
-  timed map, then a `Bool` map, then the set — each his revision). Consequences,
-  checked read by read:
+  `gfEquiv : (k : Nat) → Finset Validator`, the per-slot set of caught equivocators
+  (first a timed map, then a `Bool` map, then the set — each his revision).
+  Consequences, checked read by read:
   - the stored entry carries its time, so an unstamped stored vote is unrepresentable:
     the freeze and both confirmation cutoffs are pure entry filters, no `∈ᴹ` and no
     raise (the `let mut … ←ᴹ` form of the raising builder lost its only use — kept);
@@ -206,12 +206,15 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     proposal now carries at most one vote per validator, and no out-of-committee votes.
   Declined: keeping the two-vote sets (the size was the point). `timeBefore`, briefly
   added for the timed record, went with the `Bool`.
-- **The three indexed fields read with brackets, and a possibly-absent read raises.**
-  Each map is a named type (`VoteTable`, `TimeMap`, `StateMap`) because instances resolve
-  on a type's head constant and a bare function type has none. The vote tables are total
-  (`GetElem` validity `True`); `Σ.σ[B]` and `Σ.timestamp[x]` return `DRE` and raise on an
-  unrecorded key; the raw `Option` stays reachable by application. `B ∈ σ` is the
-  membership, `.isSome` internally.
+- **A raising read wears brackets; a total map is a plain function.** `Σ.σ[B]` and
+  `Σ.timestamp[x]` return `DRE` and raise on an unrecorded key — their map types
+  (`StateMap`, `TimeMap`) are named because instances resolve on a type's head constant
+  and a bare function type has none; the raw `Option` stays reachable by application, and
+  `B ∈ σ` is the membership, `.isSome` internally. The total maps (`sg_votes`,
+  `gf_equiv`, and the two-level `gf_votes`) are bare function types read by application —
+  `VoteTable` and its bracket read existed until Roberto dropped them (2026-08-25: "not
+  sure what it gives us"); the assignment macros still write with brackets, consulting no
+  instance.
 - **`E_F(Σ)` is not rendered** — no figure reads it, and a definition lands with its
   first consumer.
 - **`Σ.H` and `Σ.i` are this spec's own store fields.** `Σ.H` is the durable signing

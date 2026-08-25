@@ -56,15 +56,12 @@ facts of this structure.
 
 ## How the indexed fields are read
 
-`Σ.sg_votes[r]`, `Σ.gf_equiv[k]` and `Σ.σ[B]` are written with the protocol's brackets,
-and each gets there differently. `Σ.gf_votes[·]` is a two-level map read by
-application — `Σ.gf_votes k i`, an `Option` tested against `⊥` — and the vote-set rules
-consume the slot's stored votes through the collected view `gf_votes_at(Σ, k)` below.
-
-The two `VoteTable`s — the SG votes, and the Goldfish equivocator record — are **total**:
-every index has a set, empty if nothing was processed. So `VoteTable` carries a `GetElem`
-whose validity is `True`, closed by `get_elem_tactic`'s own `trivial`, and a read owes
-nothing.
+Most maps are plain functions read by application: `Σ.sg_votes r` and `Σ.gf_equiv k` are
+total, every index a set, empty if nothing was processed; `Σ.gf_votes k i` is an `Option`
+tested against `⊥`, and the vote-set rules consume the slot's stored votes through the
+collected view `gf_votes_at(Σ, k)` below. The two-level writes keep the protocol's
+brackets — `Σ.gf_votes[k][i] ← …`, `Σ.gf_equiv[k] ← …` — through the assignment macros,
+which never consult an instance.
 
 The state map is not total, and `Σ.σ[B]` **raises**: it returns
 `DRE (ChainState Validator)`, so `let σB ← Σ.σ[B]` propagates a block the map does
@@ -125,22 +122,12 @@ namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator]
 
-/-! ### The three map types, and how each is read -/
-
-/-- A per-index set: `Σ.sg_votes[·]`'s processed votes, `Σ.gf_equiv[·]`'s equivocators.
-    A named type, so that `Σ.sg_votes[r]` resolves — instances resolve on a type's head
-    constant, and a bare function type has none. A `def` and not an `abbrev`, or the name
-    would unfold away before the lookup. -/
-def VoteTable (α : Type) := (k : Nat) → Finset α
-
-/-- `table[k]`: the set at an index. Validity is `True` — every index has a set — so
-    `get_elem_tactic` closes it with `trivial` and a read owes nothing. -/
-scoped instance voteTableGetElem {α : Type} :
-    GetElem (VoteTable α) Nat (Finset α) (fun _ _ => True) where
-  getElem tbl k _ := tbl k
+/-! ### The two named map types, and how each is read -/
 
 /-- A processing-time map, one per kind of object: `Σ.timestamp(x)` restricted to that
-    kind. Named for the same reason as `VoteTable`. -/
+    kind. A named type, so that the raising bracket read below resolves — instances
+    resolve on a type's head constant, and a bare function type has none. A `def` and not
+    an `abbrev`, or the name would unfold away before the lookup. -/
 def TimeMap (α : Type) := (x : α) → Option Int
 
 /-- `times[x]`, the raising read: when `x` was processed, or the failure if it was not.
@@ -149,7 +136,7 @@ scoped instance timeMapGetElem {α : Type} :
     GetElem (TimeMap α) α (DRE Int) (fun _ _ => True) where
   getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
 
-/-- The finality layer's block-state map. Named for the same reason as `VoteTable`. -/
+/-- The finality layer's block-state map. Named for the same reason as `TimeMap`. -/
 def StateMap (Validator : Type) := (B : Block Validator) → Option (ChainState Validator)
 
 /-- `B ∈ σ`: the map records a state for `B`. -/
@@ -204,14 +191,14 @@ structure Store (Validator : Type) where
   /-- `Σ.gf_equiv[k]`: the validators from which a slot-`k` vote differing from the
       stored one has been processed — the equivocator record. It stands where a second
       stored vote used to witness an equivocation; a rule reads it as of its own run. -/
-  gfEquiv : VoteTable Validator
+  gfEquiv : (k : Nat) → Finset Validator
   /-- `Σ.live_confirmed`, the block the last evaluated slot confirmed. -/
   liveConfirmed : Block Validator
   /-- `Σ.latest_confirmed`, the monotone record the node exposes. "No rule in this protocol
       reads it" — it is written by `update_confirmation` and nothing else touches it. -/
   latestConfirmed : Block Validator
   /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer). -/
-  sgVotes : VoteTable (SGVote Validator)
+  sgVotes : (r : Nat) → Finset (SGVote Validator)
   /-- `Σ.timestamp(vote)` for an SG vote (SG layer). Written by `process_sg_vote`; no
       rendered rule reads it, `latest` selecting by round rather than by time. -/
   sgVoteTime : TimeMap (SGVote Validator)
