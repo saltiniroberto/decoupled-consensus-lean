@@ -134,7 +134,7 @@ def Store.mergeView (S : Store Validator) (s : Nat) (view : GoldfishView Validat
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
   -- the validators who voted in the merged view
-  let voters := votes.image (·.validator)
+  let voters := votes.biUnion fun a => {a.validator}
   -- a voter with two distinct votes in the merged view equivocates
   let equivocators := view.equivocators ∪
     {v ∈ voters | ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
@@ -186,7 +186,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   let s := S.s                                      -- runs at `t_s`
   -- the view as of this run: every stored vote, every recorded equivocation
   let view : GoldfishView Validator :=
-    { votes := (S.gfVotesAt (s - 1)).image (·.vote)
+    { votes := (S.gfVotesAt (s - 1)).biUnion fun e => {e.vote}
       equivocators := {v ∈ Electorate.V (Validator := Validator) |
         S.gfEquiv (s - 1) v ≠ ⊥} }
   let H ← Fig1.getHead S view (s - 1)
@@ -218,7 +218,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   -- the view at the freeze: votes stored and equivocations recorded before `t_{s−1} + 3Δ`
   let frozen : GoldfishView Validator :=
     { votes := ({e ∈ S.gfVotesAt (s - 1) |
-        e.time < slotStart (s - 1) + 3 * (Δ : Int)}).image (·.vote)
+        e.time < slotStart (s - 1) + 3 * (Δ : Int)}).biUnion fun e => {e.vote}
       equivocators := {v ∈ Electorate.V (Validator := Validator) |
         timeBefore (S.gfEquiv (s - 1) v) (slotStart (s - 1) + 3 * (Δ : Int))} }
   -- the view merge: the block-carried votes update the frozen view

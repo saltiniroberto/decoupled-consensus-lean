@@ -82,7 +82,8 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
   let late := {e ∈ S.gfVotesAt s | e.time < slotStart s + 6 * (Δ : Int)}
   -- the early votes whose validator's first equivocation is not before `t_s + 6Δ`
   let votes := ({e ∈ early |
-    ¬ timeBefore (S.gfEquiv s e.vote.validator) (slotStart s + 6 * (Δ : Int))}).image (·.vote)
+    ¬ timeBefore (S.gfEquiv s e.vote.validator) (slotStart s + 6 * (Δ : Int))}).biUnion
+    fun e => {e.vote}
   -- the denominator is `late`'s participants
   let votersCount := |{v ∈ Committees.K s | ∃ e ∈ late, e.vote.validator = v}|
   -- the majority condition, with no current-slot escape — see the module header;
