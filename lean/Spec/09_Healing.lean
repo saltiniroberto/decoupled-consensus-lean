@@ -106,10 +106,13 @@ def Store.headSupports (S : Store Validator) (k : Int) (i : Validator) (c : Int)
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) (B : Block Validator) :
     Decidable (S.headSupports k i c B) := inferInstanceAs (Decidable (∃ _ ∈ _, _))
 
-/-- Validator `i`'s stored round-`k` equivocation time is before instant `c`. Absent while
-    no equivocation was processed, and an absent entry is before nothing. -/
+/-- Validator `i` has equivocated in round `k` as of instant `c`: two distinct stored SG
+    votes of its, both processed before `c` — the detection time is the later of the two
+    stamps, so both must clear the cutoff. -/
 def Store.equivBefore (S : Store Validator) (k : Int) (i : Validator) (c : Int) : Prop :=
-  ∃ tE ∈ S.equiv k i, tE < c
+  ∃ a ∈ S.sgVotes k, ∃ b ∈ S.sgVotes k,
+    a.vote.validator = i ∧ b.vote.validator = i ∧ a.vote ≠ b.vote ∧
+    a.time < c ∧ b.time < c
 
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) :
     Decidable (S.equivBefore k i c) := inferInstanceAs (Decidable (∃ _ ∈ _, _))
