@@ -117,8 +117,8 @@ def Store.equivBefore (S : Store Validator) (k : Int) (i : Validator) (c : Int) 
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) :
     Decidable (S.equivBefore k i c) := inferInstanceAs (Decidable (∃ _ ∈ _, _))
 
-/-! ## Figure -/
-/-- `support_scores(Σ, r, j, B)`: the pair `(S_j(B), S̄_j(B))` of round-`r` support scores
+/-! ## Figure `support_scores(Σ, r, j, B)` -/
+/-- The pair `(S_j(B), S̄_j(B))` of round-`r` support scores
     for `B`, read from the round-`(r−1)` entries against the grade instant `Γ_j`.
 
     `H_j(B)` is the set of validators with a stored round-`(r−1)` vote processed before
@@ -134,8 +134,8 @@ def Store.supportScores (S : Store Validator) (r : Nat) (j : Int) (B : Block Val
   let Ej := {i ∈ Electorate.V (Validator := Validator) | S.equivBefore (r - 1) i (Γ j r)}
   (w(Hj \ Ej), w(Hj ∪ Ej))  -- S_j(B), S̄_j(B)
 
-/-! ## Figure -/
-/-- `two_view_support(Σ, r, B)`: `S_{−1,1}(B)`, the two-view score — support counted with
+/-! ## Figure `two_view_support(Σ, r, B)` -/
+/-- `S_{−1,1}(B)`, the two-view score — support counted with
     the head cutoff at `Γ_{−1}` and the equivocation cutoff at `Γ_1`: the validators
     with a stored round-`(r−1)` vote processed before `Γ_{−1}` whose head supports `B`,
     net of those the stored votes catch equivocating before `Γ_1`. -/
@@ -183,8 +183,8 @@ instance (S : Store Validator) (r : Nat) (B : Block Validator) : Decidable (S.G0
 def deepest (G : Finset (Block Validator)) : Finset (Block Validator) :=
   {B ∈ G | ∀ C ∈ G, ¬ B ≺ C}
 
-/-! ## Figure -/
-/-- `get_proposal_root(Σ, r)`: the root the round's opening proposer offers in its opening
+/-! ## Figure `get_proposal_root(Σ, r)` -/
+/-- The root the round's opening proposer offers in its opening
     block — the deepest block in the filtered tree with grade 2, or the fork-choice root
     when no such block exists. -/
 def Store.getProposalRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := do
@@ -195,8 +195,8 @@ def Store.getProposalRoot (S : Store Validator) (r : Nat) : NDRE (Block Validato
     return D
   return S.forkChoiceRoot
 
-/-! ## Figure -/
-/-- `get_lower_root(Σ, r)`: the receiver's fallback against the proposal — the deepest
+/-! ## Figure `get_lower_root(Σ, r)` -/
+/-- The receiver's fallback against the proposal — the deepest
     block in the filtered tree with grade 3 strictly descending from the fork-choice root,
     or the fork-choice root itself when there is none. -/
 def Store.getLowerRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := do
@@ -206,8 +206,8 @@ def Store.getLowerRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) 
     return D
   return S.forkChoiceRoot
 
-/-! ## Figure -/
-/-- `get_sg_root(Σ, r)`: the round's SG root, derived at the opening slot's vote time. The
+/-! ## Figure `get_sg_root(Σ, r)` -/
+/-- The round's SG root, derived at the opening slot's vote time. The
     proposed root `R_prop` is accepted exactly when the lower root precedes it, it is in
     the filtered tree, and it holds grade 1; otherwise, and while no opening block has
     registered a proposal, the SG root is the lower root. -/
@@ -220,8 +220,8 @@ def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := 
     return Rprop
   return Rlow
 
-/-! ## Figure -/
-/-- `get_walk_root(Σ, r)`: where a Goldfish walk of round `r` starts — the stored SG root
+/-! ## Figure `get_walk_root(Σ, r)` -/
+/-- Where a Goldfish walk of round `r` starts — the stored SG root
     when the fork-choice root precedes it, else the fork-choice root.
 
     `Σ.sg_root[r]` is read by the raising extraction: the protocol runs this only after
@@ -233,8 +233,8 @@ def Store.getWalkRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) :=
     return RSG
   return C
 
-/-! ## Figure -/
-/-- `get_action_root(Σ, r)`: the root anchoring the round's SG and FG outputs, derived at
+/-! ## Figure `get_action_root(Σ, r)` -/
+/-- The root anchoring the round's SG and FG outputs, derived at
     `a_r` — the walk root when it is in the filtered tree and either equals the
     fork-choice root or holds grade 1; otherwise the fork-choice root itself. A
     validator's own selection needs no external backing, while a round root adopted from
