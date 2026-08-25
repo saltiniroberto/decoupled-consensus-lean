@@ -182,23 +182,30 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   "implement the same logic used in `on_attestation` [the healing source's handler] to
   the gfVotes to reduce the size of the votes stored"). `Σ.gf_votes[k][i]` is the first
   slot-`k` vote processed from `i`; a later differing vote is never stored — it writes
-  the equivocation record `Σ.gf_equiv[k][i] ← Σ.t`, once. Every downstream rule's
-  behaviour is preserved, checked read by read:
-  - the old "second stored vote before cutoff" tests are exactly `gf_equiv` before the
-    same cutoff, the mark's time being the differing vote's processing time
-    (`update_confirmation`'s cleaning; the voter's freeze);
-  - `goldfish_score` gains a `marked` input — the record read at the caller's own
-    cutoff: the voter at the freeze, the proposer unbounded, confirmation cleaning its
-    votes and passing `∅`. The two-distinct-votes test stays beside it, for the
-    block-carried votes in the voter's merged view, which the store never deduplicates;
-  - the vote-set rules consume `gf_votes_at(Σ, k)`, the stored votes of `K_k` collected
-    as a `Finset`. A stored vote from outside the committee is not collected, which no
-    rule can observe — every score and count already filters by `K_k`. The one visible
-    change is the intended one: a proposal now carries at most one vote per validator,
-    and no out-of-committee votes.
-  Declined: keeping the two-vote sets (the size was the point), and folding the
-  processing time into the entry (the `TimeMap` stays, so `Σ.timestamp(vote)` and the
-  `∈ᴹ` cutoff filters are unchanged).
+  the equivocator record. Same day, all on Roberto's word: the entry is a `VoteTime` —
+  vote and processing time together, `gfVoteTime` deleted — and the record is
+  `gfEquiv : VoteTable Validator`, the per-slot set of caught equivocators (first a
+  timed map, then a `Bool` map, then the set — each his revision). Consequences,
+  checked read by read:
+  - the stored entry carries its time, so an unstamped stored vote is unrepresentable:
+    the freeze and both confirmation cutoffs are pure entry filters, no `∈ᴹ` and no
+    raise (the `let mut … ←ᴹ` form of the raising builder lost its only use — kept);
+  - `goldfish_score` gains a `marked` input — the record read as of the caller's run:
+    the voter, the proposer, and confirmation (which cleans its votes and passes `∅`)
+    all read `Σ.gf_equiv[k]` directly. The two-distinct-votes test stays beside it, for
+    the block-carried votes in the voter's merged view, which the store never
+    deduplicates. With the record untimed, the voter's equivocator set is no longer
+    freeze-bounded — marks landed after `t_{s−1} + 3Δ` now count (Roberto's call,
+    implicit in dropping the time); `update_confirmation`'s read is equivalent to the
+    old late-cutoff one, an object processed exactly at a scheduled instant being
+    processed after that instant's tick;
+  - the vote-set rules consume `gf_votes_at(Σ, k)`, the stored entries of `K_k`
+    collected as a `Finset`, and take the votes by `.image (·.vote)`. A stored vote from
+    outside the committee is not collected, which no rule can observe — every score and
+    count already filters by `K_k`. The one visible change is the intended one: a
+    proposal now carries at most one vote per validator, and no out-of-committee votes.
+  Declined: keeping the two-vote sets (the size was the point). `timeBefore`, briefly
+  added for the timed record, went with the `Bool`.
 - **The three indexed fields read with brackets, and a possibly-absent read raises.**
   Each map is a named type (`VoteTable`, `TimeMap`, `StateMap`) because instances resolve
   on a type's head constant and a bare function type has none. The vote tables are total
@@ -349,8 +356,10 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   - the per-round maps are `Int`-indexed: round `r` reads its round-`(r − 1)` entries and
     round `0` must find round `−1` empty, where a `Nat` index would truncate `0 − 1` to
     `0` — confirmed;
-  - `HeadEntry` is a named structure (`H`, `t`), `deriving DecidableEq` — a plain
-    structure, so the mutual-family deriving limit does not apply (not raised with him);
+  - the head entry is a named structure, `deriving DecidableEq` — a plain structure, so
+    the mutual-family deriving limit does not apply. It landed as `HeadEntry` (`H`, `t`)
+    and became `VoteTime (α : Type)` (`vote`, `t`) on Roberto's word (2026-08-25), one
+    entry type for the healing heads and the stored Goldfish votes;
   - "the deepest block in `G`" is a pick from `deepest G`, the `⪯`-maximal blocks; the
     one-chain claim that makes the pick a singleton is `Analysis/` matter, not assumed —
     confirmed;

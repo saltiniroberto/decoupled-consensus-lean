@@ -9,7 +9,7 @@ over a stricter vote set and a larger denominator."
 ## What makes it stricter
 
 Two cutoffs on the same pool, `early ⊆ late`; the walk scores the `early` votes whose
-validator the equivocation record does not mark before the late cutoff, against `late`'s
+validator the equivocation record does not mark as of the evaluation, against `late`'s
 participants — the rule itself is the Extract prose below. The two consequences the
 protocol draws there — the scored set holds at most one vote per validator, and at most
 one child can pass the eligibility condition — are facts about the sets rather than
@@ -35,11 +35,11 @@ Confirmation is the same walk over a stricter vote set and a larger denominator.
 `early` and `late` be the stored slot-`s` votes timestamped before `t_s + 2Δ` and
 before `t_s + 6Δ`. The walk scores
 
-`votes = {vote ∈ early : Σ.gf_equiv[s][vote.validator] is not before t_s + 6Δ}`
+`votes = {vote ∈ early : vote.validator ∉ Σ.gf_equiv[s]}`
 
 against the participant count of `late`: a validator counts when it voted in time and
-no differing vote of its was processed before the late cutoff, while the denominator
-counts everyone who voted at all.
+the evaluation finds no equivocation mark against it, while the denominator counts
+everyone who voted at all.
 
 The store keeps one vote per slot and validator, so `votes` holds at most one vote per
 validator and the score's equivocator inputs are empty here. At most one child can pass
@@ -68,10 +68,9 @@ open Params
     `Σ.latest_confirmed` only ever moves forward, its write behind the test
     `Σ.latest_confirmed ⪯ H`.
 
-    Both cutoffs read the timestamps with the raising bracket, through `Finset.filterM`
-: a held vote the store never stamped raises rather than silently
-    failing the cutoff. `process_goldfish_vote` stamps everything it stores, so the raise
-    marks a store the handlers cannot build — a coherence fact for `Analysis/`.
+    Both cutoffs are pure filters on the stored entries: each entry carries the time it
+    was processed, so an unstamped stored vote is unrepresentable and nothing here can
+    raise but the walk itself.
 
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the
     Goldfish duties' instants are. -/
@@ -79,13 +78,12 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
-  let early ← {vote ∈ᴹ S.gfVotesAt s | (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)}
-  let late ← {vote ∈ᴹ S.gfVotesAt s | (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)}
-  -- the early votes whose validator the record does not mark before `t_s + 6Δ`
-  let votes := {vote ∈ early |
-    ¬ timeBefore (S.gfEquiv s vote.validator) (slotStart s + 6 * (Δ : Int))}
+  let early := {e ∈ S.gfVotesAt s | e.t < slotStart s + 2 * (Δ : Int)}
+  let late := {e ∈ S.gfVotesAt s | e.t < slotStart s + 6 * (Δ : Int)}
+  -- the early votes whose validator the record does not mark, as of this run
+  let votes := ({e ∈ early | e.vote.validator ∉ S.gfEquiv[s]}).image (·.vote)
   -- the denominator is `late`'s participants
-  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
+  let votersCount := |{v ∈ Committees.K s | ∃ e ∈ late, e.vote.validator = v}|
   -- the majority condition, with no current-slot escape — see the module header;
   -- `votes` is already cleaned, so the score's equivocator inputs are empty
   let eligible := fun B => 2 * goldfishScore votes ∅ s B > votersCount

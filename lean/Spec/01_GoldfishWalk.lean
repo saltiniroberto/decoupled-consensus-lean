@@ -66,14 +66,14 @@ every block's score without its target being read at all.
 
 The score learns equivocators two ways. The store keeps one vote per slot and validator
 and records in `Σ.gf_equiv[·]` when a differing vote was first processed, so each caller
-passes `marked`, that record read at its own cutoff. The two-distinct-votes test on the
+passes `marked`, that record read as of its own run. The two-distinct-votes test on the
 set itself remains beside it, for the votes a set carries past the store — the voter's
 merged view holds block-carried votes, and two of those can conflict.
 
 ## Extract — Definition (Goldfish score and walk)
 
 Fix a vote slot `s`, a set `votes` of slot-`s` votes, and a set `marked` of validators
-the store's equivocation record marks at the caller's cutoff. Validator `v ∈ K_s`
+the store's equivocation record marks as of the caller's run. Validator `v ∈ K_s`
 equivocates when it is marked or `votes` holds two of its distinct votes, and
 participates when `votes` holds at least one of its votes.
 `goldfish_score(votes, marked, s, B)` counts every equivocator plus every
@@ -152,7 +152,7 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     `let`, as the figure writes it — the protocol defines no standalone function.
 
     `marked` is the set of validators the store's equivocation record
-    (`Σ.gf_equiv[·]`) marks, each caller reading the record at its own cutoff; the store
+    (`Σ.gf_equiv[·]`) marks, each caller reading the record as of its own run; the store
     keeps one vote per validator, so a stored second vote no longer witnesses. The
     two-distinct-votes test remains alongside it for the votes a set carries past the
     store — the voter's merged view holds block-carried votes.
