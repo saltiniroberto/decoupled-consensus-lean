@@ -94,10 +94,11 @@ Update this list when a new call lands.
   bears the plain `Store` name; `on_tick`'s is the SG layer's, rendered as a call); a
   bare name for everything defined once (`ghost`, `goldfishScore`, its prefix spelled
   since no namespace carries it). `voters_count` is a `let` at each of its three sites —
-  a local, not a definition. **A spec-body projection is `image` with an explicit lambda; no `biUnion` there**
-  (Roberto, 2026-08-25, settled over three exchanges): `votes.image fun a => a.validator`
-  is the accepted spelling — the lambda written out, not the `(·.f)` dot. `Finset.map`
-  cannot stand in (it takes an embedding, and these projections are not injective).
+  a local, not a definition. **A spec-body projection is `map'` with an explicit lambda; no `biUnion` there**
+  (Roberto, 2026-08-25, settled over four exchanges): `votes.map' fun a => a.validator` —
+  `Finset.map'` is `Finset.image` under the name a programmer expects (`FinsetM.lean`),
+  the lambda written out, not the `(·.f)` dot. The unprimed `Finset.map` cannot stand in
+  (it takes an embedding, and these projections are not injective).
   Collections stay in the `Defs` vocabulary (`gf_votes_at`, `gf_votes_before`,
   `Store.lean`), whose internals may use `biUnion`/`Option.map` — the
   `.isSome`-internally precedent — so the timed entries never reach a spec body.

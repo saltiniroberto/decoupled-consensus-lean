@@ -41,8 +41,9 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
   `OldDefs.lean`.)
 - **No `∣` (divides)**: write `% … = 0`.
-- **A projection is `image` with an explicit lambda; no `biUnion` in spec bodies**:
-  `votes.image fun a => a.validator` (`merge_view`), the lambda written out. Collections
+- **A projection is `map'` with an explicit lambda; no `biUnion` in spec bodies**:
+  `votes.map' fun a => a.validator` (`merge_view`) — `Finset.map'` is `Finset.image`
+  under the name a programmer expects (`FinsetM.lean`), the lambda written out. Collections
   live in the vocabulary layer (`gf_votes_at`, `gf_votes_before` — `Store.lean`, whose
   internals may use `biUnion`/`Option.map`), so the timed entries never reach a spec
   body. `Finset.map` cannot stand in — it takes an embedding, and these projections are

@@ -60,4 +60,10 @@ def imageM [DecidableEq β] [Monad m]
     (f : α → m β) (s : Finset α) : m (Finset β) :=
   s.fold unionM (pure ∅) fun a => do return {← f a}
 
+/-- `s.map' f`: `Finset.image` under the name a programmer expects —
+    `votes.map' fun a => a.validator`. The unprimed `map` is taken: Mathlib's
+    `Finset.map` takes an embedding, and a spec projection is not injective. -/
+def map' [DecidableEq β] (s : Finset α) (f : α → β) : Finset β :=
+  s.image f
+
 end Finset
