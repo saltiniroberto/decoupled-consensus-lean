@@ -204,7 +204,10 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     "perhaps … a struct passed to getHead and so on"); `update_confirmation` cleans its
     votes by the record at the late cutoff and passes an equivocator-free view, so its
     score stays supporters-only as before; the collected `gf_votes_at(Σ, k)` ranges over
-    `K_k` (no rule reads an out-of-committee vote).
+    `K_k` (no rule reads an out-of-committee vote). The equivocator sets range over `V`
+    (Roberto, same day: "no need to filter on the committee" — the score's own `K_s`
+    filter makes any superset domain observably equal); whether `gf_votes_at` should
+    also range over `V` is not asked yet.
   - **How `merge_view`, `GoldfishView` and `gf_votes_at` render in the extracted PDF is
     deliberately undecided** (Roberto: "for later") — none carries a figure mark yet.
 - **A raising read wears brackets; a total map is a plain function.** `Σ.σ[B]` and

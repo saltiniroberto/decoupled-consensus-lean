@@ -95,8 +95,8 @@ class RootComputation (Validator : Type) [Roots] where
   /-- The root of the block being built, from its parent and its slot. -/
   compute : (parent : Block Validator) → (s : Nat) → Root
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [RootComputation Validator]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator]
+  [Committees Validator] [Params] [RootComputation Validator]
 
 open Params
 
@@ -180,7 +180,8 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   -- the view as of this run: every stored vote, every recorded equivocation
   let view : GoldfishView Validator :=
     { votes := (S.gfVotesAt (s - 1)).image (·.vote)
-      equivocators := {v ∈ Committees.K (s - 1) | S.gfEquiv (s - 1) v ≠ ⊥} }
+      equivocators := {v ∈ Electorate.V (Validator := Validator) |
+        S.gfEquiv (s - 1) v ≠ ⊥} }
   let H ← Fig1.getHead S view (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings view.votes
@@ -211,7 +212,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   let frozen : GoldfishView Validator :=
     { votes := ({e ∈ S.gfVotesAt (s - 1) |
         e.time < slotStart (s - 1) + 3 * (Δ : Int)}).image (·.vote)
-      equivocators := {v ∈ Committees.K (s - 1) |
+      equivocators := {v ∈ Electorate.V (Validator := Validator) |
         timeBefore (S.gfEquiv (s - 1) v) (slotStart (s - 1) + 3 * (Δ : Int))} }
   -- the view merge: the block-carried votes update the frozen view
   let view := S.mergeView s frozen

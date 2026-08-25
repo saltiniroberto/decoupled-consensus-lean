@@ -51,8 +51,8 @@ set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [RootComputation Validator]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator]
+  [Committees Validator] [Params] [RootComputation Validator]
 
 /-! ## Figure `process_sg_vote(Σ, vote)` -/
 /-- Record a round-`r` SG vote with its
