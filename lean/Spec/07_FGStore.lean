@@ -207,14 +207,14 @@ def Store.getFilteredBlockTree (S : Store Validator) :
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
     none — and it is what `get_head` hands the walk, `ghost`'s condition slot being
     `DRE`. In `Store` for dot notation, its bare name unique to this layer. -/
-def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
+def Store.goldfishEligible (S : Store Validator) (view : GoldfishView Validator)
     (s : Nat) (B : Block Validator) : DRE Bool := do
   let σB ← S.σ[B]
-  -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
+  -- `voters_count ← |{v ∈ K_s : the view holds a vote by v}|` — a `let`, as the
   -- figure writes it
-  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
+  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ view.votes, a.validator = v}|
   return σB.h < S.h_max - 1 ∨
-    2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
+    2 * goldfishScore view s B > votersCount ∨ B.slot = S.s
 
 /-! ## Figure -/
 /-- The protocol's fork choice. The SG walk
@@ -227,11 +227,11 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
 
     It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
     caller wants; the superseded ones are `Fig1.getHead` and `Fig4.getHead`. -/
-def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
+def Store.getHead (S : Store Validator) (view : GoldfishView Validator) (k : Nat) :
     NDRE (Block Validator) := do
   let root := S.forkChoiceRoot
   let tree ← S.getFilteredBlockTree
   let anchor ← S.majorityForkChoice root tree (round S.s)
-  ghost anchor tree (goldfishScore votes k) (S.goldfishEligible votes k)
+  ghost anchor tree (goldfishScore view k) (S.goldfishEligible view k)
 
 end DC

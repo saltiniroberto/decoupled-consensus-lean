@@ -7,8 +7,9 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 ## Reads and failure
 
 - **Raise, never answer silently.** A map read whose key may be absent is a raising
-  bracket: `S.σ[B]`, and the three timestamp fields via `TimeMap` (`Store.lean`). The raw
-  `Option` stays reachable by applying the field directly.
+  bracket: `S.σ[B]`, and the block and SG-vote timestamps via `TimeMap` (`Store.lean`);
+  a stored Goldfish vote carries its time in its own entry. The raw `Option` stays
+  reachable by applying the field directly.
 - **Set operations over raising reads go through `filterM`/`imageM`** (`FinsetM.lean`), or
   the raising set-builder below.
 
@@ -40,8 +41,8 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
   `OldDefs.lean`.)
 - **No `∣` (divides)**: write `% … = 0`.
-- **What the protocol writes inline stays inline.** `voters_count` and the equivocator
-  set are `let`s at each use site — locals, not definitions.
+- **What the protocol writes inline stays inline.** `voters_count` is a `let` at each
+  use site — a local, not a definition.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H` — the `=`
   elaborator inserts no coercion around a mutable variable's read.
 

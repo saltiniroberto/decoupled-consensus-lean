@@ -87,7 +87,7 @@ open Params
 def Store.latest (S : Store Validator) (v : Validator) (r : Nat) : Option Nat :=
   -- the greatest eligible round; `Finset.max` answers `⊥` when there is none
   let eligible := ({k ∈ Finset.range r |
-    max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes[k], a.validator = v})
+    max 0 (r - ηSG) ≤ k ∧ ∃ a ∈ S.sgVotes k, a.validator = v})
   eligible.max
 
 /-! ## Figure -/
@@ -104,8 +104,8 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
   -- as the set the loop builds
   w({v ∈ Electorate.V |
       ∃ k, S.latest v r = some k ∧
-        ∃ a ∈ S.sgVotes[k], a.validator = v ∧
-          (∀ b ∈ S.sgVotes[k], b.validator = v → b = a) ∧
+        ∃ a ∈ S.sgVotes k, a.validator = v ∧
+          (∀ b ∈ S.sgVotes k, b.validator = v → b = a) ∧
           ∃ H, a.head = some H ∧ B ⪯ H})
 
 /-! ## Figure -/
@@ -123,9 +123,9 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
     The finality layer redefines it again, over the filtered tree and from the fork-choice
     root — that reading, `S.getHead`, is the protocol's, and this one is this file's. -/
-def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+def Fig4.getHead (S : Store Validator) (view : GoldfishView Validator) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
-  S.goldfishForkChoice anchor S.T votes s
+  S.goldfishForkChoice anchor S.T view s
 
 end DC

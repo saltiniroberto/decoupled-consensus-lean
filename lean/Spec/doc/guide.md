@@ -28,7 +28,7 @@ vote` is `process_sg_vote(Σ, vote)`, with the store written `S` because `Σ` is
 in Lean. `Id.run do` opens an imperative block: statements in order, early `return`
 allowed. Inside one, `let x := e` names a value, `let mut S := S` makes a local mutable
 copy, and assignments keep the imperative arrow — `S.t ← t`,
-`S.gfVotes[k] ← …`. A function without `do` is a single expression.
+`S.gfVotes[k][i] ← …`. A function without `do` is a single expression.
 
 One convention needs saying once: the protocol builds its layers incrementally, and a
 later layer redefines some routines. Lean cannot redefine, so the final reading carries the plain name

@@ -93,7 +93,7 @@ Update this list when a new call lands.
   bears the plain `Store` name; `on_tick`'s is the SG layer's, rendered as a call); a
   bare name for everything defined once (`ghost`, `goldfishScore`, its prefix spelled
   since no namespace carries it). `voters_count` is a `let` at each of its three sites —
-  a local, like the equivocator set, not a definition.
+  a local, not a definition.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
   dependent `if`s alone, no `have`s. The `if`s bind `_`, not a name — the tactic reads
@@ -178,24 +178,43 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 
 ### The store
 
-- **The Goldfish one-vote storage was built and rolled back the same day**
-  (2026-08-25). On Roberto's instruction, `gf_votes` became a per-slot-and-validator map
-  of timed entries (`VoteTime`, generalizing the healing `HeadEntry`), a differing vote
-  writing an equivocator record (a timed map, then a `Bool` map, then
-  `(k : Nat) → Finset Validator` — his successive revisions); `VoteTable` and its bracket
-  read were dropped; the view merge became the figure's `for` loop over a revived
-  nondeterministic `ForIn`, its body reduced to `process_goldfish_vote` alone, which
-  stopped carried votes injecting votes into the voter's walk. **Roberto then ruled the
-  result incorrect and ordered the rollback to the pre-change Goldfish** (commits
-  `bee9622`..`a67d1b0` hold the attempt; the revert commit names them). Only the
-  binder-naming rule survived on the touched files. What the attempt measured stays
-  true and recorded under Measured Lean facts.
-- **The three indexed fields read with brackets, and a possibly-absent read raises.**
-  Each map is a named type (`VoteTable`, `TimeMap`, `StateMap`) because instances resolve
-  on a type's head constant and a bare function type has none. The vote tables are total
-  (`GetElem` validity `True`); `Σ.σ[B]` and `Σ.timestamp[x]` return `DRE` and raise on an
-  unrecorded key; the raw `Option` stays reachable by application. `B ∈ σ` is the
-  membership, `.isSome` internally.
+- **The Goldfish vote storage and the view** (2026-08-25, Roberto's design, landed after
+  a first attempt the same day was built and rolled back as incorrect — commits
+  `bee9622`..`a67d1b0` hold that attempt, `89bd951` the revert). What stands:
+  - `Σ.gf_votes[k][i]` is one timed entry per slot and validator — the first vote
+    processed, with its time (`VoteTime`, fields `vote`/`time`; the healing `HeadEntry`
+    renamed into it, `e.vote`/`e.time`, per his "so we can use it for goldfish as
+    well"). A later differing vote writes `Σ.gf_equiv[k][i] ← Σ.t` once — the first
+    equivocation's time. `gfVoteTime` is gone; the freeze and cutoffs are pure entry
+    filters.
+  - **Every fork-choice rule up to `get_head` consumes a `GoldfishView`** — votes plus
+    equivocators — and `goldfish_score` derives nothing from the vote set: the view
+    supplies the equivocators (his ruling; the score's old two-distinct-votes clause is
+    gone, that judgment living where views are built).
+  - The duties build the views: the proposer as of its run (every stored vote, every
+    recorded equivocation); the voter at the previous slot's freeze — votes stored and
+    equivocations recorded before `t_{s−1} + 3Δ`, both cutoffs honest again because the
+    record is timed — then updated by `merge_view(Σ, s, view)`, the block-carried votes
+    joining the votes and a validator with two distinct votes in the union joining the
+    equivocators. `merge_view` is written as the sets it builds (processing one vote at
+    a time would fix an order the protocol does not).
+  - Claude's picks inside his sketch, each one line to change: the entry maps are
+    `Option`-valued (the sketch wrote bare `VoteTime`/`Int`; absence must be
+    representable); the view travels as the struct through the whole chain (his
+    "perhaps … a struct passed to getHead and so on"); `update_confirmation` cleans its
+    votes by the record at the late cutoff and passes an equivocator-free view, so its
+    score stays supporters-only as before; the collected `gf_votes_at(Σ, k)` ranges over
+    `K_k` (no rule reads an out-of-committee vote).
+  - **How `merge_view`, `GoldfishView` and `gf_votes_at` render in the extracted PDF is
+    deliberately undecided** (Roberto: "for later") — none carries a figure mark yet.
+- **A raising read wears brackets; a total map is a plain function.** `Σ.σ[B]` and
+  `Σ.timestamp[x]` return `DRE` and raise on an unrecorded key — their map types
+  (`StateMap`, `TimeMap`) are named because instances resolve on a type's head constant
+  and a bare function type has none; the raw `Option` stays reachable by application, and
+  `B ∈ σ` is the membership, `.isSome` internally. The total maps (`sg_votes`,
+  `gf_votes`, `gf_equiv`) are bare function types read by application — `VoteTable` and
+  its bracket read are dropped (Roberto, 2026-08-25: "not sure what it gives us"); the
+  assignment macros still write with brackets, consulting no instance.
 - **`E_F(Σ)` is not rendered** — no figure reads it, and a definition lands with its
   first consumer.
 - **`Σ.H` and `Σ.i` are this spec's own store fields.** `Σ.H` is the durable signing
@@ -494,10 +513,10 @@ works but duplicates the sequence in a `def`.
   (2026-08-25): the two-level write `σ.arr[i][j] ← e` declared as `scoped syntax` plus a
   separate `macro_rules` silently lost its expansion — the pattern also parses as core's
   pattern-bind, and every use site then errors "Invalid pattern". Declared as one
-  `scoped macro` command (no pattern quotation) it works; measured on
-  `scratch/IdxAssign2Probe.lean` during the rolled-back Goldfish attempt. **The parked
-  `idx2Assign` in `OldDefs.lean` is the broken `syntax` + `macro_rules` form** — a
-  revival must use the `macro` command shape.
+  `scoped macro` command (no pattern quotation) it works — `idxAssign2`,
+  `Notation.lean`; measured on `scratch/IdxAssign2Probe.lean`. `OldDefs.lean`'s parked
+  `idx2Assign` carried exactly the broken form and was deleted when the live macro
+  landed.
 
 ### `do` blocks over `Set`
 
@@ -548,10 +567,12 @@ works but duplicates the sequence in a `def`.
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
      and the formula is deferred on Roberto's word.
-   - **The vote-storage rework is open** (Roberto, 2026-08-25: "the head votes in the
-     healing spec are the sgVotes"; the Goldfish attempt was built and rolled back as
-     incorrect — see the store decisions). What a correct shape is, and whether the SG
-     votes and the healing `head[·]`/`equiv[·]` bookkeeping meet, is not yet ruled.
+   - **The PDF rendering of the view machinery is undecided** (Roberto, 2026-08-25:
+     "for later"): `merge_view`, `GoldfishView` and `gf_votes_at` carry no figure mark,
+     so the extracted figures show their call sites but not them.
+   - **The SG votes await their storage ruling** (Roberto, 2026-08-25: "the head votes
+     in the healing spec are the sgVotes") — whether they take the Goldfish treatment
+     and meet the healing `head[·]`/`equiv[·]` bookkeeping is not yet ruled.
 1. **The extractor workstream** (`extract/`): conventions in `extract/README.md`; the
    spec drives the structure, all eight figure blocks render.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.
