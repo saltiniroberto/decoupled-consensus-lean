@@ -596,8 +596,8 @@ works but duplicates the sequence in a `def`.
      singleton outcome set. The old `coherence-invariant` branch predates this store and
      does not transfer.
    - **Open questions awaiting Roberto's call**: renaming the `Fig<n>.…` declaration
-     prefixes; the duties taking `Σ.i` instead of an `i` parameter. (The `a_r` vs `R = 1`
-     question is ruled: `R ≥ 2`, pending above.)
+     prefixes. (Ruled: `R ≥ 2` — pending above; the duties read `Σ.i`, no identity
+     parameter — done 2026-08-25.)
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
      and the formula is deferred on Roberto's word.

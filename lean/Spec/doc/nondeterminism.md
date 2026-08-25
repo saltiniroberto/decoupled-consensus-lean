@@ -85,7 +85,7 @@ single answer would be exactly the arbitrary choice this vocabulary exists to av
 A result is consumed as a **relation**:
 
 ```lean
-res ∈ (S.onTick i t p).outcomes
+res ∈ (S.onTick t p).outcomes
 ```
 
 read: `res` is one possible outcome of the duty — a failure, or the store afterwards with

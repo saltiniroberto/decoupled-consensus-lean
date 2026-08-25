@@ -65,7 +65,7 @@ The same holds one level up: there is no run inside the spec — the figures com
 by calling them. The one boundary is `NDREB.outcomes`: the set of outcomes of a duty run
 with nothing sent, each an answer — a `DutyResult`, the store afterwards with the
 broadcasts — or the failure. The sts wiring consumes a duty as
-`res ∈ (S.onTick i t p).outcomes`, and `Analysis/` statements quantify over the same set.
+`res ∈ (S.onTick t p).outcomes`, and `Analysis/` statements quantify over the same set.
 `DutyResult` itself lives in `Store.lean` and survives only at this boundary.
 
 ## Measured traps, from the probes

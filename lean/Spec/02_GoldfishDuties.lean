@@ -16,10 +16,10 @@ The routines appear callee-first; the figure's order is `on_tick`, `process_bloc
 **`03_AvailableConfirmation.lean` comes first in the import order** although it is the
 later file: `on_tick` calls `update_confirmation`.
 
-## `ℓ` is `i`, and the proposer test is a parameter
+## `ℓ` is `Σ.i`, and the proposer test is a parameter
 
-The protocol writes `ℓ` for the validator running the node. This subtree writes `i`, and
-nothing else in it uses that letter.
+The protocol writes `ℓ` for the validator running the node. This rendering reads it off
+the store — `Σ.i`, fixed at `gen` — so no duty takes an identity parameter.
 
 `on_tick` asks whether `ℓ` "is the slot-`s` proposer". Proposer assignment is outside this
 specification's scope — a slot simply *has* an assigned proposer — so `on_tick`
@@ -160,7 +160,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     than bare `assumption`, so a caller holding the instant *inside a conjunction* — a
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
     `have`. -/
-def Store.proposeBlock (i : Validator) (S : Store Validator)
+def Store.proposeBlock (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s                                      -- runs at `t_s`
@@ -187,7 +187,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 
     "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
     same conjunction-projecting tactic. -/
-def Store.goldfishVote (i : Validator) (S : Store Validator)
+def Store.goldfishVote (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s
@@ -198,9 +198,9 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
   let H ← Fig1.getHead S votes (s - 1)
-  if i ∈ Committees.K s then
+  if S.i ∈ Committees.K s then
     -- `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
-    let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
+    let vote := GoldfishVote.mk (validator := S.i) (slot := s) (target := H)
     broadcast (Message.gfVote vote)
     return S.processGoldfishVote vote
   return S
@@ -224,16 +224,16 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     confirmation branch writes its `t_s + 2Δ` instant as `t_{s−1} + 6Δ` — equal whenever
     `s > 0`, the evaluation of the *previous* slot, and the form `update_confirmation`'s
     precondition wants. -/
-def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
+def Fig2.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- `s ← ⌊t/(4Δ)⌋`
   S.t ← t
   S.s ← s
-  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s i then
-    return ← S.proposeBlock i
+  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s S.i then
+    return ← S.proposeBlock
   if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then
-    return ← S.goldfishVote i
+    return ← S.goldfishVote
   -- the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
   if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
     return ← S.updateConfirmation (s - 1)

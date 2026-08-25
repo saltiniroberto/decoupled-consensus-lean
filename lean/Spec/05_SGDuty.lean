@@ -97,11 +97,11 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
     are. -/
-def Store.sgVote (i : Validator) (S : Store Validator)
+def Store.sgVote (S : Store Validator)
     (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let r := round S.s
-  let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
+  let vote := SGVote.mk (validator := S.i) (round := r) (head := some S.liveConfirmed)
   broadcast (Message.sgVote vote)
   return S.processSGVote vote
 
@@ -119,12 +119,12 @@ def Store.sgVote (i : Validator) (S : Store Validator)
     `live_confirmed` it votes is the round's fresh evaluation — and both broadcasts are
     in the outbox, no union written anywhere, the monad carrying the earlier sends past
     the `if`. -/
-def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
+def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
-  let S ← Fig2.onTick i S t isProposer
+  let S ← Fig2.onTick S t isProposer
   -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
   if _ : S.t = SGSchedule.a (round S.s) then
-    return ← S.sgVote i
+    return ← S.sgVote
   return S
 
 end DC

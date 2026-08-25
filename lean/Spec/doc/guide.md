@@ -84,7 +84,7 @@ return S.processSGVote vote
 a duty calls; the duty itself just returns the new store. When the tick runs a duty after
 another duty, both of their messages are in the outbox — no code collects or merges them.
 The outbox becomes visible only at the boundary where a duty's overall effect is stated:
-`(S.onTick i t p).outcomes` is the set of possible results, each a final store together
+`(S.onTick t p).outcomes` is the set of possible results, each a final store together
 with everything broadcast on the way to it.
 
 ## Small things you will bump into

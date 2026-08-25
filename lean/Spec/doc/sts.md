@@ -21,7 +21,7 @@ Four designs look the way they do because of this destination:
 
 - **A duty is consumed as a relation.** A step relation is a membership statement, so a
   duty's overall effect is the set `NDREB.outcomes` (`Nondet.lean`), and the wiring will
-  read it as `res ∈ (S.onTick i t p).outcomes`. There is deliberately no function
+  read it as `res ∈ (S.onTick t p).outcomes`. There is deliberately no function
   producing a single outcome — [nondeterminism.md](nondeterminism.md) says why.
 - **`DutyResult` is the step-result shape.** A store and a send set (`Store.lean`) — the
   field names of the framework's `NodeStepResult` — built only by `NDREB.outcomes`;
