@@ -42,9 +42,10 @@ relays every object it processes" is network behaviour, the wiring layer's to re
 
 **The view merge's `for all B ∈ Σ.T` is the nondeterministic `for`.** A `Finset` fixes
 no iteration order, so the `for` of `Nondet.lean` picks a listing — every visitation
-order among the outcomes. The merge's body is an order-free union, so every listing
-converges to one store and the outcome set is exactly the fold's; the loop spelling is
-the figure's.
+order among the outcomes. The body runs `process_goldfish_vote`, whose first-vote-wins
+write is not order-free in general, so the orders genuinely all appear; on a store whose
+blocks arrived through `process_block`, every carried vote is already folded in and
+every order is the same no-op.
 
 **The proposal's vote set crosses from `Finset` to `List` by a pick.** The block's carried votes are a
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
@@ -71,12 +72,13 @@ running the node, written `i`; a node whose `i` holds no duty for the slot simpl
 not run them. A duty broadcasts its own object and returns the store with that object
 already processed; delivering the broadcasts is left to whoever wires this up.
 
-To run the fork choice in slot `s`, a voter at `t_s + Δ` uses the slot-`(s − 1)` votes
-it saw before the view freeze at `t_{s−1} + 3Δ`, together with the votes carried by any
-slot-`s` block processed so far. That second part is the view merge: the proposal
-supplies its own view rather than a forced target. The proposer does not apply the
-freeze, and instead uses every held vote when running the fork choice at `t_s`. The
-equivocation record's marks travel with each vote set, read as of the duty's run.
+To run the fork choice in slot `s`, a voter at `t_s + Δ` first folds every vote
+carried by a processed slot-`s` block into the store — the view merge; on a store built
+by `process_block` each carried vote is already folded in, and what the merge can add
+is equivocator marks. The voter then walks the slot-`(s − 1)` votes stored before the
+view freeze at `t_{s−1} + 3Δ`, with the equivocator record read as of the run. The
+proposer applies no freeze, and uses every stored vote when running the fork choice at
+`t_s`.
 
 -/
 
@@ -174,10 +176,12 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 /-- Run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
-    The merge: the slot-`(s−1)` votes held before the *previous* slot's view
-    freeze at `t_{s−1} + 3Δ`, together with everything carried by any slot-`s` block
-    processed so far. That second part is the view merge — the proposal supplies its own view
-    rather than a forced target.
+    The view merge folds every vote carried by a processed slot-`s` block through
+    `process_goldfish_vote` before anything is read. On a store built by `process_block`,
+    which already folded each carried vote in on arrival, this changes nothing — what the
+    merge can contribute is the equivocator marks it may add. The walk then reads the
+    slot-`(s−1)` votes stored before the previous slot's view freeze at `t_{s−1} + 3Δ`,
+    with the record's marks as of this run.
 
     A validator off the slot's committee broadcasts nothing and returns the store
     unchanged.
@@ -187,13 +191,15 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
+  let mut S := S
   let s := S.s
-  -- held before the freeze at `t_{s−1} + 3Δ`: the entries carry their times
-  let mut votes := ({e ∈ S.gfVotesAt (s - 1) |
-    e.t < slotStart (s - 1) + 3 * (Δ : Int)}).image (·.vote)
-  -- the view merge: each processed slot-`s` block offers its carried votes
+  -- the view merge: fold in every vote carried by a processed slot-`s` block
   for B in {B ∈ S.T | B.slot = s} do
-    votes ← votes ∪ B.gfVotes.toFinset
+    for vote in B.gfVotes do
+      S ← S.processGoldfishVote vote
+  -- held before the freeze at `t_{s−1} + 3Δ`: the entries carry their times
+  let votes := ({e ∈ S.gfVotesAt (s - 1) |
+    e.t < slotStart (s - 1) + 3 * (Δ : Int)}).image (·.vote)
   -- the equivocator record, as of this run
   let marked := S.gfEquiv (s - 1)
   let H ← Fig1.getHead S votes marked (s - 1)

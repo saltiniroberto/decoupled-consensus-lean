@@ -67,8 +67,9 @@ every block's score without its target being read at all.
 The score learns equivocators two ways. The store keeps one vote per slot and validator
 and records in `Σ.gf_equiv[·]` when a differing vote was first processed, so each caller
 passes `marked`, that record read as of its own run. The two-distinct-votes test on the
-set itself remains beside it, for the votes a set carries past the store — the voter's
-merged view holds block-carried votes, and two of those can conflict.
+set itself remains beside it: the vote sets this spec's duties build hold at most one
+vote per validator, so within the spec it never fires, but the score takes any vote set
+and stays honest on one that does carry a pair.
 
 ## Extract — Definition (Goldfish score and walk)
 
@@ -154,8 +155,8 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     `marked` is the set of validators the store's equivocation record
     (`Σ.gf_equiv[·]`) marks, each caller reading the record as of its own run; the store
     keeps one vote per validator, so a stored second vote no longer witnesses. The
-    two-distinct-votes test remains alongside it for the votes a set carries past the
-    store — the voter's merged view holds block-carried votes.
+    two-distinct-votes test remains alongside it for a vote set that carries a pair —
+    none this spec's duties build does.
 
     An equivocator is counted without its target being read — see the module header. -/
 def goldfishScore (votes : Finset (GoldfishVote Validator)) (marked : Finset Validator)

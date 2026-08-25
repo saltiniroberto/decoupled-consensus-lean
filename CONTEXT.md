@@ -322,14 +322,22 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 - **`nj` is a stored field of the chain state**, written on entry into a height and read
   by the justify event. Recomputing the test at the event would be a *different rule* —
   it would read the `h_F` of the justification's moment, not of the height's entry.
-- **The view merge is the figure's `for` loop again** (2026-08-25, Roberto: "can we
-  please have a for loop here as in consensus-1.pdf"). The nondeterministic `ForIn` over
+- **The view merge is the figure's `for` loop, and it processes rather than unions**
+  (2026-08-25, two rulings of Roberto's: "a for loop here as in consensus-1.pdf", then
+  "in the for loop, simply call process_goldfish_vote" — of the offered shapes he chose
+  *process only*, knowing it changes the duty). The nondeterministic `ForIn` over
   `Finset` moved out of `OldDefs.lean` into `Nondet.lean`: pick a listing, loop the
-  list — every visitation order among the outcomes. The merge's body is an order-free
-  union, so every listing converges to one store and the outcome set equals the old
-  fold's. (The fold reading it replaced: `biUnion`, adopted when no `ForIn` existed —
-  needed `Mathlib.Data.Finset.Lattice.Basic` and a result-type annotation. `OldDefs` also
-  lost its parked `idx2Assign`, superseded by `Notation.lean`'s live `idxAssign2`.)
+  list — every visitation order among the outcomes. The loop runs before the reads, so
+  what it can contribute is equivocator marks; the walk's vote set is the freeze-filtered
+  stored votes alone, and **carried votes no longer inject votes into the voter's walk**
+  (they used to, by union). On a store built by `process_block` — which already folds
+  every carried vote in on arrival — the loop is a no-op in every order; the handler's
+  first-vote-wins write is not order-free in general, and the nondeterministic `for` is
+  honest about that. Consequence flagged, not ruled: the vote sets the duties build now
+  hold at most one vote per validator, so `goldfish_score`'s two-distinct-votes clause
+  never fires within the spec — kept for arbitrary vote sets, droppable on his word.
+  (The fold reading this replaced: `biUnion`, adopted when no `ForIn` existed. `OldDefs`
+  also lost its parked `idx2Assign`, superseded by `Notation.lean`'s live `idxAssign2`.)
 - **The finality-vote strategy** (`08_FinalityVote.lean`, imported 2026-08-23 from the
   first rendering's `Voting.lean`, on the branch): `SigningHistory` — the once-only
   per-height record, fields `signedEmptyTarget`/`firstTarget`/`finalityTarget` (Roberto
