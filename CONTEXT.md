@@ -173,6 +173,27 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 
 ### The store
 
+- **`gf_votes` stores one vote per slot and validator** (2026-08-25; Roberto:
+  "implement the same logic used in `on_attestation` [the healing source's handler] to
+  the gfVotes to reduce the size of the votes stored"). `Σ.gf_votes[k][i]` is the first
+  slot-`k` vote processed from `i`; a later differing vote is never stored — it writes
+  the equivocation record `Σ.gf_equiv[k][i] ← Σ.t`, once. Every downstream rule's
+  behaviour is preserved, checked read by read:
+  - the old "second stored vote before cutoff" tests are exactly `gf_equiv` before the
+    same cutoff, the mark's time being the differing vote's processing time
+    (`update_confirmation`'s cleaning; the voter's freeze);
+  - `goldfish_score` gains a `marked` input — the record read at the caller's own
+    cutoff: the voter at the freeze, the proposer unbounded, confirmation cleaning its
+    votes and passing `∅`. The two-distinct-votes test stays beside it, for the
+    block-carried votes in the voter's merged view, which the store never deduplicates;
+  - the vote-set rules consume `gf_votes_at(Σ, k)`, the stored votes of `K_k` collected
+    as a `Finset`. A stored vote from outside the committee is not collected, which no
+    rule can observe — every score and count already filters by `K_k`. The one visible
+    change is the intended one: a proposal now carries at most one vote per validator,
+    and no out-of-committee votes.
+  Declined: keeping the two-vote sets (the size was the point), and folding the
+  processing time into the entry (the `TimeMap` stays, so `Σ.timestamp(vote)` and the
+  `∈ᴹ` cutoff filters are unchanged).
 - **The three indexed fields read with brackets, and a possibly-absent read raises.**
   Each map is a named type (`VoteTable`, `TimeMap`, `StateMap`) because instances resolve
   on a type's head constant and a bare function type has none. The vote tables are total
@@ -467,7 +488,14 @@ works but duplicates the sequence in a `def`.
   Over a `Finset`, the inline `∃` works (`sgSupport`).
 - **A `let`-bound set-builder over `Electorate.V` needs the instance pinned**:
   `{i ∈ Electorate.V (Validator := Validator) | …}`; unpinned, elaboration sticks on
-  `Electorate ?m` (`W`'s definition set the spelling).
+  `Electorate ?m` (`W`'s definition set the spelling). `Committees.K` in the same
+  position needs the same pin (the `marked` builders, `02_GoldfishDuties.lean`).
+- **A `doElem` `macro_rules` whose pattern quotation is ambiguous never fires**
+  (2026-08-25): the two-level write `σ.arr[i][j] ← e` declared as `scoped syntax` plus a
+  separate `macro_rules` silently lost its expansion — the pattern also parses as core's
+  pattern-bind, and every use site then errors "Invalid pattern". Declared as one
+  `scoped macro` command (no pattern quotation) it works: `idxAssign2`,
+  `Notation.lean`; measured on `scratch/IdxAssign2Probe.lean`.
 
 ### `do` blocks over `Set`
 
@@ -518,6 +546,10 @@ works but duplicates the sequence in a `def`.
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
      and the formula is deferred on Roberto's word.
+   - **`sg_votes` await the same storage treatment as `gf_votes`** (Roberto, 2026-08-25:
+     "the head votes in the healing spec are the sgVotes", and the gf change came
+     "first") — the healing `head[·]`/`equiv[·]` bookkeeping and the SG vote sets are to
+     meet; how is not yet ruled.
 1. **The extractor workstream** (`extract/`): conventions in `extract/README.md`; the
    spec drives the structure, all eight figure blocks render.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.

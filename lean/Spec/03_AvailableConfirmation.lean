@@ -9,11 +9,11 @@ over a stricter vote set and a larger denominator."
 ## What makes it stricter
 
 Two cutoffs on the same pool, `early ⊆ late`; the walk scores the `early` votes whose
-validator `late` has not caught equivocating, against `late`'s participants — the rule
-itself is the Extract prose below. The two consequences the protocol draws there — the
-scored set holds at most one vote per validator, and at most one child can pass the
-eligibility condition — are facts about the sets rather than about this routine, so
-neither is rendered as a hypothesis.
+validator the equivocation record does not mark before the late cutoff, against `late`'s
+participants — the rule itself is the Extract prose below. The two consequences the
+protocol draws there — the scored set holds at most one vote per validator, and at most
+one child can pass the eligibility condition — are facts about the sets rather than
+about this routine, so neither is rendered as a hypothesis.
 
 ## Why it does not reuse `goldfish_eligible`
 
@@ -32,19 +32,18 @@ this routine.
 ## Extract
 
 Confirmation is the same walk over a stricter vote set and a larger denominator. Let
-`early` and `late` be the slot-`s` votes timestamped before `t_s + 2Δ` and before
-`t_s + 6Δ`. The walk scores
+`early` and `late` be the stored slot-`s` votes timestamped before `t_s + 2Δ` and
+before `t_s + 6Δ`. The walk scores
 
-`votes = {vote ∈ early : vote.validator does not equivocate in late}`
+`votes = {vote ∈ early : Σ.gf_equiv[s][vote.validator] is not before t_s + 6Δ}`
 
 against the participant count of `late`: a validator counts when it voted in time and
-no second vote of its has appeared since, while the denominator counts everyone who
-voted at all.
+no differing vote of its was processed before the late cutoff, while the denominator
+counts everyone who voted at all.
 
-Because `early ⊆ late`, a validator equivocating in `early` equivocates in `late` too,
-so `votes` holds at most one vote per validator and the score's equivocator clause
-never fires here. At most one child can pass the eligibility condition, so the descent
-has no choice to make.
+The store keeps one vote per slot and validator, so `votes` holds at most one vote per
+validator and the score's equivocator inputs are empty here. At most one child can pass
+the eligibility condition, so the descent has no choice to make.
 
 Slot `s` is evaluated once, at `t_s + 6Δ`, from genesis over the live tree. The result
 is at worst genesis, never empty. `Σ.live_confirmed` takes the result unconditionally;
@@ -80,15 +79,17 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
-  let early ← {vote ∈ᴹ S.gfVotes[s] | (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)}
-  let late ← {vote ∈ᴹ S.gfVotes[s] | (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)}
-  -- the early votes whose validator `late` does not catch equivocating
-  let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
+  let early ← {vote ∈ᴹ S.gfVotesAt s | (← S.gfVoteTime[vote]) < slotStart s + 2 * (Δ : Int)}
+  let late ← {vote ∈ᴹ S.gfVotesAt s | (← S.gfVoteTime[vote]) < slotStart s + 6 * (Δ : Int)}
+  -- the early votes whose validator the record does not mark before `t_s + 6Δ`
+  let votes := {vote ∈ early |
+    ¬ timeBefore (S.gfEquiv s vote.validator) (slotStart s + 6 * (Δ : Int))}
   -- the denominator is `late`'s participants
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
-  -- the majority gate, with no current-slot escape — see the module header
-  let eligible := fun B => 2 * goldfishScore votes s B > votersCount
-  let H ← ghost .genesis S.T (goldfishScore votes s) (fun B => pure (eligible B))
+  -- the majority condition, with no current-slot escape — see the module header;
+  -- `votes` is already cleaned, so the score's equivocator inputs are empty
+  let eligible := fun B => 2 * goldfishScore votes ∅ s B > votersCount
+  let H ← ghost .genesis S.T (goldfishScore votes ∅ s) (fun B => pure (eligible B))
   S.liveConfirmed ← H
   if S.latestConfirmed ⪯ H then
     S.latestConfirmed ← H
