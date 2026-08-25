@@ -251,7 +251,8 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `Set.monad`, activated scoped). A pick wears its own arrow, `let x ←ᵖ s`, over
   `Pickable` (`Set` or `Finset`); a pick from the empty set has **no outcomes** — not a
   raise: an error says the protocol failed, an empty pick says this combination of
-  choices does not occur. `listings s` is the set of duplicate-free orderings, a
+  choices does not occur. `s.toLists` (`listings` until 2026-08-25, Roberto's rename;
+  root `Finset` namespace for dot notation) is the set of duplicate-free orderings, a
   predicate — no list is built, none preferred.
 - **There is deliberately no computable exit.** A result is consumed as a relation,
   `res ∈ (…).run` / `res ∈ (…).outcomes` — the sts step shape — and `Analysis/`
@@ -268,7 +269,7 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     root order being one.
   - *The carried list's order.* `propose_block` must serialize a `Finset` into the
     block's `List`; an assumed `[LinearOrder (GoldfishVote _)]` with a computable
-    `Finset.sort` did it (inert protocol-wise); the picked `listings` dissolved it.
+    `Finset.sort` did it (inert protocol-wise); the picked orderings dissolved it.
     Declined throughout: list-valued vote tables, which would make "at most two per
     validator" a property of a list and put `.toFinset` at every counting site.
   - *The `for all` macros.* The two order-free loops are the sets they build — the view

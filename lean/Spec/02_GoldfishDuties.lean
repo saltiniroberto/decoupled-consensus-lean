@@ -49,7 +49,7 @@ figure's.
 **The proposal's vote set crosses from `Finset` to `List` by a pick.** The block's carried votes are a
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
 constructor, so `Block` could not hold one. The store's `Σ.gf_votes k` is a `Finset`, as
-the protocol says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
+the protocol says. The crossing is `let gfList ←ᵖ votes.toLists` — the proposer's list order
 is a genuine nondeterministic choice, since the protocol fixes none. The alternative —
 holding the store's votes as lists — would make
 "at most two distinct votes per validator" a property of a list and put a `toFinset` at
@@ -167,7 +167,7 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
   let votes := {e.vote | e ∈ S.gfVotes (s - 1)}
   let H ← Fig1.getHead S votes (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
-  let gfList ←ᵖ listings votes
+  let gfList ←ᵖ votes.toLists
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
     (gfVotes := gfList) (attestations := [])
   broadcast (Message.block B)

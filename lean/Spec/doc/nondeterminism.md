@@ -68,14 +68,14 @@ A pick from the empty set has **no outcomes** — the branch contributes the emp
 results. It is not a raise: an error is an outcome saying the protocol failed, while an
 empty pick says this combination of choices does not occur.
 
-## `listings`
+## `toLists`
 
-`propose_block` must serialize a `Finset` of votes into a list. `listings s` is the set of
+`propose_block` must serialize a `Finset` of votes into a list. `s.toLists` is the set of
 all duplicate-free lists whose elements are exactly `s` — written as a predicate, so no
 list is ever built and none is ever preferred. The routine picks one:
 
 ```lean
-let gfList ←ᵖ listings votes                       -- any order
+let gfList ←ᵖ votes.toLists                        -- any order
 ```
 
 ## Consuming a result

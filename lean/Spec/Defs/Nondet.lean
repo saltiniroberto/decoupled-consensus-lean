@@ -29,11 +29,13 @@ right: a `Set`, or a `Finset` read as its members, so set-builders, bracket read
 store fields pick directly. A pick from the empty set has **no outcomes** — the empty set of
 results, not a raise.
 
-## `listings`
+## `toLists`
 
-`listings s` is the set of duplicate-free orderings of `s` — a predicate, not an
+`s.toLists` is the set of duplicate-free orderings of `s` — a predicate, not an
 enumeration: no list is ever built, so none is ever chosen. `propose_block` picks one for
-the block's carried votes.
+the block's carried votes, `let gfList ←ᵖ votes.toLists`. (In the root `Finset` namespace
+for dot notation — a `DC` name would be invisible to it, the measured trap; the plural
+keeps it apart from Mathlib's noncomputable `Finset.toList`.)
 
 ## The duty monad, `NDREB`
 
@@ -114,8 +116,10 @@ scoped syntax (name := pickBind) "let " ident " ←ᵖ " term : doElem
 macro_rules
   | `(doElem| let $x:ident ←ᵖ $e) => `(doElem| let $x:ident ← pickFrom $e)
 
-/-- Every duplicate-free listing of `s` — a predicate, never an enumeration. -/
-def listings {α : Type} [DecidableEq α] (s : Finset α) : Set (List α) :=
+/-- `s.toLists`: every duplicate-free ordering of `s` — a predicate, never an
+    enumeration. In the root `Finset` namespace for dot notation; the plural keeps it
+    apart from Mathlib's noncomputable `Finset.toList`. -/
+def _root_.Finset.toLists {α : Type} [DecidableEq α] (s : Finset α) : Set (List α) :=
   { l | l.Nodup ∧ l.toFinset = s }
 
 /-- `for x in (s : Finset α) do …`, in any monad `Set` lifts into: pick a listing, loop
@@ -126,7 +130,7 @@ def listings {α : Type} [DecidableEq α] (s : Finset α) : Set (List α) :=
 scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [DecidableEq α] :
     ForIn m (Finset α) α where
   forIn s init body := do
-    let l ← liftM (listings s)
+    let l ← liftM s.toLists
     forIn l init body
 
 variable {Validator : Type} [Roots] [DecidableEq Validator]
