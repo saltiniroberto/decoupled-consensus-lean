@@ -118,17 +118,6 @@ macro_rules
 def listings {α : Type} [DecidableEq α] (s : Finset α) : Set (List α) :=
   { l | l.Nodup ∧ l.toFinset = s }
 
-/-- `for x in (s : Finset α) do …`, in any monad `Set` lifts into: pick a listing, loop
-    the list — every visitation order among the outcomes. A loop whose body is order-free
-    (`goldfish_vote`'s view merge, a union) converges to one store on every listing, so
-    its outcome set is the same as the fold's; a loop whose body is not order-free gets
-    every order's result as an outcome, which is exactly the honest reading. -/
-scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [DecidableEq α] :
-    ForIn m (Finset α) α where
-  forIn s init body := do
-    let l ← liftM (listings s)
-    forIn l init body
-
 variable {Validator : Type} [Roots] [DecidableEq Validator]
 
 /-- The duty monad — nondeterministic result with exception and **broadcasts**, the

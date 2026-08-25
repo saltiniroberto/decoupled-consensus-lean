@@ -61,23 +61,14 @@ place to assume it.
 
 An equivocator "counts for every block and stays among the participants, so it
 can neither create nor block a descent". That is why `equivocators` is collected
-separately and the score adds both cardinalities: an equivocator is added to
+separately and the score adds both cardinalities: a validator with two votes is added to
 every block's score without its target being read at all.
-
-The score learns equivocators two ways. The store keeps one vote per slot and validator
-and records in `Σ.gf_equiv[·]` when a differing vote was first processed, so each caller
-passes `marked`, that record read as of its own run. The two-distinct-votes test on the
-set itself remains beside it: the vote sets this spec's duties build hold at most one
-vote per validator, so within the spec it never fires, but the score takes any vote set
-and stays honest on one that does carry a pair.
 
 ## Extract — Definition (Goldfish score and walk)
 
-Fix a vote slot `s`, a set `votes` of slot-`s` votes, and a set `marked` of validators
-the store's equivocation record marks as of the caller's run. Validator `v ∈ K_s`
-equivocates when it is marked or `votes` holds two of its distinct votes, and
-participates when `votes` holds at least one of its votes.
-`goldfish_score(votes, marked, s, B)` counts every equivocator plus every
+Fix a vote slot `s` and a set `votes` of slot-`s` votes. Validator `v ∈ K_s`
+equivocates when `votes` holds two of its distinct votes, and participates when it
+holds at least one. `goldfish_score(votes, s, B)` counts every equivocator plus every
 non-equivocating participant whose target descends from `B`. An equivocator counts for
 every block and stays among the participants, so it can neither create nor block a
 descent; a non-equivocating validator counts once, in one subtree.
@@ -152,18 +143,12 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
     non-equivocating participant whose target descends from `B`. The equivocator set is a
     `let`, as the figure writes it — the protocol defines no standalone function.
 
-    `marked` is the set of validators the store's equivocation record
-    (`Σ.gf_equiv[·]`) marks, each caller reading the record as of its own run; the store
-    keeps one vote per validator, so a stored second vote no longer witnesses. The
-    two-distinct-votes test remains alongside it for a vote set that carries a pair —
-    none this spec's duties build does.
-
     An equivocator is counted without its target being read — see the module header. -/
-def goldfishScore (votes : Finset (GoldfishVote Validator)) (marked : Finset Validator)
-    (s : Nat) (B : Block Validator) : Nat :=
-  -- `{v ∈ K_s : the record marks v, or votes holds two distinct votes by v}`
+def goldfishScore (votes : Finset (GoldfishVote Validator)) (s : Nat) (B : Block Validator) :
+    Nat :=
+  -- `{v ∈ K_s : votes holds two distinct votes by v}`
   let equivocators : Finset Validator := {v ∈ Committees.K s |
-    v ∈ marked ∨ ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
+    ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}
   -- `{v ∈ K_s \ equivocators : (v, s, B') ∈ votes with B ⪯ B'}`
   let supporters := {v ∈ Committees.K s \ equivocators |
     ∃ a ∈ votes, a.validator = v ∧ B ⪯ a.target}
@@ -182,28 +167,27 @@ def goldfishScore (votes : Finset (GoldfishVote Validator)) (marked : Finset Val
     The second disjunct is why a fresh proposal can be walked onto at all: "it only does not
     apply to proposals from the current slot, which cannot yet have votes". -/
 def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
-    (marked : Finset Validator) (s : Nat) (B : Block Validator) : Bool :=
+    (s : Nat) (B : Block Validator) : Bool :=
   -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|`
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
-  2 * goldfishScore votes marked s B > votersCount ∨ B.slot = S.s
+  2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
 /-! ## Figure -/
 /-- The shared
     walk, instantiated with the Goldfish score and eligibility condition. -/
 def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
-    (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator))
-    (marked : Finset Validator) (s : Nat) : NDRE (Block Validator) :=
+    (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+    NDRE (Block Validator) :=
   -- the pure condition offered to the walk's raising slot with `pure`
-  ghost anchor tree (goldfishScore votes marked s)
-    (fun B => pure (Fig1.goldfishEligible S votes marked s B))
+  ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
 /-! ## Figure -/
 /-- The walk from genesis over the whole
     processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
     and the finality layer again, from the fork-choice root over the filtered tree — that
     reading, `S.getHead`, is the protocol's, and this one is this file's. -/
-def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
-    (marked : Finset Validator) (s : Nat) : NDRE (Block Validator) :=
-  S.goldfishForkChoice .genesis S.T votes marked s
+def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+    NDRE (Block Validator) :=
+  S.goldfishForkChoice .genesis S.T votes s
 
 end DC

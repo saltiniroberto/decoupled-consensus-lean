@@ -104,7 +104,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
     and the keyed instance below is found where the anonymous one is not. -/
 def Store.headSupports (S : Store Validator) (k : Int) (i : Validator) (c : Int)
     (B : Block Validator) : Prop :=
-  ∃ e ∈ S.head k i, e.t < c ∧ B ⪯ e.vote
+  ∃ e ∈ S.head k i, e.t < c ∧ B ⪯ e.H
 
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) (B : Block Validator) :
     Decidable (S.headSupports k i c B) := inferInstanceAs (Decidable (∃ _ ∈ _, _))

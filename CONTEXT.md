@@ -110,7 +110,7 @@ Update this list when a new call lands.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H`.
 - **Function-typed fields and parameters name their binders** (Roberto, 2026-08-25:
   "always name the parameters so that it is easier to refer to them in the docstring") —
-  `gfVotes : (k : Nat) → (i : Validator) → Option …`,
+  `head : (r : Int) → (i : Validator) → Option …`,
   `score : (B : Block Validator) → Nat`. The pattern-matching accessors (`Block.parent`
   and kin) have no binder position and stay as they are.
 - **Line comments describe; nothing numbers lines.** A `--` comment says what a statement
@@ -178,43 +178,24 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 
 ### The store
 
-- **`gf_votes` stores one vote per slot and validator** (2026-08-25; Roberto:
-  "implement the same logic used in `on_attestation` [the healing source's handler] to
-  the gfVotes to reduce the size of the votes stored"). `Σ.gf_votes[k][i]` is the first
-  slot-`k` vote processed from `i`; a later differing vote is never stored — it writes
-  the equivocator record. Same day, all on Roberto's word: the entry is a `VoteTime` —
-  vote and processing time together, `gfVoteTime` deleted — and the record is
-  `gfEquiv : (k : Nat) → Finset Validator`, the per-slot set of caught equivocators
-  (first a timed map, then a `Bool` map, then the set — each his revision).
-  Consequences, checked read by read:
-  - the stored entry carries its time, so an unstamped stored vote is unrepresentable:
-    the freeze and both confirmation cutoffs are pure entry filters, no `∈ᴹ` and no
-    raise (the `let mut … ←ᴹ` form of the raising builder lost its only use — kept);
-  - `goldfish_score` gains a `marked` input — the record read as of the caller's run:
-    the voter, the proposer, and confirmation (which cleans its votes and passes `∅`)
-    all read `Σ.gf_equiv[k]` directly. The two-distinct-votes test stays beside it, for
-    the block-carried votes in the voter's merged view, which the store never
-    deduplicates. With the record untimed, the voter's equivocator set is no longer
-    freeze-bounded — marks landed after `t_{s−1} + 3Δ` now count (Roberto's call,
-    implicit in dropping the time); `update_confirmation`'s read is equivalent to the
-    old late-cutoff one, an object processed exactly at a scheduled instant being
-    processed after that instant's tick;
-  - the vote-set rules consume `gf_votes_at(Σ, k)`, the stored entries of `K_k`
-    collected as a `Finset`, and take the votes by `.image (·.vote)`. A stored vote from
-    outside the committee is not collected, which no rule can observe — every score and
-    count already filters by `K_k`. The one visible change is the intended one: a
-    proposal now carries at most one vote per validator, and no out-of-committee votes.
-  Declined: keeping the two-vote sets (the size was the point). `timeBefore`, briefly
-  added for the timed record, went with the `Bool`.
-- **A raising read wears brackets; a total map is a plain function.** `Σ.σ[B]` and
-  `Σ.timestamp[x]` return `DRE` and raise on an unrecorded key — their map types
-  (`StateMap`, `TimeMap`) are named because instances resolve on a type's head constant
-  and a bare function type has none; the raw `Option` stays reachable by application, and
-  `B ∈ σ` is the membership, `.isSome` internally. The total maps (`sg_votes`,
-  `gf_equiv`, and the two-level `gf_votes`) are bare function types read by application —
-  `VoteTable` and its bracket read existed until Roberto dropped them (2026-08-25: "not
-  sure what it gives us"); the assignment macros still write with brackets, consulting no
-  instance.
+- **The Goldfish one-vote storage was built and rolled back the same day**
+  (2026-08-25). On Roberto's instruction, `gf_votes` became a per-slot-and-validator map
+  of timed entries (`VoteTime`, generalizing the healing `HeadEntry`), a differing vote
+  writing an equivocator record (a timed map, then a `Bool` map, then
+  `(k : Nat) → Finset Validator` — his successive revisions); `VoteTable` and its bracket
+  read were dropped; the view merge became the figure's `for` loop over a revived
+  nondeterministic `ForIn`, its body reduced to `process_goldfish_vote` alone, which
+  stopped carried votes injecting votes into the voter's walk. **Roberto then ruled the
+  result incorrect and ordered the rollback to the pre-change Goldfish** (commits
+  `bee9622`..`a67d1b0` hold the attempt; the revert commit names them). Only the
+  binder-naming rule survived on the touched files. What the attempt measured stays
+  true and recorded under Measured Lean facts.
+- **The three indexed fields read with brackets, and a possibly-absent read raises.**
+  Each map is a named type (`VoteTable`, `TimeMap`, `StateMap`) because instances resolve
+  on a type's head constant and a bare function type has none. The vote tables are total
+  (`GetElem` validity `True`); `Σ.σ[B]` and `Σ.timestamp[x]` return `DRE` and raise on an
+  unrecorded key; the raw `Option` stays reachable by application. `B ∈ σ` is the
+  membership, `.isSome` internally.
 - **`E_F(Σ)` is not rendered** — no figure reads it, and a definition lands with its
   first consumer.
 - **`Σ.H` and `Σ.i` are this spec's own store fields.** `Σ.H` is the durable signing
@@ -322,22 +303,12 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 - **`nj` is a stored field of the chain state**, written on entry into a height and read
   by the justify event. Recomputing the test at the event would be a *different rule* —
   it would read the `h_F` of the justification's moment, not of the height's entry.
-- **The view merge is the figure's `for` loop, and it processes rather than unions**
-  (2026-08-25, two rulings of Roberto's: "a for loop here as in consensus-1.pdf", then
-  "in the for loop, simply call process_goldfish_vote" — of the offered shapes he chose
-  *process only*, knowing it changes the duty). The nondeterministic `ForIn` over
-  `Finset` moved out of `OldDefs.lean` into `Nondet.lean`: pick a listing, loop the
-  list — every visitation order among the outcomes. The loop runs before the reads, so
-  what it can contribute is equivocator marks; the walk's vote set is the freeze-filtered
-  stored votes alone, and **carried votes no longer inject votes into the voter's walk**
-  (they used to, by union). On a store built by `process_block` — which already folds
-  every carried vote in on arrival — the loop is a no-op in every order; the handler's
-  first-vote-wins write is not order-free in general, and the nondeterministic `for` is
-  honest about that. Consequence flagged, not ruled: the vote sets the duties build now
-  hold at most one vote per validator, so `goldfish_score`'s two-distinct-votes clause
-  never fires within the spec — kept for arbitrary vote sets, droppable on his word.
-  (The fold reading this replaced: `biUnion`, adopted when no `ForIn` existed. `OldDefs`
-  also lost its parked `idx2Assign`, superseded by `Notation.lean`'s live `idxAssign2`.)
+- **The order-free union over `Σ.T` is a fold** (`biUnion`): no `ForIn` for `Finset`
+  exists, and a union is commutative-associative, which is why a set-typed loop is
+  writable at all. Needs `Mathlib.Data.Finset.Lattice.Basic` for the instances, and the
+  fold's result type annotated or instance search sticks inside the `do` block. (During
+  the rolled-back Goldfish attempt this was briefly the figure's `for` loop over the
+  nondeterministic `ForIn` parked in `OldDefs.lean`.)
 - **The finality-vote strategy** (`08_FinalityVote.lean`, imported 2026-08-23 from the
   first rendering's `Voting.lean`, on the branch): `SigningHistory` — the once-only
   per-height record, fields `signedEmptyTarget`/`firstTarget`/`finalityTarget` (Roberto
@@ -518,13 +489,15 @@ works but duplicates the sequence in a `def`.
 - **A `let`-bound set-builder over `Electorate.V` needs the instance pinned**:
   `{i ∈ Electorate.V (Validator := Validator) | …}`; unpinned, elaboration sticks on
   `Electorate ?m` (`W`'s definition set the spelling). `Committees.K` in the same
-  position needs the same pin (the `marked` builders, `02_GoldfishDuties.lean`).
+  position needs the same pin (measured on the rolled-back Goldfish attempt).
 - **A `doElem` `macro_rules` whose pattern quotation is ambiguous never fires**
   (2026-08-25): the two-level write `σ.arr[i][j] ← e` declared as `scoped syntax` plus a
   separate `macro_rules` silently lost its expansion — the pattern also parses as core's
   pattern-bind, and every use site then errors "Invalid pattern". Declared as one
-  `scoped macro` command (no pattern quotation) it works: `idxAssign2`,
-  `Notation.lean`; measured on `scratch/IdxAssign2Probe.lean`.
+  `scoped macro` command (no pattern quotation) it works; measured on
+  `scratch/IdxAssign2Probe.lean` during the rolled-back Goldfish attempt. **The parked
+  `idx2Assign` in `OldDefs.lean` is the broken `syntax` + `macro_rules` form** — a
+  revival must use the `macro` command shape.
 
 ### `do` blocks over `Set`
 
@@ -575,10 +548,10 @@ works but duplicates the sequence in a `def`.
    - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
      `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
      and the formula is deferred on Roberto's word.
-   - **`sg_votes` await the same storage treatment as `gf_votes`** (Roberto, 2026-08-25:
-     "the head votes in the healing spec are the sgVotes", and the gf change came
-     "first") — the healing `head[·]`/`equiv[·]` bookkeeping and the SG vote sets are to
-     meet; how is not yet ruled.
+   - **The vote-storage rework is open** (Roberto, 2026-08-25: "the head votes in the
+     healing spec are the sgVotes"; the Goldfish attempt was built and rolled back as
+     incorrect — see the store decisions). What a correct shape is, and whether the SG
+     votes and the healing `head[·]`/`equiv[·]` bookkeeping meet, is not yet ruled.
 1. **The extractor workstream** (`extract/`): conventions in `extract/README.md`; the
    spec drives the structure, all eight figure blocks render.
 2. `README.md` is refreshed before a push, not per commit; a push is long overdue.

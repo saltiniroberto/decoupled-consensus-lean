@@ -40,20 +40,20 @@ relays every object it processes" is network behaviour, the wiring layer's to re
 
 ## Two collisions with `Finset`, and where each lands
 
-**The view merge's `for all B ∈ Σ.T` is the nondeterministic `for`.** A `Finset` fixes
-no iteration order, so the `for` of `Nondet.lean` picks a listing — every visitation
-order among the outcomes. The body runs `process_goldfish_vote`, whose first-vote-wins
-write is not order-free in general, so the orders genuinely all appear; on a store whose
-blocks arrived through `process_block`, every carried vote is already folded in and
-every order is the same no-op.
+**The view merge's `for all B ∈ Σ.T` is an order-free union, written as one.** Its body
+accumulates a union, so the loop's whole effect is `biUnion` — the standard name for it —
+and the loop spelling adds nothing. A loop that were *not*
+order-free would use the nondeterministic `for` of `Nondet.lean` instead, every visitation
+order among the outcomes.
 
 **The proposal's vote set crosses from `Finset` to `List` by a pick.** The block's carried votes are a
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
-constructor, so `Block` could not hold one. The store keeps one vote per slot and
-validator, and `gf_votes_at(Σ, k)` (`Store.lean`) collects the slot's stored votes as
-the `Finset` the rules consume. The crossing is `let gfList ←ᵖ listings votes` — the
-proposer's list order is a genuine nondeterministic choice, since the protocol fixes
-none.
+constructor, so `Block` could not hold one. The store's `Σ.gf_votes[·]` is a `Finset`, as
+the protocol says. The crossing is `let gfList ←ᵖ listings votes` — the proposer's list order
+is a genuine nondeterministic choice, since the protocol fixes none. The alternative —
+holding the store's votes as lists — would make
+"at most two distinct votes per validator" a property of a list and put a `toFinset` at
+every counting site.
 
 ## `process_block` and `on_tick` here are this file's readings
 
@@ -72,13 +72,11 @@ running the node, written `i`; a node whose `i` holds no duty for the slot simpl
 not run them. A duty broadcasts its own object and returns the store with that object
 already processed; delivering the broadcasts is left to whoever wires this up.
 
-To run the fork choice in slot `s`, a voter at `t_s + Δ` first folds every vote
-carried by a processed slot-`s` block into the store — the view merge; on a store built
-by `process_block` each carried vote is already folded in, and what the merge can add
-is equivocator marks. The voter then walks the slot-`(s − 1)` votes stored before the
-view freeze at `t_{s−1} + 3Δ`, with the equivocator record read as of the run. The
-proposer applies no freeze, and uses every stored vote when running the fork choice at
-`t_s`.
+To run the fork choice in slot `s`, a voter at `t_s + Δ` uses the slot-`(s − 1)` votes
+it saw before the view freeze at `t_{s−1} + 3Δ`, together with the votes carried by any
+slot-`s` block processed so far. That second part is the view merge: the proposal
+supplies its own view rather than a forced target. The proposer does not apply the
+freeze, and instead uses every held vote when running the fork choice at `t_s`.
 
 -/
 
@@ -102,19 +100,23 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 open Params
 
 /-! ## Figure -/
-/-- Record each validator's first slot-`k` vote with its processing time, one timed entry.
-    A later slot-`k` vote from the same validator is never stored: if it differs from the
-    stored one, the validator joins the equivocator record `Σ.gf_equiv[k]` — what the
-    rules read — and otherwise the vote is ignored. A vote from the future is dropped. -/
+/-- Record a slot-`k` vote with its
+    processing time, unless it is from the future, already held, or a third vote by a
+    validator already seen equivocating.
+
+    The two-votes test is where the protocol's "at most two distinct votes per validator"
+    is maintained: "two witness the equivocation; nothing reads a third". -/
 def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validator) :
     Store Validator := Id.run do
   let mut S := S
-  if vote.slot > S.s then
+  if vote.slot > S.s ∨ vote ∈ S.gfVotes[vote.slot] then
     return S
-  if S.gfVotes vote.slot vote.validator = ⊥ then
-    S.gfVotes[vote.slot][vote.validator] ← some (VoteTime.mk (vote := vote) (t := S.t))
-  else if ∃ e ∈ S.gfVotes vote.slot vote.validator, e.vote ≠ vote then
-    S.gfEquiv[vote.slot] ← S.gfEquiv vote.slot ∪ {vote.validator}
+  -- two distinct votes by this validator are already held
+  if ∃ a ∈ S.gfVotes[vote.slot], ∃ b ∈ S.gfVotes[vote.slot],
+      a.validator = vote.validator ∧ b.validator = vote.validator ∧ a ≠ b then
+    return S
+  S.gfVotes[vote.slot] ← S.gfVotes[vote.slot] ∪ {vote}
+  S.gfVoteTime[vote] ← some S.t
   return S
 
 /-! ## Figure -/
@@ -123,7 +125,7 @@ def Store.processGoldfishVote (S : Store Validator) (vote : GoldfishVote Validat
 
     A block from the future is dropped and nothing else is checked: the protocol's admission at
     this layer is the slot test alone. The carried votes go through
-    `process_goldfish_vote`, so each is subject to that routine's own admission. -/
+    `process_goldfish_vote`, so each is subject to that routine's own three tests. -/
 def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Validator :=
     Id.run do
   let mut S := S
@@ -161,10 +163,8 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s                                      -- runs at `t_s`
-  let votes := (S.gfVotesAt (s - 1)).image (·.vote)
-  -- the equivocator record, as of this run
-  let marked := S.gfEquiv (s - 1)
-  let H ← Fig1.getHead S votes marked (s - 1)
+  let votes := S.gfVotes[s - 1]
+  let H ← Fig1.getHead S votes (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ listings votes
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
@@ -176,12 +176,10 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 /-- Run at `t_s + Δ`: vote for the head of the
     merged view, if this validator is on the slot's committee.
 
-    The view merge folds every vote carried by a processed slot-`s` block through
-    `process_goldfish_vote` before anything is read. On a store built by `process_block`,
-    which already folded each carried vote in on arrival, this changes nothing — what the
-    merge can contribute is the equivocator marks it may add. The walk then reads the
-    slot-`(s−1)` votes stored before the previous slot's view freeze at `t_{s−1} + 3Δ`,
-    with the record's marks as of this run.
+    The merge: the slot-`(s−1)` votes held before the *previous* slot's view
+    freeze at `t_{s−1} + 3Δ`, together with everything carried by any slot-`s` block
+    processed so far. That second part is the view merge — the proposal supplies its own view
+    rather than a forced target.
 
     A validator off the slot's committee broadcasts nothing and returns the store
     unchanged.
@@ -191,18 +189,13 @@ def Store.proposeBlock (i : Validator) (S : Store Validator)
 def Store.goldfishVote (i : Validator) (S : Store Validator)
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
-  let mut S := S
   let s := S.s
-  -- the view merge: fold in every vote carried by a processed slot-`s` block
-  for B in {B ∈ S.T | B.slot = s} do
-    for vote in B.gfVotes do
-      S ← S.processGoldfishVote vote
-  -- held before the freeze at `t_{s−1} + 3Δ`: the entries carry their times
-  let votes := ({e ∈ S.gfVotesAt (s - 1) |
-    e.t < slotStart (s - 1) + 3 * (Δ : Int)}).image (·.vote)
-  -- the equivocator record, as of this run
-  let marked := S.gfEquiv (s - 1)
-  let H ← Fig1.getHead S votes marked (s - 1)
+  -- held before the freeze at `t_{s−1} + 3Δ`; the timestamp read raises
+  let mut votes ← {vote ∈ᴹ S.gfVotes[s - 1] |
+    (← S.gfVoteTime[vote]) < slotStart (s - 1) + 3 * (Δ : Int)}
+  -- the view merge: the loop is an order-free union — see the module header
+  votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
+  let H ← Fig1.getHead S votes (s - 1)
   if i ∈ Committees.K s then
     -- `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := i) (slot := s) (target := H)
