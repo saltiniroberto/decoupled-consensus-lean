@@ -113,7 +113,7 @@ class Electorate (Validator : Type) where
   /-- The validator set `V`. -/
   V : Finset Validator
   /-- Validator `i`'s fixed weight `w(i)`. -/
-  w : Validator → Nat
+  w : (i : Validator) → Nat
   /-- Weights are positive. -/
   w_pos : ∀ i ∈ V, 0 < w i
 
@@ -170,7 +170,7 @@ end Electorate
     rendered figure needs it: every rule reads `K_s` directly. -/
 class Committees (Validator : Type) where
   /-- The committee of the given slot. -/
-  K : Nat → Finset Validator
+  K : (s : Nat) → Finset Validator
 
 /-! ## The protocol constants, the schedule, and rounds -/
 

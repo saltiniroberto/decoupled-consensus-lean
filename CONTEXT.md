@@ -108,6 +108,11 @@ Update this list when a new call lands.
   sends. `DutyResult` survives at the boundary only, `NDREB.outcomes` being what the sts
   wiring and `Analysis/` consume; `on_tick` returns from each action branch directly.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H`.
+- **Function-typed fields and parameters name their binders** (Roberto, 2026-08-25:
+  "always name the parameters so that it is easier to refer to them in the docstring") —
+  `gfVotes : (k : Nat) → (i : Validator) → Option …`,
+  `score : (B : Block Validator) → Nat`. The pattern-matching accessors (`Block.parent`
+  and kin) have no binder position and stay as they are.
 - **Line comments describe; nothing numbers lines.** A `--` comment says what a statement
   does and becomes the rendered figure's margin note (the `-- line n` coordinates are
   retired and deleted from the spec). Docstrings are self-contained and cite nothing.

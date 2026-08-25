@@ -45,6 +45,14 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H` — the `=`
   elaborator inserts no coercion around a mutable variable's read.
 
+## Signatures
+
+- **Function-typed fields and parameters name their binders** —
+  `gfVotes : (k : Nat) → (i : Validator) → Option …`,
+  `score : (B : Block Validator) → Nat` — so a docstring can name what it talks about.
+  The pattern-matching accessors (`Block.parent` and kin) have no binder position and
+  stay as they are.
+
 ## Messages and duties
 
 - **Messages are built by named `mk`**: `GoldfishVote.mk (validator := i) …`, and

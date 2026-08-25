@@ -131,7 +131,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator]
     so that `Σ.sg_votes[r]` resolves — instances resolve on a type's head constant, and a
     bare function type has none. A `def` and not an `abbrev`, or the name would unfold away
     before the lookup. -/
-def VoteTable (α : Type) := Nat → Finset α
+def VoteTable (α : Type) := (k : Nat) → Finset α
 
 /-- `table[k]`: the set at an index. Validity is `True` — every index has a set — so
     `get_elem_tactic` closes it with `trivial` and a read owes nothing. -/
@@ -141,7 +141,7 @@ scoped instance voteTableGetElem {α : Type} :
 
 /-- A processing-time map, one per kind of object: `Σ.timestamp(x)` restricted to that
     kind. Named for the same reason as `VoteTable`. -/
-def TimeMap (α : Type) := α → Option Int
+def TimeMap (α : Type) := (x : α) → Option Int
 
 /-- `times[x]`, the raising read: when `x` was processed, or the failure if it was not.
     The raw `Option` stays reachable by application, the map being a function. -/
@@ -160,7 +160,7 @@ instance (o : Option Int) (c : Int) : Decidable (timeBefore o c) :=
   inferInstanceAs (Decidable (∃ _ ∈ _, _))
 
 /-- The finality layer's block-state map. Named for the same reason as `VoteTable`. -/
-def StateMap (Validator : Type) := Block Validator → Option (ChainState Validator)
+def StateMap (Validator : Type) := (B : Block Validator) → Option (ChainState Validator)
 
 /-- `B ∈ σ`: the map records a state for `B`. -/
 scoped instance stateMapMembership :
@@ -207,11 +207,11 @@ structure Store (Validator : Type) where
   /-- `Σ.gf_votes[k][i]`: the first slot-`k` vote processed from validator `i`, absent
       while none — one stored vote per slot and validator. A later differing vote is not
       stored; it marks `Σ.gf_equiv[k][i]` instead. -/
-  gfVotes : Nat → Validator → Option (GoldfishVote Validator)
+  gfVotes : (k : Nat) → (i : Validator) → Option (GoldfishVote Validator)
   /-- `Σ.gf_equiv[k][i]`: the time at which a slot-`k` vote from `i` differing from its
       stored one was first processed; absent while none. This entry is what stands where
       a second stored vote used to witness an equivocation. -/
-  gfEquiv : Nat → Validator → Option Int
+  gfEquiv : (k : Nat) → (i : Validator) → Option Int
   /-- `Σ.timestamp(vote)` for a Goldfish vote. This is the map every Goldfish rule reads:
       the freeze in `goldfish_vote`, and both cutoffs in `update_confirmation`. -/
   gfVoteTime : TimeMap (GoldfishVote Validator)
@@ -243,17 +243,17 @@ structure Store (Validator : Type) where
       round-`r` attestations, with its processing time; absent while none. Indexed by `Int`:
       round `r` grades its round-`(r−1)` entries (`09_Healing.lean`), and round `0` must
       find round `−1` empty — a `Nat` index would truncate `0 − 1` back to `0`. -/
-  head : Int → Validator → Option (HeadEntry Validator)
+  head : (r : Int) → (i : Validator) → Option (HeadEntry Validator)
   /-- `Σ.equiv[r][i]` (healing layer): the time at which a head different from
       `Σ.head[r][i]`'s was first processed from validator `i` in round `r`; absent while
       none. Indexed by `Int` for the same reason as `head`. -/
-  equiv : Int → Validator → Option Int
+  equiv : (r : Int) → (i : Validator) → Option Int
   /-- `Σ.root_proposal[r]` (healing layer): the proposal root carried by the first round-`r`
       opening block processed, `⊥` while no opening block has arrived. -/
-  rootProposal : Nat → Option (Block Validator)
+  rootProposal : (r : Nat) → Option (Block Validator)
   /-- `Σ.sg_root[r]` (healing layer): the round's stored SG root (`get_sg_root`,
       `09_Healing.lean`), `⊥` before the scheduled write. -/
-  sgRoot : Nat → Option (Block Validator)
+  sgRoot : (r : Nat) → Option (Block Validator)
   /-- `Σ.H`, the validator's durable signing record — **not a field of the protocol's store**:
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
       its use in `08_FinalityVote.lean`. Written only by those rules. -/

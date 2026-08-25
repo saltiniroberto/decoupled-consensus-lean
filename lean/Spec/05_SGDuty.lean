@@ -108,7 +108,7 @@ def Store.sgVote (i : Validator) (S : Store Validator)
     in the outbox, no union written anywhere, the monad carrying the earlier sends past
     the `if`. -/
 def Store.onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
+    (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let S ← Fig2.onTick i S t isProposer
   -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
   if _ : S.t = SGSchedule.a (round S.s) then

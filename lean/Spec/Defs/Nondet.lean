@@ -97,7 +97,7 @@ scoped instance {ε : Type} {m : Type → Type} [Monad m] :
 /-- What a pick may pick from: a `Set`, or a `Finset` read as its members. -/
 class Pickable (σ : Type → Type) where
   /-- The set a pick ranges over. -/
-  toSet : {α : Type} → σ α → Set α
+  toSet : {α : Type} → (s : σ α) → Set α
 
 instance : Pickable Set := ⟨id⟩
 instance : Pickable Finset := ⟨fun s => ↑s⟩

@@ -114,7 +114,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 /-- The walk's `arg max score`: the maximal-score members, the tie a genuine pick — every
     resolution among the outcomes, a root order being one. On empty `children` there are no
     outcomes at all, an answer `ghost`'s emptiness test never lets it ask for. -/
-def bestChild (children : Finset (Block Validator)) (score : Block Validator → Nat) :
+def bestChild (children : Finset (Block Validator)) (score : (B : Block Validator) → Nat) :
     NDR (Block Validator) := do
   let top := {B ∈ children | ∀ C ∈ children, score C ≤ score B}
   let W ←ᵖ top
@@ -129,7 +129,7 @@ def bestChild (children : Finset (Block Validator)) (score : Block Validator →
 
     The figure's `loop` is bounded by `|tree|`. -/
 def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
-    (score : Block Validator → Nat) (eligible : Block Validator → DRE Bool) :
+    (score : (B : Block Validator) → Nat) (eligible : (B : Block Validator) → DRE Bool) :
     NDRE (Block Validator) := do
   let mut H := anchor
   for _ in [:|tree|] do                                        -- `loop`, bounded

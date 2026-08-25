@@ -93,7 +93,7 @@ namespace DC
     claims (`Model.lean`, the `B.root` section). -/
 class RootComputation (Validator : Type) [Roots] where
   /-- The root of the block being built, from its parent and its slot. -/
-  compute : Block Validator → Nat → Root
+  compute : (parent : Block Validator) → (s : Nat) → Root
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
   [RootComputation Validator]
@@ -229,7 +229,7 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
     `s > 0`, the evaluation of the *previous* slot, and the form `update_confirmation`'s
     precondition wants. -/
 def Fig2.onTick (i : Validator) (S : Store Validator) (t : Int)
-    (isProposer : Nat → Validator → Bool) : NDREB Validator (Store Validator) := do
+    (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- `s ← ⌊t/(4Δ)⌋`
   S.t ← t

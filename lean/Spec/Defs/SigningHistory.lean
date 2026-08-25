@@ -22,11 +22,11 @@ variable {Validator : Type} [Roots]
     and they write it into the store they return before the signature is released. -/
 structure SigningHistory (Validator : Type) [Roots] where
   /-- An empty-target vote `(h, ⊥)` was signed at height `h`. -/
-  signedEmptyTarget : Nat → Bool
+  signedEmptyTarget : (h : Nat) → Bool
   /-- The first named target signed at height `h`. -/
-  firstTarget : Nat → Option (Block Validator)
+  firstTarget : (h : Nat) → Option (Block Validator)
   /-- The target in the first finality pair signed at height `h`. -/
-  finalityTarget : Nat → Option (Block Validator)
+  finalityTarget : (h : Nat) → Option (Block Validator)
 
 /-- The record of a validator that has signed nothing anywhere: every validator's start. -/
 def SigningHistory.gen : SigningHistory Validator where

@@ -138,11 +138,11 @@ structure ChainState (Validator : Type) where
       height is *nonjustifiable*. See the module header on why it is stored. -/
   nj : Bool
   /-- `target_participation[i]`: `i` attested the exact pair `(h, T_h)`. -/
-  targetParticipation : Validator → Bool
+  targetParticipation : (i : Validator) → Bool
   /-- `progress[i]`: `i` made a current-height attestation that proves progress. -/
-  progress : Validator → Bool
+  progress : (i : Validator) → Bool
   /-- `finalize[i]`: `i`'s finality pair matched the latest justification `(h_j, J)`. -/
-  finalize : Validator → Bool
+  finalize : (i : Validator) → Bool
   /-- `J`, the latest justification on the chain. -/
   J : Block Validator
   /-- `h_j`, its height. -/
