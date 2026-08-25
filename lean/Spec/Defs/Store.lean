@@ -13,7 +13,7 @@ naming the layer it arrives in.
     Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)   availability
       + sg_votes[·]                                                              SG
       + σ[·], F, h_F, J, h_j, h_max                                              finality
-      + head[·], equiv[·], root_proposal[·], sg_root[·]                          healing
+      + root_proposal[·], sg_root[·]                                            healing
       + H, i                                                                     this spec's own
 
 ## The protocol's `Σ` is written `S`
@@ -76,9 +76,8 @@ The store is
 
 and the later layers add their fields to it — `sg_votes[·]` with the SG layer, the
 state map `σ[·]` with the finality state `(F, h_F, J, h_j, h_max)` with the finality
-layer, and the per-round bookkeeping `head[·]`, `equiv[·]`, `root_proposal[·]`,
-`sg_root[·]` with the healing layer. Later layers only ever add fields and lines; they
-never rename either.
+layer, and the round-root bookkeeping `root_proposal[·]` and `sg_root[·]` with the
+healing layer. Later layers only ever add fields and lines; they never rename either.
 
 ## Extract
 
@@ -144,8 +143,7 @@ scoped instance stateMapGetElem :
 
 /-- A timestamped vote: a stored vote and the time the store processed it. A named
     structure, where a bare product would name nothing. `α` is what was voted: a
-    `GoldfishVote` in `Σ.gf_votes[·]`, a head block in the healing bookkeeping
-    `Σ.head[·]`. -/
+    `GoldfishVote` in `Σ.gf_votes[·]`, an `SGHeadVote` in `Σ.sg_votes[·]`. -/
 structure TimestampedVote (α : Type) where
   /-- The stored vote. -/
   vote : α
@@ -206,15 +204,6 @@ structure Store (Validator : Type) where
   /-- `Σ.h_max`, the greatest state height in the live tree. It "otherwise only grows", and
       is recomputed inside the new live tree whenever `Σ.F` advances. -/
   h_max : Nat
-  /-- `Σ.head[r][i]` (healing layer): the first nonempty head processed from validator `i`'s
-      round-`r` attestations, with its processing time; absent while none. Indexed by `Int`:
-      round `r` grades its round-`(r−1)` entries (`09_Healing.lean`), and round `0` must
-      find round `−1` empty — a `Nat` index would truncate `0 − 1` back to `0`. -/
-  head : (r : Int) → (i : Validator) → Option (TimestampedVote (Block Validator))
-  /-- `Σ.equiv[r][i]` (healing layer): the time at which a head different from
-      `Σ.head[r][i]`'s was first processed from validator `i` in round `r`; absent while
-      none. Indexed by `Int` for the same reason as `head`. -/
-  equiv : (r : Int) → (i : Validator) → Option Int
   /-- `Σ.root_proposal[r]` (healing layer): the proposal root carried by the first round-`r`
       opening block processed, `⊥` while no opening block has arrived. -/
   rootProposal : (r : Nat) → Option (Block Validator)
@@ -259,8 +248,6 @@ def Store.gen (i : Validator) : Store Validator where
   J := .genesis
   h_j := 0
   h_max := 1
-  head := fun _ _ => none
-  equiv := fun _ _ => none
   rootProposal := fun _ => none
   sgRoot := fun _ => none
   H := SigningHistory.gen

@@ -98,25 +98,6 @@ macro_rules
         `(doElem| $v:ident :=
             { $v with $f:ident := Function.update (($v).$f:ident) $i $e })
 
-/-- `σ.arr[i][j] ← e`, a two-level indexed write to a function-valued field, and
-    `x[i][j] ← e` to a function-valued local. `Σ.head[r][i] ← …` is the case the
-    healing bookkeeping's writers will need. One `macro` command, deliberately: declared as
-    `syntax` plus a separate `macro_rules`, the pattern quotation is ambiguous with
-    core's pattern-bind and the expansion never fires (measured). -/
-scoped macro (name := idxAssign2) (priority := 1100)
-    x:ident noWs "[" i:term "]" "[" j:term "]" " ← " e:term : doElem => do
-  let n := x.getId
-  let pre := n.getPrefix
-  if pre.isAnonymous then
-    `(doElem| $x:ident :=
-        Function.update $x:ident $i (Function.update ($x:ident $i) $j $e))
-  else
-    let v := mkIdent pre
-    let f := mkIdent (Name.mkSimple n.getString!)
-    `(doElem| $v:ident :=
-        { $v with $f:ident := (Function.update (($v).$f:ident) $i
-            (Function.update ((($v).$f:ident) $i) $j $e)) })
-
 /-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in
     set-builder clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads
     a store map with the raising bracket has no monad to fail into; this form expands to

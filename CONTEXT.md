@@ -367,9 +367,12 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   extraction its docstring foresaw, hypothesis from the dependent `if`. **Semantic
   change, Roberto's**: an empty-headed vote now leaves no trace — before, it was stored,
   represented its sender in `W_r`, and could silence a head as half of an equivocation;
-  now it neither represents nor equivocates. **Pending**: the healing `head[·]` map is
-  now unconsumed (`equiv[·]` still feeds `equivBefore`); their fate awaits the rest of
-  the unification.
+  now it neither represents nor equivocates. The unification completed the same day:
+  `equivBefore` reads two distinct stored votes both before the cutoff, and the healing
+  `head[·]`/`equiv[·]` maps — both unconsumed — were removed on his word, the two-level
+  write macro `idxAssign2` parking back in `OldDefs.lean` (its working `macro`-command
+  form) with no two-level store map left. The healing store fields are `root_proposal[·]`
+  and `sg_root[·]` alone, still awaiting their writers.
 - **The healing layer** (`09_Healing.lean`, imported 2026-08-25 from the earlier draft's
   Figures 4 and 5, on Roberto's word — the draft `consensus.pdf`, local; not
   `consensus-1.pdf`, whose Figures 4–5 are the SG files). The support scores and grades

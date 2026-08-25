@@ -14,6 +14,29 @@ set_option autoImplicit false
 
 namespace DC
 
+open Lean
+
+/-- `σ.arr[i][j] ← e`, a two-level indexed write to a function-valued field, and
+    `x[i][j] ← e` to a function-valued local. No two-level store map remains — the
+    healing per-round bookkeeping it served is read off the SG votes now — so it has no
+    consumer. Revived by any store field of shape `κ₁ → κ₂ → Option V`. One `macro`
+    command, deliberately: declared as `syntax` plus a separate `macro_rules`, the
+    pattern quotation is ambiguous with core's pattern-bind and the expansion never
+    fires (measured). -/
+scoped macro (name := idxAssign2) (priority := 1100)
+    x:ident noWs "[" i:term "]" "[" j:term "]" " ← " e:term : doElem => do
+  let n := x.getId
+  let pre := n.getPrefix
+  if pre.isAnonymous then
+    `(doElem| $x:ident :=
+        Function.update $x:ident $i (Function.update ($x:ident $i) $j $e))
+  else
+    let v := mkIdent pre
+    let f := mkIdent (Name.mkSimple n.getString!)
+    `(doElem| $v:ident :=
+        { $v with $f:ident := (Function.update (($v).$f:ident) $i
+            (Function.update ((($v).$f:ident) $i) $j $e)) })
+
 /-- `times[x]`, the raising read on a `TimeMap`: when `x` was processed, or the
     failure. Its readers went when the stored votes began carrying their own times
     (`TimestampedVote`), and the one remaining `TimeMap` — the blocks' — is read by

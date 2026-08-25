@@ -4,10 +4,10 @@ import Spec.Defs.Nondet
 /-!
 # Healing: round grades and round roots
 
-Round `r` grades the heads of the round-`(r−1)` attestations, through the store's
-per-round head bookkeeping, and uses the grades to fix one SG root per round: the
-proposer offers a root in its opening block, each receiver checks it, and the accepted or
-fallback root anchors the round's Goldfish votes and its SG and FG outputs.
+Round `r` grades the heads of the round-`(r−1)` SG votes, read from the stored votes
+themselves, and uses the grades to fix one SG root per round: the proposer offers a root
+in its opening block, each receiver checks it, and the accepted or fallback root anchors
+the round's Goldfish votes and its SG and FG outputs.
 
 This file holds the two function groups of that mechanism: the support scores read from
 the store's round entries, with the grades defined over them, and the round-root
@@ -15,11 +15,11 @@ functions — proposal root, lower root, SG root, walk root, action root.
 
 ## What is not yet here
 
-The store fields these functions read — `Σ.head[·]`, `Σ.equiv[·]`, `Σ.root_proposal[·]`,
-`Σ.sg_root[·]` (`Store.lean`) — are written by no routine yet: the handler lines that fill
-them, the opening block's proposal-root field, and the fork-choice redirection through the
-walk root land with their own figures. Until then this file's functions are defined and
-unconsumed.
+The scores read the stored SG votes, which `process_sg_vote` already writes. The two
+round-root fields — `Σ.root_proposal[·]`, `Σ.sg_root[·]` (`Store.lean`) — are written by
+no routine yet: the handler line and tick writes that fill them, the opening block's
+proposal-root field, and the fork-choice redirection through the walk root land with
+their own figures. Until then this file's root functions are defined and unconsumed.
 
 ## The tree the rules read
 
@@ -38,21 +38,21 @@ nothing here assumes it.
 ## Extract
 
 Healing gives each round one agreed root. Round `r` grades the heads of the
-round-`(r−1)` attestations against its grade instants `Γ_j = t_r + jΔ`, `j ∈ {−1, 0, 1, 2}`
-(`t_r` the proposal time of the round's opening slot): the store keeps, per round and
-validator, the first processed nonempty attestation head with its processing time
-(`Σ.head[r][i]`), and the time at which a different head from the same validator was
-first processed (`Σ.equiv[r][i]`). The scores compare stored processing times against
-past instants, so a grade evaluated at any time after its instants gives one fixed
-answer. Grades are signed evidence.
+round-`(r−1)` SG votes against its grade instants `Γ_j = t_r + jΔ`, `j ∈ {−1, 0, 1, 2}`
+(`t_r` the proposal time of the round's opening slot). The stored votes carry their
+processing times, and only votes whose head is a block are stored; a validator has
+equivocated as of an instant when two of its distinct votes were both processed before
+it. The scores compare stored processing times against past instants, so a grade
+evaluated at any time after its instants gives one fixed answer. Grades are signed
+evidence.
 
 ## Extract — Definition (Support and grades)
 
-Fix round `r`, block `B`, and `j ∈ {−1, 0, 1, 2}`. `H_j(B)` contains the validators whose
-stored round-`(r−1)` head was processed before `Γ_j` and supports `B` (the head descends
-from `B`), and `E_j` those whose stored equivocation time is before that instant. For
-round `0` the round-`(−1)` entries are empty, so every score is `0`. The support scores
-are
+Fix round `r`, block `B`, and `j ∈ {−1, 0, 1, 2}`. `H_j(B)` contains the validators
+with a stored round-`(r−1)` vote processed before `Γ_j` whose head supports `B` (the
+head descends from `B`), and `E_j` those with two distinct stored round-`(r−1)` votes
+both processed before that instant. For round `0` there are no round-`(−1)` votes, so
+every score is `0`. The support scores are
 
 `S_j(B) = w(H_j(B) \ E_j)`, `S̄_j(B) = w(H_j(B) ∪ E_j)`, `S_{−1,1}(B) = w(H_{−1}(B) \ E_1)`
 
@@ -121,9 +121,10 @@ instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) :
 /-- `support_scores(Σ, r, j, B)`: the pair `(S_j(B), S̄_j(B))` of round-`r` support scores
     for `B`, read from the round-`(r−1)` entries against the grade instant `Γ_j`.
 
-    `H_j(B)` is the set of validators whose stored round-`(r−1)` head was processed before
-    `Γ_j` and supports `B` — the head descends from `B`; `E_j` the set of those whose
-    stored equivocation time is before that instant. Then `S_j(B) = w(H_j(B) \ E_j)`, the
+    `H_j(B)` is the set of validators with a stored round-`(r−1)` vote processed before
+    `Γ_j` whose head supports `B` — the head descends from `B`; `E_j` the set of those
+    the stored votes catch equivocating before that instant. Then
+    `S_j(B) = w(H_j(B) \ E_j)`, the
     support net of equivocators, and `S̄_j(B) = w(H_j(B) ∪ E_j)`, the support together
     with every equivocator. For round `0` the round-`(−1)` entries are empty, so every
     score is `0`. -/
@@ -135,9 +136,9 @@ def Store.supportScores (S : Store Validator) (r : Nat) (j : Int) (B : Block Val
 
 /-! ## Figure -/
 /-- `two_view_support(Σ, r, B)`: `S_{−1,1}(B)`, the two-view score — support counted with
-    the head cutoff at `Γ_{−1}` and the equivocation cutoff at `Γ_1`: the validators whose
-    stored round-`(r−1)` head was processed before `Γ_{−1}` and supports `B`, net of those
-    whose stored equivocation time is before `Γ_1`. -/
+    the head cutoff at `Γ_{−1}` and the equivocation cutoff at `Γ_1`: the validators
+    with a stored round-`(r−1)` vote processed before `Γ_{−1}` whose head supports `B`,
+    net of those the stored votes catch equivocating before `Γ_1`. -/
 def Store.twoViewSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat :=
   let Hm := {i ∈ Electorate.V (Validator := Validator) | S.headSupports (r - 1) i (Γ (-1) r) B}  -- H_{−1}(B)
   let E1 := {i ∈ Electorate.V (Validator := Validator) | S.equivBefore (r - 1) i (Γ 1 r)}  -- E_1
