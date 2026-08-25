@@ -70,8 +70,9 @@ Update this list when a new call lands.
   `abs` bars, shadowed in-namespace), the raising set-builder `let y ← {x ∈ᴹ s | p}` (a
   `doElem`, necessarily — the term-macro form loses the `←` to the outer `do`'s lift; its
   expansion pins `DRE` so it lifts whole inside `NDRE`), and the pick `let x ←ᵖ s`. The
-  order-free loops are written as the sets they build (`biUnion`, the set-builder); a
-  genuinely order-sensitive loop would use the `ForIn` parked in `OldDefs.lean`.
+  order-free loops are written as the sets they build (`biUnion`, the set-builder), or loop
+  with the nondeterministic `ForIn` over `Finset` (`Nondet.lean`) — every visitation
+  order among the outcomes, a singleton when the body is order-free (`merge_view`).
 - **No `match` and no `|` alternatives in spec bodies** — the dependent-`if` idiom;
   recursion patterns like a `for`-range bound are the tolerated shape. **Absence is
   tested `x ≠ ⊥`, never `.isSome`**, and in a raising body extraction is the lift:
@@ -196,8 +197,11 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     equivocations recorded before `t_{s−1} + 3Δ`, both cutoffs honest again because the
     record is timed — then updated by `merge_view(Σ, s, view)`, the block-carried votes
     joining the votes and a validator with two distinct votes in the union joining the
-    equivocators. `merge_view` is written as the sets it builds (processing one vote at
-    a time would fix an order the protocol does not).
+    equivocators. `merge_view` loops over the blocks with the nondeterministic `for`
+    (the `ForIn` over `Finset`, moved out of `OldDefs.lean` into `Nondet.lean`): every
+    visitation order among the outcomes, the order-free union making the outcome set a
+    singleton; the equivocators are one named `let` over the merged votes (both
+    Roberto's, 2026-08-25). `merge_view` is `NDR`-valued for the loop's sake.
   - Claude's picks inside his sketch, each one line to change: the entry maps are
     `Option`-valued (the sketch wrote bare `VoteTime`/`Int`; absence must be
     representable); the view travels as the struct through the whole chain (his

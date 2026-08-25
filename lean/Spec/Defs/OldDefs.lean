@@ -33,15 +33,4 @@ def _root_.Option.value {α : Type} (x : Option α)
     (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
   x.get (Option.ne_none_iff_isSome.mp h)
 
-/-- `for x in (s : Finset α) do …`, in any monad `Set` lifts into: pick a listing, loop the
-    list — every visitation order among the outcomes. No spec routine loops over a
-    `Finset` (`ghost` loops a range, the handlers loop `List`s, the order-free loops are
-    written as the sets they build), so the instance has no consumer. Revived by the
-    first loop whose body is not order-free. -/
-scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [DecidableEq α] :
-    ForIn m (Finset α) α where
-  forIn s init body := do
-    let l ← liftM (listings s)
-    forIn l init body
-
 end DC
