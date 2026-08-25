@@ -78,14 +78,13 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
-  let early := {e ∈ S.gfVotesAt s | e.time < slotStart s + 2 * (Δ : Int)}
-  let late := {e ∈ S.gfVotesAt s | e.time < slotStart s + 6 * (Δ : Int)}
+  let early := S.gfVotesBefore s (slotStart s + 2 * (Δ : Int))
+  let late := S.gfVotesBefore s (slotStart s + 6 * (Δ : Int))
   -- the early votes whose validator's first equivocation is not before `t_s + 6Δ`
-  let votes := ({e ∈ early |
-    ¬ timeBefore (S.gfEquiv s e.vote.validator) (slotStart s + 6 * (Δ : Int))}).biUnion
-    fun e => {e.vote}
+  let votes := {a ∈ early |
+    ¬ timeBefore (S.gfEquiv s a.validator) (slotStart s + 6 * (Δ : Int))}
   -- the denominator is `late`'s participants
-  let votersCount := |{v ∈ Committees.K s | ∃ e ∈ late, e.vote.validator = v}|
+  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
   -- the majority condition, with no current-slot escape — see the module header;
   -- the cleaned view carries no equivocators
   let view : GoldfishView Validator := { votes := votes, equivocators := ∅ }

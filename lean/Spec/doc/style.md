@@ -41,9 +41,11 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   spec bodies. (An autoparam extraction for *pure* bodies, `Option.value`, is parked in
   `OldDefs.lean`.)
 - **No `∣` (divides)**: write `% … = 0`.
-- **No `Finset.image`**: a projection is the order-free `biUnion` with a singleton body,
-  `votes.biUnion fun a => {a.validator}` (`merge_view`). The raising fold `imageM` is a
-  different thing and unaffected.
+- **No `Finset.image` and no `biUnion`**: a collection or projection moves into the
+  vocabulary layer (`gf_votes_at`, `gf_votes_before` — `Store.lean`, whose internals may
+  use them) or is spelled in the spec's set language (`voters` is a set-builder over `V`;
+  `merge_view` loops). `Finset.map` cannot stand in — it takes an embedding, and these
+  projections are not injective. The raising fold `imageM` is unaffected.
 - **What the protocol writes inline stays inline.** `voters_count` is a `let` at each
   use site — a local, not a definition.
 - **Explicit coercion where a `mut` read blocks insertion**: `B.parent = ↑H` — the `=`

@@ -94,9 +94,14 @@ Update this list when a new call lands.
   bears the plain `Store` name; `on_tick`'s is the SG layer's, rendered as a call); a
   bare name for everything defined once (`ghost`, `goldfishScore`, its prefix spelled
   since no namespace carries it). `voters_count` is a `let` at each of its three sites —
-  a local, not a definition. **No `Finset.image` in spec bodies** (Roberto, 2026-08-25:
-  "don't use image!"): a projection is the order-free `biUnion` with a singleton body,
-  `votes.biUnion fun a => {a.validator}`. `imageM` (the raising fold) is unaffected.
+  a local, not a definition. **No `Finset.image` and no `biUnion` in spec bodies**
+  (Roberto, 2026-08-25: "don't use image!", "don't use biUnion either"): a collection or
+  projection either moves into the `Defs` vocabulary (`gf_votes_at`, `gf_votes_before` in
+  `Store.lean`, whose internals may use them — the `.isSome`-internally precedent) or is
+  spelled as the spec's own set language (`voters` is a set-builder over `V`; the carried
+  votes are `merge_view`'s loop). `Finset.map` cannot stand in: it takes an embedding
+  (injective), and these projections are not. `imageM`, the raising fold, is
+  unaffected.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
   dependent `if`s alone, no `have`s. The `if`s bind `_`, not a name — the tactic reads
@@ -209,11 +214,12 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     representable); the view travels as the struct through the whole chain (his
     "perhaps … a struct passed to getHead and so on"); `update_confirmation` cleans its
     votes by the record at the late cutoff and passes an equivocator-free view, so its
-    score stays supporters-only as before; the collected `gf_votes_at(Σ, k)` ranges over
-    `K_k` (no rule reads an out-of-committee vote). The equivocator sets range over `V`
-    (Roberto, same day: "no need to filter on the committee" — the score's own `K_s`
-    filter makes any superset domain observably equal); whether `gf_votes_at` should
-    also range over `V` is not asked yet.
+    score stays supporters-only as before; the collections `gf_votes_at(Σ, k)` and
+    `gf_votes_before(Σ, k, c)` return vote sets (the timed entries never reach a spec
+    body) and range over `K_k` (no rule reads an out-of-committee vote). The equivocator
+    sets range over `V` (Roberto, same day: "no need to filter on the committee" — the
+    score's own `K_s` filter makes any superset domain observably equal); whether the
+    collections should also range over `V` is not asked yet.
   - **How `merge_view`, `GoldfishView` and `gf_votes_at` render in the extracted PDF is
     deliberately undecided** (Roberto: "for later") — none carries a figure mark yet.
 - **A raising read wears brackets; a total map is a plain function.** `Σ.σ[B]` and

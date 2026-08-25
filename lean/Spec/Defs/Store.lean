@@ -311,14 +311,20 @@ under this subtree's rule a definition lands with its first consumer. -/
 def Store.liveTree (S : Store Validator) : Finset (Block Validator) :=
   {B ∈ S.T | S.F ⪯ B}
 
-/-- `gf_votes_at(Σ, k)`: the stored slot-`k` entries of the slot's committee, as one set —
-    each a vote with its processing time, what the duties build their views from. One vote
-    per validator is stored, so the set holds at most one entry per committee member. A
-    stored vote from a validator outside `K_k` is not collected: no rule reads one —
-    every score and count filters by `K_k`. -/
+/-- `gf_votes_at(Σ, k)`: the stored slot-`k` votes of the slot's committee, as one set —
+    what the proposer's view holds. One vote per validator is stored, so the set holds at
+    most one vote per committee member. A stored vote from a validator outside `K_k` is
+    not collected: no rule reads one — every score and count filters by `K_k`. -/
 def Store.gfVotesAt [Committees Validator] (S : Store Validator) (k : Nat) :
-    Finset (VoteTime (GoldfishVote Validator)) :=
-  (Committees.K k).biUnion fun v => (S.gfVotes k v).toFinset
+    Finset (GoldfishVote Validator) :=
+  (Committees.K k).biUnion fun v => ((S.gfVotes k v).map (·.vote)).toFinset
+
+/-- `gf_votes_before(Σ, k, c)`: the stored slot-`k` votes of the slot's committee whose
+    entries were processed before instant `c` — the view a cutoff sees. -/
+def Store.gfVotesBefore [Committees Validator] (S : Store Validator) (k : Nat) (c : Int) :
+    Finset (GoldfishVote Validator) :=
+  (Committees.K k).biUnion fun v =>
+    (((S.gfVotes k v).filter fun e => e.time < c).map (·.vote)).toFinset
 
 
 /-! ## The duty boundary object
