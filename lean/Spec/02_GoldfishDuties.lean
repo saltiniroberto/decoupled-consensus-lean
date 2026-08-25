@@ -40,11 +40,11 @@ relays every object it processes" is network behaviour, the wiring layer's to re
 
 ## Two collisions with `Finset`, and where each lands
 
-**The view merge's `for all B ∈ Σ.T` is an order-free union, written as one.** Its body
-accumulates a union, so the loop's whole effect is `biUnion` — the standard name for it —
-and the loop spelling adds nothing. A loop that were *not*
-order-free would use the nondeterministic `for` of `Nondet.lean` instead, every visitation
-order among the outcomes.
+**The view merge's `for all B ∈ Σ.T` is the nondeterministic `for`.** A `Finset` fixes
+no iteration order, so the `for` of `Nondet.lean` picks a listing — every visitation
+order among the outcomes. The merge's body is an order-free union, so every listing
+converges to one store and the outcome set is exactly the fold's; the loop spelling is
+the figure's.
 
 **The proposal's vote set crosses from `Finset` to `List` by a pick.** The block's carried votes are a
 `List`: a `Finset` is a quotient, and a quotient cannot appear in an inductive's
@@ -191,8 +191,9 @@ def Store.goldfishVote (i : Validator) (S : Store Validator)
   -- held before the freeze at `t_{s−1} + 3Δ`: the entries carry their times
   let mut votes := ({e ∈ S.gfVotesAt (s - 1) |
     e.t < slotStart (s - 1) + 3 * (Δ : Int)}).image (·.vote)
-  -- the view merge: the loop is an order-free union — see the module header
-  votes ← votes ∪ ({B ∈ S.T | B.slot = s}).biUnion fun B => B.gfVotes.toFinset
+  -- the view merge: each processed slot-`s` block offers its carried votes
+  for B in {B ∈ S.T | B.slot = s} do
+    votes ← votes ∪ B.gfVotes.toFinset
   -- the equivocator record, as of this run
   let marked := S.gfEquiv (s - 1)
   let H ← Fig1.getHead S votes marked (s - 1)

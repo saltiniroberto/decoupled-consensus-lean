@@ -322,10 +322,14 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 - **`nj` is a stored field of the chain state**, written on entry into a height and read
   by the justify event. Recomputing the test at the event would be a *different rule* —
   it would read the `h_F` of the justification's moment, not of the height's entry.
-- **The order-free union over `Σ.T` is a fold** (`biUnion`): no `ForIn` for `Finset`
-  exists, and a union is commutative-associative, which is why a set-typed loop is
-  writable at all. Needs `Mathlib.Data.Finset.Lattice.Basic` for the instances, and the
-  fold's result type annotated or instance search sticks inside the `do` block.
+- **The view merge is the figure's `for` loop again** (2026-08-25, Roberto: "can we
+  please have a for loop here as in consensus-1.pdf"). The nondeterministic `ForIn` over
+  `Finset` moved out of `OldDefs.lean` into `Nondet.lean`: pick a listing, loop the
+  list — every visitation order among the outcomes. The merge's body is an order-free
+  union, so every listing converges to one store and the outcome set equals the old
+  fold's. (The fold reading it replaced: `biUnion`, adopted when no `ForIn` existed —
+  needed `Mathlib.Data.Finset.Lattice.Basic` and a result-type annotation. `OldDefs` also
+  lost its parked `idx2Assign`, superseded by `Notation.lean`'s live `idxAssign2`.)
 - **The finality-vote strategy** (`08_FinalityVote.lean`, imported 2026-08-23 from the
   first rendering's `Voting.lean`, on the branch): `SigningHistory` — the once-only
   per-height record, fields `signedEmptyTarget`/`firstTarget`/`finalityTarget` (Roberto
