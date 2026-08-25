@@ -221,7 +221,8 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   macros still write with brackets, consulting no instance.
 - **`E_F(Σ)` is not rendered** — no figure reads it, and a definition lands with its
   first consumer.
-- **`Σ.H` and `Σ.id` are this spec's own store fields.** `Σ.H` is the durable signing
+- **`Σ.history` and `Σ.id` are this spec's own store fields** (`H` and `i` until
+  Roberto's renames, 2026-08-25). `Σ.history` is the durable signing
   record behind the finality-vote rules; `Σ.id` is the node's validator — `i` until
   Roberto's rename, 2026-08-25 — fixed at `Store.gen` and written by nothing. Since
   2026-08-25 every duty reads it (`fgVote` did from the start, 2026-08-24); no duty takes

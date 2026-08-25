@@ -9,7 +9,7 @@ move the chain state; this file holds the rule a validator uses to *fill* the he
 and the finality pair it signs.
 
 The strategy, in plain words. A validator keeps a durable per-height record of what it has
-signed — `Σ.H`, a `SigningHistory` (the field in `Store.lean`): whether it signed an
+signed — `Σ.history`, a `SigningHistory` (the field in `Store.lean`): whether it signed an
 empty target at a height, the first named target it signed there, and the target of the
 first finality pair it signed there. Two store rules read that record and the store's
 view, and each
@@ -37,7 +37,7 @@ namespace DC
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
 
 /-- What a pair rule produces: the height or finality pair it signed, and the store
-    afterwards, its `Σ.H` already carrying the rule's record write. A named structure,
+    afterwards, its `Σ.history` already carrying the rule's record write. A named structure,
     where a bare product would make the caller remember which component is which. -/
 structure SigningResult (Validator : Type) [Roots] (α : Type) where
   /-- The pair the rule signed. -/
@@ -48,7 +48,7 @@ structure SigningResult (Validator : Type) [Roots] (α : Type) where
 /-- The current-height signing rule: which height pair to sign, in five cases tried in
     order, the record having precedence over anything new.
 
-    Reads from the store: the record `Σ.H`, the ceiling `Σ.live_confirmed` — the validator
+    Reads from the store: the record `Σ.history`, the ceiling `Σ.live_confirmed` — the validator
     vouches for nothing beyond it, so a target is signed only when it lies on that block's
     chain — and, through the raising read of the ceiling's stored state, the current
     height `h`, its target and the nonjustifiable flag.
@@ -68,27 +68,27 @@ def Store.heightVote (S : Store Validator) :
   let C := S.liveConfirmed
   let σC ← S.σ[C]
   let h := σC.h
-  if S.H.signedEmptyTarget h then                   -- case 1: repeat the empty target
+  if S.history.signedEmptyTarget h then                   -- case 1: repeat the empty target
     return { pair := .emptyTarget h, state := S }
-  if S.H.finalityTarget h ≠ ⊥ then                  -- case 2: repeat the finality target
-    let finalityTarget ← S.H.finalityTarget h
+  if S.history.finalityTarget h ≠ ⊥ then                  -- case 2: repeat the finality target
+    let finalityTarget ← S.history.finalityTarget h
     if finalityTarget ⪯ C then
       return { pair := .target h finalityTarget, state := S }
     return { pair := .empty, state := S }
-  if S.H.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
-    let target ← S.H.firstTarget h
+  if S.history.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
+    let target ← S.history.firstTarget h
     if target ⪯ C then
       return { pair := .target h target, state := S }
-    S.H ← S.H.saveEmptyTarget h
+    S.history ← S.history.saveEmptyTarget h
     return { pair := .emptyTarget h, state := S }
   if σC.nj then                                     -- case 4: no record, nonjustifiable
-    S.H ← S.H.saveEmptyTarget h
+    S.history ← S.history.saveEmptyTarget h
     return { pair := .emptyTarget h, state := S }
   let T := σC.T_h                                   -- case 5: no record, sign the state's
   if T ⪯ C then                                     --   target when it sits below `C`
-    S.H ← S.H.saveTarget h T
+    S.history ← S.history.saveTarget h T
     return { pair := .target h T, state := S }
-  S.H ← S.H.saveEmptyTarget h
+  S.history ← S.history.saveEmptyTarget h
   return { pair := .emptyTarget h, state := S }
 
 /-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
@@ -105,10 +105,10 @@ def Store.heightVote (S : Store Validator) :
 def Store.finalityVote (S : Store Validator) :
     SigningResult Validator (FinalityPair Validator) := Id.run do
   let mut S := S
-  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ S.H.firstTarget S.h_j = S.J ∧
-      ¬ S.H.signedEmptyTarget S.h_j ∧
-      (S.H.finalityTarget S.h_j = ⊥ ∨ S.H.finalityTarget S.h_j = S.J) then
-    S.H ← S.H.saveFinalityTarget S.h_j S.J
+  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ S.history.firstTarget S.h_j = S.J ∧
+      ¬ S.history.signedEmptyTarget S.h_j ∧
+      (S.history.finalityTarget S.h_j = ⊥ ∨ S.history.finalityTarget S.h_j = S.J) then
+    S.history ← S.history.saveFinalityTarget S.h_j S.J
     return { pair := .pair S.h_j S.J, state := S }
   return { pair := .empty, state := S }
 

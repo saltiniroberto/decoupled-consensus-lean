@@ -210,10 +210,10 @@ structure Store (Validator : Type) where
   /-- `Σ.sg_root[r]` (healing layer): the round's stored SG root (`get_sg_root`,
       `09_Healing.lean`), `⊥` before the scheduled write. -/
   sgRoot : (r : Nat) → Option (Block Validator)
-  /-- `Σ.H`, the validator's durable signing record — **not a field of the protocol's store**:
+  /-- `Σ.history`, the validator's durable signing record — **not a field of the protocol's store**:
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
       its use in `08_FinalityVote.lean`. Written only by those rules. -/
-  H : SigningHistory Validator
+  history : SigningHistory Validator
   /-- `Σ.id`, the validator running this node — the protocol's `ℓ`, which its figures treat
       as ambient and **its store does not list**. A field here, so a duty can read its
       own identity instead of taking it as a parameter. Written by nothing: fixed at
@@ -250,7 +250,7 @@ def Store.gen (i : Validator) : Store Validator where
   h_max := 1
   rootProposal := fun _ => none
   sgRoot := fun _ => none
-  H := SigningHistory.gen
+  history := SigningHistory.gen
   id := i
 
 /-! ## The live tree

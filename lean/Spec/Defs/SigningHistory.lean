@@ -5,7 +5,7 @@ import Spec.Defs.Model
 
 The durable per-height memory behind the attestation rules: `08_FinalityVote.lean` holds
 the rules that fill the pairs a validator signs, and this record is what those rules read
-and write. The store holds one as its field `Σ.H` (`Store.lean`), because the store is
+and write. The store holds one as its field `Σ.history` (`Store.lean`), because the store is
 one validator's state and the rules are store rules.
 -/
 
