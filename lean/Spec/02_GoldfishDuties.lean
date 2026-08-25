@@ -134,8 +134,7 @@ def Store.mergeView (S : Store Validator) (s : Nat) (view : GoldfishView Validat
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
   -- the validators who voted in the merged view
-  let voters := {v ∈ Electorate.V (Validator := Validator) |
-    ∃ a ∈ votes, a.validator = v}
+  let voters := votes.image fun a => a.validator
   -- a voter with two distinct votes in the merged view equivocates
   let equivocators := view.equivocators ∪
     {v ∈ voters | ∃ a ∈ votes, ∃ b ∈ votes, a.validator = v ∧ b.validator = v ∧ a ≠ b}

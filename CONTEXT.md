@@ -94,14 +94,14 @@ Update this list when a new call lands.
   bears the plain `Store` name; `on_tick`'s is the SG layer's, rendered as a call); a
   bare name for everything defined once (`ghost`, `goldfishScore`, its prefix spelled
   since no namespace carries it). `voters_count` is a `let` at each of its three sites —
-  a local, not a definition. **No `Finset.image` and no `biUnion` in spec bodies**
-  (Roberto, 2026-08-25: "don't use image!", "don't use biUnion either"): a collection or
-  projection either moves into the `Defs` vocabulary (`gf_votes_at`, `gf_votes_before` in
-  `Store.lean`, whose internals may use them — the `.isSome`-internally precedent) or is
-  spelled as the spec's own set language (`voters` is a set-builder over `V`; the carried
-  votes are `merge_view`'s loop). `Finset.map` cannot stand in: it takes an embedding
-  (injective), and these projections are not. `imageM`, the raising fold, is
-  unaffected.
+  a local, not a definition. **A spec-body projection is `image` with an explicit lambda; no `biUnion` there**
+  (Roberto, 2026-08-25, settled over three exchanges): `votes.image fun a => a.validator`
+  is the accepted spelling — the lambda written out, not the `(·.f)` dot. `Finset.map`
+  cannot stand in (it takes an embedding, and these projections are not injective).
+  Collections stay in the `Defs` vocabulary (`gf_votes_at`, `gf_votes_before`,
+  `Store.lean`), whose internals may use `biUnion`/`Option.map` — the
+  `.isSome`-internally precedent — so the timed entries never reach a spec body.
+  `imageM`, the raising fold, is unaffected.
 - **Scheduled routines carry their instant as an anonymous autoparam**
   (`… := by solve_by_elim [And.left, And.right]`); `on_tick` discharges them with
   dependent `if`s alone, no `have`s. The `if`s bind `_`, not a name — the tactic reads
