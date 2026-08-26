@@ -49,11 +49,17 @@ facts of this structure.
 
 ## How the indexed fields are read
 
-`Σ.σ[B]` wears the protocol's brackets and **raises** — the next
-paragraph. The vote tables are total maps read by application: `Σ.gf_votes k` and
-`Σ.sg_votes r` are sets, empty if nothing was processed. The indexed writes keep the
-protocol's brackets — `Σ.gf_votes[k] ← …` — through the assignment macros, which
-consult no instance.
+Every indexed field is read with the protocol's brackets. `Σ.σ[B]` **raises** — the
+next paragraph. The others are total, so their reads owe nothing: `Σ.gf_votes[k]` and
+`Σ.sg_votes[r]` are sets, empty if nothing was processed, and `Σ.root_proposal[r]`,
+`Σ.sg_root[r]` are the raw `Option`, tested `= ⊥` or extracted by the lift. The field
+types are left bare — `(k : Nat) → Finset …` — the `GetElem` instances above being
+declared on the function types themselves; the indexed *writes* consult no instance at
+all, the assignment macros expanding to `Function.update`.
+
+`Σ.sg_votes[·]` is indexed by `Int` and reads at either index: healing grades round
+`r`'s predecessor, where round `0` must read round `−1` as itself rather than truncate
+to `0`, while the SG handler holds its round as a `Nat`.
 
 The state map is not total, and `Σ.σ[B]` **raises**: it returns
 `DRE (ChainState Validator)`, so `let σB ← Σ.σ[B]` propagates a block the map does
@@ -64,9 +70,9 @@ application, `Σ.σ B`, because the map *is* a function; its one reader is the w
 inside `S.getHead`, which cannot carry the monad — set-builders raise instead, through the
 `FinsetM` fold machinery.
 
-A name is needed on each
-map type because instances resolve on a type's head constant, and a bare function type has
-none.
+`TimeMap` and `StateMap` are named for their raising reads' sake, a `def` and not an
+`abbrev` so the name survives to the instance lookup; the total maps need no name, their
+`GetElem` instances being declared on the function types themselves.
 
 ## Extract — Definition (Store)
 
@@ -121,16 +127,32 @@ variable {Validator : Type} [Roots] [DecidableEq Validator]
     lookup. -/
 def TimeMap (α : Type) := (x : α) → Option Int
 
-/-- A per-round root entry: `Σ.root_proposal[·]` and `Σ.sg_root[·]`. A named type, so
-    the bracket read below resolves — instances resolve on a type's head constant, and a
-    bare function type has none. -/
-def RoundRootMap (Validator : Type) [Roots] := (r : Nat) → Option (Block Validator)
+/-- `f[k]`: the set at an index of a `Nat`-indexed set map — `Σ.gf_votes[k]`. Validity
+    is `True`, every index having a set, so `get_elem_tactic` closes it with `trivial`
+    and a read owes nothing. The field types stay bare: an instance on the function type
+    itself is enough, no named map type in the way (measured). -/
+scoped instance natSetMapGetElem {α : Type} :
+    GetElem ((k : Nat) → Finset α) Nat (Finset α) (fun _ _ => True) where
+  getElem f k _ := f k
 
-/-- `roots[r]`: the entry at a round — the raw `Option`, so an `= ⊥` test reads as the
-    figures write it, and `let R ← roots[r]` extracts by the lift, raising on `⊥`. -/
-scoped instance roundRootMapGetElem :
-    GetElem (RoundRootMap Validator) Nat (Option (Block Validator)) (fun _ _ => True) where
-  getElem m r _ := m r
+/-- `f[r]`: the same read on an `Int`-indexed set map — `Σ.sg_votes[r]`, indexed by `Int`
+    so round `0` reads round `−1` as itself rather than truncating. -/
+scoped instance intSetMapGetElem {α : Type} :
+    GetElem ((r : Int) → Finset α) Int (Finset α) (fun _ _ => True) where
+  getElem f r _ := f r
+
+/-- `f[r]` on an `Int`-indexed set map at a `Nat` index: a routine holding a slot or
+    round as a `Nat` reads without writing the coercion. -/
+scoped instance intSetMapNatGetElem {α : Type} :
+    GetElem ((r : Int) → Finset α) Nat (Finset α) (fun _ _ => True) where
+  getElem f r _ := f (r : Int)
+
+/-- `f[r]`: the entry at an index of an `Option`-valued map — `Σ.root_proposal[r]`,
+    `Σ.sg_root[r]`. The raw `Option`, so an `= ⊥` test reads as the figures write it, and
+    `let R ← f[r]` extracts by the lift, raising on `⊥`. -/
+scoped instance optMapGetElem {α : Type} :
+    GetElem ((r : Nat) → Option α) Nat (Option α) (fun _ _ => True) where
+  getElem f r _ := f r
 
 /-- The finality layer's block-state map. Named for the same reason as `TimeMap`. -/
 def StateMap (Validator : Type) := (B : Block Validator) → Option (ChainState Validator)
@@ -217,10 +239,10 @@ structure Store (Validator : Type) where
   h_max : Nat
   /-- `Σ.root_proposal[r]` (healing layer): the proposal root carried by the first round-`r`
       opening block processed, `⊥` while no opening block has arrived. -/
-  rootProposal : RoundRootMap Validator
+  rootProposal : (r : Nat) → Option (Block Validator)
   /-- `Σ.sg_root[r]` (healing layer): the round's stored SG root (`get_sg_root`,
       `09_Healing.lean`), `⊥` before the scheduled write. -/
-  sgRoot : RoundRootMap Validator
+  sgRoot : (r : Nat) → Option (Block Validator)
   /-- `Σ.history`, the validator's durable signing record — **not a field of the protocol's store**:
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
       its use in `08_FinalityVote.lean`. Written only by those rules. -/

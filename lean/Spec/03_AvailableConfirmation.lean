@@ -79,8 +79,8 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
     (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDRE (Store Validator) := do
   let mut S := S
-  let early := {e.vote | e ∈ S.gfVotes s, e.time < slotStart s + 2 * (Δ : Int)}
-  let late := {e.vote | e ∈ S.gfVotes s, e.time < slotStart s + 6 * (Δ : Int)}
+  let early := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 2 * (Δ : Int)}
+  let late := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 6 * (Δ : Int)}
   -- the early votes whose validator `late` does not catch equivocating
   let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
   -- the denominator is `late`'s participants

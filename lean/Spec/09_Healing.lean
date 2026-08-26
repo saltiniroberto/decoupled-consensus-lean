@@ -101,7 +101,7 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validato
     stored — so the ancestry test reads it directly. -/
 def Store.headSupports (S : Store Validator) (k : Int) (i : Validator) (c : Int)
     (B : Block Validator) : Prop :=
-  ∃ vt ∈ S.sgVotes k, vt.vote.validator = i ∧ vt.time < c ∧ B ⪯ vt.vote.head
+  ∃ vt ∈ S.sgVotes[k], vt.vote.validator = i ∧ vt.time < c ∧ B ⪯ vt.vote.head
 
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) (B : Block Validator) :
     Decidable (S.headSupports k i c B) := inferInstanceAs (Decidable (∃ _ ∈ _, _))
@@ -110,7 +110,7 @@ instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) (B : Block Va
     votes of its, both processed before `c` — the detection time is the later of the two
     stamps, so both must clear the cutoff. -/
 def Store.equivBefore (S : Store Validator) (k : Int) (i : Validator) (c : Int) : Prop :=
-  ∃ a ∈ S.sgVotes k, ∃ b ∈ S.sgVotes k,
+  ∃ a ∈ S.sgVotes[k], ∃ b ∈ S.sgVotes[k],
     a.vote.validator = i ∧ b.vote.validator = i ∧ a.vote ≠ b.vote ∧
     a.time < c ∧ b.time < c
 

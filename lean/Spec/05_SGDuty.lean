@@ -77,14 +77,14 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
   -- an empty head is never stored; the extraction's hypothesis is this `if`'s
   if _ : vote.head ≠ ⊥ then
     let hv := SGHeadVote.mk (validator := vote.validator) (head := (vote.head).value)
-    if ∃ e ∈ S.sgVotes vote.round, e.vote = hv then
+    if ∃ e ∈ S.sgVotes[vote.round], e.vote = hv then
       return S
     -- two distinct votes by this validator are already held
-    if ∃ a ∈ S.sgVotes vote.round, ∃ b ∈ S.sgVotes vote.round,
+    if ∃ a ∈ S.sgVotes[vote.round], ∃ b ∈ S.sgVotes[vote.round],
         a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
         a.vote ≠ b.vote then
       return S
-    S.sgVotes[vote.round] ← S.sgVotes vote.round ∪
+    S.sgVotes[vote.round] ← S.sgVotes[vote.round] ∪
       {TimestampedVote.mk (vote := hv) (time := S.t)}
   return S
 

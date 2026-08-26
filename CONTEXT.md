@@ -211,14 +211,22 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   nondeterministic `ForIn` living in `Nondet.lean` with the view merge as the figure's
   `for` loop (order-free union, so the outcome set is a singleton); `Finset.map'`
   (`FinsetM.lean`), `image` under the name a programmer expects, no consumer here yet.
-- **A raising read wears brackets; a total map is a plain function.** `Σ.σ[B]` and
-  `Σ.timestamp[x]` return `DRE` and raise on an unrecorded key — their map types
-  (`StateMap`, `TimeMap`) are named because instances resolve on a type's head constant
-  and a bare function type has none; the raw `Option` stays reachable by application, and
-  `B ∈ σ` is the membership, `.isSome` internally. The vote tables (`gf_votes`,
-  `sg_votes`) are bare function types read by application — `VoteTable` and its bracket
-  read are dropped (Roberto, 2026-08-25: "not sure what it gives us"); the assignment
-  macros still write with brackets, consulting no instance.
+- **Every indexed field is read with the protocol's brackets, and the field types stay
+  bare** (Roberto, 2026-08-26: "I want to be able to write this", of `Σ.sg_votes[r]` —
+  reconciling his two earlier calls, brackets everywhere and no named map type in the
+  declaration). `Σ.σ[B]` and `Σ.timestamp[x]` return `DRE` and raise on an unrecorded
+  key; the total maps' reads owe nothing — `Σ.gf_votes[k]`, `Σ.sg_votes[r]` sets,
+  `Σ.root_proposal[r]`, `Σ.sg_root[r]` the raw `Option` (tested `= ⊥`, or extracted by
+  the lift). `B ∈ σ` is the membership, `.isSome` internally, and the raw `Option` of any
+  map stays reachable by application. The indexed *writes* consult no instance at all,
+  the assignment macros expanding to `Function.update`. `VoteTable` and `RoundRootMap`
+  are both gone: a `GetElem` instance on the bare function type does the work (see the
+  corrected measurement below). `TimeMap` and `StateMap` keep their names, carrying the
+  raising reads.
+- **`Σ.sg_votes[·]` is `Int`-indexed and reads at either index** (Roberto's own edit,
+  2026-08-25): healing grades round `r`'s predecessor, where round `0` must read round
+  `−1` as itself rather than truncate to `0`, while the SG handler holds its round as a
+  `Nat` — so there are two instances, the `Nat`-index one inserting the coercion.
 - **`E_F(Σ)` is not rendered** — no figure reads it, and a definition lands with its
   first consumer.
 - **`Σ.history` and `Σ.id` are this spec's own store fields** (`H` and `i` until
@@ -522,6 +530,18 @@ works but duplicates the sequence in a `def`.
   is invisible to `x.value`, hence `_root_.` on such defs. Inside `def Store.fgVote`, the
   bare name `fgVote` resolves to the def itself.
 - Digit-leading module names take guillemets: `import Spec.«01_GoldfishWalk»`.
+
+### A bare function type *can* carry a `GetElem` instance (corrected 2026-08-26)
+
+- The long-standing note here and in `Store.lean` — "instances resolve on a type's head
+  constant, and a bare function type has none" — is **wrong**, measured on
+  `scratch/FunGetElemProbe.lean`: `GetElem ((k : Nat) → Finset α) Nat (Finset α)`
+  elaborates, and `S.field[k]` reads through it with the field declared bare. It cost
+  `VoteTable`, then `RoundRootMap`, then the application-style reads; all three are gone
+  now. What *is* true, and what the original measurement probably hit: a `def`-named map
+  type must not be an `abbrev` (the name unfolds before the lookup), and **the index type
+  must match the instance exactly** — no coercion is inserted in the index position, so
+  an `Int`-indexed map read at a `Nat` needs its own instance.
 
 ### Notation overloads that do not work
 
