@@ -1,3 +1,4 @@
+import Spec.«05_SGDuty»
 import Spec.«07_FGStore»
 import Spec.Defs.Nondet
 
@@ -94,7 +95,9 @@ set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params] [Committees Validator] [RootComputation Validator] [Params]
+
+open Params
 
 /-- Validator `i` has a stored round-`k` SG vote, processed before instant `c`, whose
     head descends from `B`. The stored head is a `Block` — an empty-headed vote is never
@@ -246,5 +249,14 @@ def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) 
   if R ∈ (← S.getFilteredBlockTree) ∧ (R = C ∨ S.G1 r R) then
     return R
   return C
+
+def Store.onTick (S : Store Validator) (t : Int)
+    (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
+  let mut S:= S
+  S := (← Fig5.onTick S t isProposer)
+  let r := round S.s
+  if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
+    S.sgRoot[r] ← (← S.getSGRoot r)
+  return S
 
 end DC

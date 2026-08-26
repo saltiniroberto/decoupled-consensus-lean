@@ -122,7 +122,7 @@ def Store.sgVote (S : Store Validator)
     `live_confirmed` it votes is the round's fresh evaluation — and both broadcasts are
     in the outbox, no union written anywhere, the monad carrying the earlier sends past
     the `if`. -/
-def Store.onTick (S : Store Validator) (t : Int)
+def Fig5.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let S ← Fig2.onTick S t isProposer
   -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
