@@ -227,11 +227,11 @@ def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := 
     `Σ.sg_root[r]` is read by the raising extraction: the protocol runs this only after
     the round's SG root is stored, so behind that schedule the raise is unreachable. -/
 def Store.getWalkRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
-  let C := S.forkChoiceRoot
-  let RSG ← S.sgRoot[r]
-  if C ⪯ RSG then
-    return RSG
-  return C
+  let FCR := S.forkChoiceRoot
+  let sgRoot ← S.sgRoot[r]
+  if FCR ⪯ sgRoot then
+    return sgRoot
+  return FCR
 
 /-! ## Figure `get_action_root(Σ, r)` -/
 /-- The root anchoring the round's SG and FG outputs, derived at

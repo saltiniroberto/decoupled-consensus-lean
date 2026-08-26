@@ -581,8 +581,8 @@ works but duplicates the sequence in a `def`.
         `RoundRootMap` names the two round-root fields and its `GetElem` returns the raw
         `Option`, so `S.rootProposal[r] = ⊥` tests and `let R ← S.sgRoot[r]` extracts by
         the lift, raising on `⊥`;
-     3. re-render `E_j` as the source writes it — over the `equiv` map's domain, not a
-        filter of `V` (rendering question noted in the Decisions entry);
+     3. ~~re-render `E_j` over the `equiv` map's domain~~ — moot since 2026-08-25: the
+        `equiv` map is gone, `equivBefore` reading two distinct stored SG votes;
      4. rename the raising set-builder's `∈ᴹ` to `∈ᵉ` — `e` for exception (`Notation.lean`;
         the typing table in `doc/guide.md`, `doc/style.md`, `doc/nondeterminism.md` and
         the style sheet here mention the old spelling).
