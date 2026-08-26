@@ -171,7 +171,7 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
   for vote in B.gfVotes do
     S ← S.processGoldfishVote vote
   -- `update_finality(Σ, Σ.σ[B])` — new at this layer
-  return ← S.updateFinality (← S.σ[B])
+  return (← S.updateFinality (← S.σ[B]))
 
 /-! ## The two derived views, and the redefined fork choice -/
 

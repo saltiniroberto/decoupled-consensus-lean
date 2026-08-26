@@ -231,12 +231,12 @@ def Fig2.onTick (S : Store Validator) (t : Int)
   S.t ← t
   S.s ← s
   if _ : s > 0 ∧ t = slotStart s ∧ isProposer s S.id then
-    return ← S.proposeBlock
+    return (← S.proposeBlock)
   if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then
-    return ← S.goldfishVote
+    return (← S.goldfishVote)
   -- the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
   if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
-    return ← S.updateConfirmation (s - 1)
+    return (← S.updateConfirmation (s - 1))
   return S
 
 end DC
