@@ -12,7 +12,8 @@ the round's Goldfish votes and its SG and FG outputs.
 
 This file holds the two function groups of that mechanism: the support scores read from
 the store's round entries, with the grades defined over them, and the round-root
-functions — proposal root, lower root, SG root, round root.
+functions — proposal root, lower root, SG root, and the round's root in both readings,
+the walk-root-then-action-root pair and the one-step `get_round_root`.
 
 ## What is not yet here
 
@@ -82,13 +83,21 @@ root itself when there is none), the validator accepts the proposed root `R_prop
 when `R_low ⪯ R_prop`, `R_prop` is in the filtered tree, and `G1(R_prop)`; otherwise the
 SG root is `R_low`.
 
-`get_round_root(Σ, r)` is then the round's root, both for the Goldfish walks of the round
-and for the SG and FG outputs it anchors: the stored SG root, unless it is absent, does
-not descend from the fork-choice root, or has left the filtered tree — in each of those
-cases the fork-choice root itself. A validator's own selection needs no external
-backing, and a round root adopted from others carries its own: the stored SG root was
-either accepted on grade 1 or is a grade-3 block, so only viability is retested, `Σ.h_max`
-having moved since.
+Each Goldfish fork choice then starts from `get_walk_root(Σ, r)`: the stored SG root
+when the fork-choice root precedes it, else the fork-choice root. At `a_r`, the validator
+derives the root anchoring its SG and FG outputs, `get_action_root(Σ, r)`: the walk root
+when it is in the filtered tree and either equals the fork-choice root or has grade 1;
+otherwise the fork-choice root itself — a validator's own selection needs no external
+backing, while a round root adopted from others must still be viable and majority-backed
+at signing time.
+
+`get_round_root(Σ, r)` reads the round's root in one step, and is what the rest of the
+protocol uses: the stored SG root, unless it is absent, does not descend from the
+fork-choice root, or has left the filtered tree — in each of those cases the fork-choice
+root itself. It differs from the pair above in two ways. The grade test is dropped, being
+implied: a stored SG root was either accepted on grade 1 or is a grade-3 block, and grade
+3 implies grade 1. And viability constrains the walk's anchor as well as the signed
+outputs, so no walk starts from a block whose branch has died back.
 
 -/
 
@@ -222,21 +231,55 @@ def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Option (Block Valida
 
   if Rlow = ⊥ then
     return ⊥
-    
+
   let Rprop ← S.rootProposal[r]
   if (← Rlow) ⪯ Rprop ∧ Rprop ∈ (← S.getFilteredBlockTree) ∧ S.G1 r Rprop then
     return Rprop
   return Rlow
 
-/-! ## Figure `get_round_root(Σ, r)` -/
-/-- The root of round `r`: where its Goldfish walks start and what its SG and FG outputs
-    anchor on. The stored SG root, unless it is absent, does not descend from the
-    fork-choice root, or is no longer in the filtered tree — in each of which cases the
-    fork-choice root itself.
+/-! ## Figure `get_walk_root(Σ, r)` -/
+/-- Where a Goldfish walk of round `r` starts — the stored SG root when the fork-choice
+    root precedes it, else the fork-choice root. It asks nothing of viability: a walk may
+    start from a block outside the filtered tree, the tree constraining the walk's
+    children rather than its anchor.
 
-    No grade is tested here. The stored SG root is either a proposal `get_sg_root`
-    accepted on grade 1 or a grade-3 block it fell back to, so a grade test would restate
-    what already holds; viability is retested because `Σ.h_max` moves.
+    `Σ.sg_root[r]` is read by the raising extraction, behind the `= ⊥` test. -/
+def Store.getWalkRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
+  let FCR := S.forkChoiceRoot
+  if S.sgRoot[r] = ⊥ then
+    return FCR
+  let sgRoot ← S.sgRoot[r]
+  if ¬ (FCR ⪯ sgRoot) then
+    return FCR
+  return sgRoot
+
+/-! ## Figure `get_action_root(Σ, r)` -/
+/-- The root anchoring the round's SG and FG outputs, derived at `a_r` — the walk root
+    when it is in the filtered tree and either equals the fork-choice root or holds
+    grade 1; otherwise the fork-choice root itself. A validator's own selection needs no
+    external backing, while a round root adopted from others must still be viable and
+    majority-backed at signing time. -/
+def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
+  -- at a_r
+  let FCR := S.forkChoiceRoot
+  let R ← S.getWalkRoot r
+  if R ∈ (← S.getFilteredBlockTree) ∧ (R = FCR ∨ S.G1 r R) then
+    return R
+  return FCR
+
+/-! ## Figure `get_round_root(Σ, r)` -/
+/-- The root of round `r` in one step: where its Goldfish walks start and what its SG and
+    FG outputs anchor on. The stored SG root, unless it is absent, does not descend from
+    the fork-choice root, or is no longer in the filtered tree — in each of which cases
+    the fork-choice root itself.
+
+    The two-step reading above and this one part company in two places. No grade is tested
+    here: a stored SG root is either a proposal `get_sg_root` accepted on grade 1 or a
+    grade-3 block it fell back to, and grade 3 implies grade 1, so `get_action_root`'s
+    grade test restates what already holds. And viability constrains the walk's anchor
+    here, where `get_walk_root` leaves it free — so a walk in this reading never starts
+    from a block whose branch has died back, and never returns a head nothing can build
+    on.
 
     `Σ.sg_root[r]` is read by the raising extraction, behind the `= ⊥` test. -/
 def Store.getRoundRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
@@ -244,9 +287,7 @@ def Store.getRoundRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) :
   if S.sgRoot[r] = ⊥ then
     return FCR
   let sgRoot ← S.sgRoot[r]
-  if ¬ (FCR ⪯ sgRoot) then
-    return FCR
-  if sgRoot ∉ (← S.getFilteredBlockTree) then
+  if ¬ (FCR ⪯ sgRoot ∧ sgRoot ∈ (← S.getFilteredBlockTree)) then
     return FCR
   return sgRoot
 

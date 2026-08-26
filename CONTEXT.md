@@ -434,18 +434,20 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   - **the SG root is an `Option`**: `get_lower_root` answers `⊥` where it used to fall
     back to the fork-choice root, and `get_sg_root` passes that through, so a round may
     have no SG root at all. `get_round_root` maps `⊥` to the fork-choice root.
-  - **`get_walk_root` and `get_action_root` are one routine, `get_round_root`**: with the
-    fork-choice fallback gone from `get_sg_root`, a stored SG root is either a proposal
-    accepted on grade 1 or a grade-3 block, and grade 3 implies grade 1 (the cutoffs
-    nest: `H_{−1} ⊆ H_1`), while grades are fixed once their instants pass — so the
-    action root's grade test restated what already held, and the two routines differed
-    only in the viability test. **Protocol change inside the merge**: that test now
-    applies to the walk's anchor too, where the source let a Goldfish walk start from a
-    non-viable SG root (07's "Goldfish starts at the root even if the root is not in the
-    filtered tree"). The reason to prefer it: a walk anchored on a block with no live
-    descendant near the frontier has no eligible children and returns the anchor, a head
-    nothing can build on. It also explains why `action_root[·]` never needed to be a
-    store field — nothing is frozen, the round root being derived at each read.
+  - **the round's root has two readings, both kept** (Roberto, 2026-08-27: merge them,
+    then "restore the original function, but keep the unified one"). `get_walk_root` and
+    `get_action_root` are the two-step reading; `get_round_root` is the one-step reading
+    the rest of the protocol uses. They differ in two ways, and the docstrings say so:
+    the grade test is dropped as implied — with the fork-choice fallback gone from
+    `get_sg_root`, a stored SG root is either a proposal accepted on grade 1 or a
+    grade-3 block, grade 3 implies grade 1 (the cutoffs nest: `H_{−1} ⊆ H_1`), and grades
+    are fixed once their instants pass — and viability constrains the walk's *anchor*,
+    where the two-step reading leaves it free (07: "Goldfish starts at the root even if
+    the root is not in the filtered tree"). The reason to prefer the constraint: a walk
+    anchored on a block with no live descendant near the frontier has no eligible
+    children and returns the anchor, a head nothing can build on. One-step also means
+    nothing is frozen at `a_r`, which is why `action_root[·]` never needed to be a store
+    field.
   - **Open, Roberto thinking** (2026-08-27): what the fallback should be when no grade-3
     block exists — his instinct, the SG majority fork choice. Today `get_sg_root` answers
     `⊥` there *and* refuses the proposal, which disables adoption in exactly the rounds
