@@ -70,22 +70,24 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
     votes per validator" is maintained — "two witness the equivocation; nothing reads a
     third". -/
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
-    Store Validator := Id.run do
+    DRE (Store Validator) := do
   let mut S := S
   if vote.round > round S.s then
     return S
+
+  if vote.head = ⊥ then
+    return S
   -- an empty head is never stored; the extraction's hypothesis is this `if`'s
-  if _ : vote.head ≠ ⊥ then
-    let hv := SGHeadVote.mk (validator := vote.validator) (head := (vote.head).value)
-    if ∃ e ∈ S.sgVotes[vote.round], e.vote = hv then
-      return S
-    -- two distinct votes by this validator are already held
-    if ∃ a ∈ S.sgVotes[vote.round], ∃ b ∈ S.sgVotes[vote.round],
-        a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
-        a.vote ≠ b.vote then
-      return S
-    S.sgVotes[vote.round] ← S.sgVotes[vote.round] ∪
-      {TimestampedVote.mk (vote := hv) (time := S.t)}
+  let hv := SGHeadVote.mk (validator := vote.validator) (head := (← vote.head))
+  if ∃ e ∈ S.sgVotes[vote.round], e.vote = hv then
+    return S
+  -- two distinct votes by this validator are already held
+  if ∃ a ∈ S.sgVotes[vote.round], ∃ b ∈ S.sgVotes[vote.round],
+      a.vote.validator = vote.validator ∧ b.vote.validator = vote.validator ∧
+      a.vote ≠ b.vote then
+    return S
+  S.sgVotes[vote.round] ← S.sgVotes[vote.round] ∪
+    {TimestampedVote.mk (vote := hv) (time := S.t)}
   return S
 
 /-! ## Figure `sg_vote(Σ)` — runs at `a_r` -/
@@ -103,7 +105,7 @@ def Store.sgVote (S : Store Validator)
   let r := round S.s
   let vote := SGVote.mk (validator := S.id) (round := r) (head := some S.liveConfirmed)
   broadcast (Message.sgVote vote)
-  return S.processSGVote vote
+  return (← S.processSGVote vote)
 
 /-- `on_tick(Σ, t)`, the protocol's reading: the Goldfish `on_tick`, then the SG layer's
     one line — at `t = a_r` for the current round, run `sg_vote`. No later layer touches
@@ -124,7 +126,7 @@ def Store.onTick (S : Store Validator) (t : Int)
   let S ← Fig2.onTick S t isProposer
   -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
   if _ : S.t = SGSchedule.a (round S.s) then
-    return ← S.sgVote
+    return (← S.sgVote)
   return S
 
 end DC
