@@ -121,6 +121,17 @@ variable {Validator : Type} [Roots] [DecidableEq Validator]
     lookup. -/
 def TimeMap (α : Type) := (x : α) → Option Int
 
+/-- A per-round root entry: `Σ.root_proposal[·]` and `Σ.sg_root[·]`. A named type, so
+    the bracket read below resolves — instances resolve on a type's head constant, and a
+    bare function type has none. -/
+def RoundRootMap (Validator : Type) [Roots] := (r : Nat) → Option (Block Validator)
+
+/-- `roots[r]`: the entry at a round — the raw `Option`, so an `= ⊥` test reads as the
+    figures write it, and `let R ← roots[r]` extracts by the lift, raising on `⊥`. -/
+scoped instance roundRootMapGetElem :
+    GetElem (RoundRootMap Validator) Nat (Option (Block Validator)) (fun _ _ => True) where
+  getElem m r _ := m r
+
 /-- The finality layer's block-state map. Named for the same reason as `TimeMap`. -/
 def StateMap (Validator : Type) := (B : Block Validator) → Option (ChainState Validator)
 
@@ -206,10 +217,10 @@ structure Store (Validator : Type) where
   h_max : Nat
   /-- `Σ.root_proposal[r]` (healing layer): the proposal root carried by the first round-`r`
       opening block processed, `⊥` while no opening block has arrived. -/
-  rootProposal : (r : Nat) → Option (Block Validator)
+  rootProposal : RoundRootMap Validator
   /-- `Σ.sg_root[r]` (healing layer): the round's stored SG root (`get_sg_root`,
       `09_Healing.lean`), `⊥` before the scheduled write. -/
-  sgRoot : (r : Nat) → Option (Block Validator)
+  sgRoot : RoundRootMap Validator
   /-- `Σ.history`, the validator's durable signing record — **not a field of the protocol's store**:
       the record behind the finality-vote rules, its type in `SigningHistory.lean` and
       its use in `08_FinalityVote.lean`. Written only by those rules. -/

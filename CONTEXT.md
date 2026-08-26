@@ -577,8 +577,10 @@ works but duplicates the sequence in a `def`.
      1. raise `Params.R_ge` to `2 ≤ R` (the healing source's schedule requires it; it
         also settles the `a_r`-outside-round-`r` pathology and `SGSchedule`'s
         inhabitation);
-     2. respell `get_walk_root`'s read as the bracket `S.sgRoot[r]` (raising semantics
-        confirmed; needs a named map type or `GetElem` instance);
+     2. ~~respell `get_walk_root`'s read as the bracket~~ — done 2026-08-26:
+        `RoundRootMap` names the two round-root fields and its `GetElem` returns the raw
+        `Option`, so `S.rootProposal[r] = ⊥` tests and `let R ← S.sgRoot[r]` extracts by
+        the lift, raising on `⊥`;
      3. re-render `E_j` as the source writes it — over the `equiv` map's domain, not a
         filter of `V` (rendering question noted in the Decisions entry);
      4. rename the raising set-builder's `∈ᴹ` to `∈ᵉ` — `e` for exception (`Notation.lean`;

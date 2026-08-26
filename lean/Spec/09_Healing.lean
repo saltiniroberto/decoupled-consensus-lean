@@ -213,9 +213,9 @@ def Store.getLowerRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) 
     registered a proposal, the SG root is the lower root. -/
 def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := do
   let Rlow ← S.getLowerRoot r
-  if S.rootProposal r = ⊥ then
+  if S.rootProposal[r] = ⊥ then
     return Rlow
-  let Rprop ← S.rootProposal r
+  let Rprop ← S.rootProposal[r]
   if Rlow ⪯ Rprop ∧ Rprop ∈ (← S.getFilteredBlockTree) ∧ S.G1 r Rprop then
     return Rprop
   return Rlow
@@ -228,7 +228,7 @@ def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := 
     the round's SG root is stored, so behind that schedule the raise is unreachable. -/
 def Store.getWalkRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
   let C := S.forkChoiceRoot
-  let RSG ← S.sgRoot r
+  let RSG ← S.sgRoot[r]
   if C ⪯ RSG then
     return RSG
   return C
