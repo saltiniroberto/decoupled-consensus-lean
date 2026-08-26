@@ -12,14 +12,14 @@ the round's Goldfish votes and its SG and FG outputs.
 
 This file holds the two function groups of that mechanism: the support scores read from
 the store's round entries, with the grades defined over them, and the round-root
-functions — proposal root, lower root, SG root, walk root, action root.
+functions — proposal root, lower root, SG root, round root.
 
 ## What is not yet here
 
 The scores read the stored SG votes, which `process_sg_vote` already writes. The two
 round-root fields — `Σ.root_proposal[·]`, `Σ.sg_root[·]` (`Store.lean`) — are written by
 no routine yet: the handler line and tick writes that fill them, the opening block's
-proposal-root field, and the fork-choice redirection through the walk root land with
+proposal-root field, and the fork-choice redirection through the round root land with
 their own figures. Until then this file's root functions are defined and unconsumed.
 
 ## The tree the rules read
@@ -80,14 +80,15 @@ At the opening slot's vote time, a validator derives its round's SG root,
 the filtered tree with grade 3 strictly descending from the fork-choice root (or that
 root itself when there is none), the validator accepts the proposed root `R_prop` exactly
 when `R_low ⪯ R_prop`, `R_prop` is in the filtered tree, and `G1(R_prop)`; otherwise the
-SG root is `R_low`. Each Goldfish fork choice then starts from `get_walk_root(Σ, r)`: the
-stored SG root when the fork-choice root precedes it, else the fork-choice root.
+SG root is `R_low`.
 
-At `a_r`, the validator derives the root anchoring its SG and FG outputs,
-`get_action_root(Σ, r)`: the walk root when it is in the filtered tree and either equals
-the fork-choice root or has grade 1; otherwise the fork-choice root itself — a
-validator's own selection needs no external backing, while a round root adopted from
-others must still be viable and majority-backed at signing time.
+`get_round_root(Σ, r)` is then the round's root, both for the Goldfish walks of the round
+and for the SG and FG outputs it anchors: the stored SG root, unless it is absent, does
+not descend from the fork-choice root, or has left the filtered tree — in each of those
+cases the fork-choice root itself. A validator's own selection needs no external
+backing, and a round root adopted from others carries its own: the stored SG root was
+either accepted on grade 1 or is a grade-3 block, so only viability is retested, `Σ.h_max`
+having moved since.
 
 -/
 
@@ -95,7 +96,7 @@ set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params] [Committees Validator] [RootComputation Validator] [Params]
+variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Committees Validator] [RootComputation Validator] [Params]
 
 open Params
 
@@ -202,61 +203,64 @@ def Store.getProposalRoot (S : Store Validator) (r : Nat) : NDRE (Block Validato
 /-- The receiver's fallback against the proposal — the deepest
     block in the filtered tree with grade 3 strictly descending from the fork-choice root,
     or the fork-choice root itself when there is none. -/
-def Store.getLowerRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := do
+def Store.getLowerRoot (S : Store Validator) (r : Nat) : NDRE (Option (Block Validator)) := do
   let G := {B ∈ (← S.getFilteredBlockTree) | S.G3 r B ∧ S.forkChoiceRoot ≺ B}
   if G ≠ ∅ then
     let D ←ᵖ deepest G
     return D
-  return S.forkChoiceRoot
+  return ⊥
 
 /-! ## Figure `get_sg_root(Σ, r)` -/
 /-- The round's SG root, derived at the opening slot's vote time. The
     proposed root `R_prop` is accepted exactly when the lower root precedes it, it is in
     the filtered tree, and it holds grade 1; otherwise, and while no opening block has
     registered a proposal, the SG root is the lower root. -/
-def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := do
+def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Option (Block Validator)) := do
   let Rlow ← S.getLowerRoot r
   if S.rootProposal[r] = ⊥ then
     return Rlow
+
+  if Rlow = ⊥ then
+    return ⊥
+    
   let Rprop ← S.rootProposal[r]
-  if Rlow ⪯ Rprop ∧ Rprop ∈ (← S.getFilteredBlockTree) ∧ S.G1 r Rprop then
+  if (← Rlow) ⪯ Rprop ∧ Rprop ∈ (← S.getFilteredBlockTree) ∧ S.G1 r Rprop then
     return Rprop
   return Rlow
 
-/-! ## Figure `get_walk_root(Σ, r)` -/
-/-- Where a Goldfish walk of round `r` starts — the stored SG root
-    when the fork-choice root precedes it, else the fork-choice root.
+/-! ## Figure `get_round_root(Σ, r)` -/
+/-- The root of round `r`: where its Goldfish walks start and what its SG and FG outputs
+    anchor on. The stored SG root, unless it is absent, does not descend from the
+    fork-choice root, or is no longer in the filtered tree — in each of which cases the
+    fork-choice root itself.
 
-    `Σ.sg_root[r]` is read by the raising extraction: the protocol runs this only after
-    the round's SG root is stored, so behind that schedule the raise is unreachable. -/
-def Store.getWalkRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
+    No grade is tested here. The stored SG root is either a proposal `get_sg_root`
+    accepted on grade 1 or a grade-3 block it fell back to, so a grade test would restate
+    what already holds; viability is retested because `Σ.h_max` moves.
+
+    `Σ.sg_root[r]` is read by the raising extraction, behind the `= ⊥` test. -/
+def Store.getRoundRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
   let FCR := S.forkChoiceRoot
+  if S.sgRoot[r] = ⊥ then
+    return FCR
   let sgRoot ← S.sgRoot[r]
-  if FCR ⪯ sgRoot then
-    return sgRoot
-  return FCR
-
-/-! ## Figure `get_action_root(Σ, r)` -/
-/-- The root anchoring the round's SG and FG outputs, derived at
-    `a_r` — the walk root when it is in the filtered tree and either equals the
-    fork-choice root or holds grade 1; otherwise the fork-choice root itself. A
-    validator's own selection needs no external backing, while a round root adopted from
-    others must still be viable and majority-backed at signing time. -/
-def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
-  -- at a_r
-  let C := S.forkChoiceRoot
-  let R ← S.getWalkRoot r
-  if R ∈ (← S.getFilteredBlockTree) ∧ (R = C ∨ S.G1 r R) then
-    return R
-  return C
+  if ¬ (FCR ⪯ sgRoot) then
+    return FCR
+  if sgRoot ∉ (← S.getFilteredBlockTree) then
+    return FCR
+  return sgRoot
 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let mut S:= S
-  S ⇐ Fig5.onTick S t isProposer
   let r := round S.s
   if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
     S.sgRoot[r] ⇐ S.getSGRoot r
+  S ⇐ Fig5.onTick S t isProposer
   return S
+
+def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
+    NDRE (Block Validator) := do
+    return .genesis
 
 end DC

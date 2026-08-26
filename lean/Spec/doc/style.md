@@ -33,6 +33,9 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 - **No `match` and no `|` alternatives.** The dependent `if` idiom instead, binding `_`
   unless the hypothesis's name is used. A `for`-range bound is the tolerated recursion
   shape (`ghost`'s loop).
+- **`return`s do not alternate.** Read top to bottom, once the returned value changes it
+  never changes back: each rejection returns the fallback in its own `if`, and the value
+  the routine is about comes last (`get_round_root`, `09_Healing.lean`).
 - **A set-builder condition over an `Option` entry is a named predicate** — the inline
   `∃ e ∈ Σ.head[k][i], …` loses the decidability search at `def` level (measured), so the
   condition gets a name and a keyed `Decidable` instance (`Store.headSupports`,

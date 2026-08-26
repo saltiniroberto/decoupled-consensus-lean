@@ -227,7 +227,7 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
 
     It bears the plain `Store` name — `S.getHead votes k` — because it is the reading a
     caller wants; the superseded ones are `Fig1.getHead` and `Fig4.getHead`. -/
-def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
+def Fig7.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
   let root := S.forkChoiceRoot
   let tree ← S.getFilteredBlockTree

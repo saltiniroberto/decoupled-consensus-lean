@@ -79,6 +79,11 @@ Update this list when a new call lands.
   order-free loops are written as the sets they build (the set-builder) or loop with the
   nondeterministic `ForIn` over `Finset` (`Nondet.lean`) — every visitation order among
   the outcomes, a singleton when the body is order-free (the view merge).
+- **A routine's `return`s do not alternate** (Roberto, 2026-08-27): read top to bottom,
+   once the returned value changes it never changes back — so each rejection returns the
+   fallback in its own `if`, and the value the routine is about is returned last
+   (`get_round_root`). It cost the positive form the source writes
+   (`if R ∈ C(Σ) ∧ … then return R; return FCR`), which alternates.
 - **No `match` and no `|` alternatives in spec bodies** — the dependent-`if` idiom;
   recursion patterns like a `for`-range bound are the tolerated shape. **Absence is
   tested `x ≠ ⊥`, never `.isSome`**, and in a raising body extraction is the lift:
@@ -425,6 +430,29 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     `S.sgRoot[r]`, which needs a named map type (or `GetElem` instance) the way
     `TimeMap`'s raising bracket is done;
   - `G0` is imported with the other grades though nothing reads it yet — confirmed, keep.
+  Reworked 2026-08-26/27, Roberto reading the algorithm rather than the import:
+  - **the SG root is an `Option`**: `get_lower_root` answers `⊥` where it used to fall
+    back to the fork-choice root, and `get_sg_root` passes that through, so a round may
+    have no SG root at all. `get_round_root` maps `⊥` to the fork-choice root.
+  - **`get_walk_root` and `get_action_root` are one routine, `get_round_root`**: with the
+    fork-choice fallback gone from `get_sg_root`, a stored SG root is either a proposal
+    accepted on grade 1 or a grade-3 block, and grade 3 implies grade 1 (the cutoffs
+    nest: `H_{−1} ⊆ H_1`), while grades are fixed once their instants pass — so the
+    action root's grade test restated what already held, and the two routines differed
+    only in the viability test. **Protocol change inside the merge**: that test now
+    applies to the walk's anchor too, where the source let a Goldfish walk start from a
+    non-viable SG root (07's "Goldfish starts at the root even if the root is not in the
+    filtered tree"). The reason to prefer it: a walk anchored on a block with no live
+    descendant near the frontier has no eligible children and returns the anchor, a head
+    nothing can build on. It also explains why `action_root[·]` never needed to be a
+    store field — nothing is frozen, the round root being derived at each read.
+  - **Open, Roberto thinking** (2026-08-27): what the fallback should be when no grade-3
+    block exists — his instinct, the SG majority fork choice. Today `get_sg_root` answers
+    `⊥` there *and* refuses the proposal, which disables adoption in exactly the rounds
+    that need it (grade 3 needs a direct majority processed before `Γ_{−1}`, so after
+    asynchrony nothing holds it, while the proposer offers grade 2 and receivers check
+    grade 1 — the path meant for those rounds). `get_sg_root` is also the one routine
+    whose `return`s still alternate.
   Skipped, deliberately, each to land with its own figure: the writers (the source's
   `on_tick`/`on_attestation` lines and the `on_block` proposal-root registration), the
   block's proposal-root field, and the `action_root[·]` store field. The source's
