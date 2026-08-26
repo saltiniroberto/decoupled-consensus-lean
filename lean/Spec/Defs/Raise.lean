@@ -100,14 +100,4 @@ instance {α : Type} [DecidableEq α] :
 scoped instance : MonadLift Option DRE :=
   ⟨fun x => x.elim (.error .error) .ok⟩
 
-/-- The pure extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis discharged
-    from a dependent `if _ : x = ⊥` branch by the instants' own tactic — for a *pure*
-    body that must extract, where no lift can fire (`process_sg_vote`'s head extraction
-    is the consumer). The measured trap it carries: dot notation resolves fields in the
-    type's own namespace only, hence the `_root_.` (a `DC.Option.value` is invisible to
-    `x.value`). -/
-def _root_.Option.value {α : Type} (x : Option α)
-    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
-  x.get (Option.ne_none_iff_isSome.mp h)
-
 end DC

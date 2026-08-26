@@ -62,22 +62,23 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 /-- Record a round-`r` SG vote with its
     processing time, unless its head is empty, it is from a future round, already held,
     or a third vote by a validator already seen equivocating. Only votes whose head is a
-    block are stored, so the stored entry (`SGHeadVote`) carries the head as a `Block` —
-    the extraction is `Option.value`, its hypothesis the dependent `if`'s.
+    block are stored, so the stored entry (`SGHeadVote`) carries the head as a `Block`:
+    the empty head is turned away first, and the extraction after it is the raising
+    lift — so the routine's `DRE` advertises a failure no admitted vote can reach.
 
-    `process_goldfish_vote`'s shape one field over: the round test is against
+    `process_goldfish_vote` one field over, plus the head test: the round test is against
     `round(Σ.s)` rather than `Σ.s`, and the two-votes test is where "at most two distinct
     votes per validator" is maintained — "two witness the equivocation; nothing reads a
-    third". -/
+    third". A Goldfish vote's target is a block rather than an optional head, so that
+    routine tests no head and stays pure. -/
 def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     DRE (Store Validator) := do
   let mut S := S
   if vote.round > round S.s then
     return S
-
+  -- an empty head is never stored, so the extraction below cannot raise
   if vote.head = ⊥ then
     return S
-  -- an empty head is never stored; the extraction's hypothesis is this `if`'s
   let hv := SGHeadVote.mk (validator := vote.validator) (head := (← vote.head))
   if ∃ e ∈ S.sgVotes[vote.round], e.vote = hv then
     return S

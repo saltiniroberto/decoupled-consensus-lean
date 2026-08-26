@@ -45,6 +45,19 @@ scoped instance timeMapGetElem {α : Type} :
     GetElem (TimeMap α) α (DRE Int) (fun _ _ => True) where
   getElem times x _ := if h : (times x).isSome then .ok ((times x).get h) else .error .error
 
+/-- The pure extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis discharged
+    from a dependent `if _ : x ≠ ⊥` branch by the instants' own tactic. The raising lift
+    in `Raise.lean` — `let y ← x` behind a plain `≠ ⊥` test — covers the monadic bodies,
+    and `process_sg_vote`, its one consumer, went monadic, so this has none. Revived by a
+    *pure* body that must extract, where no lift can fire; the extraction must then sit
+    inside the dependent `if`'s then-branch, a do join point not carrying the hypothesis
+    into the continuation (measured). The trap it carries: dot notation resolves fields
+    in the type's own namespace only, hence the `_root_.` (a `DC.Option.value` is
+    invisible to `x.value`). -/
+def _root_.Option.value {α : Type} (x : Option α)
+    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
+  x.get (Option.ne_none_iff_isSome.mp h)
+
 /-- `d.withSend prior`: a `DutyResult` with an earlier duty's broadcasts unioned into
     its own. In the duty monad the outbox carries earlier sends, so nothing unions.
     Revived by any composition done on `DutyResult` values rather than in the monad. -/

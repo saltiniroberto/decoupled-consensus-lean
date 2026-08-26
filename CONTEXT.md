@@ -80,10 +80,11 @@ Update this list when a new call lands.
   `Raise.lean`; Roberto: "do that, also wherever applicable"). Behind a plain
   `if x ≠ ⊥` the raise is unreachable; the accepted cost, stated at the instance, is that
   dropping the test leaves compiling code that raises where a rule meant to fall through.
-  In a *pure* body the extraction is `Option.value` (`Raise.lean`), its `≠ ⊥` hypothesis
-  a dependent `if`'s — the extraction must sit inside the `if`'s then-branch, the do
-  join point not carrying the hypothesis to the continuation (measured;
-  `process_sg_vote` is the consumer). The store's map machinery
+The site-checked alternative for a *pure* body,
+  `Option.value`, is parked in `OldDefs.lean` again: its one consumer,
+  `process_sg_vote`'s head extraction, went monadic on 2026-08-26. A revival must put
+  the extraction inside the dependent `if`'s then-branch, the do join point not carrying
+  the hypothesis to the continuation (measured). The store's map machinery
   keeps `.isSome` internally — the rule is about spec bodies. **No `∣` (divides)**: write
   `% … = 0`.
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`; `Block.mk`
@@ -372,8 +373,11 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   reads the SG votes directly — `∃ vt ∈ Σ.sg_votes[k], vt.vote.validator = i ∧
   vt.time < c ∧ B ⪯ vt.vote.head` (the head-votes-are-the-sgVotes unification's first
   step; `sgVotes` is `Int`-indexed, Roberto's own edit, for healing's round-`(r−1)`
-  reads). `Option.value` is revived from `OldDefs.lean` into `Raise.lean` — the pure
-  extraction its docstring foresaw, hypothesis from the dependent `if`. **Semantic
+  reads). The head extraction was `Option.value` behind a dependent `if` for a day;
+  2026-08-26 Roberto flattened the routine — a plain `if vote.head = ⊥ then return S`
+  and the raising lift after it, so `process_sg_vote` is `DRE`-valued and `Option.value`
+  parks again. A flat *pure* shape is unavailable: the do join point does not carry a
+  dependent `if`'s hypothesis into the continuation. **Semantic
   change, Roberto's**: an empty-headed vote now leaves no trace — before, it was stored,
   represented its sender in `W_r`, and could silence a head as half of an equivocation;
   now it neither represents nor equivocates. The unification completed the same day:
