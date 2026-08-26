@@ -135,6 +135,7 @@ turns into the symbol as you type (hovering over any symbol shows its abbreviati
 | Symbol | Type |
 | --- | --- |
 | `←` | `\l` or `\gets` |
+| `⇐` | `\l=` |
 | `←ᵖ` | `\l` then `\^p` |
 | `∈`, `∈ᴹ` | `\in`, then `\^M` for the monadic one |
 | `⪯` | `\preceq` |

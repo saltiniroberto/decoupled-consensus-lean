@@ -38,6 +38,21 @@ distinguishes them, and so do the figure files:
 * **introduces** a name → `let x := e`, or `let mut x := e` when a later line overwrites it;
 * **re-assigns** an existing one → `x ← e`, the macros below.
 
+## `⇐` where the right-hand side computes
+
+The protocol's arrow says nothing about whether the routine on its right picks, raises or
+merely returns; here that difference is worth seeing, so an assignment fed by a
+computation wears a second arrowhead — `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, `H ⇐ arg max`.
+It binds the value and writes it, and the `Option` a field wraps is supplied by coercion,
+so no `some` is written. Three arrows, then, each saying one thing: `←` re-assigns a
+value, `⇐` binds a computation's, `←ᵖ` picks (`Nondet.lean`).
+
+The alternative — teaching `←` itself to accept either — was built and measured: a class
+dispatching on the right-hand side works where that side types itself, and breaks where
+the *assignment* is what types it, which is how two of the protocol's own lines
+elaborate (`σ.nj ← …` through the `Decidable` coercion, `σ.progress ← fun _ => false`
+through the field). Repairing those would have put ascriptions into the figures.
+
 ## Hazard
 
 Parser tokens are global even for `scoped` syntax, so **a field name must never become an
@@ -97,6 +112,47 @@ macro_rules
         let f := mkIdent (Name.mkSimple n.getString!)
         `(doElem| $v:ident :=
             { $v with $f:ident := Function.update (($v).$f:ident) $i $e })
+
+/-- `σ.f ⇐ e`, and `x ⇐ e` to a bare local: assignment whose right-hand side computes.
+    The expansion binds it — `σ := { σ with f := (← e) }` — so a routine that picks or
+    raises can feed a field, and the arrowhead is what tells a reader it does. -/
+scoped syntax (name := stateAssignBind) (priority := high) ident " ⇐ " term : doElem
+
+macro_rules
+  | `(doElem| $x:ident ⇐ $e) => do
+      let n := x.getId
+      let pre := n.getPrefix
+      if pre.isAnonymous then
+        `(doElem| do
+            let val ← ($e)
+            $x:ident := val)
+      else
+        let v := mkIdent pre
+        let f := mkIdent (Name.mkSimple n.getString!)
+        `(doElem| do
+            let val ← ($e)
+            $v:ident := { $v with $f:ident := val })
+
+/-- `σ.arr[i] ⇐ e`, the indexed write whose value computes, and `x[i] ⇐ e` to a
+    function-valued local: `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, the healing tick's line.
+    An `Option`-valued field takes the bound value through the coercion, no `some`. -/
+scoped syntax (name := idxAssignBind) (priority := high)
+  ident noWs "[" term "]" " ⇐ " term : doElem
+
+macro_rules
+  | `(doElem| $x:ident[$i] ⇐ $e) => do
+      let n := x.getId
+      let pre := n.getPrefix
+      if pre.isAnonymous then
+        `(doElem| do
+            let val ← ($e)
+            $x:ident := Function.update $x:ident $i val)
+      else
+        let v := mkIdent pre
+        let f := mkIdent (Name.mkSimple n.getString!)
+        `(doElem| do
+            let val ← ($e)
+            $v:ident := { $v with $f:ident := Function.update (($v).$f:ident) $i val })
 
 /-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in
     set-builder clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads

@@ -65,6 +65,12 @@ Update this list when a new call lands.
   through `filterM`/`imageM`, and the raw `Option` stays reachable by application. The
   walk and the duties carry `NDRE` (`Nondet.lean`): ties and list orders are picks
   (`←ᵖ`), every resolution among the outcomes. No deviation stands.
+- **Three arrows, each saying one thing** (Roberto, 2026-08-27): `←` re-assigns a value,
+  `⇐` (`\l=`) assigns what a computation returns — binding it, and supplying an
+  `Option` field's wrapper by coercion — and `←ᵖ` picks. So an arrow says at a glance
+  whether its right-hand side has effects: `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`,
+  `H ⇐ bestChild …`. This retired the rendering's one recorded notation deviation, the
+  walk's `H := (← bestChild …)`.
 - **Pseudocode spelling, gaps closed in `Notation.lean` and `Nondet.lean`**: assignment
   arrows (incl. bare identifiers and the pair form), `|s|` for `Finset.card` (cost: the
   `abs` bars, shadowed in-namespace), the raising set-builder `let y ← {x ∈ᴹ s | p}` (a
@@ -534,6 +540,27 @@ works but duplicates the sequence in a `def`.
   is invisible to `x.value`, hence `_root_.` on such defs. Inside `def Store.fgVote`, the
   bare name `fgVote` resolves to the def itself.
 - Digit-leading module names take guillemets: `import Spec.«01_GoldfishWalk»`.
+
+### Overloading `←` on its right-hand side: built, measured, rejected (2026-08-27)
+
+- Roberto asked whether `Σ.sg_root[r] ← get_sg_root(Σ, r)` could work — one arrow for
+  both a value and a computation. **The mechanism works**: a class `AssignVal m β α`
+  dispatching on the right-hand side, four instances (value, computation, each with and
+  without an `Option` wrap), the macros expanding through it; probed on
+  `scratch/AssignDispatchProbe.lean`. **It breaks the spec's own lines**: dispatch needs
+  the right-hand side to type *itself*, and two of the protocol's assignments take their
+  type from the *assignment* instead — `σ.nj ← σ.h % K = 0 ∧ …` elaborates as a `Prop`
+  and reaches the field through the `Decidable` coercion (no instance can rescue this:
+  decidability belongs to each proposition, not to `Prop`), and
+  `σ.progress ← fun _ => false` leaves the lambda's domain a metavariable ("typeclass
+  instance problem is stuck"). Repairs would have put `decide`/ascriptions into the
+  figures, and left the same trap for every future assignment. **A second arrow, `⇐`,
+  costs nothing and keeps effects visible** — the choice taken.
+- **A `term` antiquotation cannot sit in a `let x ← …` slot of a `doElem` quotation**
+  ("has type `TSyntax `term` but is expected to have type `TSyntax `doElem`"): the
+  arrow's right-hand side there is parsed as a `doElem`. `(← $e)` fails the same way.
+  Parenthesizing puts it back in term position — `let val ← ($e)` — which is what the
+  `⇐` macros expand through.
 
 ### A bare function type *can* carry a `GetElem` instance (corrected 2026-08-26)
 

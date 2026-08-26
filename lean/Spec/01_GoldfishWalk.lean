@@ -37,9 +37,9 @@ offer theirs with `pure`. The children filter runs
 through `Finset.filterM` at `DRE`, whose fold instances exist; a per-child
 condition in `NDRE` itself would not commute (a pick with no outcomes annihilates where an
 error survives), which is why the parameter type is the raising monad, not the full stack.
-One notation cost, measured: the figure's `H ← arg max` cannot use the plain arrow, which
-the assignment macro claims for pure re-assignment, so the monadic bind is written
-`H := (← bestChild …)`.
+The figure's `H ← arg max` keeps an arrow: `H ⇐ bestChild children score`, the
+assignment whose right-hand side computes (`Notation.lean`), the second arrowhead saying
+that the step picks.
 
 ## The figure's `loop` gets a bound
 
@@ -131,9 +131,8 @@ def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
       DRE (Finset (Block Validator)))
     if children = ∅ then
       return H
-    -- `H ← arg max score`; the plain arrow is the assignment macro's, so the
-    -- monadic bind is written through `:=`
-    H := (← bestChild children score)
+    -- `H ← arg max score`; the arrowhead says the step picks
+    H ⇐ bestChild children score
   return H  -- the bound is reached: not a figure line, see the module header
 
 /-! ## The Goldfish score and eligibility -/

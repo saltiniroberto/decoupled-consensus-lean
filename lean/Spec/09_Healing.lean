@@ -253,10 +253,10 @@ def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let mut S:= S
-  S := (← Fig5.onTick S t isProposer)
+  S ⇐ Fig5.onTick S t isProposer
   let r := round S.s
   if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
-    S.sgRoot[r] ← (← S.getSGRoot r)
+    S.sgRoot[r] ⇐ S.getSGRoot r
   return S
 
 end DC

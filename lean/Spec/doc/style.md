@@ -17,7 +17,10 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 ## Notation (`Notation.lean`, `Nondet.lean`)
 
 - Assignment arrows render the figures' `←`, including bare identifiers, two-level map
-  writes, and the pair form.
+  writes, and the pair form. **`⇐` is the assignment whose right-hand side computes** —
+  `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, `H ⇐ bestChild …` — binding the value and supplying
+  an `Option` field's wrapper by coercion, so the arrowhead is what says the step picks or
+  raises. Three arrows: `←` re-assigns, `⇐` binds, `←ᵖ` picks.
 - `|s|` is `Finset.card`. Cost: the `abs` bars are shadowed inside the namespace.
 - `let y ← {x ∈ᴹ s | p}` is the raising set-builder — a filter whose condition may raise.
   It is a `doElem` macro, necessarily: a term-macro form loses the inner `←` to the outer
