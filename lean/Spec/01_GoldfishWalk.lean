@@ -193,13 +193,30 @@ def Store.goldfishForkChoice (S : Store Validator)
   ghost tree (goldfishScore votes s) (fun B => do return Fig1.goldfishEligible S votes s B)
 
 /-! ## Figure -/
+/-- This file's tree: genesis, over the whole processed tree. The first field of
+    `Fig1.goldfishWalk` below. -/
+def Fig1.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) :=
+  pure { root := .genesis, blocks := S.T }
+
+/-- This file's reading of what the fork choice takes from the layer: the whole processed
+    tree from genesis, and this file's eligibility condition, offered to the class's raising
+    slot with `pure`.
+
+    It is a `def`, not an `instance`: `GoldfishWalk` carries exactly one instance, the
+    assembled protocol's, and this is the value a caller names to pin *this* reading —
+    `@Store.getHead _ _ Fig1.goldfishWalk` is `Fig1.getHead`. See `Defs/GoldfishWalk.lean`. -/
+abbrev Fig1.goldfishWalk : GoldfishWalk Validator :=
+  ⟨Fig1.getGoldfishFilteredBlockTree,
+   fun S votes s B => pure (Fig1.goldfishEligible S votes s B)⟩
+
+/-! ## Figure -/
 /-- The walk from genesis over the whole
     processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
     and the finality layer again, from the fork-choice root over the filtered tree — that
     reading is the protocol's, reached as `S.getHead`, and this one is this file's. -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
-    NDRE (Block Validator) :=
-  S.goldfishForkChoice {root := .genesis, blocks := S.T} votes s
+    NDRE (Block Validator) := do
+  S.goldfishForkChoice (← Fig1.getGoldfishFilteredBlockTree S) votes s
 
 /-! ## Figure -/
 /-- The protocol's `get_head`: the

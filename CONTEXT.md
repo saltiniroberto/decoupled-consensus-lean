@@ -470,6 +470,20 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   through untouched. 09's five root computations name `Fig7.getFilteredBlockTree` explicitly,
   which is the tree they resolved to before the instance moved; whether the healing roots
   should instead be chosen over the *vetoed* tree is open.
+  **Every layer has its `GoldfishWalk` value** (Roberto, 2026-08-28: "define instances of
+  GoldfishWalk per each file where the corresponding functions are defined").
+  `Fig1.goldfishWalk`, `Fig4.goldfishWalk`, `Fig7.goldfishWalk` and `Fig9.goldfishWalk`, each
+  beside the functions it names, with a `Fig<n>.getGoldfishFilteredBlockTree` per layer. They
+  are `abbrev`s of class type, **not `instance`s**: four registered instances of one class at
+  one `Validator` would leave resolution to pick a reading, and the rule is that exactly one
+  exists — 09's `scoped instance : GoldfishWalk Validator := Fig9.goldfishWalk`. `abbrev`
+  because Lean requires a class-typed definition to be reducible (`def` warns), and because
+  the extractor renders figures from `def` only, so these stay out of `dc.pdf` while the
+  `Fig<n>.getHead` figures stay in. Checked by `rfl` in a scratch probe:
+  `@Store.getHead _ _ _ Fig<n>.goldfishWalk = Fig<n>.getHead` for n = 1, 4, 7. So each
+  superseded reading is now `Store.getHead` at its own value, and the numbered defs survive
+  as the paper's per-layer figures — which is also the reason to give 09 one back if the
+  healing `get_head` should appear in `dc.pdf`.
   **Still not reached**: `Store.goldfishForkChoice` (01) names `Fig1.goldfishEligible`, so
   `Fig1.getHead` and `Fig4.getHead` keep 01's condition, and `Fig7.getHead` calls `ghost`
   directly rather than through `goldfishForkChoice`.

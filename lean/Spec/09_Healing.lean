@@ -320,16 +320,22 @@ def Store.updateConfirmation (S : Store Validator) :
   S.liveConfirmed ← confirmed
   return S
 
-/-- The protocol's fork choice is this layer's: `GoldfishWalk` (`Defs/GoldfishWalk.lean`)
-    has exactly one instance, and it lives with the last readings, so `Store.getHead` and the
-    duties of `02_GoldfishDuties.lean` run this layer's tree without naming it — the round's
-    own root under the walk, through `get_sg_majority_start`, and the grade-0 blocks dropped.
-    The eligibility condition is unchanged at this layer, so the instance carries the finality
-    layer's, `Fig7.goldfishEligible`. This layer defines no `Fig9.getHead`: its reading of
-    `get_head` is these two fields. A later layer would take the fork choice over by moving
-    this instance, not by adding one. -/
-scoped instance : GoldfishWalk Validator :=
+/-- This layer's reading of what the fork choice takes from the layer: the tree above, and
+    the eligibility condition unchanged from the finality layer, `Fig7.goldfishEligible`.
+
+    A `def` like the earlier layers' (`Fig1.goldfishWalk`), and the `instance` below is what
+    makes it the protocol's. -/
+abbrev Fig9.goldfishWalk : GoldfishWalk Validator :=
   ⟨Fig9.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩
+
+/-- The protocol's fork choice is this layer's reading: `GoldfishWalk`
+    (`Defs/GoldfishWalk.lean`) has exactly one instance, and it lives with the last reading,
+    so `Store.getHead` and the duties of `02_GoldfishDuties.lean` run this layer's tree
+    without naming it — the round's own root under the walk, through
+    `get_sg_majority_start`, and the grade-0 blocks dropped. This layer defines no
+    `Fig9.getHead`: `Store.getHead` under this instance is it. A later layer would take the
+    fork choice over by moving this instance to its own reading, not by adding one. -/
+scoped instance : GoldfishWalk Validator := Fig9.goldfishWalk
 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do

@@ -229,6 +229,22 @@ def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
   return σB.h < S.h_max - 1 ∨
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
+/-- This layer's tree: the SG walk from the fork-choice root over the filtered tree gives
+    the root, and the blocks are that same filtered tree. The first field of
+    `Fig7.goldfishWalk` below. -/
+def Fig7.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
+  let root := S.forkChoiceRoot
+  let tree ← Fig7.getFilteredBlockTree S
+  let anchor ← S.majorityForkChoice root tree (round S.s)
+  return { root := anchor, blocks := tree }
+
+/-- This layer's reading of what the fork choice takes from the layer. Both fields are this
+    layer's, and the healing layer's instance carries the second unchanged.
+
+    A `def`, not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
+abbrev Fig7.goldfishWalk : GoldfishWalk Validator :=
+  ⟨Fig7.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩
+
 /-! ## Figure -/
 /-- The protocol's fork choice. The SG walk
     selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
@@ -243,10 +259,7 @@ def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
     The earlier ones are `Fig1.getHead` and `Fig4.getHead`. -/
 def Fig7.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
-  let root := S.forkChoiceRoot
-  let tree ← Fig7.getFilteredBlockTree S
-  let anchor ← S.majorityForkChoice root tree (round S.s)
-  ghost { root := anchor, blocks := tree } (goldfishScore votes k)
+  ghost (← Fig7.getGoldfishFilteredBlockTree S) (goldfishScore votes k)
     (Fig7.goldfishEligible S votes k)
 
 end DC

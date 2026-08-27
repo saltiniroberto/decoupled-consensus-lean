@@ -119,6 +119,21 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost {root := anchor, blocks := tree } (S.sgSupport r) (fun B => pure (eligible B))
 
+/-- This file's tree: the SG walk from genesis over the whole processed tree gives the
+    root, and the blocks are that same tree. The first field of `Fig4.goldfishWalk` below. -/
+def Fig4.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
+  let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
+  return { root := anchor, blocks := S.T }
+
+/-- This file's reading of what the fork choice takes from the layer. The eligibility
+    condition is unchanged at this layer, so it is `Fig1.goldfishEligible`, offered to the
+    class's raising slot with `pure`.
+
+    A `def`, not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
+abbrev Fig4.goldfishWalk : GoldfishWalk Validator :=
+  ⟨Fig4.getGoldfishFilteredBlockTree,
+   fun S votes s B => pure (Fig1.goldfishEligible S votes s B)⟩
+
 /-! ## Figure -/
 /-- The SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
@@ -127,7 +142,6 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     file's. -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
-  let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
-  S.goldfishForkChoice {root := anchor, blocks := S.T} votes s
+  S.goldfishForkChoice (← Fig4.getGoldfishFilteredBlockTree S) votes s
 
 end DC
