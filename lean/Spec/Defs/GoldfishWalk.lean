@@ -67,7 +67,7 @@ class GoldfishWalk (Validator : Type) [Roots] where
   /-- The tree the walk descends: `root` is the block it starts from and `blocks` are the
       blocks it may step onto. It picks as well as raises — from the SG layer on the root is
       selected by a walk of its own — hence `NDRE` rather than `DRE`. -/
-  getFilteredBlockTree : (S : Store Validator) → NDRE (BlockTree Validator)
+  getGoldfishFilteredBlockTree : (S : Store Validator) → NDRE (BlockTree Validator)
   /-- Whether the walk may step onto `B`, given the slot-`s` votes it counts. It raises: the
       readings that test a height read `Σ.σ[B]`, and a block the map does not record has
       none. -/
@@ -75,9 +75,9 @@ class GoldfishWalk (Validator : Type) [Roots] where
     (s : Nat) → (B : Block Validator) → DRE Bool
 
 /-- The tree `get_head`'s walk descends: the instance's reading, reached by dot notation. -/
-abbrev Store.getFilteredBlockTree [GoldfishWalk Validator] (S : Store Validator) :
+abbrev Store.getGoldfishFilteredBlockTree [GoldfishWalk Validator] (S : Store Validator) :
     NDRE (BlockTree Validator) :=
-  GoldfishWalk.getFilteredBlockTree S
+  GoldfishWalk.getGoldfishFilteredBlockTree S
 
 /-- `goldfish_eligible(Σ, votes, s, B)`, as the figures call it: the instance's reading,
     reached by dot notation. -/

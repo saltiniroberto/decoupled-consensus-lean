@@ -304,14 +304,14 @@ def Store.applyG0Veto (S : Store Validator) (blocks : Finset (Block Validator)) 
     (`get_sg_majority_start`) over the processed tree, holding the finality layer's filtered
     blocks with the grade-0 veto applied. The first field of this layer's `GoldfishWalk`
     instance below. -/
-def Fig9.getFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
+def Fig9.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
   let r := round S.s
   let anchor ← S.majorityForkChoice (← S.getSGMajorityStart r) S.T r
   return { root := anchor, blocks := S.applyG0Veto (← Fig7.getFilteredBlockTree S) }
 
 def Store.getConfirmation (S : Store Validator) :
   NDRE (Block Validator) := do
-  return (← getGoldfishConfirmation (← Fig9.getFilteredBlockTree S) S.gfVotes[S.s] S.s)
+  return (← getGoldfishConfirmation (← Fig9.getGoldfishFilteredBlockTree S) S.gfVotes[S.s] S.s)
 
 def Store.updateConfirmation (S : Store Validator) :
   NDRE (Store Validator) := do
@@ -329,7 +329,7 @@ def Store.updateConfirmation (S : Store Validator) :
     `get_head` is these two fields. A later layer would take the fork choice over by moving
     this instance, not by adding one. -/
 scoped instance : GoldfishWalk Validator :=
-  ⟨Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩
+  ⟨Fig9.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩
 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do

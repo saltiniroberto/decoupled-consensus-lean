@@ -9,10 +9,12 @@ Viability, and the finality layer's routines: `process_block` extended, `update_
 
 **This is the protocol for `process_block`**, which bears the plain `Store` name,
 `S.processBlock`. The fork choice is not: `get_head` is one definition (`Store.getHead`,
-`01_GoldfishWalk.lean`) whose anchor, blocks and eligibility condition come from the single
+`01_GoldfishWalk.lean`) whose tree and eligibility condition come from the single
 `GoldfishWalk` instance (`Defs/GoldfishWalk.lean`), and the healing layer holds that
-instance. This layer's readings of two of those three fields are `Fig7.getFilteredBlockTree`
-and `Fig7.goldfishEligible`, and the healing layer's instance carries the second unchanged.
+instance. This layer supplies neither field, but both are built from what it defines here:
+its `Fig7.goldfishEligible` is what the healing layer's instance carries, unchanged, and its
+`Fig7.getFilteredBlockTree` — `get_filtered_block_tree(Σ)`, the viable blocks at or below the
+fork-choice root — is the set the healing layer's tree is filtered from.
 Every reading is named by its file's number — `Fig7.getHead` here, `Fig2.processBlock`,
 `Fig1.goldfishEligible`, `Fig1.getHead` and `Fig4.getHead` earlier. See
 `01_GoldfishWalk.lean` on the scheme.

@@ -210,6 +210,6 @@ def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     readings are `Fig1.getHead` above, `Fig4.getHead` and `Fig7.getHead`. -/
 def Store.getHead [GoldfishWalk Validator] (S : Store Validator)
     (votes : Finset (GoldfishVote Validator)) (k : Nat) : NDRE (Block Validator) := do
-  ghost (← S.getFilteredBlockTree) (goldfishScore votes k) (S.goldfishEligible votes k)
+  ghost (← S.getGoldfishFilteredBlockTree) (goldfishScore votes k) (S.goldfishEligible votes k)
 
 end DC

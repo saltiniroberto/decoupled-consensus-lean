@@ -441,13 +441,13 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   so the monotone record the node exposes is now never updated.
 - **`get_head` is one definition** (2026-08-28, Roberto: "can we now have one getHead that
   consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the two
-  things the walk takes from the layer — `getFilteredBlockTree : Store → NDRE (BlockTree …)`,
-  the tree it descends, and `eligible` — reached as `S.getFilteredBlockTree` and
+  things the walk takes from the layer — `getGoldfishFilteredBlockTree : Store → NDRE (BlockTree …)`,
+  the tree it descends, and `eligible` — reached as `S.getGoldfishFilteredBlockTree` and
   `S.goldfishEligible`. `Store.getHead`
   (`01_GoldfishWalk.lean`) is a plain `def` over the two, so `get_head` renders into
   `dc.pdf` like any other routine instead of being a class field. `ForkChoice` and its
   `abbrev Store.getHead` are deleted; the single instance is 09's,
-  `⟨Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩` — a layer that changes one field builds
+  `⟨Fig9.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩` — a layer that changes one field builds
   its instance from the earlier reading of the other.
   **The tree field carries the anchor** (Roberto: "`GoldfishWalk.getFilteredBlockTree` must
   return a `BlockTree`"): the walk descends from a root through a set of blocks and
@@ -458,10 +458,12 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   two walks of a layer's `get_head` need not descend the same set, 07's both descending the
   filtered tree while 09's SG walk descends `Σ.T` and its Goldfish walk the vetoed one — but
   it split a pair the walk always takes together.
-  **Naming to settle**: `Store.getFilteredBlockTree` (the class field, `NDRE (BlockTree …)`,
-  its root the anchor) and `Fig7.getFilteredBlockTree` (the protocol's own routine,
-  `DRE (Finset …)`, the viable blocks at or below the fork-choice root) now share a name with
-  different types, which the `Fig<n>.x`-is-a-reading-of-`x` scheme does not fit.
+  **The two names are distinct** (Roberto, 2026-08-28): the class field and its dispatcher are
+  `getGoldfishFilteredBlockTree` — the tree the *Goldfish* walk descends, root and blocks —
+  while `get_filtered_block_tree` stays the protocol's own routine, `Fig7.getFilteredBlockTree
+  : Store → DRE (Finset …)`, the viable blocks at or below the fork-choice root. They were one
+  name with two types for a commit, which the `Fig<n>.x`-is-a-reading-of-`x` scheme did not
+  fit.
   What went with it: `Fig9.getHead` is deleted, its reading now being the instance, and the
   `r`-for-`s` slip in it — `goldfishScore votes r` where the vote slot was wanted — went with
   it. `Store.applyG0Veto` now maps `Finset` to `Finset`, its root having always passed
