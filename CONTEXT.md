@@ -449,8 +449,13 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   reads `Σ.history`, `Σ.live_confirmed` and `Σ.σ[·]` and touches no field.
   `Store.decideHeightVote : Store → DRE (Store …)` signs what it chose: it stores
   `Σ.height_pair` (a new `Store` field, `HeightPair.empty` at `gen`) and writes the record by
-  matching on the pair — `saveTarget h T` for a named target, `saveEmptyTarget h` for an empty
-  one, nothing for the empty pair. `Store.fgVote` calls `decide_height_vote` and reads the
+  reading `hp.T` and `hp.h` — `saveTarget` for a named target, `saveEmptyTarget` for an empty
+  one, nothing for the empty pair. It was first written as a `match` on the pair, which breaks
+  the recorded no-`match` ruling; the two accessors `HeightPair.h` and `HeightPair.T`
+  (`Defs/Model.lean`, beside `Block.parent` and kin) are what let the body test `≠ ⊥` and
+  extract by the lift instead. A pattern variable in those accessors may not be named
+  `target`: inside `namespace HeightPair` the name resolves to the constructor, and the
+  pattern is rejected for missing arguments. `Store.fgVote` calls `decide_height_vote` and reads the
   pair back from the store, so it still returns a store carrying both record writes.
   **One behaviour changed**, and it is the only place the two shapes disagree: in case 2 —
   a recorded *finality* target repeated as the height target — the old routine wrote nothing,

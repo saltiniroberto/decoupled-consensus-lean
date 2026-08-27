@@ -107,15 +107,20 @@ def Store.computeHeightVote (S : Store Validator) :
     Both writes overwrite with the value a repeat already holds, so signing a pair the record
     already carries leaves the record unchanged. The one case where the write is new to this
     routine is a finality target repeated as a height target: it is now recorded as the
-    height-`h` first target as well. -/
+    height-`h` first target as well.
+
+    Which of the two writes a pair asks for is read off `hp.T` and `hp.h` (`Defs/Model.lean`),
+    the empty pair asking for neither. -/
 def Store.decideHeightVote (S : Store Validator) :
     DRE (Store Validator) := do
   let mut S := S
   let hp ← S.computeHeightVote
-  match hp with
-  | .target h T => S.history ← S.history.saveTarget h T
-  | .emptyTarget h => S.history ← S.history.saveEmptyTarget h
-  | .empty => pure ()
+  -- a named target is recorded as the height's first target
+  if hp.T ≠ ⊥ then
+    S.history ← S.history.saveTarget (← hp.h) (← hp.T)
+  -- an empty target sets the height's flag
+  if hp.T = ⊥ ∧ hp.h ≠ ⊥ then
+    S.history ← S.history.saveEmptyTarget (← hp.h)
   S.heightPair ← hp
   return S
 

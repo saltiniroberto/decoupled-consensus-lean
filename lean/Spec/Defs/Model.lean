@@ -582,6 +582,23 @@ def attestations : Block Validator → List (Attestation Validator)
 
 end Block
 
+namespace HeightPair
+
+/-- The height a height pair signs; `⊥` for the empty pair. -/
+def h : HeightPair Validator → Option Nat
+  | .target height _ => some height
+  | .emptyTarget height => some height
+  | .empty => ⊥
+
+/-- The named target a height pair signs; `⊥` for an empty-target vote and for the empty
+    pair. -/
+def T : HeightPair Validator → Option (Block Validator)
+  | .target _ B => some B
+  | .emptyTarget _ => ⊥
+  | .empty => ⊥
+
+end HeightPair
+
 /-! ## Ancestry -/
 
 /-- The block and all of its ancestors, nearest first. Structural recursion on the parent
