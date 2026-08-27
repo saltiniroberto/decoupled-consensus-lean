@@ -64,9 +64,9 @@ variable {Validator : Type} [Roots]
     blocks together, and the condition a child must satisfy. Exactly one instance exists,
     supplied by the layer whose readings are the protocol's. -/
 class GoldfishWalk (Validator : Type) [Roots] where
-  /-- The tree the walk descends: `root` is the block it starts from and `blocks` are the
-      blocks it may step onto. It picks as well as raises — from the SG layer on the root is
-      selected by a walk of its own — hence `NDRE` rather than `DRE`. -/
+  /-- `get_goldfish_tree(Σ)`: the tree the walk descends — `root` the block it starts from,
+      `blocks` the blocks it may step onto. It picks as well as raises, since from the SG
+      layer on the root is selected by a walk of its own, hence `NDRE` rather than `DRE`. -/
   getGoldfishFilteredBlockTree : (S : Store Validator) → NDRE (BlockTree Validator)
   /-- Whether the walk may step onto `B`, given the slot-`s` votes it counts. It raises: the
       readings that test a height read `Σ.σ[B]`, and a block the map does not record has
@@ -74,7 +74,8 @@ class GoldfishWalk (Validator : Type) [Roots] where
   eligible : (S : Store Validator) → (votes : Finset (GoldfishVote Validator)) →
     (s : Nat) → (B : Block Validator) → DRE Bool
 
-/-- The tree `get_head`'s walk descends: the instance's reading, reached by dot notation. -/
+/-- `get_goldfish_tree(Σ)`, as the figures call it: the tree `get_head`'s walk descends,
+    root and blocks, in the instance's reading, reached by dot notation. -/
 abbrev Store.getGoldfishFilteredBlockTree [GoldfishWalk Validator] (S : Store Validator) :
     NDRE (BlockTree Validator) :=
   GoldfishWalk.getGoldfishFilteredBlockTree S

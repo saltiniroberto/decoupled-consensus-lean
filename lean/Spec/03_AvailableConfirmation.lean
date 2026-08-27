@@ -3,8 +3,14 @@ import Spec.«01_GoldfishWalk»
 /-!
 # Available confirmation
 
-`update_confirmation(Σ, s)`, run once per slot at `t_s + 6Δ`. "Confirmation is the same walk
-over a stricter vote set and a larger denominator."
+The confirmation walk and the two routines around it. Confirmation is the same walk as the
+fork choice over a stricter vote set and a larger denominator.
+
+The file holds three routines. `get_goldfish_confirmation` is the walk: it takes the tree to
+descend, reads the slot's votes, and writes nothing. `Store.getConfirmation` runs it over the
+layer's own tree for the store's current slot. `Store.updateConfirmation` records what comes
+back. Splitting them is what lets the healing layer change the tree without touching the
+walk.
 
 ## What makes it stricter
 
@@ -23,11 +29,15 @@ has no business being confirmed for free. So the routine defines its own `eligib
 inline, as the figure does, and passes it to `ghost` directly rather than going through
 `goldfish_fork_choice`.
 
-The walk starts at genesis over `Σ.T` — from genesis over the live tree. Once the
-finality layer exists the live tree is `T_F(Σ)`; at this layer nothing has been finalized
-yet and `Σ.T` is all there is. The finality layer runs available confirmation's walk from
-`Σ.F` over `T_F(Σ)`, so its version of this rule is a change to `Σ.F` and `T_F`, not to
-this routine.
+## Where the walk starts, and over what
+
+Neither is this file's to decide any more. `Store.getConfirmation` takes both from the single
+`GoldfishWalk` instance (`Defs/GoldfishWalk.lean`), so confirmation descends the same tree the
+fork choice descends and starts where it starts. With the healing layer assembled that is the
+round's SG root, over the height-filtered blocks with the grade-0 blocks dropped.
+
+On its own this file would walk from genesis over `Σ.T`. It no longer does, and no reading
+of it that does is kept here.
 
 ## Extract
 
@@ -46,9 +56,14 @@ so `votes` holds at most one vote per validator and the score's equivocator clau
 never fires here. At most one child can pass the eligibility condition, so the descent
 has no choice to make.
 
-Slot `s` is evaluated once, at `t_s + 6Δ`, from genesis over the live tree. The result
-is at worst genesis, never empty. `Σ.live_confirmed` takes the result unconditionally;
-`Σ.latest_confirmed` only ever moves forward.
+A slot is evaluated once, at `t_s + 6Δ`. The result is at worst the tree's own root, never
+empty. `Σ.live_confirmed` takes it unconditionally.
+
+Two deviations from that reading are worth naming here rather than leaving a reader to find
+them. The slot evaluated is the store's own `Σ.s`, not a parameter, so the `t_s + 6Δ`
+precondition that pinned the two together is gone with it. And nothing writes
+`Σ.latest_confirmed`: the rule that advanced it, only when the new result descended from the
+old, is not rendered.
 
 -/
 
@@ -60,65 +75,47 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-def Store.getGoldfishConfirmation (S: Store Validator) (tree : BlockTree Validator) (s : Nat)
-    -- (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right])
-  :
-    NDRE (Block Validator) := do
+/-! ## Figure -/
+/-- The confirmation walk over `tree`,
+    scoring the slot-`s` votes twice filtered. `early` and `late` are the votes processed
+    before `t_s + 2Δ` and before `t_s + 6Δ`; what the walk scores is the `early` votes whose
+    validator `late` does not catch equivocating, and what it scores them against is the
+    number of `late`'s participants.
+
+    The eligibility condition is the majority test alone, without `goldfish_eligible`'s
+    current-slot escape — see the module header on why.
+
+    The walk and nothing else: the tree is the caller's, the only store field read is
+    `Σ.gf_votes[s]`, and nothing is written. -/
+def Store.getGoldfishConfirmation (S : Store Validator) (tree : BlockTree Validator)
+    (s : Nat) : NDRE (Block Validator) := do
   let early := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 2 * (Δ : Int)}
   let late := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 6 * (Δ : Int)}
   -- the early votes whose validator `late` does not catch equivocating
   let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
   -- the denominator is `late`'s participants
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
-  -- the majority gate, with no current-slot escape — see the module header
+  -- the majority condition, with no current-slot escape — see the module header
   let eligible := fun B => 2 * goldfishScore votes s B > votersCount
   return (← ghost tree (goldfishScore votes s) (fun B => pure (eligible B)))
 
+/-! ## Figure -/
+/-- What the node confirms now: the
+    walk above, over the layer's own tree, for the store's current slot. The tree comes from
+    the `GoldfishWalk` instance, so both where the walk starts and which blocks it may step
+    onto are the assembled protocol's — see the module header. -/
 def Store.getConfirmation (S : Store Validator) [GoldfishWalk Validator]:
   NDRE (Block Validator) := do
   return (← S.getGoldfishConfirmation (← S.getGoldfishFilteredBlockTree) S.s)
 
+/-! ## Figure -/
+/-- Record what the walk confirms:
+    `Σ.live_confirmed` takes the result, unconditionally. `Σ.latest_confirmed` is not
+    written — see the module header. -/
 def Store.updateConfirmation (S : Store Validator) [GoldfishWalk Validator]:
   NDRE (Store Validator) := do
   let mut S := S
   let confirmed ← S.getConfirmation
   S.liveConfirmed ← confirmed
   return S
-
-/-
-/-! ## Figure at `t_s + 6Δ` -/
-/-- Run at `t_s + 6Δ`: evaluate slot `s`
-    once and record what it confirms.
-
-    `Σ.live_confirmed` takes the result unconditionally — it is "the block the last evaluated
-    slot confirmed", and an evaluation that walks nowhere leaves genesis, never nothing.
-    `Σ.latest_confirmed` only ever moves forward, its write behind the test
-    `Σ.latest_confirmed ⪯ H`.
-
-    Both cutoffs are pure filters on the stored elements: each carries the time it
-    was processed, so an unstamped stored vote is unrepresentable and nothing here can
-    raise but the walk itself.
-
-    "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the
-    Goldfish duties' instants are. -/
-def Fig3.updateConfirmation (S : Store Validator) (anchor: Block Validator) (s : Nat)
-    -- (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right])
-  :
-    NDRE (Store Validator) := do
-  let mut S := S
-  let early := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 2 * (Δ : Int)}
-  let late := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 6 * (Δ : Int)}
-  -- the early votes whose validator `late` does not catch equivocating
-  let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
-  -- the denominator is `late`'s participants
-  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
-  -- the majority gate, with no current-slot escape — see the module header
-  let eligible := fun B => 2 * goldfishScore votes s B > votersCount
-  let H ← ghost anchor S.T (goldfishScore votes s) (fun B => pure (eligible B))
-  S.liveConfirmed ← H
-  if S.latestConfirmed ⪯ H then
-    S.latestConfirmed ← H
-  return S
--/
-
 end DC

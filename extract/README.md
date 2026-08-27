@@ -65,6 +65,32 @@ rewriter as the figures, and fall back to mono exactly when they quote Lean.
 
 **The `## Extract` sections live in `lean/Spec/`**, the extractor's input.
 
+## How a superseded routine reads (2026-08-28)
+
+The draft's device for redefining a routine is to print it again in the later figure and say
+so in prose: figures 1, 4 and 7 each print `get_head`, and the reader takes the last one. Lean
+cannot redefine, so the spec names each layer's reading `Fig<n>.…` and reaches the assembled
+one through a class. Three conventions carry the draft's meaning across, and none of them
+needed a rule in this script:
+
+- **A `Fig<n>.` prefix never reaches the document.** Every name renders from its last
+  dot-separated component, so `Fig7.getFilteredBlockTree` prints `get_filtered_block_tree`
+  both at its definition and at a call. A figure prints the reading its own file defines,
+  which is the draft's device exactly.
+- **What each layer redefines is what the document prints.** In this spec `get_head` is one
+  definition over the two fields of `GoldfishWalk`, and what a layer changes is the tree,
+  `get_goldfish_tree`. So `Store.getHead` is figured once, in `01`, and every layer figures its
+  own `Fig<n>.getGoldfishFilteredBlockTree`. The numbered `Fig<n>.getHead` readings stay in the
+  Lean, unfigured — each is `Store.getHead` at that layer's value, provably so — and the
+  document does not print them twice.
+- **A class and its dispatchers are invisible, and their fields carry paper forms.** The class
+  declaration and the `abbrev` dispatchers are unfigured and marked with no prose, so nothing
+  of the mechanism appears. What does appear is the field read in a figured body,
+  `Σ.get_goldfish_tree` — from the class *field's* docstring opening span, the same convention
+  that names a structure field. A field whose docstring does not open with a span renders
+  namespace-stripped and snake-cased, which is how the long Lean name leaked into the figure
+  before this was written down.
+
 ## The conventions the extractor harvests
 
 No rewrite rule names an identifier of the spec. Instead, `extract.py` builds its rename

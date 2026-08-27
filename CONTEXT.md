@@ -429,7 +429,9 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
 - **Available confirmation splits, and reaches the layer's tree through the class**
   (2026-08-28, Roberto). `03`'s `Store.getGoldfishConfirmation(tree, s)` is the walk alone —
   it reads `Σ.gf_votes[s]` and writes nothing, `NDRE (Block …)` — and the store writes belong
-  to the caller; `Fig3.updateConfirmation`, which did both, is commented out in place. Above
+  to the caller; `Fig3.updateConfirmation`, which did both, is gone (Roberto, 2026-08-28:
+  "remove commented out code blocks in the specs" — `Fig5.onTick` and 09's two confirmation
+  routines went with it, and `Fig2.onTick`'s commented confirmation branch). Above
   it, both in `03`: `Store.getConfirmation`, the walk over `S.getGoldfishFilteredBlockTree`
   with a `[GoldfishWalk Validator]` binder, and `Store.updateConfirmation`, which writes what
   it returns. The pair lived in `09` for one commit, naming `Fig9.getGoldfishFilteredBlockTree`
@@ -441,10 +443,26 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   root nor the filtered tree" is now false twice over and needs rewriting; the evaluated slot
   is the store's own `Σ.s` rather than a parameter, and the `t_s + 6Δ` instant precondition is
   gone with it; and **nothing writes `Σ.latest_confirmed` any more** — its only writer was
-  inside the commented-out routine, so the monotone record the node exposes is never updated.
+  in the routine that is now gone, so the monotone record the node exposes is never updated.
   **Nor is `Σ.live_confirmed`**: `Store.updateConfirmation`'s only caller was `Fig2.onTick`'s
-  confirmation branch, commented out at `02_GoldfishDuties.lean:252`.
+  confirmation branch, itself now removed from `02_GoldfishDuties.lean`.
   The three routines carry no docstrings yet.
+- **How the document renders a superseded routine** (2026-08-28, Roberto: "think about how
+  to handle the classes we have introduced in extract.py so that the output conveys a similar
+  meaning to consensus-1.pdf when the paper says an old function is superseded"). No script
+  change was needed; three conventions do it, and they are now in `extract/README.md`:
+  a `Fig<n>.` prefix never reaches the document (every name renders from its last
+  dot-separated component, so each figure prints the plain paper name of the reading its own
+  file defines — the draft's own device); what a layer *redefines* is what the document prints,
+  which here means `Store.getHead` figured once in `01` and a `Fig<n>.getGoldfishFilteredBlockTree`
+  figured in each layer, with the numbered `Fig<n>.getHead` readings left unfigured because each
+  is `Store.getHead` at that layer's value; and a class with its dispatchers is invisible, its
+  *field's* docstring opening span supplying the paper form a figured body shows —
+  `Σ.get_goldfish_tree`. Two extractor changes were tried and reverted, since the convention
+  route reaches the same output: counting `abbrev` as a `def` when harvesting, and falling back
+  to a routine's paper name in a dotted field chain. What went wrong before the field docstring
+  carried a span: the figure printed `Σ.get_goldfish_filtered_block_tree`, the snake-cased Lean
+  name, and `01` printed `get_head` twice.
 - **`heightDecisionTime`, and the attestation duty at `sgfgVoting`** (2026-08-28, Roberto).
   `SGSchedule.a` is renamed `heightDecisionTime`, a bare definition — the shared prefix
   suggested a class membership it never had, and the instant is where the round's height pair

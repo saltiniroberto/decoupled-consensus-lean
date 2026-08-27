@@ -27,7 +27,8 @@ The store gains `Σ.σ[·]` and the finality state `(Σ.F, Σ.h_F, Σ.J, Σ.h_j,
 layer" in the figure and here.
 
 And the walk no longer starts at genesis over everything. It starts at
-`fork_choice_root(Σ)` over `get_filtered_block_tree(Σ)`, and the Goldfish gate gains a third
+`fork_choice_root(Σ)` over `get_filtered_block_tree(Σ)`, and the Goldfish eligibility
+condition gains a third
 disjunct — a child whose state height is below `Σ.h_max − 1` is eligible without a majority.
 
 ## `Σ.F ⪯ Σ.J` is claimed, not enforced
@@ -83,8 +84,13 @@ two derived views: `fork_choice_root(Σ)`, the block the walk starts from, and
 children. Goldfish starts at the root even if the root is not in the filtered tree.
 
 At this layer `goldfish_eligible` gains one clause: a child whose state height is below
-`Σ.h_max − 1` is eligible without a majority. Available confirmation runs its own walk
-from `Σ.F` over `T_F(Σ)`; it uses neither the SG root nor the filtered tree.
+`Σ.h_max − 1` is eligible without a majority.
+
+Available confirmation is not a separate walk over the live tree. It takes the root it starts
+from and the blocks it may step onto from the same place `get_head` takes them, so it inherits
+this layer's height filter, and whatever a later layer puts in place of it. What it keeps of
+its own are the votes it scores and its eligibility condition, which has no current-slot
+escape.
 
 -/
 
@@ -229,9 +235,11 @@ def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
   return σB.h < S.h_max - 1 ∨
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
 
-/-- This layer's tree: the SG walk from the fork-choice root over the filtered tree gives
-    the root, and the blocks are that same filtered tree. The first field of
-    `Fig7.goldfishWalk` below. -/
+/-! ## Figure `get_goldfish_tree(Σ)` -/
+/-- `get_goldfish_tree(Σ)` at this layer:
+    the SG walk from the fork-choice root over the filtered tree gives the root, and the blocks
+    are that same filtered tree. With the extended `goldfish_eligible` above, this is the
+    layer's whole change to the fork choice. -/
 def Fig7.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
   let root := S.forkChoiceRoot
   let tree ← Fig7.getFilteredBlockTree S
@@ -241,22 +249,19 @@ def Fig7.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Va
 /-- This layer's reading of what the fork choice takes from the layer. Both fields are this
     layer's, and the healing layer's instance carries the second unchanged.
 
-    A `def`, not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
+    Not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
 abbrev Fig7.goldfishWalk : GoldfishWalk Validator :=
   ⟨Fig7.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩
 
-/-! ## Figure -/
-/-- The protocol's fork choice. The SG walk
-    selects the anchor from the fork-choice root over the filtered tree, and the Goldfish walk
-    selects a descendant of it over the same tree. It raises where the filtered tree does.
+/-- This layer's reading of `get_head`, spelled out: the SG walk selects the anchor from the
+    fork-choice root over the filtered tree, and the Goldfish walk selects a descendant of it
+    over the same tree. It raises where the filtered tree does.
 
-    The walk receives `goldfish_eligible` itself: `ghost`'s condition slot is
-    `DRE`, so the extended condition — which raises, reading `Σ.σ[B].h` — passes
-    directly.
+    The walk receives `goldfish_eligible` itself: `ghost`'s condition slot is `DRE`, so the
+    extended condition — which raises, reading `Σ.σ[B].h` — passes directly.
 
-    The healing layer redefines the anchor and the blocks again, and its instance is the
-    protocol's, reached as `S.getHead`; this reading is this file's — hence the `Fig7` name.
-    The earlier ones are `Fig1.getHead` and `Fig4.getHead`. -/
+    Definitionally `Store.getHead` at `Fig7.goldfishWalk`, and kept as the reading a statement
+    can name; the document prints the tree above instead. -/
 def Fig7.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
   ghost (← Fig7.getGoldfishFilteredBlockTree S) (goldfishScore votes k)

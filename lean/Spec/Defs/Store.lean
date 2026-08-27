@@ -13,8 +13,10 @@ naming the layer it arrives in.
     Σ = (t, s, T, timestamp[·], gf_votes[·], live_confirmed, latest_confirmed)   availability
       + sg_votes[·]                                                              SG
       + σ[·], F, h_F, J, h_j, h_max                                              finality
-      + root_proposal[·], sg_root[·]                                            healing
-      + H, i                                                                     this spec's own
+      + height_pair                                                              attestations
+      + root_proposal[·], sg_root[·]                                             healing
+      + history, id                                                              this spec's own
+      + user_goldfish_confirmed, confirmed_for_height_vote                       reserved
 
 ## The protocol's `Σ` is written `S`
 
@@ -215,22 +217,32 @@ structure Store (Validator : Type) where
   gfVotes : (k : Nat) → Finset (TimestampedVote (GoldfishVote Validator))
   /-- `Σ.live_confirmed`, the block the last evaluated slot confirmed. -/
   liveConfirmed : Block Validator
-  /-- `Σ.latest_confirmed`, the monotone record the node exposes. "No rule in this protocol
-      reads it" — it is written by `update_confirmation` and nothing else touches it. -/
+  /-- `Σ.latest_confirmed`, the monotone record the node exposes. No rule of the protocol
+      reads it, and nothing writes it: `update_confirmation`
+      (`03_AvailableConfirmation.lean`) writes `Σ.live_confirmed` only, and the advance of
+      this field is not rendered. -/
   latestConfirmed : Block Validator
+  /-- `Σ.user_goldfish_confirmed`, a second confirmation record beside `Σ.live_confirmed`.
+      Its name says what it is for: the Goldfish confirmation a user of the node reads, rather
+      than the one the protocol's own rules read. Nothing writes it and nothing reads it, so
+      the name is all this field means so far. -/
+  userGoldfishConfirmed : Block Validator
+
+  /-- `Σ.confirmed_for_height_vote`, the block the current-height signing rule is to take as
+      its ceiling. Nothing writes it and nothing reads it: `compute_height_vote`
+      (`08_FinalityVote.lean`) still reads `Σ.live_confirmed` directly, so this field records
+      an intended separation between the two and no more. -/
+  confirmedForHeightVote : Block Validator
+
+  /-- `Σ.height_pair`, the height pair this validator has signed. `decide_height_vote`
+      (`08_FinalityVote.lean`) writes it, and `fg_vote` reads it back when it assembles the
+      vote. `HeightPair.empty` at `gen`: nothing signed yet. -/
+  heightPair : HeightPair Validator
+
   /-- `Σ.sg_votes[r]`, the processed round-`r` SG votes (SG layer), each a `SGHeadVote` —
       only votes whose head is a block are stored — with the time it was processed.
       `latest` selects by round rather than by time; the healing scores read the
       times. -/
-  userGoldfishConfirmed: Block Validator
-
-  confirmedForHeightVote: Block Validator
-
-  /-- `Σ.height_pair`, the height pair this validator has signed: what
-      `decide_height_vote` (`08_FinalityVote.lean`) last wrote, and what `fg_vote` reads back
-      when it assembles the vote. `HeightPair.empty` at `gen`, nothing yet signed. -/
-  heightPair : HeightPair Validator
-
   sgVotes : (r : Int) → Finset (TimestampedVote (SGHeadVote Validator))
   /-- `Σ.σ[B]`, the stored post-state of each processed block (finality layer). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/

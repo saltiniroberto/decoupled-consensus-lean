@@ -221,18 +221,20 @@ def roundStart [Params] (r : Nat) : Int := slotStart (r * Params.R)
     protocol's. -/
 def Γ [Params] (j : Int) (r : Nat) : Int := roundStart r + j * (Params.Δ : Int)
 
-/-- Each round's decision instant, `6Δ` after the beginning of the round:
-    `heightDecisionTime r = roundStart r + 6Δ`. It is the protocol's `a_r`, the round's SG
-    vote time, and the instant at which the round's height pair is decided
-    (`Store.decideHeightVote`, `08_FinalityVote.lean`).
+/-- The round's action instant, `a_r = roundStart r + 6Δ`: `6Δ` after the round opens, one
+    fixed time per round at which the validator settles what it will sign for the round. This
+    spec decides the height pair there (`Store.decideHeightVote`, `08_FinalityVote.lean`),
+    which is what the name says; the attestation carrying it goes out later, at the
+    validator's own `sgfgVoting` time below.
 
-    It is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s confirmation is evaluated; the
-    actions compose (`Store.onTick`, `09_Healing.lean`).
+    The same instant is `t_{rR+1} + 2Δ`, the tick at which the opening slot's confirmation is
+    evaluated, so the two actions of that tick compose: the height pair is decided against a
+    confirmation computed in the same tick (`Store.onTick`, `09_Healing.lean`).
 
-    A fixed formula, so a definition rather than a field of `SGSchedule` below — that class
-    carries the *assumed* part of the round schedule, and an instance must not be able to move
-    this instant. It takes `[Params]` alone, so a routine tests it without carrying the
-    class. -/
+    The formula is fixed, so this is a definition and not a field of `SGSchedule` below. That
+    class carries the part of the schedule the protocol leaves open, and no instance should be
+    able to move this instant. Taking `[Params]` alone, it also mentions no validator, so a
+    routine tests it without carrying the class. -/
 def heightDecisionTime [Params] (r : Nat) : Int :=
   roundStart r + 6 * (Params.Δ : Int)
 

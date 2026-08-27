@@ -127,13 +127,21 @@ def Store.decideHeightVote (S : Store Validator) :
   S.heightPair ← hp
   return S
 
-/-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
+/-- Decide the finality pair: sign `(h_j, J)` — the latest justification, read with its
     height and the finalization from the store — exactly when it is ahead of the
     finalization (`h_F < h_j`), on its chain (`F ⪯ J`), and consistent with the record:
     the validator already signed `J` as its target at `h_j`, signed no empty target
-    there, and its recorded finality target there is empty or `J` itself. That record is
-    written into the returned store on first release; the rule is total — every branch
-    returns. No separate knowledge of the justification is asked for: justification is an
+    there, and its recorded finality target there is empty or `J` itself. Otherwise the pair
+    is empty. The rule is total — every branch returns.
+
+    Deciding and signing are one routine here, unlike the current-height pair, which splits
+    into `compute_height_vote` and `decide_height_vote`. On first release this one writes the
+    height-`h_j` finality target into the record and hands back the store carrying it, so no
+    signature is released before its record is durable. It stores the pair in no field: a
+    caller that wants it takes it from the result, which is why the result is a pair and a
+    store rather than a store alone.
+
+    No separate knowledge of the justification is asked for: justification is an
     on-chain fact — `Σ.J` and `Σ.h_j` read off replayed states whose justifying
     attestations sit inside blocks the validator has processed — so a coherent store's
     own chain is the evidence.

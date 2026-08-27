@@ -5,30 +5,43 @@ import Spec.«08_FinalityVote»
 import Spec.Defs.Nondet
 
 /-!
-# Healing: round grades and round roots
+# Healing: round grades, round roots, and the assembled tick
 
 Round `r` grades the heads of the round-`(r−1)` SG votes, read from the stored votes
-themselves, and uses the grades to fix one SG root per round: the proposer offers a root
+themselves, and uses the grades to fix one root per round: the proposer offers a root
 in its opening block, each receiver checks it, and the accepted or fallback root anchors
-the round's Goldfish votes and its SG and FG outputs.
+the round's Goldfish walks and its SG and FG outputs.
 
-This file holds the two function groups of that mechanism: the support scores read from
-the store's round entries, with the grades defined over them, and the round-root
-functions — proposal root, lower root, SG root, and the round's root in both readings,
-the walk-root-then-action-root pair and the one-step `get_round_root`.
+The file is in three parts. First the support scores read from the stored votes, with the
+grades defined over them. Then the round-root functions — proposal root, lower root, SG root,
+and the round's root in both readings, the walk-root-then-action-root pair and the one-step
+`get_sg_majority_start`. Then the layer as assembled: the tree the fork choice descends, the
+single `GoldfishWalk` instance that makes it the protocol's, and `on_tick`.
+
+## This is the last layer, so its readings are the protocol's
+
+`Fig9.goldfishWalk` holds the tree every walk of the assembled protocol descends: rooted at
+the SG fork choice run from the round's own root, over the height-filtered blocks with the
+grade-0 blocks dropped. The `GoldfishWalk` instance below it is the only one in the spec, so
+`get_head` (`01_GoldfishWalk.lean`), the duties that call it, and available confirmation
+(`03_AvailableConfirmation.lean`) all run this reading without naming it. `on_tick` here is
+the protocol's, and it is where the round's attestation is broadcast.
 
 ## What is not yet here
 
-The scores read the stored SG votes, which `process_sg_vote` already writes. The two
-round-root fields — `Σ.root_proposal[·]`, `Σ.sg_root[·]` (`Store.lean`) — are written by
-no routine yet: the handler line and tick writes that fill them, the opening block's
-proposal-root field, and the fork-choice redirection through the round root land with
-their own figures. Until then this file's root functions are defined and unconsumed.
+`Σ.root_proposal[r]` is written by nothing. Two figures would fill it: the proposer's
+`get_proposal_root` call, which puts a root in its opening block, and the `process_block`
+line that registers the first round-`r` opening block's root. Until they land,
+`get_sg_root` always takes its fallback branch, since it reads that field to find a proposal
+to accept.
 
 ## The tree the rules read
 
-Every root function selects within `get_filtered_block_tree(Σ)` and falls back to
-`fork_choice_root(Σ)`, both of `07_FGStore.lean`. No new view is introduced.
+Every root function selects within `Fig7.getFilteredBlockTree`, the height-filtered blocks of
+`07_FGStore.lean`, and falls back to `fork_choice_root(Σ)`. It names that reading rather than
+going through the class, because the class's instance is this layer's own and would answer
+with the grade-0 veto applied — a filter on what a walk may step onto, not on what may be a
+round's root.
 
 ## "The deepest block" is a pick
 
@@ -269,11 +282,11 @@ def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) 
     return R
   return FCR
 
-/-! ## Figure `get_round_root(Σ, r)` -/
-/-- The root of round `r` in one step: where its Goldfish walks start and what its SG and
-    FG outputs anchor on. The stored SG root, unless it is absent, does not descend from
-    the fork-choice root, or is no longer in the filtered tree — in each of which cases
-    the fork-choice root itself.
+/-! ## Figure `get_sg_majority_start(Σ, r)` -/
+/-- Where round `r`'s SG walk starts, in one step: the stored SG root, unless it is absent,
+    does not descend from the fork-choice root, or is no longer in the filtered tree — in each
+    of which cases the fork-choice root itself. It is the round's root, so it is also what the
+    round's SG and FG outputs anchor on.
 
     The two-step reading above and this one part company in two places. No grade is tested
     here: a stored SG root is either a proposal `get_sg_root` accepted on grade 1 or a
@@ -301,31 +314,23 @@ def Store.applyG0Veto (S : Store Validator) (blocks : Finset (Block Validator)) 
   let r := round S.s
   return {B ∈ blocks | ¬ (∃ B' ∈ blocks, ¬ (B' ∼ B) ∧ S.G0 r B)}
 
-/-- This layer's tree: rooted at the SG fork choice from the round's own root
+/-! ## Figure `get_goldfish_tree(Σ)` -/
+/-- `get_goldfish_tree(Σ)` at this layer,
+    and so the protocol's: rooted at the SG fork choice run from the round's own root
     (`get_sg_majority_start`) over the processed tree, holding the finality layer's filtered
-    blocks with the grade-0 veto applied. The first field of this layer's `GoldfishWalk`
-    instance below. -/
+    blocks with the grade-0 veto applied.
+
+    This is the layer's whole change to the fork choice, and to available confirmation with
+    it — both take their tree from here. `get_head` (`01_GoldfishWalk.lean`) is untouched. -/
 def Fig9.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
   let r := round S.s
   let anchor ← S.majorityForkChoice (← S.getSGMajorityStart r) S.T r
   return { root := anchor, blocks := S.applyG0Veto (← Fig7.getFilteredBlockTree S) }
-
--- def Store.getConfirmation (S : Store Validator) :
---   NDRE (Block Validator) := do
---   return (← getGoldfishConfirmation (← Fig9.getGoldfishFilteredBlockTree S) S.gfVotes[S.s] S.s)
-
--- def Store.updateConfirmation (S : Store Validator) :
---   NDRE (Store Validator) := do
---   let mut S := S
---   let confirmed ← S.getConfirmation
---   S.liveConfirmed ← confirmed
---   return S
-
 /-- This layer's reading of what the fork choice takes from the layer: the tree above, and
     the eligibility condition unchanged from the finality layer, `Fig7.goldfishEligible`.
 
-    A `def` like the earlier layers' (`Fig1.goldfishWalk`), and the `instance` below is what
-    makes it the protocol's. -/
+    Named like the earlier layers' readings (`Fig1.goldfishWalk`), and the `instance` below is
+    what makes this one the protocol's. -/
 abbrev Fig9.goldfishWalk : GoldfishWalk Validator :=
   ⟨Fig9.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩
 
@@ -338,6 +343,33 @@ abbrev Fig9.goldfishWalk : GoldfishWalk Validator :=
     fork choice over by moving this instance to its own reading, not by adding one. -/
 scoped instance : GoldfishWalk Validator := Fig9.goldfishWalk
 
+/-! ## Figure -/
+/-- `on_tick(Σ, t)`, the protocol's
+    reading: the Goldfish tick, and the three lines the round schedule adds around it.
+
+    The SG root, at `Γ_1 = t_r + Δ`. The round's root is derived once, there, and stored in
+    `Σ.sg_root[r]`; every later reader takes it from the field rather than deriving it again,
+    which is what makes one round have one root.
+
+    `Fig2.onTick`, which sets the clock and the slot and runs whatever slot duty this instant
+    carries — proposal, Goldfish vote, confirmation.
+
+    The height pair, at the round's action instant `heightDecisionTime r`. `decide_height_vote`
+    settles what this validator will sign for the round and records it.
+
+    The attestation, at `sgfgVoting Σ.id r` — this validator's own time, which the schedule
+    assumes rather than fixes. The finality pair is decided there, and the round's one combined
+    attestation goes out carrying it, the head `sg_vote` returns, and the height pair settled
+    earlier. This is the only line in the spec that reaches the wire with an attestation.
+
+    Which clock each line reads: the first runs before `Fig2.onTick`, so its test sees the
+    clock as the previous tick left it, while the two below it see `t`, just written. `r` is
+    the round of the slot the store held on entry.
+
+    The `[SGSchedule Validator]` binder is for the attestation time. There is no
+    `[GoldfishWalk Validator]` binder: the instance above is in scope where this is elaborated,
+    so this layer's reading is fixed inside it, while the duties below keep their binders and
+    stay generic. -/
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool)
     [SGSchedule Validator]

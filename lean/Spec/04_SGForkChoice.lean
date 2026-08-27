@@ -10,8 +10,9 @@ SG votes selects the root from which the Goldfish walk starts.
 ## The two walks are one function
 
 `majority_fork_choice` is `ghost` again, with the SG support as the score and a strict
-majority of the represented weight as the gate. Nothing about the walk changes — "the two
-walks are the same function with different scores and gates" — so this file instantiates
+majority of the represented weight as the eligibility condition. Nothing about the walk
+changes — the two walks are the same function with different scores and conditions — so this
+file instantiates
 the shared `ghost` and defines no walk of its own.
 
 ## The equivocator consequence is a fact, not a hypothesis
@@ -111,7 +112,7 @@ def Store.sgSupport (S : Store Validator) (r : Nat) (B : Block Validator) : Nat 
 
 /-! ## Figure -/
 /-- The shared walk with
-    the SG support as its score, gated on a strict majority of the represented weight. -/
+    the SG support as its score, eligibility a strict majority of the represented weight. -/
 def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
     (tree : Finset (Block Validator)) (r : Nat) : NDRE (Block Validator) :=
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})
@@ -119,8 +120,11 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost {root := anchor, blocks := tree } (S.sgSupport r) (fun B => pure (eligible B))
 
-/-- This file's tree: the SG walk from genesis over the whole processed tree gives the
-    root, and the blocks are that same tree. The first field of `Fig4.goldfishWalk` below. -/
+/-! ## Figure `get_goldfish_tree(Σ)` -/
+/-- `get_goldfish_tree(Σ)` at this layer:
+    the SG walk from genesis over the whole processed tree gives the root, and the blocks are
+    that same tree. This is the layer's whole change to the fork choice — `get_head` itself
+    (`01_GoldfishWalk.lean`) is untouched. -/
 def Fig4.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
   return { root := anchor, blocks := S.T }
@@ -129,17 +133,15 @@ def Fig4.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Va
     condition is unchanged at this layer, so it is `Fig1.goldfishEligible`, offered to the
     class's raising slot with `pure`.
 
-    A `def`, not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
+    Not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
 abbrev Fig4.goldfishWalk : GoldfishWalk Validator :=
   ⟨Fig4.getGoldfishFilteredBlockTree,
    fun S votes s B => pure (Fig1.goldfishEligible S votes s B)⟩
 
-/-! ## Figure -/
-/-- The SG walk selects the anchor from
+/-- This layer's reading of `get_head`, spelled out: the SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
-    The finality layer redefines it again, over the filtered tree and from the fork-choice
-    root — that reading is the protocol's, reached as `S.getHead`, and this one is this
-    file's. -/
+    Definitionally `Store.getHead` at `Fig4.goldfishWalk`, and kept as the reading a statement
+    can name; the document prints the tree above instead. -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   S.goldfishForkChoice (← Fig4.getGoldfishFilteredBlockTree S) votes s

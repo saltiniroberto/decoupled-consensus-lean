@@ -5,25 +5,25 @@ import Spec.Defs.Nondet
 /-!
 # The SG duty and store handler
 
-`sg_vote`, run at the round's vote time `a_r`, and `process_sg_vote` — and the protocol's
-`on_tick`, the SG layer's extension of the Goldfish one.
+`sg_vote`, the head a validator votes for its round, and `process_sg_vote`, the handler
+that stores one.
 
-## What the SG layer adds to `on_tick`
+## The duty produces a vote; it does not send one
 
-One line: at `t = a_r` for the current round `r`, run `sg_vote`. The Goldfish proposer
-and voter call the fork choice through the single `GoldfishWalk` instance
-(`Defs/GoldfishWalk.lean`), so whichever layer holds it reaches them; nothing else in their
-duties changes, and available confirmation is unchanged.
+`sg_vote` returns the vote and touches nothing. Under the assembled protocol the head it
+returns travels inside the round's one combined attestation, and it is the attestation duty
+that broadcasts — `Store.onTick` in `09_Healing.lean`, at the sending validator's own time.
+So this file has no line that reaches the wire, and `process_sg_vote` is reached only by a
+receiver's handler.
 
-The added line is this file's reading of the tick: run the Goldfish reading,
-`Fig2.onTick`, and then the one line. The redirected `get_head` needs no rewriting here —
-the duties name no reading, writing `S.getHead` for whatever the instance supplies — so
-this file holds the two routines it itself introduces and its reading of the tick.
+This layer therefore adds no line to `on_tick`, and holds no reading of it. The tick that
+runs the round's action is the graded layer's.
 
-`a_r = t_{rR} + 6Δ`, `6Δ` after the beginning of the round — `heightDecisionTime` in
-`Model.lean`, named for the height pair the instant decides. That instant is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s
-confirmation is evaluated, so the tick runs both actions; `Store.onTick`'s docstring says
-how they compose.
+## The round's action instant
+
+`a_r = t_{rR} + 6Δ`, `6Δ` after the round opens, is `heightDecisionTime` in `Model.lean`. It
+is also `t_{rR+1} + 2Δ`, the tick at which the opening slot's confirmation is evaluated, so a
+head signed for the round rests on a confirmation computed in the same tick.
 
 ## An empty head is never stored
 
@@ -37,10 +37,14 @@ sender nor counts toward an equivocation.
 
 ## Extract
 
-`on_tick` gains one line: at `t = a_r` for the current round `r`, run `sg_vote`. The
-proposer and voter of [fig:02_GoldfishDuties] then call the `get_head` of
-[fig:04_SGForkChoice]; that redirected reading is not written out here, because the
-finality layer redefines `get_head` again and that final reading is the protocol's. Available confirmation is unchanged.
+`sg_vote` produces the head a validator votes for its round: its current `live_confirmed`,
+which is a block. Nothing is sent here. The head travels inside the round's one combined
+attestation, and the graded layer's `on_tick` is what broadcasts that.
+
+The proposer and voter of [fig:02_GoldfishDuties] call the `get_head` of
+[fig:04_SGForkChoice]; that redirected reading is not written out here, because later layers
+redefine `get_head` again and the last reading is the protocol's. Available confirmation is
+unchanged at this layer.
 
 At `a_r`, an honest validator votes its current `live_confirmed`, which is a block; the
 empty head appears only in adversarial votes here. `process_sg_vote(Σ, vote)` is
@@ -92,42 +96,20 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
   return S
 
 /-! ## Figure `sg_vote(Σ)` — runs at `a_r` -/
-/-- Run at `a_r`: vote the store's current
-    `live_confirmed` for the current round.
+/-- The head this validator votes for
+    the current round: its `live_confirmed`, which is a block.
 
-    A `NDREB` duty, as the Goldfish duties are: `broadcast vote; process_sg_vote(Σ, vote)`
-    is the protocol's two verbs. Total —
-    this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
-    monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
-    are. -/
+    It returns the vote and leaves the store alone. Nothing is broadcast and nothing is
+    recorded here — the caller sends the head inside the round's combined attestation, and a
+    receiver's `process_sg_vote` is what stores one. See the module header.
+
+    The result carries the full wire tuple rather than the head alone, so the caller has the
+    validator and the round without recomputing them. `NDRE` and not a pure value only
+    because the monad is where the rest of the tick lives; this routine walks nothing, picks
+    nothing and raises nothing. -/
 def Store.sgVote (S : Store Validator):
     NDRE (SGVote Validator) := do
   let r := round S.s
   let vote := SGVote.mk (validator := S.id) (round := r) (head := some S.liveConfirmed)
   return vote
-
-/-
-/-- `on_tick(Σ, t)`, the protocol's reading: the Goldfish `on_tick`, then the SG layer's
-    one line — at `t = a_r` for the current round, run `sg_vote`. No later layer touches
-    `on_tick`.
-
-    `Fig2.onTick` has already written the clock into the store it returns, so the
-    dependent `if` hands `sg_vote` its instant precondition, exactly as `Fig2.onTick`'s
-    own branches do.
-
-    `a_r = t_{rR} + 6Δ` coincides with a Goldfish instant: it is `t_{rR+1} + 2Δ`, the
-    tick at which `Fig2.onTick` evaluates slot `rR`'s confirmation. On that tick the two
-    actions compose: `sg_vote` runs on the post-confirmation store — so the
-    `live_confirmed` it votes is the round's fresh evaluation — and both broadcasts are
-    in the outbox, no union written anywhere, the monad carrying the earlier sends past
-    the `if`. -/
-def Fig5.onTick (S : Store Validator) (t : Int)
-    (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
-  let S ← Fig2.onTick S t isProposer
-  -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
-  if _ : S.t = heightDecisionTime (round S.s) then
-    return (← S.sgVote)
-  return S
--/
-
 end DC

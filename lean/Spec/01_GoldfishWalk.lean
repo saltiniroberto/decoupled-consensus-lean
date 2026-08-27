@@ -86,11 +86,11 @@ descent; a non-equivocating validator counts once, in one subtree.
 
 Throughout this document, we use this as a building block:
 
-`ghost(anchor, tree, score, eligible)`
+`ghost(tree, score, eligible)`
 
-where `score` is a function on blocks and `eligible` a predicate on blocks. It descends
-from `anchor` through eligible children in `tree`, taking the highest score at each
-step, and stops where no child is eligible.
+where `tree` is a root together with a set of blocks, `score` a function on blocks and
+`eligible` a predicate on blocks. It descends from the root through eligible blocks of the
+set, taking the highest score at each step, and stops where no child is eligible.
 
 Goldfish instantiates the walk with `goldfish_score(votes, s, ·)` and the eligibility
 condition
@@ -192,9 +192,11 @@ def Store.goldfishForkChoice (S : Store Validator)
   -- the pure condition offered to the walk's raising slot with `pure`
   ghost tree (goldfishScore votes s) (fun B => do return Fig1.goldfishEligible S votes s B)
 
-/-! ## Figure -/
-/-- This file's tree: genesis, over the whole processed tree. The first field of
-    `Fig1.goldfishWalk` below. -/
+/-! ## Figure `get_goldfish_tree(Σ)` -/
+/-- `get_goldfish_tree(Σ)` for this file:
+    genesis, over the whole processed tree. The first field of `Fig1.goldfishWalk` below.
+
+    Each layer redefines this and leaves `get_head` alone — see the module header. -/
 def Fig1.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) :=
   pure { root := .genesis, blocks := S.T }
 
@@ -202,29 +204,33 @@ def Fig1.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Va
     tree from genesis, and this file's eligibility condition, offered to the class's raising
     slot with `pure`.
 
-    It is a `def`, not an `instance`: `GoldfishWalk` carries exactly one instance, the
-    assembled protocol's, and this is the value a caller names to pin *this* reading —
-    `@Store.getHead _ _ Fig1.goldfishWalk` is `Fig1.getHead`. See `Defs/GoldfishWalk.lean`. -/
+    Not an `instance`. `GoldfishWalk` carries exactly one, the assembled protocol's, and this
+    is the value a caller names to pin *this* reading instead:
+    `@Store.getHead _ _ _ Fig1.goldfishWalk` is `Fig1.getHead`, definitionally. An `abbrev`
+    because Lean asks a definition of class type to be reducible. See
+    `Defs/GoldfishWalk.lean`. -/
 abbrev Fig1.goldfishWalk : GoldfishWalk Validator :=
   ⟨Fig1.getGoldfishFilteredBlockTree,
    fun S votes s B => pure (Fig1.goldfishEligible S votes s B)⟩
 
-/-! ## Figure -/
 /-- The walk from genesis over the whole
-    processed tree. The SG layer redefines it to start from the SG root (`Fig4.getHead`),
-    and the finality layer again, from the fork-choice root over the filtered tree — that
-    reading is the protocol's, reached as `S.getHead`, and this one is this file's. -/
+    processed tree, spelled out: this file's reading of `get_head`, and definitionally
+    `Store.getHead` at `Fig1.goldfishWalk`. Kept as the reading a statement can name; the
+    document prints `get_head` once, from `Store.getHead`, because what each layer redefines
+    is `get_goldfish_tree` above. -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   S.goldfishForkChoice (← Fig1.getGoldfishFilteredBlockTree S) votes s
 
 /-! ## Figure -/
-/-- The protocol's `get_head`: the
+/-- `get_head(Σ, votes, k)`: the
     Goldfish walk over the layer's tree — descending from its root, stepping onto its blocks —
     testing the layer's eligibility condition. Both come from the single `GoldfishWalk`
     instance (`Defs/GoldfishWalk.lean`), so this is the only definition of `get_head` a caller
-    reaches and it means whatever the assembled protocol's fork choice is. The superseded
-    readings are `Fig1.getHead` above, `Fig4.getHead` and `Fig7.getHead`. -/
+    reaches and it means whatever the assembled protocol's fork choice is.
+
+    It is written once and never redefined. What each later layer redefines is
+    `get_goldfish_tree`, and at the finality layer `goldfish_eligible` as well. -/
 def Store.getHead [GoldfishWalk Validator] (S : Store Validator)
     (votes : Finset (GoldfishVote Validator)) (k : Nat) : NDRE (Block Validator) := do
   ghost (← S.getGoldfishFilteredBlockTree) (goldfishScore votes k) (S.goldfishEligible votes k)
