@@ -18,8 +18,9 @@ named by the number of the file that defines it — `Fig1.getHead`, `Fig4.getHea
 makes.
 
 `get_head` is the one a duty must not name, since the duties outlive every reading of it. So
-it is written once, `Store.getHead` at the end of this file: the walk from an anchor, over a
-set of blocks, testing an eligibility condition. Those three come from `GoldfishWalk`
+it is written once, `Store.getHead` at the end of this file: the walk over a tree — the
+anchor its root, the blocks it may step onto — testing an eligibility condition. Those two
+come from `GoldfishWalk`
 (`Defs/GoldfishWalk.lean`), whose single instance the layer owning the protocol's readings
 supplies — the healing layer, which is why there is no `Fig9.getHead`: that layer's reading
 *is* its instance. A duty writes `S.getHead votes k` and means whatever the assembled
@@ -202,14 +203,13 @@ def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
 
 /-! ## Figure -/
 /-- The protocol's `get_head`: the
-    Goldfish walk from the layer's anchor, over the layer's blocks, testing the layer's
-    eligibility condition. The three come from the single `GoldfishWalk` instance
-    (`Defs/GoldfishWalk.lean`), so this is the only definition of `get_head` a caller reaches
-    and it means whatever the assembled protocol's fork choice is. The superseded readings
-    are `Fig1.getHead` above, `Fig4.getHead` and `Fig7.getHead`. -/
+    Goldfish walk over the layer's tree — descending from its root, stepping onto its blocks —
+    testing the layer's eligibility condition. Both come from the single `GoldfishWalk`
+    instance (`Defs/GoldfishWalk.lean`), so this is the only definition of `get_head` a caller
+    reaches and it means whatever the assembled protocol's fork choice is. The superseded
+    readings are `Fig1.getHead` above, `Fig4.getHead` and `Fig7.getHead`. -/
 def Store.getHead [GoldfishWalk Validator] (S : Store Validator)
     (votes : Finset (GoldfishVote Validator)) (k : Nat) : NDRE (Block Validator) := do
-  ghost { root := (← S.anchor), blocks := (← S.getFilteredBlockTree) }
-    (goldfishScore votes k) (S.goldfishEligible votes k)
+  ghost (← S.getFilteredBlockTree) (goldfishScore votes k) (S.goldfishEligible votes k)
 
 end DC

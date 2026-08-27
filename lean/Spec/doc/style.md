@@ -89,9 +89,9 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   abstract `Root` type, its order, genesis's root), `RootComputation` (a block's root from
   its parent and slot), `SGSchedule` (the attestation times `sgfgVoting i r`, no formula
   fixed, bounded to `a_r ≤ sgfgVoting i r < roundStart (r + 1)`) — all in `Model.lean` —
-  and `GoldfishWalk` (`Defs/GoldfishWalk.lean`), the anchor, the blocks and the
-  eligibility condition that `get_head` takes from the layer, with exactly one instance,
-  supplied by the layer whose readings are the protocol's.
+  and `GoldfishWalk` (`Defs/GoldfishWalk.lean`), the tree and the eligibility condition
+  that `get_head` takes from the layer, with exactly one instance, supplied by the layer
+  whose readings are the protocol's.
   The SG vote time `a_r` is a definition in the class's own namespace, not a field —
   `SGSchedule.a r = roundStart r + 6Δ` — so the whole round schedule reads `SGSchedule.…`.
 

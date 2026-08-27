@@ -300,22 +300,18 @@ def Store.applyG0Veto (S : Store Validator) (blocks : Finset (Block Validator)) 
   let r := round S.s
   return {B ∈ blocks | ¬ (∃ B' ∈ blocks, ¬ (B' ∼ B) ∧ S.G0 r B)}
 
-/-- This layer's anchor: the SG fork choice from the round's own root
-    (`get_sg_majority_start`) over the processed tree. It is the first field of this layer's
-    `GoldfishWalk` instance below. -/
-def Fig9.anchor (S : Store Validator) : NDRE (Block Validator) := do
+/-- This layer's tree: rooted at the SG fork choice from the round's own root
+    (`get_sg_majority_start`) over the processed tree, holding the finality layer's filtered
+    blocks with the grade-0 veto applied. The first field of this layer's `GoldfishWalk`
+    instance below. -/
+def Fig9.getFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
   let r := round S.s
-  return (← S.majorityForkChoice (← S.getSGMajorityStart r) S.T r)
-
-/-- This layer's blocks: the finality layer's filtered tree with the grade-0 veto applied.
-    The second field of the instance below. -/
-def Fig9.getFilteredBlockTree (S : Store Validator) : DRE (Finset (Block Validator)) := do
-  return S.applyG0Veto (← Fig7.getFilteredBlockTree S)
+  let anchor ← S.majorityForkChoice (← S.getSGMajorityStart r) S.T r
+  return { root := anchor, blocks := S.applyG0Veto (← Fig7.getFilteredBlockTree S) }
 
 def Store.getConfirmation (S : Store Validator) :
   NDRE (Block Validator) := do
-  let tree := { root := (← Fig9.anchor S), blocks := (← Fig9.getFilteredBlockTree S) }
-  return (← getGoldfishConfirmation tree S.gfVotes[S.s] S.s)
+  return (← getGoldfishConfirmation (← Fig9.getFilteredBlockTree S) S.gfVotes[S.s] S.s)
 
 def Store.updateConfirmation (S : Store Validator) :
   NDRE (Store Validator) := do
@@ -326,14 +322,14 @@ def Store.updateConfirmation (S : Store Validator) :
 
 /-- The protocol's fork choice is this layer's: `GoldfishWalk` (`Defs/GoldfishWalk.lean`)
     has exactly one instance, and it lives with the last readings, so `Store.getHead` and the
-    duties of `02_GoldfishDuties.lean` run this layer's anchor and blocks without naming them
-    — the round's own root under the walk, through `get_sg_majority_start`, and the grade-0
-    blocks dropped from the tree. The eligibility condition is unchanged at this layer, so the
-    instance carries the finality layer's, `Fig7.goldfishEligible`. This layer defines no
-    `Fig9.getHead`: its reading of `get_head` is these three fields. A later layer would take
-    the fork choice over by moving this instance, not by adding one. -/
+    duties of `02_GoldfishDuties.lean` run this layer's tree without naming it — the round's
+    own root under the walk, through `get_sg_majority_start`, and the grade-0 blocks dropped.
+    The eligibility condition is unchanged at this layer, so the instance carries the finality
+    layer's, `Fig7.goldfishEligible`. This layer defines no `Fig9.getHead`: its reading of
+    `get_head` is these two fields. A later layer would take the fork choice over by moving
+    this instance, not by adding one. -/
 scoped instance : GoldfishWalk Validator :=
-  ⟨Fig9.anchor, Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩
+  ⟨Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩
 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do

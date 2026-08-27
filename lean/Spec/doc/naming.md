@@ -41,8 +41,9 @@ file that defined it.
 `Fig2.onTick`, then the one line at `t = a_r`.
 
 `get_head` is the one routine written once rather than layer by layer. `Store.getHead`
-(`01_GoldfishWalk.lean`) is the walk from an anchor, over a set of blocks, testing an
-eligibility condition, and those three are the fields of the `GoldfishWalk` class
+(`01_GoldfishWalk.lean`) is the walk over a tree — descending from its root, stepping onto its
+blocks — testing an eligibility condition, and those two are the fields of the `GoldfishWalk`
+class
 (`Defs/GoldfishWalk.lean`), which has exactly one instance, supplied by the layer whose
 readings are the protocol's. So a duty writes `S.getHead votes k`, is written once, and means
 whatever fork choice the assembled protocol has — while a reader who sees `Fig2.processBlock` inside `Store.proposeBlock`

@@ -440,22 +440,28 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `Σ.latest_confirmed` any more** — its only writer was inside the commented-out routine,
   so the monotone record the node exposes is now never updated.
 - **`get_head` is one definition** (2026-08-28, Roberto: "can we now have one getHead that
-  consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the three
-  things the walk takes from the layer — `anchor : Store → NDRE (Block …)`,
-  `getFilteredBlockTree : Store → DRE (Finset (Block …))`, and `eligible` — reached as
-  `S.anchor`, `S.getFilteredBlockTree` and `S.goldfishEligible`. `Store.getHead`
-  (`01_GoldfishWalk.lean`) is a plain `def` over the three, so `get_head` renders into
+  consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the two
+  things the walk takes from the layer — `getFilteredBlockTree : Store → NDRE (BlockTree …)`,
+  the tree it descends, and `eligible` — reached as `S.getFilteredBlockTree` and
+  `S.goldfishEligible`. `Store.getHead`
+  (`01_GoldfishWalk.lean`) is a plain `def` over the two, so `get_head` renders into
   `dc.pdf` like any other routine instead of being a class field. `ForkChoice` and its
   `abbrev Store.getHead` are deleted; the single instance is 09's,
-  `⟨Fig9.anchor, Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩` — a layer that changes
-  one field builds its instance from the earlier readings of the others.
-  **Why `anchor` rather than a start block and a tree for the majority walk**: the two walks
-  of a layer's `get_head` need not descend the same set — 07's both descend the filtered tree,
-  09's SG walk descends `Σ.T` while its Goldfish walk descends the vetoed filtered tree. An
-  `anchor` field that *contains* the SG walk expresses every layer as it stands, and needed no
-  protocol change; splitting into `majorityStart` + two tree fields would have been four
-  fields, and one shared tree field would have moved 09's SG walk onto the filtered tree.
-  It also fits `Fig1`, which runs no SG walk at all (`anchor = pure .genesis`).
+  `⟨Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩` — a layer that changes one field builds
+  its instance from the earlier reading of the other.
+  **The tree field carries the anchor** (Roberto: "`GoldfishWalk.getFilteredBlockTree` must
+  return a `BlockTree`"): the walk descends from a root through a set of blocks and
+  `BlockTree` is that pair, so one field supplies both rather than two supplying the halves,
+  and the two cannot fall out of step. It is `NDRE` because from the SG layer on the root is
+  selected by a walk, and `ghost`'s arg-max step picks. A first pass had a separate
+  `anchor : Store → NDRE (Block …)` field; that also expressed every layer as it stands — the
+  two walks of a layer's `get_head` need not descend the same set, 07's both descending the
+  filtered tree while 09's SG walk descends `Σ.T` and its Goldfish walk the vetoed one — but
+  it split a pair the walk always takes together.
+  **Naming to settle**: `Store.getFilteredBlockTree` (the class field, `NDRE (BlockTree …)`,
+  its root the anchor) and `Fig7.getFilteredBlockTree` (the protocol's own routine,
+  `DRE (Finset …)`, the viable blocks at or below the fork-choice root) now share a name with
+  different types, which the `Fig<n>.x`-is-a-reading-of-`x` scheme does not fit.
   What went with it: `Fig9.getHead` is deleted, its reading now being the instance, and the
   `r`-for-`s` slip in it — `goldfishScore votes r` where the vote slot was wanted — went with
   it. `Store.applyG0Veto` now maps `Finset` to `Finset`, its root having always passed

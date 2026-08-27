@@ -45,9 +45,9 @@ objects), `Store.lean` (the store, with the fields each layer adds),
 `08_FinalityVote.lean`), `Notation.lean` (the assignment macros and the raising set-builder),
 `Raise.lean` (the failure vocabulary: `Error` and `DRE`), `FinsetM.lean` (monadic filter
 and image over a `Finset`), `Nondet.lean` (the nondeterminism vocabulary: `NDR`, `NDRE`,
-the pick, and the duty monad `NDREB` with `broadcast`), `GoldfishWalk.lean` (the anchor,
-the blocks and the eligibility condition that `get_head` takes from the layer, one instance
-held by the layer whose readings are the protocol's), and `OldDefs.lean`
+the pick, and the duty monad `NDREB` with `broadcast`), `GoldfishWalk.lean` (the tree and
+the eligibility condition that `get_head` takes from the layer, one instance held by the
+layer whose readings are the protocol's), and `OldDefs.lean`
 (parked definitions kept compiling; nothing may import it). The import order is dependency
 order rather than figure order: Figure 6's chain state is what the store's `Σ.σ[·]` maps
 into, and Figure 3's confirmation is what Figure 2's `on_tick` calls.
