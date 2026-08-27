@@ -538,7 +538,7 @@ instance : DecidableEq (SGVote Validator) := fun a b =>
     hand-written ones it needs.
 
     Attestations travel on the wire: a signed attestation goes from signer to proposer,
-    so `Store.fgVote` can be a duty that broadcasts what it signs, and a block carries
+    so the rules that fill its pairs are store rules and a block carries
     the ones its proposer includes. -/
 inductive Message (Validator : Type) [Roots] where
   /-- A proposed block. -/
