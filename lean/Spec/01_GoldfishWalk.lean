@@ -1,5 +1,6 @@
 import Spec.Defs.Store
 import Spec.Defs.Nondet
+import Spec.Defs.ForkChoice
 
 /-!
 # The Goldfish score and the walk
@@ -16,8 +17,9 @@ the number of the file that defines it — `Fig1.getHead`, `Fig4.getHead`, `Fig7
 `Fig1.goldfishEligible`, `Fig2.processBlock` — so a call names the reading it makes.
 
 `get_head` is the one a duty must not name, since the duties outlive every reading of it:
-they write `S.getHead votes k`, which is the field of `ForkChoice` below reached by dot
-notation, and the layer owning the protocol's reading supplies the single instance.
+they write `S.getHead votes k`, the field of `ForkChoice` (`Defs/ForkChoice.lean`)
+reached by dot notation, and the layer owning the protocol's reading supplies the single
+instance.
 
 There are no namespace blocks: every definition carries its full name at its own `def`.
 The full naming scheme is `doc/naming.md`.
@@ -190,27 +192,5 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   S.goldfishForkChoice .genesis S.T votes s
-
-/-! ## The protocol's fork choice, as an ambient class -/
-
-/-- The fork choice the duties call. Each layer's reading of `get_head` differs in three
-    things — the anchor it starts from, the tree it descends, and the eligibility
-    condition — so a duty cannot name one of them and stay true across layers. It names
-    this field instead, and the layer that owns the protocol's reading supplies the one
-    instance; a duty carrying `[ForkChoice Validator]` therefore runs whichever reading
-    the assembled protocol has, and a statement about a duty can pin the instance it
-    means. -/
-class ForkChoice (Validator : Type) [Roots] where
-  /-- The head to build on or vote for, from the store, a set of slot-`k` votes, and the
-      vote slot `k`. -/
-  getHead : (S : Store Validator) → (votes : Finset (GoldfishVote Validator)) →
-    (k : Nat) → NDRE (Block Validator)
-
-/-- `Σ.get_head(votes, k)`, the protocol's fork choice, as the figures call it: the
-    instance's reading, reached by dot notation. So a duty writes `S.getHead votes k` and
-    means whichever reading the assembled protocol has. -/
-abbrev Store.getHead [ForkChoice Validator] (S : Store Validator)
-    (votes : Finset (GoldfishVote Validator)) (k : Nat) : NDRE (Block Validator) :=
-  ForkChoice.getHead S votes k
 
 end DC

@@ -236,7 +236,7 @@ def Fig7.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
   ghost anchor tree (goldfishScore votes k) (S.goldfishEligible votes k)
 
 /-- The protocol's fork choice is this layer's reading: `ForkChoice`
-    (`01_GoldfishWalk.lean`) has exactly one instance, and it lives with the last reading,
+    (`Defs/ForkChoice.lean`) has exactly one instance, and it lives with the last reading,
     so the duties of `02_GoldfishDuties.lean` run `Fig7.getHead` without naming it. A
     later layer takes the fork choice over by moving this instance, not by adding one. -/
 scoped instance : ForkChoice Validator := ⟨Fig7.getHead⟩

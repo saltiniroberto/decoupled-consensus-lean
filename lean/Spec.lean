@@ -3,6 +3,7 @@ import Spec.Defs.Notation
 import Spec.Defs.FinsetM
 import Spec.Defs.Raise
 import Spec.Defs.Nondet
+import Spec.Defs.ForkChoice
 import Spec.Defs.OldDefs
 import Spec.Defs.SigningHistory
 import Spec.«06_StateTransition»

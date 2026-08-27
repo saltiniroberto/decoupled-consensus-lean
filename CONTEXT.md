@@ -104,7 +104,8 @@ The site-checked alternative for a *pure* body,
 - **The fork choice is late-bound through a class** (Roberto, 2026-08-27: "is there any
   way to redefine the getHead function used by Goldfish?", then "can I have the class
   inside Store, so that I can have instances named `S.getHead`?"). `class ForkChoice`
-  (`01_GoldfishWalk.lean`) has one field, and `abbrev Store.getHead` reaches it by dot
+  (`Defs/ForkChoice.lean`, general machinery rather than figure content — Roberto) has one
+  field, and `abbrev Store.getHead` reaches it by dot
   notation, so the duties write `S.getHead votes k` and mean whatever reading the
   assembled protocol has; the layer owning that reading supplies **exactly one** instance
   (today `07_FGStore.lean`'s, `⟨Fig7.getHead⟩`), and a later layer takes over by *moving*

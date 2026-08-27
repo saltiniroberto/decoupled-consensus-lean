@@ -30,7 +30,7 @@ to run it* that is not.
 
 Both duties run `get_head`, and every layer redefines it. Naming one reading would make
 these routines true of one layer only, so they write `S.getHead votes k` — the
-`ForkChoice` field reached by dot notation (`01_GoldfishWalk.lean`) — and the layer owning
+`ForkChoice` field reached by dot notation (`Defs/ForkChoice.lean`) — and the layer owning
 the protocol's reading supplies the instance. The duties are written once and mean
 whatever the assembled protocol's fork choice is.
 
@@ -103,7 +103,6 @@ class RootComputation (Validator : Type) [Roots] where
   compute : (parent : Block Validator) → (s : Nat) → Root
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [ForkChoice Validator]
   [RootComputation Validator]
 
 open Params
@@ -170,6 +169,7 @@ def Fig2.processBlock (S : Store Validator) (B : Block Validator) : Store Valida
     dependent `if` on a several-part condition, as `on_tick`'s — discharges it with no
     `have`. -/
 def Store.proposeBlock (S : Store Validator)
+    [ForkChoice Validator]
     (_ : S.t = slotStart S.s := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s                                      -- runs at `t_s`
@@ -197,6 +197,7 @@ def Store.proposeBlock (S : Store Validator)
     "Run at `t_s + Δ`" is an input precondition, as `propose_block`'s instant is, with the
     same conjunction-projecting tactic. -/
 def Store.goldfishVote (S : Store Validator)
+    [ForkChoice Validator]
     (_ : S.t = slotStart S.s + (Δ : Int) := by solve_by_elim [And.left, And.right]) :
     NDREB Validator (Store Validator) := do
   let s := S.s
@@ -234,7 +235,9 @@ def Store.goldfishVote (S : Store Validator)
     `s > 0`, the evaluation of the *previous* slot, and the form `update_confirmation`'s
     precondition wants. -/
 def Fig2.onTick (S : Store Validator) (t : Int)
-    (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
+    (isProposer : (s : Nat) → (i : Validator) → Bool)
+  [ForkChoice Validator]
+    : NDREB Validator (Store Validator) := do
   let mut S := S
   let s := (t / (4 * (Δ : Int))).toNat                         -- `s ← ⌊t/(4Δ)⌋`
   S.t ← t

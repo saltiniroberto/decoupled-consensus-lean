@@ -11,7 +11,7 @@ import Spec.Defs.Nondet
 ## What the SG layer adds to `on_tick`
 
 One line: at `t = a_r` for the current round `r`, run `sg_vote`. The Goldfish proposer
-and voter call the fork choice through `ForkChoice` (`01_GoldfishWalk.lean`), so this
+and voter call the fork choice through `ForkChoice` (`Defs/ForkChoice.lean`), so this
 layer's reading reaches them by its instance; nothing else in their duties changes, and
 available confirmation is unchanged.
 

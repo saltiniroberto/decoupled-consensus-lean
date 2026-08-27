@@ -23,6 +23,7 @@ What the algorithms are written in terms of sits in [`Defs/`](../Defs):
 | [`Store.lean`](../Defs/Store.lean) | the store — what a node keeps — and the duty boundary object |
 | [`SigningHistory.lean`](../Defs/SigningHistory.lean) | the durable signing record behind the attestation rules |
 | [`Notation.lean`](../Defs/Notation.lean), [`Raise.lean`](../Defs/Raise.lean), [`FinsetM.lean`](../Defs/FinsetM.lean), [`Nondet.lean`](../Defs/Nondet.lean) | the vocabulary: pseudocode spellings, the failure monad `DRE`, monadic set operations, the nondeterminism monads `NDR`/`NDRE`, the duty monad `NDREB` with `broadcast` |
+| [`ForkChoice.lean`](../Defs/ForkChoice.lean) | the `get_head` the duties call — one class field, one instance, supplied by the layer whose reading is the protocol's |
 | [`OldDefs.lean`](../Defs/OldDefs.lean) | parked definitions, kept compiling; nothing imports it |
 
 ## The design pages
