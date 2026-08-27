@@ -118,7 +118,8 @@ The site-checked alternative for a *pure* body,
   *pieces* — anchor, tree, eligibility condition — which is this class with extra steps,
   the layers differing in all three. The same shape fits `process_block`,
   `goldfish_eligible` and `update_confirmation` if their redirections ever need to be
-  real too.
+  real too. **Reversed the next day**: passing the pieces is what the spec now does, and
+  `ForkChoice` is gone — see "`get_head` is one definition" below.
 - **Full names at each `def`, no namespace blocks.** `Store.…` for whatever a store flows
   into, so dot notation works; `Fig<n>.…` for a superseded reading of an
   incrementally-redefined routine (`Fig1.getHead`, `Fig4.getHead`, `Fig2.processBlock`,
@@ -438,30 +439,45 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   parameter, and the `t_s + 6Δ` instant precondition is gone with it; and **nothing writes
   `Σ.latest_confirmed` any more** — its only writer was inside the commented-out routine,
   so the monotone record the node exposes is now never updated.
-- **`get_filtered_block_tree` and `goldfish_eligible` are late-bound too** (2026-08-28,
-  Roberto): one class `GoldfishWalk` (`Defs/GoldfishWalk.lean`) with those two fields —
-  `getFilteredBlockTree` and `eligible` — reached as `S.getFilteredBlockTree` and
-  `S.goldfishEligible`, on the same discipline as `ForkChoice`: exactly one instance, held by
-  the layer whose readings are the protocol's, taken over by moving it. 07's two defs are now
-  `Fig7.getFilteredBlockTree` and `Fig7.goldfishEligible`, and 07 holds the instance. The two
-  share one class because a walk hands `ghost` the blocks and the condition in the same call
-  and every layer that redefined one redefined the other; two classes could disagree about
-  which layer is speaking. **What this does not yet reach**: `Store.goldfishForkChoice` (01)
-  still calls `Fig1.goldfishEligible` by name, so `Fig1.getHead` and `Fig4.getHead` keep 01's
-  condition and neither `Fig7.getHead` nor `Fig9.getHead` can go back to calling
-  `goldfishForkChoice` — both still call `ghost` directly. Switching that one call to
-  `S.goldfishEligible` is what would unify them, and it changes what `Fig1.getHead` means.
+- **`get_head` is one definition** (2026-08-28, Roberto: "can we now have one getHead that
+  consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the three
+  things the walk takes from the layer — `anchor : Store → NDRE (Block …)`,
+  `getFilteredBlockTree : Store → DRE (Finset (Block …))`, and `eligible` — reached as
+  `S.anchor`, `S.getFilteredBlockTree` and `S.goldfishEligible`. `Store.getHead`
+  (`01_GoldfishWalk.lean`) is a plain `def` over the three, so `get_head` renders into
+  `dc.pdf` like any other routine instead of being a class field. `ForkChoice` and its
+  `abbrev Store.getHead` are deleted; the single instance is 09's,
+  `⟨Fig9.anchor, Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩` — a layer that changes
+  one field builds its instance from the earlier readings of the others.
+  **Why `anchor` rather than a start block and a tree for the majority walk**: the two walks
+  of a layer's `get_head` need not descend the same set — 07's both descend the filtered tree,
+  09's SG walk descends `Σ.T` while its Goldfish walk descends the vetoed filtered tree. An
+  `anchor` field that *contains* the SG walk expresses every layer as it stands, and needed no
+  protocol change; splitting into `majorityStart` + two tree fields would have been four
+  fields, and one shared tree field would have moved 09's SG walk onto the filtered tree.
+  It also fits `Fig1`, which runs no SG walk at all (`anchor = pure .genesis`).
+  What went with it: `Fig9.getHead` is deleted, its reading now being the instance, and the
+  `r`-for-`s` slip in it — `goldfishScore votes r` where the vote slot was wanted — went with
+  it. `Store.applyG0Veto` now maps `Finset` to `Finset`, its root having always passed
+  through untouched. 09's five root computations name `Fig7.getFilteredBlockTree` explicitly,
+  which is the tree they resolved to before the instance moved; whether the healing roots
+  should instead be chosen over the *vetoed* tree is open.
+  **Still not reached**: `Store.goldfishForkChoice` (01) names `Fig1.goldfishEligible`, so
+  `Fig1.getHead` and `Fig4.getHead` keep 01's condition, and `Fig7.getHead` calls `ghost`
+  directly rather than through `goldfishForkChoice`.
 - **An `alwaysEligible` parameter on `goldfishForkChoice` was tried and dropped** (2026-08-28):
   an extra `Block → DRE Bool` disjunct passed at each call site, so a layer could widen the
   condition without redefining it. Rejected in favour of the class above — the parameter is an
   argument the figures do not write, threaded through every caller, and it widens only the
   condition, leaving the tree still hard-wired.
-- **The fork choice moved to the healing layer** (2026-08-28): `Fig9.getHead` walks from
-  the round's own root, and 09 holds the single `ForkChoice` instance — 07's was removed,
-  not shadowed, which is the discipline `Defs/ForkChoice.lean` states. Note what the move
-  does *not* reach: `Store.onTick` in 09 is elaborated where the instance is in scope, so
-  it has no `[ForkChoice]` binder and 09's reading is baked into it; the duties below keep
-  their binders and stay generic.
+- **The fork choice moved to the healing layer** (2026-08-28): the walk starts from the
+  round's own root, and 09 holds the single instance — 07's was removed, not shadowed, which
+  is the discipline `Defs/GoldfishWalk.lean` states. Note what the move does *not* reach:
+  `Store.onTick` in 09 is elaborated where the instance is in scope, so it has no
+  `[GoldfishWalk]` binder and 09's reading is baked into it; the duties below keep their
+  binders and stay generic. A theorem about `Store.onTick` therefore needs no instance binder
+  and is automatically about 09's reading; one that quantifies over instances has to be
+  stated about `Fig2.onTick`, which kept its binder.
 - **The healing layer** (`09_Healing.lean`, imported 2026-08-25 from the earlier draft's
   Figures 4 and 5, on Roberto's word — the draft `consensus.pdf`, local; not
   `consensus-1.pdf`, whose Figures 4–5 are the SG files). The support scores and grades

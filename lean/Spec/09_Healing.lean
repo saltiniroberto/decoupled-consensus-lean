@@ -203,7 +203,7 @@ def deepest (G : Finset (Block Validator)) : Finset (Block Validator) :=
     when no such block exists. -/
 def Store.getProposalRoot (S : Store Validator) (r : Nat) : NDRE (Block Validator) := do
   -- the proposer, at t_r
-  let G := {B ∈ (← S.getFilteredBlockTree) | S.G2 r B}
+  let G := {B ∈ (← Fig7.getFilteredBlockTree S) | S.G2 r B}
   if G ≠ ∅ then
     let D ←ᵖ deepest G
     return D
@@ -214,7 +214,7 @@ def Store.getProposalRoot (S : Store Validator) (r : Nat) : NDRE (Block Validato
     block in the filtered tree with grade 3 strictly descending from the fork-choice root,
     or the fork-choice root itself when there is none. -/
 def Store.getLowerRoot (S : Store Validator) (r : Nat) : NDRE (Option (Block Validator)) := do
-  let G := {B ∈ (← S.getFilteredBlockTree) | S.G3 r B ∧ S.forkChoiceRoot ≺ B}
+  let G := {B ∈ (← Fig7.getFilteredBlockTree S) | S.G3 r B ∧ S.forkChoiceRoot ≺ B}
   if G ≠ ∅ then
     let D ←ᵖ deepest G
     return D
@@ -234,7 +234,7 @@ def Store.getSGRoot (S : Store Validator) (r : Nat) : NDRE (Option (Block Valida
     return ⊥
 
   let Rprop ← S.rootProposal[r]
-  if (← Rlow) ⪯ Rprop ∧ Rprop ∈ (← S.getFilteredBlockTree) ∧ S.G1 r Rprop then
+  if (← Rlow) ⪯ Rprop ∧ Rprop ∈ (← Fig7.getFilteredBlockTree S) ∧ S.G1 r Rprop then
     return Rprop
   return Rlow
 
@@ -264,7 +264,7 @@ def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) 
   -- at a_r
   let FCR := S.forkChoiceRoot
   let R ← S.getWalkRoot r
-  if R ∈ (← S.getFilteredBlockTree) ∧ (R = FCR ∨ S.G1 r R) then
+  if R ∈ (← Fig7.getFilteredBlockTree S) ∧ (R = FCR ∨ S.G1 r R) then
     return R
   return FCR
 
@@ -288,27 +288,34 @@ def Store.getSGMajorityStart (S : Store Validator) (r : Nat) : DRE (Block Valida
   if S.sgRoot[r] = ⊥ then
     return FCR
   let sgRoot ← S.sgRoot[r]
-  if ¬ (FCR ⪯ sgRoot ∧ sgRoot ∈ (← S.getFilteredBlockTree)) then
+  if ¬ (FCR ⪯ sgRoot ∧ sgRoot ∈ (← Fig7.getFilteredBlockTree S)) then
     return FCR
   return sgRoot
 
 
-def Store.applyG0Veto (S: Store Validator) (tree: BlockTree Validator) : BlockTree Validator := Id.run do
+/-- The blocks of `blocks` that the grade-0 veto leaves: a block is dropped when `blocks`
+    holds one conflicting with it and it has grade 0 in the store's own round. -/
+def Store.applyG0Veto (S : Store Validator) (blocks : Finset (Block Validator)) :
+    Finset (Block Validator) := Id.run do
   let r := round S.s
-  let filteredTree := {
-    root := tree.root
-    blocks := {B ∈ tree.blocks | ¬ (∃ B' ∈ tree.blocks, ¬ (B' ∼ B) ∧ S.G0 r B)}
-  }
-  return filteredTree
+  return {B ∈ blocks | ¬ (∃ B' ∈ blocks, ¬ (B' ∼ B) ∧ S.G0 r B)}
+
+/-- This layer's anchor: the SG fork choice from the round's own root
+    (`get_sg_majority_start`) over the processed tree. It is the first field of this layer's
+    `GoldfishWalk` instance below. -/
+def Fig9.anchor (S : Store Validator) : NDRE (Block Validator) := do
+  let r := round S.s
+  return (← S.majorityForkChoice (← S.getSGMajorityStart r) S.T r)
+
+/-- This layer's blocks: the finality layer's filtered tree with the grade-0 veto applied.
+    The second field of the instance below. -/
+def Fig9.getFilteredBlockTree (S : Store Validator) : DRE (Finset (Block Validator)) := do
+  return S.applyG0Veto (← Fig7.getFilteredBlockTree S)
 
 def Store.getConfirmation (S : Store Validator) :
   NDRE (Block Validator) := do
-  let mut S := S
-  let r := round S.s
-  let majorityForkChoiceStart ← S.getSGMajorityStart r
-  let anchor ← S.majorityForkChoice majorityForkChoiceStart S.T r
-  let filteredVetoedBlockTree := S.applyG0Veto {root := anchor, blocks :=  (← S.getFilteredBlockTree)}
-  return (← getGoldfishConfirmation filteredVetoedBlockTree S.gfVotes[S.s] S.s)
+  let tree := { root := (← Fig9.anchor S), blocks := (← Fig9.getFilteredBlockTree S) }
+  return (← getGoldfishConfirmation tree S.gfVotes[S.s] S.s)
 
 def Store.updateConfirmation (S : Store Validator) :
   NDRE (Store Validator) := do
@@ -317,20 +324,16 @@ def Store.updateConfirmation (S : Store Validator) :
   S.liveConfirmed ← confirmed
   return S
 
-def Fig9.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
-    NDRE (Block Validator) := do
-  let r := round S.s
-  let majorityForkChoiceStart ← S.getSGMajorityStart r
-  let anchor ← S.majorityForkChoice majorityForkChoiceStart S.T (round S.s)
-  let filteredVetoedBlockTree := S.applyG0Veto {root := anchor, blocks :=  (← S.getFilteredBlockTree)}
-  return (← ghost filteredVetoedBlockTree (goldfishScore votes r) (S.goldfishEligible votes r))
-
-/-- The protocol's fork choice is this layer's reading: `ForkChoice`
-    (`Defs/ForkChoice.lean`) has exactly one instance, and it lives with the last reading,
-    so the duties of `02_GoldfishDuties.lean` run `Fig9.getHead` without naming it — the
-    round's own root under it, through `get_sg_majority_start`. A later layer would take
+/-- The protocol's fork choice is this layer's: `GoldfishWalk` (`Defs/GoldfishWalk.lean`)
+    has exactly one instance, and it lives with the last readings, so `Store.getHead` and the
+    duties of `02_GoldfishDuties.lean` run this layer's anchor and blocks without naming them
+    — the round's own root under the walk, through `get_sg_majority_start`, and the grade-0
+    blocks dropped from the tree. The eligibility condition is unchanged at this layer, so the
+    instance carries the finality layer's, `Fig7.goldfishEligible`. This layer defines no
+    `Fig9.getHead`: its reading of `get_head` is these three fields. A later layer would take
     the fork choice over by moving this instance, not by adding one. -/
-scoped instance : ForkChoice Validator := ⟨Fig9.getHead⟩
+scoped instance : GoldfishWalk Validator :=
+  ⟨Fig9.anchor, Fig9.getFilteredBlockTree, Fig7.goldfishEligible⟩
 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do

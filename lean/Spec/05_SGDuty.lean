@@ -11,9 +11,9 @@ import Spec.Defs.Nondet
 ## What the SG layer adds to `on_tick`
 
 One line: at `t = a_r` for the current round `r`, run `sg_vote`. The Goldfish proposer
-and voter call the fork choice through `ForkChoice` (`Defs/ForkChoice.lean`), so this
-layer's reading reaches them by its instance; nothing else in their duties changes, and
-available confirmation is unchanged.
+and voter call the fork choice through the single `GoldfishWalk` instance
+(`Defs/GoldfishWalk.lean`), so whichever layer holds it reaches them; nothing else in their
+duties changes, and available confirmation is unchanged.
 
 The added line is this file's reading of the tick: run the Goldfish reading,
 `Fig2.onTick`, and then the one line. The redirected `get_head` needs no rewriting here —
@@ -56,7 +56,7 @@ set_option autoImplicit false
 namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [RootComputation Validator] [ForkChoice Validator]
+  [RootComputation Validator] [GoldfishWalk Validator]
 
 /-! ## Figure `process_sg_vote(Σ, vote)` -/
 /-- Record a round-`r` SG vote with its

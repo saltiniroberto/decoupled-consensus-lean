@@ -40,11 +40,12 @@ file that defined it.
 3.4 says "`on_tick` gains one line", and `Store.onTick` is exactly that — it runs
 `Fig2.onTick`, then the one line at `t = a_r`.
 
-`get_head` is the one routine whose plain name is not a definition but a dispatch:
-`Store.getHead` is the field of the `ForkChoice` class (`Defs/ForkChoice.lean`), which has
-exactly one instance, supplied by the layer whose reading is the protocol's. So a duty
-writes `S.getHead votes k`, is written once, and means whatever fork choice the assembled
-protocol has — while a reader who sees `Fig2.processBlock` inside `Store.proposeBlock`
+`get_head` is the one routine written once rather than layer by layer. `Store.getHead`
+(`01_GoldfishWalk.lean`) is the walk from an anchor, over a set of blocks, testing an
+eligibility condition, and those three are the fields of the `GoldfishWalk` class
+(`Defs/GoldfishWalk.lean`), which has exactly one instance, supplied by the layer whose
+readings are the protocol's. So a duty writes `S.getHead votes k`, is written once, and means
+whatever fork choice the assembled protocol has — while a reader who sees `Fig2.processBlock` inside `Store.proposeBlock`
 knows that duty predates the finality extension.
 
 ## What this replaced

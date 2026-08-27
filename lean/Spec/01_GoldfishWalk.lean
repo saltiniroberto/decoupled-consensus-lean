@@ -1,6 +1,5 @@
 import Spec.Defs.Store
 import Spec.Defs.Nondet
-import Spec.Defs.ForkChoice
 import Spec.Defs.GoldfishWalk
 
 /-!
@@ -12,15 +11,19 @@ with a different score and eligibility condition.
 
 ## The protocol defines incrementally; the old readings are numbered
 
-Later files redefine three routines — `get_head` (files `01`, `04`, `07`),
-`process_block` (`02`, `07`), `goldfish_eligible` (`01`, `07`). Each reading is named by
-the number of the file that defines it — `Fig1.getHead`, `Fig4.getHead`, `Fig7.getHead`,
-`Fig1.goldfishEligible`, `Fig2.processBlock` — so a call names the reading it makes.
+Later files redefine three routines — `get_head` (files `01`, `04`, `07`, `09`),
+`process_block` (`02`, `07`), `goldfish_eligible` (`01`, `07`). Each superseded reading is
+named by the number of the file that defines it — `Fig1.getHead`, `Fig4.getHead`,
+`Fig7.getHead`, `Fig1.goldfishEligible`, `Fig2.processBlock` — so a call names the reading it
+makes.
 
-`get_head` is the one a duty must not name, since the duties outlive every reading of it:
-they write `S.getHead votes k`, the field of `ForkChoice` (`Defs/ForkChoice.lean`)
-reached by dot notation, and the layer owning the protocol's reading supplies the single
-instance.
+`get_head` is the one a duty must not name, since the duties outlive every reading of it. So
+it is written once, `Store.getHead` at the end of this file: the walk from an anchor, over a
+set of blocks, testing an eligibility condition. Those three come from `GoldfishWalk`
+(`Defs/GoldfishWalk.lean`), whose single instance the layer owning the protocol's readings
+supplies — the healing layer, which is why there is no `Fig9.getHead`: that layer's reading
+*is* its instance. A duty writes `S.getHead votes k` and means whatever the assembled
+protocol's fork choice is.
 
 There are no namespace blocks: every definition carries its full name at its own `def`.
 The full naming scheme is `doc/naming.md`.
@@ -196,5 +199,17 @@ def Store.goldfishForkChoice (S : Store Validator)
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   S.goldfishForkChoice {root := .genesis, blocks := S.T} votes s
+
+/-! ## Figure -/
+/-- The protocol's `get_head`: the
+    Goldfish walk from the layer's anchor, over the layer's blocks, testing the layer's
+    eligibility condition. The three come from the single `GoldfishWalk` instance
+    (`Defs/GoldfishWalk.lean`), so this is the only definition of `get_head` a caller reaches
+    and it means whatever the assembled protocol's fork choice is. The superseded readings
+    are `Fig1.getHead` above, `Fig4.getHead` and `Fig7.getHead`. -/
+def Store.getHead [GoldfishWalk Validator] (S : Store Validator)
+    (votes : Finset (GoldfishVote Validator)) (k : Nat) : NDRE (Block Validator) := do
+  ghost { root := (← S.anchor), blocks := (← S.getFilteredBlockTree) }
+    (goldfishScore votes k) (S.goldfishEligible votes k)
 
 end DC

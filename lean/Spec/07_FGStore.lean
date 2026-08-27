@@ -7,14 +7,14 @@ import Spec.«02_GoldfishDuties»
 Viability, and the finality layer's routines: `process_block` extended, `update_finality`, `fork_choice_root`,
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
-**This is the protocol.** Where a routine here shares a name with an earlier file's,
-this is the reading a caller wants. `S.processBlock` bears the plain `Store` name outright.
-The walk's three routines are reached through their classes, and this layer supplies both
-instances: `S.getHead` from `ForkChoice` (`Defs/ForkChoice.lean`), and
-`S.getFilteredBlockTree` and `S.goldfishEligible` from `GoldfishWalk`
-(`Defs/GoldfishWalk.lean`). Every reading is named by its file's number —
-`Fig7.getFilteredBlockTree`, `Fig7.goldfishEligible` and `Fig7.getHead` here,
-`Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead` and `Fig4.getHead` earlier. See
+**This is the protocol for `process_block`**, which bears the plain `Store` name,
+`S.processBlock`. The fork choice is not: `get_head` is one definition (`Store.getHead`,
+`01_GoldfishWalk.lean`) whose anchor, blocks and eligibility condition come from the single
+`GoldfishWalk` instance (`Defs/GoldfishWalk.lean`), and the healing layer holds that
+instance. This layer's readings of two of those three fields are `Fig7.getFilteredBlockTree`
+and `Fig7.goldfishEligible`, and the healing layer's instance carries the second unchanged.
+Every reading is named by its file's number — `Fig7.getHead` here, `Fig2.processBlock`,
+`Fig1.goldfishEligible`, `Fig1.getHead` and `Fig4.getHead` earlier. See
 `01_GoldfishWalk.lean` on the scheme.
 
 ## What this layer adds
@@ -196,8 +196,9 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
     separately by `get_head`. It raises exactly where `viable` does.
 
-    This is the reading a caller wants, so it is what the `GoldfishWalk` instance below
-    supplies. There is no earlier one: before this layer the walk descended `Σ.T`. -/
+    It is what the healing layer's `GoldfishWalk` instance builds on: that layer's reading
+    is this one with the grade-0 veto applied. There is no earlier one — before this layer the
+    walk descended `Σ.T`. -/
 def Fig7.getFilteredBlockTree (S : Store Validator) :
     DRE (Finset (Block Validator)) := do
   let root := S.forkChoiceRoot
@@ -215,8 +216,8 @@ def Fig7.getFilteredBlockTree (S : Store Validator) :
     none — and it is what `get_head` hands the walk, `ghost`'s condition slot being
     `DRE`.
 
-    This is the reading a caller wants, so it is what the `GoldfishWalk` instance below
-    supplies; the earlier one is `Fig1.goldfishEligible`. -/
+    This is the reading a caller wants, and the healing layer's `GoldfishWalk` instance
+    carries it unchanged; the earlier one is `Fig1.goldfishEligible`. -/
 def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : DRE Bool := do
   let σB ← S.σ[B]
@@ -225,13 +226,6 @@ def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
   return σB.h < S.h_max - 1 ∨
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
-
-/-- The protocol's filtered tree and eligibility condition are this layer's readings:
-    `GoldfishWalk` (`Defs/GoldfishWalk.lean`) has exactly one instance, and it lives with the
-    last readings, so a walk runs them without naming them. A later layer would take them
-    over by moving this instance, not by adding one. -/
-scoped instance : GoldfishWalk Validator :=
-  ⟨Fig7.getFilteredBlockTree, Fig7.goldfishEligible⟩
 
 /-! ## Figure -/
 /-- The protocol's fork choice. The SG walk
@@ -242,13 +236,15 @@ scoped instance : GoldfishWalk Validator :=
     `DRE`, so the extended condition — which raises, reading `Σ.σ[B].h` — passes
     directly.
 
-    This is the reading a caller wants, so it is what the `ForkChoice` instance below
-    supplies; the earlier readings are `Fig1.getHead` and `Fig4.getHead`. -/
+    The healing layer redefines the anchor and the blocks again, and its instance is the
+    protocol's, reached as `S.getHead`; this reading is this file's — hence the `Fig7` name.
+    The earlier ones are `Fig1.getHead` and `Fig4.getHead`. -/
 def Fig7.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
     NDRE (Block Validator) := do
   let root := S.forkChoiceRoot
-  let tree ← S.getFilteredBlockTree
+  let tree ← Fig7.getFilteredBlockTree S
   let anchor ← S.majorityForkChoice root tree (round S.s)
-  ghost { root := anchor, blocks := tree } (goldfishScore votes k) (S.goldfishEligible votes k)
+  ghost { root := anchor, blocks := tree } (goldfishScore votes k)
+    (Fig7.goldfishEligible S votes k)
 
 end DC
