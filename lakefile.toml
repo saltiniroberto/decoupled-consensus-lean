@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["Spec", "Analysis"]
+defaultTargets = ["Spec", "SpecM", "Analysis"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -31,6 +31,17 @@ rev = "v4.32.2"
 name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
+
+# A frozen copy of `Spec` as it stood on 2026-08-27 -- the working tree at commit c0ef96e
+# plus the uncommitted spec edits of that moment. Root `SpecM`, same `srcDir`, so
+# `SpecM.Defs.Store` is `lean/SpecM/Defs/Store.lean`. It is where the experiment of threading
+# the store through a monad is carried out; `Spec` itself is not touched by that work. The
+# copy differs from its source only in the module names its `import` lines use. Both libraries
+# define into namespace `DC`, so no file may import from both.
+[[lean_lib]]
+name = "SpecM"
+srcDir = "lean"
+globs = ["SpecM", "SpecM.+"]
 
 # The analysis: results stated (and eventually proved) against the specification above.
 # Root `Analysis`, same `srcDir`, so `Analysis.AccountableSafety` is
