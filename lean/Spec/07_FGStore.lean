@@ -8,11 +8,14 @@ Viability, and the finality layer's routines: `process_block` extended, `update_
 `get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
 
 **This is the protocol.** Where a routine here shares a name with an earlier file's,
-this is the reading a caller wants, and it bears the plain `Store` name: `S.processBlock`,
-`S.goldfishEligible`, and the fork choice this layer's `ForkChoice` instance supplies to
-`S.getHead`. The superseded readings are
-named by their file's number — `Fig2.processBlock`, `Fig1.goldfishEligible`,
-`Fig1.getHead`, `Fig4.getHead`. See `01_GoldfishWalk.lean` on the scheme.
+this is the reading a caller wants. `S.processBlock` bears the plain `Store` name outright.
+The walk's three routines are reached through their classes, and this layer supplies both
+instances: `S.getHead` from `ForkChoice` (`Defs/ForkChoice.lean`), and
+`S.getFilteredBlockTree` and `S.goldfishEligible` from `GoldfishWalk`
+(`Defs/GoldfishWalk.lean`). Every reading is named by its file's number —
+`Fig7.getFilteredBlockTree`, `Fig7.goldfishEligible` and `Fig7.getHead` here,
+`Fig2.processBlock`, `Fig1.goldfishEligible`, `Fig1.getHead` and `Fig4.getHead` earlier. See
+`01_GoldfishWalk.lean` on the scheme.
 
 ## What this layer adds
 
@@ -191,8 +194,11 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
 
     "Goldfish starts at the root even if the root is not in the filtered tree" — so this set
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
-    separately by `get_head`. It raises exactly where `viable` does. -/
-def Store.getFilteredBlockTree (S : Store Validator) :
+    separately by `get_head`. It raises exactly where `viable` does.
+
+    This is the reading a caller wants, so it is what the `GoldfishWalk` instance below
+    supplies. There is no earlier one: before this layer the walk descended `Σ.T`. -/
+def Fig7.getFilteredBlockTree (S : Store Validator) :
     DRE (Finset (Block Validator)) := do
   let root := S.forkChoiceRoot
   return {B ∈ (← S.viable) | root ⪯ B}
@@ -207,8 +213,11 @@ def Store.getFilteredBlockTree (S : Store Validator) :
 
     It raises: the height it tests is `Σ.σ[B].h`, and a block the map does not record has
     none — and it is what `get_head` hands the walk, `ghost`'s condition slot being
-    `DRE`. In `Store` for dot notation, its bare name unique to this layer. -/
-def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
+    `DRE`.
+
+    This is the reading a caller wants, so it is what the `GoldfishWalk` instance below
+    supplies; the earlier one is `Fig1.goldfishEligible`. -/
+def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
     (s : Nat) (B : Block Validator) : DRE Bool := do
   let σB ← S.σ[B]
   -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
@@ -216,6 +225,13 @@ def Store.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote V
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
   return σB.h < S.h_max - 1 ∨
     2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
+
+/-- The protocol's filtered tree and eligibility condition are this layer's readings:
+    `GoldfishWalk` (`Defs/GoldfishWalk.lean`) has exactly one instance, and it lives with the
+    last readings, so a walk runs them without naming them. A later layer would take them
+    over by moving this instance, not by adding one. -/
+scoped instance : GoldfishWalk Validator :=
+  ⟨Fig7.getFilteredBlockTree, Fig7.goldfishEligible⟩
 
 /-! ## Figure -/
 /-- The protocol's fork choice. The SG walk

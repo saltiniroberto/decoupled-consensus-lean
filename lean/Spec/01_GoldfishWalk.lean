@@ -1,6 +1,7 @@
 import Spec.Defs.Store
 import Spec.Defs.Nondet
 import Spec.Defs.ForkChoice
+import Spec.Defs.GoldfishWalk
 
 /-!
 # The Goldfish score and the walk
@@ -179,10 +180,13 @@ def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
 /-! ## Figure -/
 /-- The shared
     walk, instantiated with the Goldfish score and eligibility condition. -/
-def Store.goldfishForkChoice (S : Store Validator) (tree :  BlockTree Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+def Store.goldfishForkChoice (S : Store Validator)
+    (tree :  BlockTree Validator)
+    (votes : Finset (GoldfishVote Validator))
+    (s : Nat) :
     NDRE (Block Validator) :=
   -- the pure condition offered to the walk's raising slot with `pure`
-  ghost tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
+  ghost tree (goldfishScore votes s) (fun B => do return Fig1.goldfishEligible S votes s B)
 
 /-! ## Figure -/
 /-- The walk from genesis over the whole

@@ -438,6 +438,24 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   parameter, and the `t_s + 6Δ` instant precondition is gone with it; and **nothing writes
   `Σ.latest_confirmed` any more** — its only writer was inside the commented-out routine,
   so the monotone record the node exposes is now never updated.
+- **`get_filtered_block_tree` and `goldfish_eligible` are late-bound too** (2026-08-28,
+  Roberto): one class `GoldfishWalk` (`Defs/GoldfishWalk.lean`) with those two fields —
+  `getFilteredBlockTree` and `eligible` — reached as `S.getFilteredBlockTree` and
+  `S.goldfishEligible`, on the same discipline as `ForkChoice`: exactly one instance, held by
+  the layer whose readings are the protocol's, taken over by moving it. 07's two defs are now
+  `Fig7.getFilteredBlockTree` and `Fig7.goldfishEligible`, and 07 holds the instance. The two
+  share one class because a walk hands `ghost` the blocks and the condition in the same call
+  and every layer that redefined one redefined the other; two classes could disagree about
+  which layer is speaking. **What this does not yet reach**: `Store.goldfishForkChoice` (01)
+  still calls `Fig1.goldfishEligible` by name, so `Fig1.getHead` and `Fig4.getHead` keep 01's
+  condition and neither `Fig7.getHead` nor `Fig9.getHead` can go back to calling
+  `goldfishForkChoice` — both still call `ghost` directly. Switching that one call to
+  `S.goldfishEligible` is what would unify them, and it changes what `Fig1.getHead` means.
+- **An `alwaysEligible` parameter on `goldfishForkChoice` was tried and dropped** (2026-08-28):
+  an extra `Block → DRE Bool` disjunct passed at each call site, so a layer could widen the
+  condition without redefining it. Rejected in favour of the class above — the parameter is an
+  argument the figures do not write, threaded through every caller, and it widens only the
+  condition, leaving the tree still hard-wired.
 - **The fork choice moved to the healing layer** (2026-08-28): `Fig9.getHead` walks from
   the round's own root, and 09 holds the single `ForkChoice` instance — 07's was removed,
   not shadowed, which is the discipline `Defs/ForkChoice.lean` states. Note what the move
