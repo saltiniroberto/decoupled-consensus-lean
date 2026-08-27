@@ -424,21 +424,25 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `majority_fork_choice` still takes the two separately — open, and the reason to change
   it is that 07 would then build one pair for both walks, `get_filtered_block_tree`
   returning the pair rather than the blocks alone.
-- **Available confirmation splits, and the healing layer takes it over** (2026-08-28,
-  Roberto). `03`'s `get_goldfish_confirmation(tree, votes, s)` is the walk alone — no
-  store, no writes, `NDRE (Block …)` — and the store writes belong to the caller;
-  `Fig3.updateConfirmation`, which did both, is commented out in place. The healing
-  layer's `Store.getConfirmation` composes the round's pieces: the SG majority start
-  (`get_sg_majority_start`), the majority fork choice over it, a **G0 veto** on the tree
-  (`apply_G0_veto`, the grade the import left unconsumed), then the Goldfish walk; and
-  `Store.updateConfirmation` writes what it returns. **Protocol changes inside this**, each
-  Roberto's: confirmation walks from the SG majority root rather than genesis, over a
-  G0-vetoed tree — so 07's Extract sentence "available confirmation runs its own walk from
-  `Σ.F` over `T_F(Σ)`; it uses neither the SG root nor the filtered tree" is now false
-  twice over and needs rewriting; the evaluated slot is the store's own `Σ.s` rather than a
-  parameter, and the `t_s + 6Δ` instant precondition is gone with it; and **nothing writes
-  `Σ.latest_confirmed` any more** — its only writer was inside the commented-out routine,
-  so the monotone record the node exposes is now never updated.
+- **Available confirmation splits, and reaches the layer's tree through the class**
+  (2026-08-28, Roberto). `03`'s `Store.getGoldfishConfirmation(tree, s)` is the walk alone —
+  it reads `Σ.gf_votes[s]` and writes nothing, `NDRE (Block …)` — and the store writes belong
+  to the caller; `Fig3.updateConfirmation`, which did both, is commented out in place. Above
+  it, both in `03`: `Store.getConfirmation`, the walk over `S.getGoldfishFilteredBlockTree`
+  with a `[GoldfishWalk Validator]` binder, and `Store.updateConfirmation`, which writes what
+  it returns. The pair lived in `09` for one commit, naming `Fig9.getGoldfishFilteredBlockTree`
+  directly; through the class it reaches the same tree with no layer named, so the routines
+  sit with the rest of confirmation. **Protocol changes inside this**, each Roberto's:
+  confirmation walks from the SG majority root rather than genesis, over a G0-vetoed tree
+  (`apply_G0_veto`, the grade the import left unconsumed) — so 07's Extract sentence
+  "available confirmation runs its own walk from `Σ.F` over `T_F(Σ)`; it uses neither the SG
+  root nor the filtered tree" is now false twice over and needs rewriting; the evaluated slot
+  is the store's own `Σ.s` rather than a parameter, and the `t_s + 6Δ` instant precondition is
+  gone with it; and **nothing writes `Σ.latest_confirmed` any more** — its only writer was
+  inside the commented-out routine, so the monotone record the node exposes is never updated.
+  **Nor is `Σ.live_confirmed`**: `Store.updateConfirmation`'s only caller was `Fig2.onTick`'s
+  confirmation branch, commented out at `02_GoldfishDuties.lean:252`.
+  The three routines carry no docstrings yet.
 - **`get_head` is one definition** (2026-08-28, Roberto: "can we now have one getHead that
   consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the two
   things the walk takes from the layer — `getGoldfishFilteredBlockTree : Store → NDRE (BlockTree …)`,

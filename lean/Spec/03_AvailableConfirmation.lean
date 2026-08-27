@@ -60,12 +60,12 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
-def getGoldfishConfirmation (tree : BlockTree Validator) (votes: Finset (TimestampedVote (GoldfishVote Validator))) (s : Nat)
+def Store.getGoldfishConfirmation (S: Store Validator) (tree : BlockTree Validator) (s : Nat)
     -- (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right])
   :
     NDRE (Block Validator) := do
-  let early := {e.vote | e ∈ votes, e.time < slotStart s + 2 * (Δ : Int)}
-  let late := {e.vote | e ∈ votes, e.time < slotStart s + 6 * (Δ : Int)}
+  let early := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 2 * (Δ : Int)}
+  let late := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 6 * (Δ : Int)}
   -- the early votes whose validator `late` does not catch equivocating
   let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
   -- the denominator is `late`'s participants
@@ -74,6 +74,16 @@ def getGoldfishConfirmation (tree : BlockTree Validator) (votes: Finset (Timesta
   let eligible := fun B => 2 * goldfishScore votes s B > votersCount
   return (← ghost tree (goldfishScore votes s) (fun B => pure (eligible B)))
 
+def Store.getConfirmation (S : Store Validator) [GoldfishWalk Validator]:
+  NDRE (Block Validator) := do
+  return (← S.getGoldfishConfirmation (← S.getGoldfishFilteredBlockTree) S.s)
+
+def Store.updateConfirmation (S : Store Validator) [GoldfishWalk Validator]:
+  NDRE (Store Validator) := do
+  let mut S := S
+  let confirmed ← S.getConfirmation
+  S.liveConfirmed ← confirmed
+  return S
 
 /-
 /-! ## Figure at `t_s + 6Δ` -/

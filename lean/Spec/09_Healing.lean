@@ -309,16 +309,16 @@ def Fig9.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Va
   let anchor ← S.majorityForkChoice (← S.getSGMajorityStart r) S.T r
   return { root := anchor, blocks := S.applyG0Veto (← Fig7.getFilteredBlockTree S) }
 
-def Store.getConfirmation (S : Store Validator) :
-  NDRE (Block Validator) := do
-  return (← getGoldfishConfirmation (← Fig9.getGoldfishFilteredBlockTree S) S.gfVotes[S.s] S.s)
+-- def Store.getConfirmation (S : Store Validator) :
+--   NDRE (Block Validator) := do
+--   return (← getGoldfishConfirmation (← Fig9.getGoldfishFilteredBlockTree S) S.gfVotes[S.s] S.s)
 
-def Store.updateConfirmation (S : Store Validator) :
-  NDRE (Store Validator) := do
-  let mut S := S
-  let confirmed ← S.getConfirmation
-  S.liveConfirmed ← confirmed
-  return S
+-- def Store.updateConfirmation (S : Store Validator) :
+--   NDRE (Store Validator) := do
+--   let mut S := S
+--   let confirmed ← S.getConfirmation
+--   S.liveConfirmed ← confirmed
+--   return S
 
 /-- This layer's reading of what the fork choice takes from the layer: the tree above, and
     the eligibility condition unchanged from the finality layer, `Fig7.goldfishEligible`.
