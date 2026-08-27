@@ -496,6 +496,50 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `Store.lean`; the duty monad sits in `Nondet.lean` (its own `Duty.lean` said nothing —
   merged; `Nondet` imports `Store`, acyclic).
 
+- **`lean/SpecM/` is a frozen copy of `lean/Spec/`** (2026-08-27), taken at Roberto's
+  word so that the experiment of threading the store through a monad has somewhere to
+  happen: `Spec` is never the place that work is done. **Taken from the working tree at
+  commit `c0ef96e` ("BlockTree: a root and the blocks a walk may descend", branch
+  `healing`), with the then-uncommitted edits to `01_GoldfishWalk`, `03_AvailableConfirmation`, `04_SGForkChoice`, `07_FGStore`, `08_FinalityVote`, `09_Healing` and `Defs/Model` in place** — so the
+  source state is that commit plus those edits, and the bytes of it are what the frozen
+  copy's own commit records. The copy is byte-identical to its source except on its
+  `import` lines, which name `SpecM.…` (measured with `diff -r`); `lean/SpecM.lean` opens
+  with a note saying so. Only the Lean files were copied — `Spec/doc/` is not duplicated. It is its own `lean_lib` in `lakefile.toml`, in `defaultTargets`, and
+  the `orphans` target excludes its paths. Both libraries define into namespace `DC`, so
+  no file may import from both — `Analysis` imports `Spec`, and stays there. Nothing of
+  the monad experiment is written yet.
+
+- **The store-as-monad experiment, in `SpecM/` only** (2026-08-28). `DRES Validator α`
+  (`SpecM/Defs/Store.lean`) is `StateT (Store Validator) DRE α`; the letter continues the
+  effect inventory, `S` for the store as `B` in `NDREB` is for the broadcasts.
+  `SpecM/08_FinalityVote.lean`'s `heightVote` is written in it — no store at the
+  signature, no store returned, `let S ← get` once at the top, and the two record writes
+  as named routines `recordEmptyTarget`/`recordTarget` so no rule body says `modify`. The
+  one call site, `Store.fgVote`, runs it: `let (hp, S) ← heightVote.run S`.
+  `Store.finalityVote` and `Store.fgVote` keep the store-in/store-out shape, deliberately,
+  so the two readings stand side by side. Naming still open for Roberto: `DRES`, and
+  whether the record-write routines belong to `SigningHistory`.
+  **Measured while choosing the shape** (probes in `scratch/`, gitignored):
+  - the rule is named bare, not `Store.heightVote`, because dot notation *does* resolve
+    through `StateT` — `S.heightVote` elaborates as the run, `DRE (α × Store)`, and it
+    type-checks inside a threading block while dropping the store the run returns. Bare,
+    the mistake is an unknown identifier (`StoreNamespaceProbe.lean`).
+  - a term macro `Σ` for `(← get)`, to keep the docstrings' spelling in bodies, does
+    **not** work: `do` collects nested `←` before macro expansion, so the arrow a macro
+    produces is rejected — "Nested action `← get` must be nested inside a `do`
+    expression". `Σ _ : Nat, Nat` still parsed, so the sigma clash is not the obstacle
+    (`StoreSigmaNotationProbe.lean`).
+  - a `⟵`/`⟸` write-arrow family in the `Notation.lean` shape, expanding to `modify`,
+    does work — plain, indexed and computed forms all compile
+    (`StoreWriteSpellingProbe.lean`). Not adopted for `heightVote`: naming the two writes
+    was enough. It is the option if store writes spread across files.
+  - the store as a `StateT` *outside* `NDREB` composes: bare `get`/`modify` mean the
+    store, `broadcast` keeps its `NDREB` definition and lifts through, and `←ᵖ` still
+    picks. A rule written against `[MonadStateOf (Store V) m] [MonadLiftT DRE m]` rather
+    than a concrete stack instantiates at both `StateT (Store V) DRE` and
+    `StateT (Store V) (NDREB V)` unchanged (`StoreOOShapeProbe.lean`). Not adopted yet —
+    no duty is converted.
+
 ### Accountable safety
 
 Statements only (2026-08-24): `lean/Analysis/AccountableSafety.lean` holds `E1`, `E2`,

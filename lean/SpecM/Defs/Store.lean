@@ -292,6 +292,28 @@ def Store.gen (i : Validator) : Store Validator where
   history := SigningHistory.gen
   id := i
 
+/-! ## The store, threaded
+
+A routine that both reads the store and writes it can take it as a parameter and hand it
+back — the shape everything in this subtree used before — or it can leave it out of the
+signature and let the monad carry it. `DRES` is that second shape, and `08_FinalityVote.lean`'s
+`heightVote` is the one routine written in it so far.
+
+The letter continues the effect inventory of `Raise.lean` and `Nondet.lean`: `S` for the
+store it threads, as `B` in `NDREB` is for the broadcasts. Under the `abbrev` a routine is
+a function `Store → DRE (α × Store)`, so the store still enters and leaves — what changes
+is that neither is written at the routine's own signature or at its call sites.
+
+**A caller that holds a store runs one**: `heightVote.run S`. Dot notation on the store is
+deliberately not available — the routines in this monad carry no `Store.` prefix, so
+`S.heightVote` does not resolve. Were it to, it would elaborate as that same run, which
+type-checks inside a threading block while silently dropping the store the run returns. -/
+
+/-- The store threaded through a raising routine: `DRES Validator α` is `Store → DRE (α × Store)`,
+    written so that neither the store parameter nor the returned store appears at the
+    signature. `S` continues the effect inventory — see the section above. -/
+abbrev DRES (Validator : Type) (α : Type) := StateT (Store Validator) DRE α
+
 /-! ## The live tree
 
 The finality layer's other derived set, the processed finality evidence
