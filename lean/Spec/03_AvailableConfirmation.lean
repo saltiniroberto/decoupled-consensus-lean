@@ -60,6 +60,22 @@ variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validato
 
 open Params
 
+def getGoldfishConfirmation (tree : BlockTree Validator) (votes: Finset (TimestampedVote (GoldfishVote Validator))) (s : Nat)
+    -- (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right])
+  :
+    NDRE (Block Validator) := do
+  let early := {e.vote | e ∈ votes, e.time < slotStart s + 2 * (Δ : Int)}
+  let late := {e.vote | e ∈ votes, e.time < slotStart s + 6 * (Δ : Int)}
+  -- the early votes whose validator `late` does not catch equivocating
+  let votes := {vote ∈ early | ¬ ∃ b ∈ late, b.validator = vote.validator ∧ b ≠ vote}
+  -- the denominator is `late`'s participants
+  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
+  -- the majority gate, with no current-slot escape — see the module header
+  let eligible := fun B => 2 * goldfishScore votes s B > votersCount
+  return (← ghost tree (goldfishScore votes s) (fun B => pure (eligible B)))
+
+
+/-
 /-! ## Figure at `t_s + 6Δ` -/
 /-- Run at `t_s + 6Δ`: evaluate slot `s`
     once and record what it confirms.
@@ -93,5 +109,6 @@ def Fig3.updateConfirmation (S : Store Validator) (anchor: Block Validator) (s :
   if S.latestConfirmed ⪯ H then
     S.latestConfirmed ← H
   return S
+-/
 
 end DC

@@ -293,6 +293,44 @@ def Store.getSGMajorityStart (S : Store Validator) (r : Nat) : DRE (Block Valida
   return sgRoot
 
 
+def Store.applyG0Veto (S: Store Validator) (tree: BlockTree Validator) : BlockTree Validator := Id.run do
+  let r := round S.s
+  let filteredTree := {
+    root := tree.root
+    blocks := {B ∈ tree.blocks | ¬ (∃ B' ∈ tree.blocks, ¬ (B' ∼ B) ∧ S.G0 r B)}
+  }
+  return filteredTree
+
+def Store.getConfirmation (S : Store Validator) :
+  NDRE (Block Validator) := do
+  let mut S := S
+  let r := round S.s
+  let majorityForkChoiceStart ← S.getSGMajorityStart r
+  let goldfishAnchor ← S.majorityForkChoice majorityForkChoiceStart S.T r
+  let filteredBlockTree := S.applyG0Veto {root := goldfishAnchor, blocks := S.T}
+  return (← getGoldfishConfirmation filteredBlockTree S.gfVotes[S.s] S.s)
+
+def Store.updateConfirmation (S : Store Validator) :
+  NDRE (Store Validator) := do
+  let mut S := S
+  let confirmed ← S.getConfirmation
+  S.liveConfirmed ← confirmed
+  return S
+
+def Fig9.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+    NDRE (Block Validator) := do
+  let r := round S.s
+  let majorityForkChoiceStart ← S.getSGMajorityStart r
+  let anchor ← S.majorityForkChoice majorityForkChoiceStart S.T (round S.s)
+  S.goldfishForkChoice {root := anchor, blocks := S.T} votes s
+
+/-- The protocol's fork choice is this layer's reading: `ForkChoice`
+    (`Defs/ForkChoice.lean`) has exactly one instance, and it lives with the last reading,
+    so the duties of `02_GoldfishDuties.lean` run `Fig9.getHead` without naming it — the
+    round's own root under it, through `get_sg_majority_start`. A later layer would take
+    the fork choice over by moving this instance, not by adding one. -/
+scoped instance : ForkChoice Validator := ⟨Fig9.getHead⟩
+
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let mut S:= S
@@ -301,14 +339,5 @@ def Store.onTick (S : Store Validator) (t : Int)
     S.sgRoot[r] ⇐ S.getSGRoot r
   S ⇐ Fig5.onTick S t isProposer
   return S
-
-
-def Store.updateConfirmation (S : Store Validator) (s : Nat) :
-  NDRE (Store Validator) := do
-  let r := round S.s
-  let majorityForckChoiceStart ← S.getSGMajorityStart r
-  let goldfishAnchor ← S.majorityForkChoice majorityForckChoiceStart S.T r
-  return (← Fig3.updateConfirmation S goldfishAnchor s)
-
 
 end DC

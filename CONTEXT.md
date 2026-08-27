@@ -378,7 +378,7 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   asked for speaking names over the source's `τ`/`T`/`lock`) — with the five-case
   `heightVote` under the confirmed ceiling, `finalityVote` signing `(h_j, J)`, and
   `Store.fgVote` composing them finality-first, so the finality write is visible to the
-  height rule's read. The rules are store rules returning `SigningResult` (`pair`,
+  height rule's read. The rules are store rules returning `VoteAndStore` (`vote`,
   `state` — a named structure, not a product), the record write riding the returned
   store. **The crossing decisions, each one to revisit**: the pair encodings
   (`.timeout` → `emptyTarget`, `.commit` → `pair`); the four fork-choice inputs read from
@@ -415,6 +415,35 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   write macro `idxAssign2` parking back in `OldDefs.lean` (its working `macro`-command
   form) with no two-level store map left. The healing store fields are `root_proposal[·]`
   and `sg_root[·]` alone, still awaiting their writers.
+- **The walk takes a `BlockTree`** (2026-08-27/28, Roberto): `ghost` and
+  `goldfish_fork_choice` take one `BlockTree` — root and blocks together (`Model.lean`) —
+  instead of an anchor and a `Finset` side by side, since the pair always travels
+  together and each layer supplies its own. `Fig1.getHead` builds
+  `{ root := .genesis, blocks := Σ.T }`; 04 and 07 wrap at their call sites.
+  `majority_fork_choice` still takes the two separately — open, and the reason to change
+  it is that 07 would then build one pair for both walks, `get_filtered_block_tree`
+  returning the pair rather than the blocks alone.
+- **Available confirmation splits, and the healing layer takes it over** (2026-08-28,
+  Roberto). `03`'s `get_goldfish_confirmation(tree, votes, s)` is the walk alone — no
+  store, no writes, `NDRE (Block …)` — and the store writes belong to the caller;
+  `Fig3.updateConfirmation`, which did both, is commented out in place. The healing
+  layer's `Store.getConfirmation` composes the round's pieces: the SG majority start
+  (`get_sg_majority_start`), the majority fork choice over it, a **G0 veto** on the tree
+  (`apply_G0_veto`, the grade the import left unconsumed), then the Goldfish walk; and
+  `Store.updateConfirmation` writes what it returns. **Protocol changes inside this**, each
+  Roberto's: confirmation walks from the SG majority root rather than genesis, over a
+  G0-vetoed tree — so 07's Extract sentence "available confirmation runs its own walk from
+  `Σ.F` over `T_F(Σ)`; it uses neither the SG root nor the filtered tree" is now false
+  twice over and needs rewriting; the evaluated slot is the store's own `Σ.s` rather than a
+  parameter, and the `t_s + 6Δ` instant precondition is gone with it; and **nothing writes
+  `Σ.latest_confirmed` any more** — its only writer was inside the commented-out routine,
+  so the monotone record the node exposes is now never updated.
+- **The fork choice moved to the healing layer** (2026-08-28): `Fig9.getHead` walks from
+  the round's own root, and 09 holds the single `ForkChoice` instance — 07's was removed,
+  not shadowed, which is the discipline `Defs/ForkChoice.lean` states. Note what the move
+  does *not* reach: `Store.onTick` in 09 is elaborated where the instance is in scope, so
+  it has no `[ForkChoice]` binder and 09's reading is baked into it; the duties below keep
+  their binders and stay generic.
 - **The healing layer** (`09_Healing.lean`, imported 2026-08-25 from the earlier draft's
   Figures 4 and 5, on Roberto's word — the draft `consensus.pdf`, local; not
   `consensus-1.pdf`, whose Figures 4–5 are the SG files). The support scores and grades

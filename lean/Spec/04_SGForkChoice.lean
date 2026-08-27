@@ -117,7 +117,7 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
   let total := w({v ∈ Electorate.V | S.latest v r ≠ ⊥})
   let eligible := fun B => 2 * S.sgSupport r B > total
   -- the pure condition offered to the walk's raising slot with `pure`
-  ghost anchor tree (S.sgSupport r) (fun B => pure (eligible B))
+  ghost {root := anchor, blocks := tree } (S.sgSupport r) (fun B => pure (eligible B))
 
 /-! ## Figure -/
 /-- The SG walk selects the anchor from
@@ -128,6 +128,6 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)
-  S.goldfishForkChoice anchor S.T votes s
+  S.goldfishForkChoice {root := anchor, blocks := S.T} votes s
 
 end DC

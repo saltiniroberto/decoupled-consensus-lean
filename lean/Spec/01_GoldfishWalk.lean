@@ -124,14 +124,15 @@ def bestChild (children : Finset (Block Validator)) (score : (B : Block Validato
     rather than the full stack.
 
     The figure's `loop` is bounded by `|tree|`. -/
-def ghost (anchor : Block Validator) (tree : Finset (Block Validator))
+def ghost (tree :  BlockTree Validator)
     (score : (B : Block Validator) → Nat) (eligible : (B : Block Validator) → DRE Bool) :
     NDRE (Block Validator) := do
-  let mut H := anchor
-  for _ in [:|tree|] do                                        -- `loop`, bounded
+  let mut H := tree.root
+  let blocks := tree.blocks
+  for _ in [:|blocks|] do                                        -- `loop`, bounded
     -- the eligible children of the block we stand on; the filter runs at
     -- `DRE` — the ascription keeps the stack out of it — and lifts whole
-    let children ← (({B ∈ tree | B.parent = ↑H}).filterM eligible :
+    let children ← (({B ∈ blocks | B.parent = ↑H}).filterM eligible :
       DRE (Finset (Block Validator)))
     if children = ∅ then
       return H
@@ -178,11 +179,10 @@ def Fig1.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Va
 /-! ## Figure -/
 /-- The shared
     walk, instantiated with the Goldfish score and eligibility condition. -/
-def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
-    (tree : Finset (Block Validator)) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
+def Store.goldfishForkChoice (S : Store Validator) (tree :  BlockTree Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
   -- the pure condition offered to the walk's raising slot with `pure`
-  ghost anchor tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
+  ghost tree (goldfishScore votes s) (fun B => pure (Fig1.goldfishEligible S votes s B))
 
 /-! ## Figure -/
 /-- The walk from genesis over the whole
@@ -191,6 +191,6 @@ def Store.goldfishForkChoice (S : Store Validator) (anchor : Block Validator)
     reading is the protocol's, reached as `S.getHead`, and this one is this file's. -/
 def Fig1.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) :=
-  S.goldfishForkChoice .genesis S.T votes s
+  S.goldfishForkChoice {root := .genesis, blocks := S.T} votes s
 
 end DC
