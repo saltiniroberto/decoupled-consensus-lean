@@ -1,6 +1,7 @@
 import Spec.«03_AvailableConfirmation»
 import Spec.«05_SGDuty»
 import Spec.«07_FGStore»
+import Spec.«08_FinalityVote»
 import Spec.Defs.Nondet
 
 /-!
@@ -344,6 +345,10 @@ def Store.onTick (S : Store Validator) (t : Int)
   if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
     S.sgRoot[r] ⇐ S.getSGRoot r
   S ⇐ Fig2.onTick S t isProposer
+
+  if _ : S.t = SGSchedule.a (round S.s) then
+    S ⇐ S.decideHeightVote
+
   return S
 
 end DC

@@ -226,6 +226,11 @@ structure Store (Validator : Type) where
 
   confirmedForHeightVote: Block Validator
 
+  /-- `Σ.height_pair`, the height pair this validator has signed: what
+      `decide_height_vote` (`08_FinalityVote.lean`) last wrote, and what `fg_vote` reads back
+      when it assembles the vote. `HeightPair.empty` at `gen`, nothing yet signed. -/
+  heightPair : HeightPair Validator
+
   sgVotes : (r : Int) → Finset (TimestampedVote (SGHeadVote Validator))
   /-- `Σ.σ[B]`, the stored post-state of each processed block (finality layer). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/
@@ -280,6 +285,7 @@ def Store.gen (i : Validator) : Store Validator where
   latestConfirmed := .genesis
   userGoldfishConfirmed := .genesis
   confirmedForHeightVote := .genesis
+  heightPair := .empty
   sgVotes := fun _ => ∅
   σ := fun B => if B = .genesis then some .gen else none
   F := .genesis

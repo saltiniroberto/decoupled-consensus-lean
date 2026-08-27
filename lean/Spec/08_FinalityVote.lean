@@ -73,37 +73,51 @@ structure FGVote (Validator : Type) [Roots] where
     no longer sits below the ceiling, an empty target is signed instead; (4) with a silent
     record and the height nonjustifiable, an empty target is signed; (5) with a silent
     record otherwise, the state's target is signed when it sits below the ceiling, else an
-    empty target. A case that signs something new writes the record in the store it
-    returns; a repeat returns the store untouched.
+    empty target. It touches no store field: `decide_height_vote` below is what records the
+    signing and stores the pair.
 -/
-def Store.heightVote (S : Store Validator) :
-    DRE (VoteAndStore Validator (HeightPair Validator)) := do
-  let mut S := S
+def Store.computeHeightVote (S : Store Validator) :
+    DRE (HeightPair Validator) := do
   let C := S.liveConfirmed
   let σC ← S.σ[C]
   let h := σC.h
   if S.history.signedEmptyTarget h then                   -- case 1: repeat the empty target
-    return { vote := .emptyTarget h, state := S }
+    return .emptyTarget h
   if S.history.finalityTarget h ≠ ⊥ then                  -- case 2: repeat the finality target
     let finalityTarget ← S.history.finalityTarget h
     if finalityTarget ⪯ C then
-      return { vote := .target h finalityTarget, state := S }
-    return { vote := .empty, state := S }
+      return .target h finalityTarget
+    return .empty
   if S.history.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
     let target ← S.history.firstTarget h
     if target ⪯ C then
-      return { vote := .target h target, state := S }
-    S.history ← S.history.saveEmptyTarget h
-    return { vote := .emptyTarget h, state := S }
+      return .target h target
+    return .emptyTarget h
   if σC.nj then                                     -- case 4: no record, nonjustifiable
-    S.history ← S.history.saveEmptyTarget h
-    return { vote := .emptyTarget h, state := S }
+    return .emptyTarget h
   let T := σC.T_h                                   -- case 5: no record, sign the state's
   if T ⪯ C then                                     --   target when it sits below `C`
-    S.history ← S.history.saveTarget h T
-    return { vote := .target h T, state := S }
-  S.history ← S.history.saveEmptyTarget h
-  return { vote := .emptyTarget h, state := S }
+    return .target h T
+  return .emptyTarget h
+
+/-- Sign the height pair `compute_height_vote` chose: store it as `Σ.height_pair`, and make
+    its record durable — a named target as the height-`h` first target, an empty target as
+    the height-`h` empty-target flag, the empty pair recording nothing.
+
+    Both writes overwrite with the value a repeat already holds, so signing a pair the record
+    already carries leaves the record unchanged. The one case where the write is new to this
+    routine is a finality target repeated as a height target: it is now recorded as the
+    height-`h` first target as well. -/
+def Store.decideHeightVote (S : Store Validator) :
+    DRE (Store Validator) := do
+  let mut S := S
+  let hp ← S.computeHeightVote
+  match hp with
+  | .target h T => S.history ← S.history.saveTarget h T
+  | .emptyTarget h => S.history ← S.history.saveEmptyTarget h
+  | .empty => pure ()
+  S.heightPair ← hp
+  return S
 
 /-- The finality signing rule: sign `(h_j, J)` — the latest justification, read with its
     height and the finalization from the store — exactly when it is ahead of the
@@ -132,7 +146,8 @@ def Store.finalityVote (S : Store Validator) :
     itself is `Analysis/` matter.
 
     It returns the vote and the store, whose `Σ.history` carries both record writes — so
-    no signature is released before its record is durable. What reaches the wire is an
+    no signature is released before its record is durable. The height pair is read back from
+    the `Σ.height_pair` that `decide_height_vote` wrote. What reaches the wire is an
     attestation, which adds a head and a round to these two pairs; assembling and
     broadcasting one is the concern of whoever holds the head, not of the rules that fill
     the pairs.
@@ -140,7 +155,7 @@ def Store.finalityVote (S : Store Validator) :
 def Store.fgVote (S : Store Validator) :
     DRE (VoteAndStore Validator (FGVote Validator)) := do
   let { vote := fp, state := S } := S.finalityVote  -- first the finality pair
-  let { vote := hp, state := S } ← S.heightVote     -- then the current-height pair
-  return { vote := { heightPair := hp, finalityPair := fp }, state := S }
+  let S ← S.decideHeightVote                        -- then the current-height pair
+  return { vote := { heightPair := S.heightPair, finalityPair := fp }, state := S }
 
 end DC

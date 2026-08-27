@@ -443,6 +443,26 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   **Nor is `Σ.live_confirmed`**: `Store.updateConfirmation`'s only caller was `Fig2.onTick`'s
   confirmation branch, commented out at `02_GoldfishDuties.lean:252`.
   The three routines carry no docstrings yet.
+- **The height rule splits: compute, then decide** (2026-08-28, Roberto: "computeHeightVote
+  just computes the vote… decideHeightVote updates the history and `S.heightPair`").
+  `Store.computeHeightVote : Store → DRE (HeightPair …)` is the five-case ladder alone — it
+  reads `Σ.history`, `Σ.live_confirmed` and `Σ.σ[·]` and touches no field.
+  `Store.decideHeightVote : Store → DRE (Store …)` signs what it chose: it stores
+  `Σ.height_pair` (a new `Store` field, `HeightPair.empty` at `gen`) and writes the record by
+  matching on the pair — `saveTarget h T` for a named target, `saveEmptyTarget h` for an empty
+  one, nothing for the empty pair. `Store.fgVote` calls `decide_height_vote` and reads the
+  pair back from the store, so it still returns a store carrying both record writes.
+  **One behaviour changed**, and it is the only place the two shapes disagree: in case 2 —
+  a recorded *finality* target repeated as the height target — the old routine wrote nothing,
+  and the write driven by the pair records it as the height-`h` first target too. Every other
+  case is identical, because both `SigningHistory` writes are `Function.update` with the value
+  a repeat already holds. Keeping the old behaviour exactly would mean testing
+  `S.history.finalityTarget h = ⊥` inside `decide_height_vote`, which re-encodes case 2's
+  condition in the writer and defeats the split.
+  09's `Store.onTick` calls it, `S ⇐ S.decideHeightVote` at `a_r` — Roberto's line; whether
+  the height vote belongs at that instant rather than at `sgfgVoting i r` is open.
+  `Store.confirmedForHeightVote` (also new, `Block Validator`, genesis at `gen`) has no
+  docstring, no writer and no reader yet.
 - **`get_head` is one definition** (2026-08-28, Roberto: "can we now have one getHead that
   consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the two
   things the walk takes from the layer — `getGoldfishFilteredBlockTree : Store → NDRE (BlockTree …)`,
