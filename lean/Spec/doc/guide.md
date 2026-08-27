@@ -118,7 +118,7 @@ hypothesis:
 
 ```lean
 def Store.sgVote (i : Validator) (S : Store Validator)
-    (_ : S.t = SGSchedule.a (round S.s) := by …) : …
+    (_ : S.t = heightDecisionTime (round S.s) := by …) : …
 ```
 
 Read the underscore argument as "requires: the clock is at `a_r`". The `:= by …` part

@@ -20,8 +20,8 @@ The added line is this file's reading of the tick: run the Goldfish reading,
 the duties name no reading, writing `S.getHead` for whatever the instance supplies — so
 this file holds the two routines it itself introduces and its reading of the tick.
 
-`a_r = t_{rR} + 6Δ`, `6Δ` after the beginning of the round — `SGSchedule.a` in
-`Model.lean`. That instant is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s
+`a_r = t_{rR} + 6Δ`, `6Δ` after the beginning of the round — `heightDecisionTime` in
+`Model.lean`, named for the height pair the instant decides. That instant is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s
 confirmation is evaluated, so the tick runs both actions; `Store.onTick`'s docstring says
 how they compose.
 
@@ -125,7 +125,7 @@ def Fig5.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
   let S ← Fig2.onTick S t isProposer
   -- the SG layer's line: at `t = a_r` for the current round, run `sg_vote`
-  if _ : S.t = SGSchedule.a (round S.s) then
+  if _ : S.t = heightDecisionTime (round S.s) then
     return (← S.sgVote)
   return S
 -/

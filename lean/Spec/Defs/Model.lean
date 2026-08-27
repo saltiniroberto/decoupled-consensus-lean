@@ -221,14 +221,23 @@ def roundStart [Params] (r : Nat) : Int := slotStart (r * Params.R)
     protocol's. -/
 def Γ [Params] (j : Int) (r : Nat) : Int := roundStart r + j * (Params.Δ : Int)
 
-/-- `a_r`, each round's SG vote time: `6Δ` after the beginning of the round,
-    `a_r = roundStart r + 6Δ`. That instant is also `t_{rR+1} + 2Δ`, the tick at which
-    slot `rR`'s confirmation is evaluated; the two actions compose (`Store.onTick`,
-    `05_SGDuty.lean`). -/
-def SGSchedule.a [Params] (r : Nat) : Int :=
+/-- Each round's decision instant, `6Δ` after the beginning of the round:
+    `heightDecisionTime r = roundStart r + 6Δ`. It is the protocol's `a_r`, the round's SG
+    vote time, and the instant at which the round's height pair is decided
+    (`Store.decideHeightVote`, `08_FinalityVote.lean`).
+
+    It is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s confirmation is evaluated; the
+    actions compose (`Store.onTick`, `09_Healing.lean`).
+
+    A fixed formula, so a definition rather than a field of `SGSchedule` below — that class
+    carries the *assumed* part of the round schedule, and an instance must not be able to move
+    this instant. It takes `[Params]` alone, so a routine tests it without carrying the
+    class. -/
+def heightDecisionTime [Params] (r : Nat) : Int :=
   roundStart r + 6 * (Params.Δ : Int)
 
-/-- The assumed part of the round schedule (`a_r`, above, is the fixed part): the time
+/-- The assumed part of the round schedule (`heightDecisionTime`, above, is the fixed
+    part): the time
     each validator sends its attestation (`Attestation`, below) for each round — a
     public parameter of the protocol, no formula fixed, and a public parameter is
     exactly an ambient class, as `Committees` is. The assignment is total: every
@@ -240,7 +249,7 @@ class SGSchedule (Validator : Type) [Params] where
   sgfgVoting : (i : Validator) → (r : Nat) → Int
   /-- No attestation time precedes the round's SG vote time:
       `a_r ≤ sgfgVoting i r`. -/
-  sgfgVoting_ge : ∀ (i : Validator) (r : Nat), SGSchedule.a r ≤ sgfgVoting i r
+  sgfgVoting_ge : ∀ (i : Validator) (r : Nat), heightDecisionTime r ≤ sgfgVoting i r
   /-- Every attestation time falls before the next round begins:
       `sgfgVoting i r < roundStart (r + 1)`. -/
   sgfgVoting_lt : ∀ (i : Validator) (r : Nat), sgfgVoting i r < roundStart (r + 1)

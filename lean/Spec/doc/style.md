@@ -92,8 +92,10 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   and `GoldfishWalk` (`Defs/GoldfishWalk.lean`), the tree and the eligibility condition
   that `get_head` takes from the layer, with exactly one instance, supplied by the layer
   whose readings are the protocol's.
-  The SG vote time `a_r` is a definition in the class's own namespace, not a field —
-  `SGSchedule.a r = roundStart r + 6Δ` — so the whole round schedule reads `SGSchedule.…`.
+  The round's fixed instant is a bare definition, not a field of that class —
+  `heightDecisionTime r = roundStart r + 6Δ`, the protocol's `a_r` — because the formula is
+  fixed and no instance may move it, and because taking `[Params]` alone lets a routine test
+  it without carrying the class.
 
 ## Comments and citations
 

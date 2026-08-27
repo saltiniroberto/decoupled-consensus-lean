@@ -13,18 +13,21 @@ signed — `Σ.history`, a `SigningHistory` (the field in `Store.lean`): whether
 empty target at a height, the first named target it signed there, and the target of the
 first finality pair it signed there. Two store rules read that record and the store's
 view, and each
-returns its pair **and the updated store** — the record write rides the returned store, so
+carries its pair on the updated store — the record write rides that store, so
 no signature is released before its record is durable:
 
-* `Store.finalityVote` signs `(h_j, J)` — the latest justification — exactly when it is
+* `Store.decideFinalityVote` signs `(h_j, J)` — the latest justification — exactly when it is
   ahead of the finalization, on its chain, and consistent with the record: the
   validator already signed `J` as its target at `h_j`, signed no empty target there, and
-  its recorded finality target there is empty or `J` itself — written on first release.
-* `Store.heightVote` signs the current-height pair under the ceiling `Σ.live_confirmed`,
+  its recorded finality target there is empty or `J` itself — written on first release. It
+  returns the pair with the store.
+* `Store.computeHeightVote` chooses the current-height pair under the ceiling `Σ.live_confirmed`,
   the block the validator currently takes as confirmed: it repeats what its record forces
   (an empty-target vote or a recorded target), and only with a silent record does it sign
   something new — an empty target when the height is nonjustifiable, else the confirmed
-  state's target when that target sits at or below the ceiling.
+  state's target when that target sits at or below the ceiling. It writes nothing;
+  `Store.decideHeightVote` is what records the signing and stores the pair as
+  `Σ.height_pair`.
 
 `Store.fgVote` composes them, finality first, so the finality target written by the
 finality rule is visible to the height rule's record read within the same vote, and
@@ -135,7 +138,7 @@ def Store.decideHeightVote (S : Store Validator) :
     attestations sit inside blocks the validator has processed — so a coherent store's
     own chain is the evidence.
 -/
-def Store.finalityVote (S : Store Validator) :
+def Store.decideFinalityVote (S : Store Validator) :
     VoteAndStore Validator (FinalityPair Validator) := Id.run do
   let mut S := S
   if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ S.history.firstTarget S.h_j = S.J ∧
@@ -159,7 +162,7 @@ def Store.finalityVote (S : Store Validator) :
 -/
 def Store.fgVote (S : Store Validator) :
     DRE (VoteAndStore Validator (FGVote Validator)) := do
-  let { vote := fp, state := S } := S.finalityVote  -- first the finality pair
+  let { vote := fp, state := S } := S.decideFinalityVote  -- first the finality pair
   let S ← S.decideHeightVote                        -- then the current-height pair
   return { vote := { heightPair := S.heightPair, finalityPair := fp }, state := S }
 

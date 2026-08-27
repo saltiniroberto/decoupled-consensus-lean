@@ -339,15 +339,24 @@ abbrev Fig9.goldfishWalk : GoldfishWalk Validator :=
 scoped instance : GoldfishWalk Validator := Fig9.goldfishWalk
 
 def Store.onTick (S : Store Validator) (t : Int)
-    (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
+    (isProposer : (s : Nat) → (i : Validator) → Bool)
+    [SGSchedule Validator]
+  : NDREB Validator (Store Validator) := do
   let mut S:= S
   let r := round S.s
   if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
     S.sgRoot[r] ⇐ S.getSGRoot r
   S ⇐ Fig2.onTick S t isProposer
 
-  if _ : S.t = SGSchedule.a (round S.s) then
+  if _ : S.t = heightDecisionTime (round S.s) then
     S ⇐ S.decideHeightVote
+
+  if S.t = SGSchedule.sgfgVoting S.id r then
+    let {vote := fp, state := S'} := S.decideFinalityVote
+    S ← S'
+    let sgHead := (← S.sgVote).head
+    broadcast (Message.attestation (Attestation.mk (validator := S.id) (round := r)
+      (head := sgHead) (heightPair := S.heightPair) (finalityPair := fp)))
 
   return S
 

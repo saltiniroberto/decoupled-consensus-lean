@@ -47,7 +47,8 @@ submodule.
 Names to search history with (each renamed since; dated commits carry the old ones):
 namespace `Consensus1` → `DC`; `ResultOrExcept` → `DRE`; `Fig<n><Name>.lean` files →
 `XX_Name.lean`; `FinalityVote.lean` → `08_FinalityVote.lean`; `Duty.lean` → merged into
-`Nondet.lean`; `DutyM` → `NDREB`; `SGSchedule` the class → `SGSchedule.a` the definition;
+`Nondet.lean`; `DutyM` → `NDREB`; `SGSchedule` the class → `heightDecisionTime` the definition
+→ `heightDecisionTime`;
 `firstLock`/`saveLock` → `finalityTarget`/`saveFinalityTarget`; layer namespaces
 `Goldfish`/`SG`/`FG` → the full-name scheme.
 
@@ -142,8 +143,8 @@ The site-checked alternative for a *pure* body,
   used (`if hp :` at `07_FGStore.lean`'s `(B.parent).get hp`).
 - **The ambient environment is classes**: `Electorate`, `Committees`, `Params`, `Roots`
   (abstract `Root`, its order, genesis's root), `RootComputation`, `SGSchedule`. All in
-  `Model.lean`; the SG vote time is a definition in the class's namespace, not a field —
-  `SGSchedule.a r = t_{rR} + 6Δ`.
+  `Model.lean`; the round's fixed instant is a bare definition, not a field —
+  `heightDecisionTime r = t_{rR} + 6Δ`.
 - **Duties run in `NDREB`** (`Nondet.lean`): the outbox threaded over `NDRE`, `broadcast`
   the protocol's own verb, the store an explicit input and output — no caller unions
   sends. `DutyResult` survives at the boundary only, `NDREB.outcomes` being what the sts
@@ -181,9 +182,9 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   constrains a block's root to match the post-state it would compute — the block *claims*
   one, and validity is not this spec's question.
 - **`a_r = t_{rR} + 6Δ`** (2026-08-24): each round's SG vote time is `6Δ` after the
-  round's opening slot — `SGSchedule.a`, a definition in `Model.lean`. It was an assumed
+  round's opening slot — `heightDecisionTime`, a definition in `Model.lean`. It was an assumed
   class ("a public parameter, no formula fixed") until Roberto fixed the formula; the
-  `SGSchedule.a` spelling survived the change, so call sites stood. The instant coincides
+  `heightDecisionTime` spelling survived the change, so call sites stood. The instant coincides
   with `t_{rR+1} + 2Δ`, the tick at which the opening slot's confirmation is evaluated —
   the two actions compose, `sg_vote` voting the fresh `live_confirmed`. Open: with
   `R = 1` the instant lies outside round `r` and `on_tick`, dispatching on the current
@@ -193,16 +194,17 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   attestation for round `r` — a public parameter with no formula fixed. Total on the
   validator set by being a function; the binders are named for documentation only. Two
   proof fields, both Roberto's, bound each time within its round:
-  `sgfgVoting_ge : ∀ i r, SGSchedule.a r ≤ sgfgVoting i r` and
+  `sgfgVoting_ge : ∀ i r, heightDecisionTime r ≤ sgfgVoting i r` and
   `sgfgVoting_lt : ∀ i r, sgfgVoting i r < roundStart (r + 1)`. The window is
   `[roundStart r + 6Δ, roundStart r + 4ΔR)`, nonempty exactly when `R ≥ 2` — with
   `R = 1` the two fields contradict and the class has no instance; `Params` requires
   only `R ≥ 1` (flagged, not ruled on — it sharpens the `a_r` vs `R = 1` question
   under Next). `roundStart r = t_{rR}` is a definition next to `round`, and
-  `SGSchedule.a` reads `roundStart r + 6Δ`. The class shares the namespace of the
-  definition `SGSchedule.a` (Roberto: "combine it all under SGSchedule"), so the whole
-  round schedule reads `SGSchedule.…`; a declaration and its namespace may share a name,
-  and the build confirms no clash. Names are Roberto's after two same-day renames (it
+  `heightDecisionTime` reads `roundStart r + 6Δ`. It shared the class's namespace as
+  `heightDecisionTime` until 2026-08-28 (Roberto: "combine it all under SGSchedule", then "let's
+  rename `heightDecisionTime` to just `heightDecisionTime`") — a declaration and its namespace may
+  share a name, and the build confirmed no clash, but the shared prefix suggested a class
+  membership the definition never had. Names are Roberto's after two same-day renames (it
   landed as `FGSchedule` with field `b`, then `SGFGVotingSchedule`); the constraint
   fields' `_ge`/`_lt` suffixes follow `Params`. Nothing consumes the class yet.
 - **Block equality is decided by hand**: `deriving DecidableEq` does not reach a mutual
@@ -443,6 +445,23 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   **Nor is `Σ.live_confirmed`**: `Store.updateConfirmation`'s only caller was `Fig2.onTick`'s
   confirmation branch, commented out at `02_GoldfishDuties.lean:252`.
   The three routines carry no docstrings yet.
+- **`heightDecisionTime`, and the attestation duty at `sgfgVoting`** (2026-08-28, Roberto).
+  `SGSchedule.a` is renamed `heightDecisionTime`, a bare definition — the shared prefix
+  suggested a class membership it never had, and the instant is where the round's height pair
+  is decided. It is still the protocol's `a_r = roundStart r + 6Δ`, still `[Params]` alone.
+  `Store.onTick` (09) now has three lines after `Fig2.onTick`: the SG root at
+  `roundStart r + Δ`, `decide_height_vote` at `heightDecisionTime (round Σ.s)`, and at
+  `sgfgVoting Σ.id r` — the per-validator instant `SGSchedule` assumes — the attestation duty
+  itself: `decide_finality_vote`, then `broadcast` an `Attestation` carrying `Σ.id`, the round,
+  the head from `Σ.sg_vote`, `Σ.height_pair`, and the finality pair just decided. That closes
+  the gap recorded above: something broadcasts an attestation again. `on_tick` takes
+  `[SGSchedule Validator]` for it. **Open**: the head is `Σ.sg_vote`'s, so it is
+  `Σ.live_confirmed` as of `sgfgVoting`, not as of `a_r`; and `Store.sgVote`'s docstring still
+  says "run at `a_r`" and describes the `broadcast`/`process_sg_vote` pair it no longer does.
+  Roberto also renamed `Store.finalityVote` to `Store.decideFinalityVote`; unlike
+  `decide_height_vote` it writes no `Σ.finality_pair` field, so it still returns
+  `VoteAndStore`, and a caller holding a `mut` store needs two lines for it — a `Σ.finality_pair`
+  field would make it one, and was declined for now.
 - **The height rule splits: compute, then decide** (2026-08-28, Roberto: "computeHeightVote
   just computes the vote… decideHeightVote updates the history and `S.heightPair`").
   `Store.computeHeightVote : Store → DRE (HeightPair …)` is the five-case ladder alone — it
