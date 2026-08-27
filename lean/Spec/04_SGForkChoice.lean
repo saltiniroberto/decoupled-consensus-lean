@@ -123,7 +123,8 @@ def Store.majorityForkChoice (S : Store Validator) (anchor : Block Validator)
 /-- The SG walk selects the anchor from
     genesis over the whole processed tree, and the Goldfish walk selects a descendant of it.
     The finality layer redefines it again, over the filtered tree and from the fork-choice
-    root — that reading, `S.getHead`, is the protocol's, and this one is this file's. -/
+    root — that reading is the protocol's, reached as `S.getHead`, and this one is this
+    file's. -/
 def Fig4.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (s : Nat) :
     NDRE (Block Validator) := do
   let anchor ← S.majorityForkChoice .genesis S.T (round S.s)

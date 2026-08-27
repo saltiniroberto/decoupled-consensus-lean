@@ -101,6 +101,23 @@ The site-checked alternative for a *pure* body,
 - **Messages are built by named `mk`** (`GoldfishVote.mk (validator := i) …`; `Block.mk`
   likewise, in `Store.proposeBlock`); `DutyResult` keeps the brace form
   `{ state := …, send := ∅ }`; `match` patterns untouched.
+- **The fork choice is late-bound through a class** (Roberto, 2026-08-27: "is there any
+  way to redefine the getHead function used by Goldfish?", then "can I have the class
+  inside Store, so that I can have instances named `S.getHead`?"). `class ForkChoice`
+  (`01_GoldfishWalk.lean`) has one field, and `abbrev Store.getHead` reaches it by dot
+  notation, so the duties write `S.getHead votes k` and mean whatever reading the
+  assembled protocol has; the layer owning that reading supplies **exactly one** instance
+  (today `07_FGStore.lean`'s, `⟨Fig7.getHead⟩`), and a later layer takes over by *moving*
+  it, not by adding one. Every layer's reading stays a `Fig<n>.getHead` def, figure
+  content that nothing calls. What this bought: 05's recorded deviation — "the redirected
+  `get_head` is not written out" — is gone, the redirection now being real; and
+  `Analysis/` can pin the instance a statement means, which hard-called `Fig1.getHead`
+  made impossible. Declined: threading `get_head` as a parameter (visible noise in every
+  duty and tick, and the paper's figures write no such argument), and passing the
+  *pieces* — anchor, tree, eligibility condition — which is this class with extra steps,
+  the layers differing in all three. The same shape fits `process_block`,
+  `goldfish_eligible` and `update_confirmation` if their redirections ever need to be
+  real too.
 - **Full names at each `def`, no namespace blocks.** `Store.…` for whatever a store flows
   into, so dot notation works; `Fig<n>.…` for a superseded reading of an
   incrementally-redefined routine (`Fig1.getHead`, `Fig4.getHead`, `Fig2.processBlock`,

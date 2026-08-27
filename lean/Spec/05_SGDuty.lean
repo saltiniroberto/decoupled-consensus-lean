@@ -11,14 +11,14 @@ import Spec.Defs.Nondet
 ## What the SG layer adds to `on_tick`
 
 One line: at `t = a_r` for the current round `r`, run `sg_vote`. The Goldfish proposer
-and voter then call `Fig4.getHead`; nothing else in their duties changes, and available
-confirmation is unchanged.
+and voter call the fork choice through `ForkChoice` (`01_GoldfishWalk.lean`), so this
+layer's reading reaches them by its instance; nothing else in their duties changes, and
+available confirmation is unchanged.
 
-The added line is this file's `Store.onTick`: run the Goldfish reading, `Fig2.onTick`,
-and then the one line. The finality layer never touches `on_tick`, so that composition is
-the protocol's tick. The redirected `get_head` is not written out: the finality layer
-redefines it again, and that version, `Store.getHead`, is the protocol's. So this file
-holds the two routines it itself introduces and the protocol's `on_tick`.
+The added line is this file's reading of the tick: run the Goldfish reading,
+`Fig2.onTick`, and then the one line. The redirected `get_head` needs no rewriting here —
+the duties name no reading, writing `S.getHead` for whatever the instance supplies — so
+this file holds the two routines it itself introduces and its reading of the tick.
 
 `a_r = t_{rR} + 6Δ`, `6Δ` after the beginning of the round — `SGSchedule.a` in
 `Model.lean`. That instant is also `t_{rR+1} + 2Δ`, the tick at which slot `rR`'s
@@ -56,7 +56,7 @@ set_option autoImplicit false
 namespace DC
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
-  [RootComputation Validator]
+  [RootComputation Validator] [ForkChoice Validator]
 
 /-! ## Figure `process_sg_vote(Σ, vote)` -/
 /-- Record a round-`r` SG vote with its

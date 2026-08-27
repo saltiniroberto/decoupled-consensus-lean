@@ -26,6 +26,14 @@ specification's scope — a slot simply *has* an assigned proposer — so `on_ti
 takes the test as a parameter. `propose_block` itself is fully rendered; it is only *whether
 to run it* that is not.
 
+## The fork choice is ambient, not named
+
+Both duties run `get_head`, and every layer redefines it. Naming one reading would make
+these routines true of one layer only, so they write `S.getHead votes k` — the
+`ForkChoice` field reached by dot notation (`01_GoldfishWalk.lean`) — and the layer owning
+the protocol's reading supplies the instance. The duties are written once and mean
+whatever the assembled protocol's fork choice is.
+
 ## How a duty broadcasts
 
 The protocol's duties broadcast and then process their own object: `broadcast B;
@@ -95,6 +103,7 @@ class RootComputation (Validator : Type) [Roots] where
   compute : (parent : Block Validator) → (s : Nat) → Root
 
 variable {Validator : Type} [Roots] [DecidableEq Validator] [Committees Validator] [Params]
+  [ForkChoice Validator]
   [RootComputation Validator]
 
 open Params
@@ -165,7 +174,7 @@ def Store.proposeBlock (S : Store Validator)
     NDREB Validator (Store Validator) := do
   let s := S.s                                      -- runs at `t_s`
   let votes := {e.vote | e ∈ S.gfVotes[s - 1]}
-  let H ← Fig1.getHead S votes (s - 1)
+  let H ← S.getHead votes (s - 1)
   -- a block with `B.parent = H`, `B.slot = s`, `B.gf_votes = votes`
   let gfList ←ᵖ votes.toLists
   let B := Block.mk (parent := H) (slot := s) (root := RootComputation.compute H s)
@@ -197,7 +206,7 @@ def Store.goldfishVote (S : Store Validator)
   -- the view merge: each processed slot-`s` block offers its carried votes
   for B in {B ∈ S.T | B.slot = s} do
     votes ← votes ∪ B.gfVotes.toFinset
-  let H ← Fig1.getHead S votes (s - 1)
+  let H ← S.getHead votes (s - 1)
   if S.id ∈ Committees.K s then
     -- `vote ← (ℓ, s, H); broadcast vote; process_goldfish_vote(Σ, vote)`
     let vote := GoldfishVote.mk (validator := S.id) (slot := s) (target := H)
@@ -234,9 +243,9 @@ def Fig2.onTick (S : Store Validator) (t : Int)
     return (← S.proposeBlock)
   if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then
     return (← S.goldfishVote)
-  -- the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
-  if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
-    return (← S.updateConfirmation (s - 1))
+  -- -- the figure's `t_s + 2Δ`, written `t_{s−1} + 6Δ` — equal whenever `s > 0`
+  -- if _ : s > 0 ∧ t = slotStart (s - 1) + 6 * (Δ : Int) then
+  --   return (← S.updateConfirmation (s - 1))
   return S
 
 end DC

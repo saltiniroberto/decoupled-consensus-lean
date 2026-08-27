@@ -75,8 +75,9 @@ open Params
 
     "Run at `t_s + 6Δ`" — slot `s`'s own start — is an input precondition, as the
     Goldfish duties' instants are. -/
-def Store.updateConfirmation (S : Store Validator) (s : Nat)
-    (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right]) :
+def Fig3.updateConfirmation (S : Store Validator) (anchor: Block Validator) (s : Nat)
+    -- (_ : S.t = slotStart s + 6 * (Δ : Int) := by solve_by_elim [And.left, And.right])
+  :
     NDRE (Store Validator) := do
   let mut S := S
   let early := {e.vote | e ∈ S.gfVotes[s], e.time < slotStart s + 2 * (Δ : Int)}
@@ -87,7 +88,7 @@ def Store.updateConfirmation (S : Store Validator) (s : Nat)
   let votersCount := |{v ∈ Committees.K s | ∃ a ∈ late, a.validator = v}|
   -- the majority gate, with no current-slot escape — see the module header
   let eligible := fun B => 2 * goldfishScore votes s B > votersCount
-  let H ← ghost .genesis S.T (goldfishScore votes s) (fun B => pure (eligible B))
+  let H ← ghost anchor S.T (goldfishScore votes s) (fun B => pure (eligible B))
   S.liveConfirmed ← H
   if S.latestConfirmed ⪯ H then
     S.latestConfirmed ← H

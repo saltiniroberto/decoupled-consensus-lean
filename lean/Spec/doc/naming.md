@@ -31,7 +31,7 @@ file that defined it.
 
 | routine             | superseded readings            | the protocol's                      |
 | ------------------- | ------------------------------ | ----------------------------------- |
-| `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `Store.getHead` (`07_FGStore.lean`)          |
+| `get_head`          | `Fig1.getHead`, `Fig4.getHead` | `S.getHead`, dispatching to `Fig7.getHead` |
 | `process_block`     | `Fig2.processBlock`            | `Store.processBlock` (`07_FGStore.lean`)     |
 | `goldfish_eligible` | `Fig1.goldfishEligible`        | `Store.goldfishEligible` (`07_FGStore.lean`) |
 | `on_tick`           | `Fig2.onTick`                  | `Store.onTick` (`05_SGDuty.lean`)            |
@@ -40,9 +40,12 @@ file that defined it.
 3.4 says "`on_tick` gains one line", and `Store.onTick` is exactly that — it runs
 `Fig2.onTick`, then the one line at `t = a_r`.
 
-So a caller who writes `S.getHead` gets the protocol's fork choice without thinking about
-layers, and a reader who sees `Fig2.processBlock` inside `Store.proposeBlock` knows that
-duty predates the finality extension.
+`get_head` is the one routine whose plain name is not a definition but a dispatch:
+`Store.getHead` is the field of the `ForkChoice` class (`01_GoldfishWalk.lean`), which has
+exactly one instance, supplied by the layer whose reading is the protocol's. So a duty
+writes `S.getHead votes k`, is written once, and means whatever fork choice the assembled
+protocol has — while a reader who sees `Fig2.processBlock` inside `Store.proposeBlock`
+knows that duty predates the finality extension.
 
 ## What this replaced
 

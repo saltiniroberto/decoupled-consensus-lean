@@ -42,7 +42,7 @@ A routine takes the weakest type that fits what it does:
 | neither raises nor chooses | plain value        | `Store.processGoldfishVote`, `Store.sgVote` |
 | raises, never chooses      | `DRE α` | `Store.viable`, `Store.processBlock` |
 | chooses, never raises      | `NDR α`            | `bestChild` |
-| both                       | `NDRE α`           | `ghost`, `Store.getHead` |
+| both                       | `NDRE α`           | `ghost`, `Fig7.getHead` |
 
 The duties sit one layer up: `NDREB α` (`Nondet.lean`) is the broadcast outbox threaded
 over `NDRE`, so a duty picks, raises, *and* broadcasts — see [style.md](style.md).

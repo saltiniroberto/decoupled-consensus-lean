@@ -1,3 +1,4 @@
+import Spec.«03_AvailableConfirmation»
 import Spec.«05_SGDuty»
 import Spec.«07_FGStore»
 import Spec.Defs.Nondet
@@ -282,7 +283,7 @@ def Store.getActionRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) 
     on.
 
     `Σ.sg_root[r]` is read by the raising extraction, behind the `= ⊥` test. -/
-def Store.getRoundRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
+def Store.getSGMajorityStart (S : Store Validator) (r : Nat) : DRE (Block Validator) := do
   let FCR := S.forkChoiceRoot
   if S.sgRoot[r] = ⊥ then
     return FCR
@@ -290,6 +291,7 @@ def Store.getRoundRoot (S : Store Validator) (r : Nat) : DRE (Block Validator) :
   if ¬ (FCR ⪯ sgRoot ∧ sgRoot ∈ (← S.getFilteredBlockTree)) then
     return FCR
   return sgRoot
+
 
 def Store.onTick (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) : NDREB Validator (Store Validator) := do
@@ -300,8 +302,13 @@ def Store.onTick (S : Store Validator) (t : Int)
   S ⇐ Fig5.onTick S t isProposer
   return S
 
-def Store.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
-    NDRE (Block Validator) := do
-    return .genesis
+
+def Store.updateConfirmation (S : Store Validator) (s : Nat) :
+  NDRE (Store Validator) := do
+  let r := round S.s
+  let majorityForckChoiceStart ← S.getSGMajorityStart r
+  let goldfishAnchor ← S.majorityForkChoice majorityForckChoiceStart S.T r
+  return (← Fig3.updateConfirmation S goldfishAnchor s)
+
 
 end DC
