@@ -296,8 +296,8 @@ def Store.gen (i : Validator) : Store Validator where
 
 A routine that both reads the store and writes it can take it as a parameter and hand it
 back — the shape everything in this subtree used before — or it can leave it out of the
-signature and let the monad carry it. `DRES` is that second shape, and `08_FinalityVote.lean`'s
-`heightVote` is the one routine written in it so far.
+signature and let the monad carry it. `DRES` and `DRS` are that second shape, and
+`08_FinalityVote.lean`'s three rules are written in them.
 
 The letter continues the effect inventory of `Raise.lean` and `Nondet.lean`: `S` for the
 store it threads, as `B` in `NDREB` is for the broadcasts. Under the `abbrev` a routine is
@@ -307,12 +307,34 @@ is that neither is written at the routine's own signature or at its call sites.
 **A caller that holds a store runs one**: `heightVote.run S`. Dot notation on the store is
 deliberately not available — the routines in this monad carry no `Store.` prefix, so
 `S.heightVote` does not resolve. Were it to, it would elaborate as that same run, which
-type-checks inside a threading block while silently dropping the store the run returns. -/
+type-checks inside a threading block while silently dropping the store the run returns.
+
+A routine that threads the store but cannot fail keeps its purity visible, the way
+`Raise.lean` keeps `DRE` for what raises and nothing for what does not: it is a `DRS`, and
+`DRES` is for the ones that also read the store's maps. `raising` carries the first into
+the second, and is written at the one call site where the two meet.
+
+**`raising` is a function and not a `MonadLift` instance**, measured. As an instance it is
+found — `inferInstance` produces it — but the automatic lift at `←` fires only where the
+source's `Validator` is already determined at that site. A bare `let fp ← finalityVote`
+leaves it a metavariable and the elaborator reports a type mismatch instead of lifting; an
+ascription or this function is what determines it. The function is the one that says at the
+site which of the two monads the routine came from. -/
 
 /-- The store threaded through a raising routine: `DRES Validator α` is `Store → DRE (α × Store)`,
     written so that neither the store parameter nor the returned store appears at the
     signature. `S` continues the effect inventory — see the section above. -/
 abbrev DRES (Validator : Type) (α : Type) := StateT (Store Validator) DRE α
+
+/-- The store threaded through a routine that cannot fail: `DRS Validator α` is
+    `Store → α × Store`. The same threading as `DRES` with the exception dropped, so a rule
+    that only reads store *fields* does not advertise a failure it cannot make. -/
+abbrev DRS (Validator : Type) (α : Type) := StateM (Store Validator) α
+
+/-- A routine that cannot fail, read as one that may: `let fp ← raising finalityVote`
+    inside a `DRES` block. The store threads the same way; only the result type changes. -/
+def raising {α : Type} (x : DRS Validator α) : DRES Validator α :=
+  StateT.mk fun S => pure (x.run S)
 
 /-! ## The live tree
 

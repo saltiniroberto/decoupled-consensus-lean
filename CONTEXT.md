@@ -538,16 +538,21 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   no file may import from both — `Analysis` imports `Spec`, and stays there. Nothing of
   the monad experiment is written yet.
 
-- **The store-as-monad experiment, in `SpecM/` only** (2026-08-28). `DRES Validator α`
-  (`SpecM/Defs/Store.lean`) is `StateT (Store Validator) DRE α`; the letter continues the
-  effect inventory, `S` for the store as `B` in `NDREB` is for the broadcasts.
-  `SpecM/08_FinalityVote.lean`'s `heightVote` is written in it — no store at the
-  signature, no store returned, `let S ← get` once at the top, and the two record writes
-  as named routines `recordEmptyTarget`/`recordTarget` so no rule body says `modify`. The
-  one call site, `Store.fgVote`, runs it: `let (hp, S) ← heightVote.run S`.
-  `Store.finalityVote` and `Store.fgVote` keep the store-in/store-out shape, deliberately,
-  so the two readings stand side by side. Naming still open for Roberto: `DRES`, and
-  whether the record-write routines belong to `SigningHistory`.
+- **The store-as-monad experiment, in `SpecM/` only** (2026-08-28). Two abbrevs in
+  `SpecM/Defs/Store.lean`: `DRES Validator α` is `StateT (Store Validator) DRE α`, and
+  `DRS Validator α` is `StateM (Store Validator) α` for a rule that threads the store but
+  cannot fail — the letter continues the effect inventory, `S` for the store as `B` in
+  `NDREB` is for the broadcasts. `raising : DRS → DRES` carries the second into the first.
+  **All three rules of `SpecM/08_FinalityVote.lean` are written in them**: `heightVote`
+  and `fgVote` are `DRES`, `finalityVote` is `DRS` (it reads no store map). No store at
+  any signature, none returned, each rule returns its vote alone, so `VoteAndStore` is
+  gone from that file — what a boundary caller gets from `.run` is `StateT`'s anonymous
+  product. Each rule reads through one `let S ← get` at the top; the record writes are the
+  named routines `recordEmptyTarget`, `recordTarget`, `recordFinalityTarget`, so no rule
+  body says `modify`. `fgVote` composes with two binds, `let fp ← raising finalityVote`
+  then `let hp ← heightVote`, the ordering now carried by the order of the lines.
+  Naming still open for Roberto: `DRES`/`DRS`/`raising`, and whether the record-write
+  routines belong to `SigningHistory`.
   **Measured while choosing the shape** (probes in `scratch/`, gitignored):
   - the rule is named bare, not `Store.heightVote`, because dot notation *does* resolve
     through `StateT` — `S.heightVote` elaborates as the run, `DRE (α × Store)`, and it
@@ -562,6 +567,16 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
     does work — plain, indexed and computed forms all compile
     (`StoreWriteSpellingProbe.lean`). Not adopted for `heightVote`: naming the two writes
     was enough. It is the option if store writes spread across files.
+  - a `MonadLift (DRS V) (DRES V)` instance **is found** (`inferInstance` produces it)
+    but does not make `let fp ← finalityVote` work: the automatic lift at `←` fires only
+    where the source's `Validator` is already determined at the site, and a bare bind
+    leaves it a metavariable, reported as a type mismatch rather than a failed lift. An
+    ascription works, and so does an explicit function — which is why `raising` is a
+    `def` and not an instance (`LiftReachProbe.lean`, `StorePureThreadProbe2.lean`). The
+    same reason keeps the two height-rule record writes at `DRES` rather than `DRS`:
+    `recordEmptyTarget h` has no argument that pins the store's type.
+  - dot notation does not reach a `DRS`/`DRES` routine's own namespace: the abbrev unfolds
+    to a function type, so `x.raising` looks for `Function.raising`. Prefix form only.
   - the store as a `StateT` *outside* `NDREB` composes: bare `get`/`modify` mean the
     store, `broadcast` keeps its `NDREB` definition and lifts through, and `←ᵖ` still
     picks. A rule written against `[MonadStateOf (Store V) m] [MonadLiftT DRE m]` rather
