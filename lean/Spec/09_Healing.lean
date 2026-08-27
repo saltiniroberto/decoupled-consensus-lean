@@ -306,9 +306,9 @@ def Store.getConfirmation (S : Store Validator) :
   let mut S := S
   let r := round S.s
   let majorityForkChoiceStart ← S.getSGMajorityStart r
-  let goldfishAnchor ← S.majorityForkChoice majorityForkChoiceStart S.T r
-  let filteredBlockTree := S.applyG0Veto {root := goldfishAnchor, blocks := S.T}
-  return (← getGoldfishConfirmation filteredBlockTree S.gfVotes[S.s] S.s)
+  let anchor ← S.majorityForkChoice majorityForkChoiceStart S.T r
+  let filteredVetoedBlockTree := S.applyG0Veto {root := anchor, blocks :=  (← S.getFilteredBlockTree)}
+  return (← getGoldfishConfirmation filteredVetoedBlockTree S.gfVotes[S.s] S.s)
 
 def Store.updateConfirmation (S : Store Validator) :
   NDRE (Store Validator) := do
@@ -322,7 +322,8 @@ def Fig9.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator))
   let r := round S.s
   let majorityForkChoiceStart ← S.getSGMajorityStart r
   let anchor ← S.majorityForkChoice majorityForkChoiceStart S.T (round S.s)
-  S.goldfishForkChoice {root := anchor, blocks := S.T} votes s
+  let filteredVetoedBlockTree := S.applyG0Veto {root := anchor, blocks :=  (← S.getFilteredBlockTree)}
+  return (← ghost filteredVetoedBlockTree (goldfishScore votes r) (S.goldfishEligible votes r))
 
 /-- The protocol's fork choice is this layer's reading: `ForkChoice`
     (`Defs/ForkChoice.lean`) has exactly one instance, and it lives with the last reading,
@@ -337,7 +338,7 @@ def Store.onTick (S : Store Validator) (t : Int)
   let r := round S.s
   if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
     S.sgRoot[r] ⇐ S.getSGRoot r
-  S ⇐ Fig5.onTick S t isProposer
+  S ⇐ Fig2.onTick S t isProposer
   return S
 
 end DC

@@ -100,14 +100,13 @@ def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
     this duty runs no walk, picks nothing, raises nothing; only the outbox is under the
     monad. "Runs at `a_r`" is an input precondition, as the Goldfish duties' instants
     are. -/
-def Store.sgVote (S : Store Validator)
-    (_ : S.t = SGSchedule.a (round S.s) := by solve_by_elim [And.left, And.right]) :
-    NDREB Validator (Store Validator) := do
+def Store.sgVote (S : Store Validator):
+    NDRE (SGVote Validator) := do
   let r := round S.s
   let vote := SGVote.mk (validator := S.id) (round := r) (head := some S.liveConfirmed)
-  broadcast (Message.sgVote vote)
-  return (← S.processSGVote vote)
+  return vote
 
+/-
 /-- `on_tick(Σ, t)`, the protocol's reading: the Goldfish `on_tick`, then the SG layer's
     one line — at `t = a_r` for the current round, run `sg_vote`. No later layer touches
     `on_tick`.
@@ -129,5 +128,6 @@ def Fig5.onTick (S : Store Validator) (t : Int)
   if _ : S.t = SGSchedule.a (round S.s) then
     return (← S.sgVote)
   return S
+-/
 
 end DC
