@@ -754,6 +754,50 @@ works but duplicates the sequence in a `def`.
   `doElem`, not a term macro: the enclosing `do` lifts a user's `(← …)` out of a term
   before the macro expands, and the bound variable escapes its binder.
 
+## In flight, 2026-08-28 (the tree is red)
+
+Uncommitted, all in `05_SGDuty.lean`: Roberto's `Store.sgVote` now returns the vote
+rather than broadcasting it — the `fgVote` move one layer over — and `Fig5.onTick` is
+commented out on his word. Three things follow, none yet done:
+
+- `sgVote`'s result type reads `NDREB (SGVote Validator)`, which is malformed — `NDREB`
+  takes the validator type *and* the payload. On the shape it now has (no broadcast, no
+  `process_sg_vote`, no store touched) it needs no monad at all: `SGVote Validator`, pure.
+  Its docstring's "A `NDREB` duty" paragraph goes with it.
+- `09_Healing.lean`'s `Store.onTick` calls the commented-out `Fig5.onTick`.
+- Nothing broadcasts an SG vote or an attestation any more: with `sgVote` and `fgVote`
+  both returning votes, and `Fig5.onTick` gone, the duty that assembles and sends is
+  missing from the spec. It is presumably the attestation duty at `sgfgVoting i r`
+  (`SGSchedule`), still unwritten.
+
+Design questions open at this point, in the order they were raised:
+
+1. **`get_head`'s parameters.** `k` is derivable (`Σ.s - 1` at every call site) and can
+   go; `votes` cannot, since the proposer passes every held vote and the voter passes the
+   freeze-filtered set merged with block-carried votes — one instance cannot tell them
+   apart. Roberto's better proposal: **instance the tree, not the head** — a class field
+   `getGoldfishTree : Store → NDRE (BlockTree …)`, with `get_head` a plain `def` reading
+   `S.goldfishForkChoice tree votes s`. That also puts `get_head` back in `dc.pdf`, the
+   extractor rendering figure routines from `def` only. **Blocked on one ruling**:
+   `Fig7.getHead` differs in *two* ways — the filtered tree and the height-clause
+   eligibility — so a tree-only class cannot express it; and `Fig9.getHead`, now the
+   protocol's reading, has already dropped both (it calls `goldfishForkChoice`, whose
+   condition is `Fig1.goldfishEligible`, over `Σ.T`). Deliberate or a slip?
+2. **`majority_fork_choice` taking a `BlockTree`**, which would let 07 build one pair for
+   both walks and `get_filtered_block_tree` return the pair.
+3. **`get_sg_root`'s fallback when no grade-3 block exists** — Roberto's instinct: the SG
+   majority fork choice. Today it answers `⊥` *and* refuses the proposal, which disables
+   adoption in exactly the rounds healing is for.
+4. **`apply_G0_veto` tests `S.G0 r B`, not `B'`** — as written it drops `B` when `B`
+   itself has grade 0 and anything conflicts with it.
+5. **`Σ.latest_confirmed` has no writer** and 07's Extract sentence about available
+   confirmation is false twice over (see the confirmation entry under Decisions).
+6. **`lean/SpecM/`** is a second tree inside the lake build, so its warnings and any
+   future `sorry` ride along with the spec's.
+
+Still queued from 2026-08-25, untouched: raise `Params.R_ge` to `2 ≤ R`; rename the
+raising set-builder's `∈ᴹ` to `∈ᵉ`.
+
 ## Next
 
 0. **The spec is the source of truth, complete over its seven figures plus the
