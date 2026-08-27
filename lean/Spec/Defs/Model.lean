@@ -8,7 +8,8 @@ import Mathlib.Data.Finset.Lattice.Basic
 
 The substrate of the specification: everything the algorithm files read and no
 algorithm of their own. A definition lands here at the moment an algorithm file first
-consumes it, so everything below has a consumer under `Spec/`. Docstrings are
+consumes it, so everything below has a consumer under `Spec/` — save `BlockTree`, which
+waits for the walks it is meant for. Docstrings are
 self-contained: each definition's own text is what it means.
 
 ## What this file fixes
@@ -615,5 +616,21 @@ def Compatible (a b : Block Validator) : Prop := a ⪯ b ∨ b ⪯ a
 
 instance : DecidableRel (Compatible (Validator := Validator)) :=
   fun _ _ => inferInstanceAs (Decidable (_ ∨ _))
+
+/-! ## A rooted set of blocks -/
+
+/-- A block tree: a root, and the blocks a walk may descend through. The two travel
+    together — every walk in the protocol starts at a root and takes its children from a
+    set, and each layer supplies its own pair.
+
+    Nothing is enforced. That the root lies in `blocks`, that `blocks` is closed under
+    parents, that it is a tree at all: each is a fact about the pairs the protocol builds,
+    for `Analysis/` to state, not a fact of this type. A walk over a pair that is none of
+    those things still runs; it simply answers what its own steps say. -/
+structure BlockTree (Validator : Type) [Roots] where
+  /-- The block a walk starts from. -/
+  root : Block Validator
+  /-- The blocks it may descend through. -/
+  blocks : Finset (Block Validator)
 
 end DC

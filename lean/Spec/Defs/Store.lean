@@ -222,6 +222,10 @@ structure Store (Validator : Type) where
       only votes whose head is a block are stored — with the time it was processed.
       `latest` selects by round rather than by time; the healing scores read the
       times. -/
+  userGoldfishConfirmed: Block Validator
+
+  confirmedForHeightVote: Block Validator
+
   sgVotes : (r : Int) → Finset (TimestampedVote (SGHeadVote Validator))
   /-- `Σ.σ[B]`, the stored post-state of each processed block (finality layer). Absent outside
       `Σ.T`; that it is defined on exactly `Σ.T` is an invariant, not a fact of the type. -/
@@ -274,6 +278,8 @@ def Store.gen (i : Validator) : Store Validator where
   gfVotes := fun _ => ∅
   liveConfirmed := .genesis
   latestConfirmed := .genesis
+  userGoldfishConfirmed := .genesis
+  confirmedForHeightVote := .genesis
   sgVotes := fun _ => ∅
   σ := fun B => if B = .genesis then some .gen else none
   F := .genesis
