@@ -16,7 +16,6 @@ naming the layer it arrives in.
       + height_pair                                                              attestations
       + root_proposal[·], sg_root[·]                                             healing
       + history, id                                                              this spec's own
-      + user_goldfish_confirmed, confirmed_for_height_vote                       reserved
 
 ## The protocol's `Σ` is written `S`
 
@@ -222,18 +221,6 @@ structure Store (Validator : Type) where
       (`03_AvailableConfirmation.lean`) writes `Σ.live_confirmed` only, and the advance of
       this field is not rendered. -/
   latestConfirmed : Block Validator
-  /-- `Σ.user_goldfish_confirmed`, a second confirmation record beside `Σ.live_confirmed`.
-      Its name says what it is for: the Goldfish confirmation a user of the node reads, rather
-      than the one the protocol's own rules read. Nothing writes it and nothing reads it, so
-      the name is all this field means so far. -/
-  userGoldfishConfirmed : Block Validator
-
-  /-- `Σ.confirmed_for_height_vote`, the block the current-height signing rule is to take as
-      its ceiling. Nothing writes it and nothing reads it: `compute_height_vote`
-      (`08_FinalityVote.lean`) still reads `Σ.live_confirmed` directly, so this field records
-      an intended separation between the two and no more. -/
-  confirmedForHeightVote : Block Validator
-
   /-- `Σ.height_pair`, the height pair this validator has signed. `decide_height_vote`
       (`08_FinalityVote.lean`) writes it, and `fg_vote` reads it back when it assembles the
       vote. `HeightPair.empty` at `gen`: nothing signed yet. -/
@@ -295,8 +282,6 @@ def Store.gen (i : Validator) : Store Validator where
   gfVotes := fun _ => ∅
   liveConfirmed := .genesis
   latestConfirmed := .genesis
-  userGoldfishConfirmed := .genesis
-  confirmedForHeightVote := .genesis
   heightPair := .empty
   sgVotes := fun _ => ∅
   σ := fun B => if B = .genesis then some .gen else none

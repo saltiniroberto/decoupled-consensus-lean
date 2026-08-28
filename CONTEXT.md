@@ -555,8 +555,14 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   condition in the writer and defeats the split.
   09's `Store.onTick` calls it, `S ⇐ S.decideHeightVote` at `a_r` — Roberto's line; whether
   the height vote belongs at that instant rather than at `sgfgVoting i r` is open.
-  `Store.confirmedForHeightVote` (also new, `Block Validator`, genesis at `gen`) has no
-  docstring, no writer and no reader yet.
+  `Store.confirmedForHeightVote` and `Store.userGoldfishConfirmed` arrived with it, both
+  `Block Validator` and genesis at `gen`, and both were **dropped on 2026-08-28** (Roberto:
+  "just drop them for now") — nothing ever read or wrote either, and a field with no rule
+  behind it sits in the type a reader audits. A field audit at the same moment found the rest
+  of the store accounted for: `blockTime` and `id` are unused by design and say so;
+  `rootProposal` is read by `get_sg_root` and written by nothing, the gap 09's header names;
+  and `latestConfirmed` lost its only writer when `Fig3.updateConfirmation` was removed, so
+  the monotone record the node exposes is never advanced.
 - **`get_head` is one definition** (2026-08-28, Roberto: "can we now have one getHead that
   consumes these classes?"). `class GoldfishWalk` (`Defs/GoldfishWalk.lean`) carries the two
   things the walk takes from the layer — `getGoldfishFilteredBlockTree : Store → NDRE (BlockTree …)`,
