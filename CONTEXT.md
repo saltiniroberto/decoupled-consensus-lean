@@ -452,6 +452,34 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   **Nor is `Σ.live_confirmed`**: `Store.updateConfirmation`'s only caller was `Fig2.onTick`'s
   confirmation branch, itself now removed from `02_GoldfishDuties.lean`.
   The three routines carry no docstrings yet.
+- **The sts plumbing exists: `lean/Sts.lean`** (2026-08-28, Roberto: "let's add the sts
+  plumbing — all the functions processing messages are supposed to be executed upon message
+  reception"). A fourth `lean_lib`, `Sts`, one file, importing `Spec` and `StsMultisetLog`.
+  Nothing in `Spec/` imports it and the extractor does not read it, so no line of it reaches
+  the document. `Makefile`'s orphan check learned the path.
+  **The shape**: `Store.receive` sends each wire object to its handler — `process_block`,
+  `process_goldfish_vote`, `process_sg_vote` — `reactions` turns an event into the set of
+  `NodeStepResult`s, and `protocol` is the framework's `Protocol` with `init i = Σ.gen i` and
+  `Ev := Empty`. `Σ.gen i` is where `Σ.id` comes from, which is why no reaction reads the
+  framework's `p`.
+  **Decisions taken here, each open to revision**:
+  *An attestation runs `process_sg_vote`* on the vote it carries. It has to: since `sg_vote`
+  stopped broadcasting, the round's head travels only inside an attestation, and nothing an
+  honest validator does sends a bare `Message.sgVote` any more. That constructor is now
+  reachable only from an adversary, and it runs the same handler.
+  *One tick per unit of the spec's clock*, so a tick reading `r` is the instant `r`. The
+  alternative, ticks on a `Δ` grid, is a stronger model and would also miss
+  `sgfg_voting i r`, which `SGSchedule` bounds but does not place.
+  *A raise is not a step.* Only successful outcomes are reactions; a configuration with no
+  successful outcome would leave the protocol stuck, which the framework's `total` forbids, so
+  the relation admits one fallback there — store unchanged, nothing sent. `total` is proved
+  from that fallback by a classical case split on whether the reaction set is nonempty.
+  *`wake` does nothing.* A slept validator's clock is behind and the next tick moves it.
+  **Checked on probes**: a `.recv` of a Goldfish vote has the reaction whose state is
+  `process_goldfish_vote`'s answer; `Σ.receive (.attestation a)` is `process_sg_vote` on
+  `(a.validator, a.round, a.head)`; and `(protocol p).init i |>.id = i`. All three by `rfl`.
+  **Not yet**: no model is instantiated — `Examples/Models` shows the shape, and which
+  network and adversary assumptions this protocol is stated under is a separate decision.
 - **`on_tick` is late-bound too: `class Tick`** (2026-08-28, Roberto: "we can have an onTick
   class that we redefine as we go"). `Defs/Tick.lean` carries one field — the tick — and
   `abbrev Store.onTick` reaches it, so whoever drives the clock writes `S.onTick t is_proposer`

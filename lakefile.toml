@@ -43,6 +43,14 @@ name = "SpecM"
 srcDir = "lean"
 globs = ["SpecM", "SpecM.+"]
 
+# The boundary to the sts framework: the specification above placed under
+# `StsMultisetLog`'s `Protocol`. Root `Sts`, same `srcDir`. Nothing in `Spec` imports it, and
+# the extractor does not read it, so no line of it reaches the document.
+[[lean_lib]]
+name = "Sts"
+srcDir = "lean"
+globs = ["Sts"]
+
 # The analysis: results stated (and eventually proved) against the specification above.
 # Root `Analysis`, same `srcDir`, so `Analysis.AccountableSafety` is
 # `lean/Analysis/AccountableSafety.lean`.

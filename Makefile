@@ -43,7 +43,8 @@ orphans:
 	@bad=`find lean -name '*.lean' \
 	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' \
 	    ! -path 'lean/SpecM.lean' ! -path 'lean/SpecM/*' \
-	    ! -path 'lean/Analysis.lean' ! -path 'lean/Analysis/*'`; \
+	    ! -path 'lean/Analysis.lean' ! -path 'lean/Analysis/*' \
+	    ! -path 'lean/Sts.lean'`; \
 	if [ -n "$$bad" ]; then \
 		echo "$$bad"; \
 		echo 'FAIL: .lean under lean/ claimed by no lean_lib glob in lakefile.toml'; \
