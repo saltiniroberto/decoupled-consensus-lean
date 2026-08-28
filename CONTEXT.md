@@ -490,6 +490,14 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   ambiguity the one-instance rule exists to prevent.
   Checked by `rfl`: `S.onTick t p = Fig9.onTick S t p`, and a theorem taking `[Tick Validator]`
   quantifies over the reading, which the hard-named `Store.onTick` made impossible.
+- **The document writes one assignment arrow** (2026-08-28, Roberto: "the `←` and `⇐` arrows
+  should be typed the same in the pdf"). `⇐` used to reach the TeX untouched — the tokenizer
+  had no rule for it, so it printed as `⇐` with no spacing around it, unlike `←`. It is
+  normalised to `←` in `tokenize`, which also puts it through every assignment rule below:
+  `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)` renders as the figure's own
+  `Σ.sg_root[r] ← get_sg_root(Σ, r)`. The second arrowhead is a Lean-side distinction — the
+  right-hand side computes rather than being a value — and the draft has no such mark.
+  `←ᵖ` stays distinct; it is a different character and a different verb, a pick.
 - **A file can hold more than one figure** (2026-08-28, Roberto: "figure 8 doesn't fit in
   the pdf page"). A `figure` float cannot break across pages, so `09_Healing`'s ten routines
   overran by `Overfull \vbox (296.8pt too high)` — silently, since nothing fails the build.

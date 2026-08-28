@@ -141,7 +141,7 @@ def ghost (tree :  BlockTree Validator)
       DRE (Finset (Block Validator)))
     if children = ∅ then
       return H
-    -- `H ← arg max score`; the arrowhead says the step picks
+    -- `H ← arg max score`, the step picking among the maximal-score children
     H ⇐ bestChild children score
   return H  -- the bound is reached: not a figure line, see the module header
 

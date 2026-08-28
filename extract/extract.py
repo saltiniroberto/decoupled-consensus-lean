@@ -592,7 +592,11 @@ OPEN = {"(": ")", "[": "]", "{": "}"}
 
 
 def tokenize(s: str):
-    return TOKEN_RE.findall(s)
+    # `⇐` and `←` are one arrow in the paper. The second arrowhead is a Lean-side
+    # distinction — the right-hand side computes rather than being a value — and the
+    # figures write both as the draft's `←`, so the two are the same token from here on
+    # and every assignment rule below sees one shape.
+    return [("←" if t == "⇐" else t) for t in TOKEN_RE.findall(s)]
 
 
 def parse_group(toks, i=0, closer=None):

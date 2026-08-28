@@ -43,6 +43,8 @@ distinguishes them, and so do the figure files:
 The protocol's arrow says nothing about whether the routine on its right picks, raises or
 merely returns; here that difference is worth seeing, so an assignment fed by a
 computation wears a second arrowhead — `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, `H ⇐ arg max`.
+The distinction is Lean's, not the protocol's: the extracted document writes one arrow for
+both, as the draft does, so a figure shows `←` wherever a routine writes either.
 It binds the value and writes it, and the `Option` a field wraps is supplied by coercion,
 so no `some` is written. Three arrows, then, each saying one thing: `←` re-assigns a
 value, `⇐` binds a computation's, `←ᵖ` picks (`Nondet.lean`).
