@@ -383,6 +383,7 @@ def Fig9.onTick [SGSchedule Validator] (S : Store Validator) (t : Int)
   -- the round's lines
   if _ : S.s > 0 ∧ S.t = roundStart r + (Δ : Int) then
     S.sgRoot[r] ⇐ S.getSGRoot r
+  S ⇐ S.goldfishOnTick isProposer
   if _ : S.t = heightDecisionTime r then
     S ⇐ S.decideHeightVote
   if S.t = SGSchedule.sgfgVoting S.id r then
@@ -391,8 +392,7 @@ def Fig9.onTick [SGSchedule Validator] (S : Store Validator) (t : Int)
     let sgHead := (← S.sgVote).head
     let a := Attestation.mk (validator := S.id) (round := r) (head := sgHead)
       (heightPair := S.heightPair) (finalityPair := fp)
-    broadcast (Message.attestation a)
-  S ⇐ S.goldfishOnTick isProposer                              -- then the slot's actions
+    broadcast (Message.attestation a)                             -- then the slot's actions
   return S
 
 /-- The protocol's tick is this layer's reading: `Tick` (`Defs/Tick.lean`) has exactly one

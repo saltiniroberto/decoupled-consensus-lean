@@ -200,7 +200,12 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `R = 1` the two fields contradict and the class has no instance; `Params` requires
   only `R ≥ 1` (flagged, not ruled on — it sharpens the `a_r` vs `R = 1` question
   under Next). `roundStart r = t_{rR}` is a definition next to `round`, and
-  `heightDecisionTime` reads `roundStart r + 6Δ`. It shared the class's namespace as
+  `heightDecisionTime` reads `slotStart (openingSlot r + 1) + 2Δ` (2026-08-28, Roberto):
+  `2Δ` into the round's second slot, which is the tick at which the opening slot's
+  confirmation is evaluated. Written from the slot rather than as `roundStart r + 6Δ` — the
+  same instant, checked by `ring` on a probe — because what the choice rests on is the
+  confirmation the height pair is decided against. `openingSlot r = rR` is new with it, the
+  round-to-slot map that until then existed only as `r * R` inside `roundStart`. It shared the class's namespace as
   `heightDecisionTime` until 2026-08-28 (Roberto: "combine it all under SGSchedule", then "let's
   rename `heightDecisionTime` to just `heightDecisionTime`") — a declaration and its namespace may
   share a name, and the build confirmed no clash, but the shared prefix suggested a class

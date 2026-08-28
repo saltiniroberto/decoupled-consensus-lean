@@ -212,8 +212,11 @@ def slotStart [Params] (s : Nat) : Int := 4 * (Params.Δ : Int) * (s : Int)
     `rR, …, rR + R − 1`, and slot `rR` is its *opening slot*. -/
 def round [Params] (s : Nat) : Nat := s / Params.R
 
+/-- The opening slot of round `r`: the first of the `R` slots the round consists of, `rR`. -/
+def openingSlot [Params] (r : Nat) : Nat := r * Params.R
+
 /-- The start of round `r`: the start of its opening slot, `t_{rR}`. -/
-def roundStart [Params] (r : Nat) : Int := slotStart (r * Params.R)
+def roundStart [Params] (r : Nat) : Int := slotStart (openingSlot r)
 
 /-- `Γ_j`, the grade instants of round `r`: `Γ_j = roundStart r + jΔ`. Round `r` grades
     the received round-`(r−1)` attestations at its four grade instants, `j ∈ {−1, 0, 1, 2}`
@@ -221,22 +224,25 @@ def roundStart [Params] (r : Nat) : Int := slotStart (r * Params.R)
     protocol's. -/
 def Γ [Params] (j : Int) (r : Nat) : Int := roundStart r + j * (Params.Δ : Int)
 
-/-- The round's action instant, `a_r = roundStart r + 6Δ`: `6Δ` after the round opens, one
-    fixed time per round at which the validator settles what it will sign for the round. This
-    spec decides the height pair there (`Store.decideHeightVote`, `08_FinalityVote.lean`),
-    which is what the name says; the attestation carrying it goes out later, at the
-    validator's own `sgfgVoting` time below.
+/-- The round's action instant: `2Δ` into the round's second slot, which is the tick at
+    which the opening slot's confirmation is evaluated. One fixed time per round, at which the
+    validator settles what it will sign for the round — this spec decides the height pair
+    there (`Store.decideHeightVote`, `08_FinalityVote.lean`), which is what the name says,
+    while the attestation carrying it goes out later, at the validator's own `sgfgVoting` time
+    below.
 
-    The same instant is `t_{rR+1} + 2Δ`, the tick at which the opening slot's confirmation is
-    evaluated, so the two actions of that tick compose: the height pair is decided against a
-    confirmation computed in the same tick (`Fig9.onTick`, `09_Healing.lean`).
+    Written from the slot rather than as `roundStart r + 6Δ`, the two being the same instant,
+    because what the choice of instant rests on is the confirmation: the height pair is
+    decided against a confirmation computed in the same tick (`Fig9.onTick`,
+    `09_Healing.lean`). The round's second slot exists only when `R ≥ 2`, which `Params` does
+    not yet require.
 
     The formula is fixed, so this is a definition and not a field of `SGSchedule` below. That
     class carries the part of the schedule the protocol leaves open, and no instance should be
     able to move this instant. Taking `[Params]` alone, it also mentions no validator, so a
     routine tests it without carrying the class. -/
 def heightDecisionTime [Params] (r : Nat) : Int :=
-  roundStart r + 6 * (Params.Δ : Int)
+  slotStart (openingSlot r + 1) + 2 * (Params.Δ : Int)
 
 /-- The assumed part of the round schedule (`heightDecisionTime`, above, is the fixed
     part): the time
