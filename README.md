@@ -42,8 +42,16 @@ Also here:
 - [`extract/`](extract/README.md) — `make extract` renders the spec into a paper-shaped
   PDF, `extract/out/dc.pdf`.
 - [`deps/lean-sts`](https://github.com/saltiniroberto/lean-sts) — the transition-system
-  framework, a submodule. `lean/Sts.lean` places the spec under its `StsMultisetLog`
-  flavour; no network or adversary model is instantiated yet.
+  framework, a submodule. The spec says what one validator does; the framework supplies
+  everything around it — signed messages and a message log, the views it maintains so a
+  protocol can neither forget nor fabricate a delivery, a schedule of who is corrupt and who
+  is awake at each time, executions, and the network and fairness assumptions as predicates
+  over them. Its invariants come with it, so this project neither restates nor re-proves
+  them: that every message in a view really was signed and sent, that the log only grows,
+  and what a reaction may and may not touch. Because the assumptions are predicates, the
+  model is a choice a protocol makes rather than something the framework commits to.
+  [`lean/Sts.lean`](lean/Sts.lean) places this spec under the `StsMultisetLog` flavour; no
+  model is instantiated yet.
 
 ## Building
 
