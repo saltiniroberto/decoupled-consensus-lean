@@ -6,14 +6,17 @@ It lives in [`lean/Spec/`](lean/Spec/) — one algorithm file per part of the pr
 the routines read the way they would in a paper:
 
 ```lean
-def Store.goldfishOnTick (S : Store Validator)
-    (isProposer : (s : Nat) → (i : Validator) → Bool) [GoldfishWalk Validator] :
-    NDREB Validator (Store Validator) := do
+def Store.decideHeightVote (S : Store Validator) :
+    DRE (Store Validator) := do
   let mut S := S
-  if _ : S.s > 0 ∧ S.t = slotStart S.s ∧ isProposer S.s S.id then
-    return (← S.proposeBlock)
-  if _ : S.s > 0 ∧ S.t = slotStart S.s + (Δ : Int) then
-    return (← S.goldfishVote)
+  let hp ← S.computeHeightVote
+  -- a named target is recorded as the height's first target
+  if hp.T ≠ ⊥ then
+    S.history ← S.history.saveTarget (← hp.h) (← hp.T)
+  -- an empty target sets the height's flag
+  if hp.T = ⊥ ∧ hp.h ≠ ⊥ then
+    S.history ← S.history.saveEmptyTarget (← hp.h)
+  S.heightPair ← hp
   return S
 ```
 
