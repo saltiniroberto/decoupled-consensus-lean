@@ -490,6 +490,19 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   ambiguity the one-instance rule exists to prevent.
   Checked by `rfl`: `S.onTick t p = Fig9.onTick S t p`, and a theorem taking `[Tick Validator]`
   quantifies over the reading, which the hard-named `Store.onTick` made impossible.
+- **A file can hold more than one figure** (2026-08-28, Roberto: "figure 8 doesn't fit in
+  the pdf page"). A `figure` float cannot break across pages, so `09_Healing`'s ten routines
+  overran by `Overfull \vbox (296.8pt too high)` — silently, since nothing fails the build.
+  `/-! ## New figure — Caption -/` before a figured routine closes the current box and opens
+  another; the first group keeps the file's title and its `fig:<stem>` label so prose
+  references still resolve, later groups get `fig:<stem>-<slug>`. The heading may not begin
+  with `Figure`, which `FIGURE_HEADING` would read as a routine's paper signature.
+  09 is cut in three — support scores, round-root functions, the fork choice and tick — which
+  is the draft's own division of the same material, and 02 in two, the handlers and duties
+  then the tick, after the tick split into three routines pushed it 19.9pt over.
+  `\emergencystretch` in the preamble takes care of the remaining class of warning: a field
+  name set in sans has no hyphenation points, so a paragraph ending on one could overrun the
+  margin. The document now builds with no overfull box at all.
 - **An anonymous instance hid a figure** (2026-08-28). `extract.py`'s `DECL_RE` matched only
   a keyword at the start of a line followed by a name, so `scoped instance : C α := …` and
   `instance (S : Store α) …` were not declarations to it. The damage was not the skipped item:

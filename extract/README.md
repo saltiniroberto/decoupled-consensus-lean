@@ -53,6 +53,19 @@ is Lean-side documentation, and only its opening backticked span is harvested (t
 symbol conventions below — for figured routines the signature comes from the `Figure`
 block, not the docstring).
 
+**`## New figure — Caption` cuts a file into more than one figure** (2026-08-28). A
+`figure` float cannot break across pages, so a file with more figured routines than fit on
+one overruns the page silently — `09_Healing` did, by 297pt. A `/-! ## New figure — Caption -/`
+comment before a figured routine closes the current box and opens another with that caption.
+The first group of a file keeps the file's section title and the `fig:<stem>` label, so every
+`[fig:…]` reference still resolves; a later group is labelled `fig:<stem>-<slugified caption>`.
+A marker on the file's *first* figured routine renames the first box rather than opening a
+second, which is how a file gives every box a caption of its own. The heading may not begin
+with the word `Figure`, or the routine-signature rule above would read it.
+
+The draft splits the same material the same way — the healing layer is three of its figures —
+so a file that needs cutting usually has the draft's own cut to follow.
+
 The marker also drives the document's structure (Roberto, 2026-08-24): **files in a
 subdirectory render before the files at the root** — the vocabulary a spec is written
 in terms of precedes its algorithms — and **within a directory, `config.toml`'s

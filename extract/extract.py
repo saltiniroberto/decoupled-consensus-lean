@@ -1887,6 +1887,24 @@ def extract_sections(text: str):
 
 
 FIGURE_HEADING = re.compile(r"Figure\b\s*(.*)$")
+# `## New figure — Caption` before a figured routine starts a second box in the same
+# file. A `figure` float cannot break across pages, so a file holding more routines than
+# fit on one — the healing layer, which the draft itself splits into three figures — says
+# where to cut. The heading may not begin with `Figure`, or `FIGURE_HEADING` would read it
+# as a routine's paper signature.
+NEW_FIGURE_HEADING = re.compile(r"New figure\b\s*[—–:-]?\s*(.*)$")
+
+
+def new_figure_section(text: str):
+    """The caption of a `## New figure` section in a declaration's preceding comment, or
+    None. The routine it stands before opens a new figure box."""
+    for h, b in split_sections(text):
+        if h is None:
+            continue
+        m = NEW_FIGURE_HEADING.match(h)
+        if m is not None:
+            return (m.group(1).strip() + " " + b.strip()).strip()
+    return None
 
 
 def figure_section(text: str):
@@ -2056,6 +2074,9 @@ PREAMBLE = r"""\documentclass[10pt]{article}
 \newtheorem{definition}{Definition}
 % right-aligned small figure comments, the draft's own style
 \algrenewcommand{\algorithmiccomment}[1]{\hfill{\scriptsize\color{black!55}$\triangleright$ #1}}
+% a field name set in sans has no hyphenation points, so a paragraph ending on one can
+% overrun; let TeX stretch the line instead
+\setlength{\emergencystretch}{2em}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{4pt plus 1pt}
 \usepackage[colorlinks=true, allcolors=blue!35!black]{hyperref}
@@ -2261,11 +2282,18 @@ def main():
         emit_sections(tex, header_secs, prose_rw)
 
         if figured:
-            blocks = []
+            # one box per `## New figure` group; a file with no marker is one box, as
+            # before. The first group keeps the file's title and its `fig:<stem>` label,
+            # so every `[fig:…]` reference in prose still resolves.
+            groups = [[None, [], []]]        # caption, prose comments, routine blocks
             for r, src, pre in figured:
-                # a figured routine's `## Extract` prose leads its figure in, the way
-                # the draft's prose introduces each figure
-                emit_sections(tex, extract_sections(pre), prose_rw)
+                caption = new_figure_section(pre)
+                if caption is not None:
+                    if groups[-1][2]:
+                        groups.append([caption, [], []])
+                    else:
+                        groups[-1][0] = caption
+                groups[-1][1].append(pre)
                 sig, _b = split_signature(src)
                 params = parse_params(sig)
                 ptypes = {n: ty for n, ty, _a2 in params}
@@ -2276,8 +2304,18 @@ def main():
                     for sname in tables.struct_sym:
                         if ty.startswith(sname):
                             store_param = n
-                blocks.append(routine_lines(tables, r, src, store_param, ptypes))
-            render_figure(tex, stem, title, blocks, prose_rw)
+                groups[-1][2].append(routine_lines(tables, r, src, store_param, ptypes))
+            for i, (caption, pres, blocks) in enumerate(groups):
+                # a figured routine's `## Extract` prose leads its figure in, the way
+                # the draft's prose introduces each figure
+                for pre in pres:
+                    emit_sections(tex, extract_sections(pre), prose_rw)
+                if not blocks:
+                    continue
+                render_figure(tex,
+                              stem if i == 0 else f"{stem}-{slug(caption or str(i))}",
+                              caption or title if i == 0 else caption,
+                              blocks, prose_rw)
 
         # `## Extract` prose of the file's other declarations follows the figure
         for pre, _name in others:

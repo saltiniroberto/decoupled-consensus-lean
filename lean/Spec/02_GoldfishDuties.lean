@@ -218,6 +218,7 @@ def Store.goldfishVote (S : Store Validator)
     return S.processGoldfishVote vote
   return S
 
+/-! ## New figure — The tick -/
 /-! ## Figure `set_clock(Σ, t)` -/
 /-- Move the store's clock to `t` and
     with it the slot, `s = ⌊t/(4Δ)⌋`.

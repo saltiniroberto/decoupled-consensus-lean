@@ -145,6 +145,7 @@ def Store.equivBefore (S : Store Validator) (k : Int) (i : Validator) (c : Int) 
 instance (S : Store Validator) (k : Int) (i : Validator) (c : Int) :
     Decidable (S.equivBefore k i c) := inferInstanceAs (Decidable (∃ _ ∈ _, _))
 
+/-! ## New figure — Support scores in round r -/
 /-! ## Figure `support_scores(Σ, r, j, B)` -/
 /-- The pair `(S_j(B), S̄_j(B))` of round-`r` support scores
     for `B`, read from the round-`(r−1)` entries against the grade instant `Γ_j`.
@@ -211,6 +212,7 @@ instance (S : Store Validator) (r : Nat) (B : Block Validator) : Decidable (S.G0
 def deepest (G : Finset (Block Validator)) : Finset (Block Validator) :=
   {B ∈ G | ∀ C ∈ G, ¬ B ≺ C}
 
+/-! ## New figure — Round-root functions -/
 /-! ## Figure `get_proposal_root(Σ, r)` -/
 /-- The root the round's opening proposer offers in its opening
     block — the deepest block in the filtered tree with grade 2, or the fork-choice root
@@ -314,6 +316,7 @@ def Store.applyG0Veto (S : Store Validator) (blocks : Finset (Block Validator)) 
   let r := round S.s
   return {B ∈ blocks | ¬ (∃ B' ∈ blocks, ¬ (B' ∼ B) ∧ S.G0 r B)}
 
+/-! ## New figure — The graded layer's fork choice and tick -/
 /-! ## Figure `get_goldfish_tree(Σ)` -/
 /-- `get_goldfish_tree(Σ)` at this layer,
     and so the protocol's: rooted at the SG fork choice run from the round's own root
