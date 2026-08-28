@@ -167,8 +167,14 @@ def order_directory(paths, spec: list, rel: str):
 # Files render in alphabetical order of their path under SRC; a file with nothing
 # marked `## Extract` emits no section but is still harvested for renames.
 
+# `scoped`/`local` prefixes, and an instance with no name — `scoped instance : C a := ...`,
+# `instance (S : Store a) ...` — are declarations too. Missing them costs more than the item:
+# the scan that finds a docstring's declaration runs past them, so an anonymous instance's
+# docstring is handed to the *next* declaration and any `## Figure` marker between the two is
+# swallowed with it.
 DECL_RE = re.compile(
-    r"^(?:noncomputable\s+)?(def|abbrev|structure|inductive|class|instance)\s+([^\s(:\[{]+)"
+    r"^(?:noncomputable\s+|scoped\s+|local\s+|private\s+)*"
+    r"(def|abbrev|structure|inductive|class|instance)\b\s*([^\s(:\[{]*)"
 )
 # a docstring's opening span that is a pure call — `name(args)` and nothing else —
 # names a figured routine's paper signature explicitly, overriding the derivation

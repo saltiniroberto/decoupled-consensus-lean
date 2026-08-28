@@ -89,9 +89,18 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   abstract `Root` type, its order, genesis's root), `RootComputation` (a block's root from
   its parent and slot), `SGSchedule` (the attestation times `sgfgVoting i r`, no formula
   fixed, bounded to `a_r ≤ sgfgVoting i r < roundStart (r + 1)`) — all in `Model.lean` —
-  and `GoldfishWalk` (`Defs/GoldfishWalk.lean`), the tree and the eligibility condition
-  that `get_head` takes from the layer, with exactly one instance, supplied by the layer
-  whose readings are the protocol's.
+  and two classes for the routines every layer redefines, each with exactly one instance
+  supplied by the layer whose reading is the protocol's: `GoldfishWalk`
+  (`Defs/GoldfishWalk.lean`), the tree and the eligibility condition `get_head` takes from
+  the layer, and `Tick` (`Defs/Tick.lean`), `on_tick` itself.
+
+- **A layer that appends to a routine calls the earlier reading; a layer that inserts writes
+  the routine out.** `Store.onTick` was the SG layer's own lines followed by `Fig2.onTick`
+  while the added line went at one end. It could not stay that once the graded layer's lines
+  had to run *between* the clock and the slot's duties, so `Fig9.onTick` writes the tick out
+  in full — as the draft prints `on_tick` again in the figure of a layer that changes it. What
+  a reading repeats from the layer below is figure content, like `Fig4.getHead` repeating the
+  walk.
   The round's fixed instant is a bare definition, not a field of that class —
   `heightDecisionTime r = roundStart r + 6Δ`, the protocol's `a_r` — because the formula is
   fixed and no instance may move it, and because taking `[Params]` alone lets a routine test

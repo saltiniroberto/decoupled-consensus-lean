@@ -229,7 +229,7 @@ def Γ [Params] (j : Int) (r : Nat) : Int := roundStart r + j * (Params.Δ : Int
 
     The same instant is `t_{rR+1} + 2Δ`, the tick at which the opening slot's confirmation is
     evaluated, so the two actions of that tick compose: the height pair is decided against a
-    confirmation computed in the same tick (`Store.onTick`, `09_Healing.lean`).
+    confirmation computed in the same tick (`Fig9.onTick`, `09_Healing.lean`).
 
     The formula is fixed, so this is a definition and not a field of `SGSchedule` below. That
     class carries the part of the schedule the protocol leaves open, and no instance should be

@@ -343,53 +343,66 @@ abbrev Fig9.goldfishWalk : GoldfishWalk Validator :=
     fork choice over by moving this instance to its own reading, not by adding one. -/
 scoped instance : GoldfishWalk Validator := Fig9.goldfishWalk
 
-/-! ## Figure -/
-/-- `on_tick(Σ, t)`, the protocol's
-    reading: the Goldfish tick, and the three lines the round schedule adds around it.
+/-! ## Figure `on_tick(Σ, t)` -/
+/-- `on_tick(Σ, t)` at this layer: the
+    clock, then the round's three lines, then the slot's two duties.
 
-    The SG root, at `Γ_1 = t_r + Δ`. The round's root is derived once, there, and stored in
-    `Σ.sg_root[r]`; every later reader takes it from the field rather than deriving it again,
-    which is what makes one round have one root.
+    The clock first, as in every reading — `Σ.t` and `Σ.s` are what each line below tests, so
+    an instant is compared against the tick that is running, never the one before it.
 
-    `Fig2.onTick`, which sets the clock and the slot and runs whatever slot duty this instant
-    carries — proposal, Goldfish vote, confirmation.
+    Then the round. The SG root at `Γ_1 = t_r + Δ`: the round's root is derived once, there,
+    and stored in `Σ.sg_root[r]`, and every later reader takes it from the field rather than
+    deriving it again, which is what makes one round have one root. The height pair at the
+    round's action instant: `decide_height_vote` settles what this validator will sign and
+    records it. The attestation at `sgfg_voting(Σ.id, r)`, this validator's own time, which
+    the schedule assumes rather than fixes — the finality pair is decided there, and the
+    round's one combined attestation goes out carrying it, the head `sg_vote` returns, and the
+    height pair settled earlier. That broadcast is the only line in the spec that puts an
+    attestation on the wire.
 
-    The height pair, at the round's action instant `heightDecisionTime r`. `decide_height_vote`
-    settles what this validator will sign for the round and records it.
+    Then the slot, unchanged from `Fig2.onTick`. The round's lines come first because they
+    share instants with the slot's: `Γ_1` is the opening slot's vote time, and the action
+    instant is the tick at which that slot's confirmation is evaluated. A walk run in this
+    tick uses the root stored in this tick.
 
-    The attestation, at `sgfgVoting Σ.id r` — this validator's own time, which the schedule
-    assumes rather than fixes. The finality pair is decided there, and the round's one combined
-    attestation goes out carrying it, the head `sg_vote` returns, and the height pair settled
-    earlier. This is the only line in the spec that reaches the wire with an attestation.
-
-    Which clock each line reads: the first runs before `Fig2.onTick`, so its test sees the
-    clock as the previous tick left it, while the two below it see `t`, just written. `r` is
-    the round of the slot the store held on entry.
+    The reading is written out rather than composed onto `Fig2.onTick`, for the reason
+    `Defs/Tick.lean` gives: a call can only put the new lines wholly before or wholly after,
+    and these go between.
 
     The `[SGSchedule Validator]` binder is for the attestation time. There is no
-    `[GoldfishWalk Validator]` binder: the instance above is in scope where this is elaborated,
-    so this layer's reading is fixed inside it, while the duties below keep their binders and
-    stay generic. -/
-def Store.onTick (S : Store Validator) (t : Int)
-    (isProposer : (s : Nat) → (i : Validator) → Bool)
-    [SGSchedule Validator]
-  : NDREB Validator (Store Validator) := do
-  let mut S:= S
+    `[GoldfishWalk Validator]` binder: the instance above is in scope where this is
+    elaborated, so this layer's fork choice is fixed inside it, while the duties it calls keep
+    their binders and stay generic. -/
+def Fig9.onTick [SGSchedule Validator] (S : Store Validator) (t : Int)
+    (isProposer : (s : Nat) → (i : Validator) → Bool) :
+    NDREB Validator (Store Validator) := do
+  let mut S := S
+  S.t ← t
+  S.s ← (t / (4 * (Δ : Int))).toNat                           -- `s ← ⌊t/(4Δ)⌋`
   let r := round S.s
-  if _ : S.s > 0 ∧  S.t = roundStart r + (Δ: Int) then
+  -- the round's lines
+  if _ : S.s > 0 ∧ S.t = roundStart r + (Δ : Int) then
     S.sgRoot[r] ⇐ S.getSGRoot r
-  S ⇐ Fig2.onTick S t isProposer
-
-  if _ : S.t = heightDecisionTime (round S.s) then
+  if _ : S.t = heightDecisionTime r then
     S ⇐ S.decideHeightVote
-
   if S.t = SGSchedule.sgfgVoting S.id r then
     let {vote := fp, state := S'} := S.decideFinalityVote
     S ← S'
     let sgHead := (← S.sgVote).head
-    broadcast (Message.attestation (Attestation.mk (validator := S.id) (round := r)
-      (head := sgHead) (heightPair := S.heightPair) (finalityPair := fp)))
-
+    let a := Attestation.mk (validator := S.id) (round := r) (head := sgHead)
+      (heightPair := S.heightPair) (finalityPair := fp)
+    broadcast (Message.attestation a)
+  -- then the slot's duties, as the Goldfish layer wrote them
+  if _ : S.s > 0 ∧ S.t = slotStart S.s ∧ isProposer S.s S.id then
+    return (← S.proposeBlock)
+  if _ : S.s > 0 ∧ S.t = slotStart S.s + (Δ : Int) then
+    return (← S.goldfishVote)
   return S
+
+/-- The protocol's tick is this layer's reading: `Tick` (`Defs/Tick.lean`) has exactly one
+    instance, and it lives with the last reading, so whoever drives the clock writes
+    `S.onTick t is_proposer` and gets this. A later layer would take the tick over by moving
+    this instance to its own reading, not by adding one. -/
+scoped instance [SGSchedule Validator] : Tick Validator := ⟨Fig9.onTick⟩
 
 end DC

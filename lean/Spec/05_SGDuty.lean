@@ -12,7 +12,8 @@ that stores one.
 
 `sg_vote` returns the vote and touches nothing. Under the assembled protocol the head it
 returns travels inside the round's one combined attestation, and it is the attestation duty
-that broadcasts — `Store.onTick` in `09_Healing.lean`, at the sending validator's own time.
+that broadcasts — the graded layer's tick, `Fig9.onTick` in `09_Healing.lean`, at the
+sending validator's own time.
 So this file has no line that reaches the wire, and `process_sg_vote` is reached only by a
 receiver's handler.
 

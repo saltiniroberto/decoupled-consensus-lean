@@ -65,6 +65,17 @@ rewriter as the figures, and fall back to mono exactly when they quote Lean.
 
 **The `## Extract` sections live in `lean/Spec/`**, the extractor's input.
 
+## A `scoped` or anonymous instance is a declaration (2026-08-28)
+
+`DECL_RE` used to require the keyword at the start of the line and a name after it, so
+`scoped instance : C α := …` and `instance (S : Store α) …` matched nothing. That cost more
+than the skipped item. The scan that pairs a docstring with its declaration walks forward
+until `DECL_RE` matches, so an unmatched instance handed *its* docstring to the next real
+declaration, and any `## Figure` marker standing between the two was swallowed on the way.
+`Fig9.onTick` sat behind such an instance and never reached the document. The regex now
+accepts `scoped`/`local`/`private` prefixes and an empty name; instances are still ignored
+everywhere downstream.
+
 ## How a superseded routine reads (2026-08-28)
 
 The draft's device for redefining a routine is to print it again in the later figure and say

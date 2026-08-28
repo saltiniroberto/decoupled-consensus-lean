@@ -447,6 +447,48 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   **Nor is `Σ.live_confirmed`**: `Store.updateConfirmation`'s only caller was `Fig2.onTick`'s
   confirmation branch, itself now removed from `02_GoldfishDuties.lean`.
   The three routines carry no docstrings yet.
+- **`on_tick` is late-bound too: `class Tick`** (2026-08-28, Roberto: "we can have an onTick
+  class that we redefine as we go"). `Defs/Tick.lean` carries one field — the tick — and
+  `abbrev Store.onTick` reaches it, so whoever drives the clock writes `S.onTick t is_proposer`
+  and gets whichever reading the assembled protocol has. 09 supplies the instance,
+  `⟨Fig9.onTick⟩`, taking `[SGSchedule Validator]`; the instance binder must sit **before** the
+  value parameters in `Fig9.onTick`, or its type ends `… → [SGSchedule …] → NDREB …` and does
+  not match the field.
+  **Why the reading is written out rather than composed.** A layer that only appends can call
+  the earlier reading — that is what `Store.onTick` did while the SG line went at one end, and
+  the draft's own words for it are "`on_tick` gains one line". The graded layer's lines are not
+  an append: the SG root is stored at `Γ_1`, which is the opening slot's vote time, and the
+  round's action instant is the tick at which that slot's confirmation is evaluated. Which runs
+  first is a protocol decision, and a call can only put the new lines wholly before or wholly
+  after. So `Fig9.onTick` sets the clock, runs the round's three lines, then the slot's two
+  duties — and the draft does the same, printing `on_tick` whole in the figure of a layer that
+  changes it. The repeated Goldfish branches are figure content, like `Fig4.getHead` repeating
+  the walk.
+  **What this fixed.** The old `Store.onTick` tested `Σ.t` for its SG-root line *before*
+  `Fig2.onTick` wrote the clock, so that branch compared against the previous tick's time while
+  the two below it compared against this one, and `r` was the round of the previous tick's slot.
+  Every line now tests the clock this tick wrote.
+  **Two designs declined**, both Roberto's own proposals, and the reasons are worth keeping:
+  per-layer step routines (`goldfishOnTick`, `healingOnTick`) with `Store.onTick` calling them
+  in order — no duplication, but the paper gains routines the draft has no name for, and the
+  tick is the one figure whose content *is* the ordered list of actions; and a class carrying a
+  `List` of steps so each layer conses its own onto the previous layer's — the only shape that
+  genuinely accumulates across files, but `on_tick` then renders as a fold over functions,
+  which says nothing about the protocol, and the step type has to be uniform even though only
+  the Goldfish step wants `is_proposer`. Lean has no way to *merge* instances; an
+  attribute-based collection would accumulate, and its order would be declaration order — the
+  ambiguity the one-instance rule exists to prevent.
+  Checked by `rfl`: `S.onTick t p = Fig9.onTick S t p`, and a theorem taking `[Tick Validator]`
+  quantifies over the reading, which the hard-named `Store.onTick` made impossible.
+- **An anonymous instance hid a figure** (2026-08-28). `extract.py`'s `DECL_RE` matched only
+  a keyword at the start of a line followed by a name, so `scoped instance : C α := …` and
+  `instance (S : Store α) …` were not declarations to it. The damage was not the skipped item:
+  the scan that pairs a docstring with its declaration runs forward until `DECL_RE` matches, so
+  an anonymous instance's docstring was handed to the next real declaration and the
+  `## Figure` marker between them was swallowed. `Fig9.onTick` was the first routine to sit
+  behind one, and it never reached the document. The regex now takes `scoped`/`local`/`private`
+  prefixes and an empty name; the fix adds exactly one routine to the output and changes
+  nothing else.
 - **How the document renders a superseded routine** (2026-08-28, Roberto: "think about how
   to handle the classes we have introduced in extract.py so that the output conveys a similar
   meaning to consensus-1.pdf when the paper says an old function is superseded"). No script

@@ -1,6 +1,7 @@
 import Mathlib.Data.Finset.Union
 import Spec.«03_AvailableConfirmation»
 import Spec.Defs.Nondet
+import Spec.Defs.Tick
 
 /-!
 # The Goldfish duties and store handlers
@@ -69,8 +70,9 @@ every counting site.
 The finality layer extends `process_block` with two lines: the post-state and
 `update_finality`. That reading, `S.processBlock`, is the protocol's; this one is the
 availability layer's — hence `Fig2.processBlock`. Likewise `on_tick`: the SG layer
-extends it with one line — at `t = a_r`, run `sg_vote` — and that reading, `S.onTick`
-(`05_SGDuty.lean`), is the protocol's; this one is this file's, hence `Fig2.onTick`. See
+extends it, and the graded layer again; the protocol's reading is whichever the single
+`Tick` instance supplies (`Defs/Tick.lean`), reached as `S.onTick`. This one is this file's,
+hence `Fig2.onTick`. See
 `01_GoldfishWalk.lean` on the numbered readings.
 
 ## Extract
@@ -220,8 +222,10 @@ def Store.goldfishVote (S : Store Validator)
 /-- Set the clock and the slot, then run whichever of
     the slot's actions this instant is.
 
-    This is the availability layer's reading. The SG layer extends it with one line — at `t = a_r`, run
-    `sg_vote` — and that reading, `S.onTick` (`05_SGDuty.lean`), is the protocol's.
+    This is the availability layer's reading. The SG layer adds one line to it — at `t = a_r`,
+    run `sg_vote` — and the graded layer writes the tick out again with its round lines in
+    place. The protocol's reading is whichever the single `Tick` instance supplies
+    (`Defs/Tick.lean`), reached as `S.onTick`.
 
     `isProposer` is the proposer test taken as a parameter; see the module header. A `NDREB` duty too,
     so whatever an action broadcasts is in the outbox. Each action branch returns its
