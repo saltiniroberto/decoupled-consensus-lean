@@ -460,10 +460,15 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   an append: the SG root is stored at `Γ_1`, which is the opening slot's vote time, and the
   round's action instant is the tick at which that slot's confirmation is evaluated. Which runs
   first is a protocol decision, and a call can only put the new lines wholly before or wholly
-  after. So `Fig9.onTick` sets the clock, runs the round's three lines, then the slot's two
-  duties — and the draft does the same, printing `on_tick` whole in the figure of a layer that
-  changes it. The repeated Goldfish branches are figure content, like `Fig4.getHead` repeating
-  the walk.
+  after. So `Fig9.onTick` sets the clock, runs the round's three lines, then the slot's
+  actions — and the draft does the same, printing `on_tick` whole in the figure of a layer that
+  changes it.
+  **The repeated halves are named, not copied** (Roberto, same day, after seeing the
+  duplication): `Store.setClock`, the two clock assignments every reading begins with, and
+  `Store.goldfishOnTick`, the slot's actions, which reads `Σ.t` and `Σ.s` rather than taking
+  the time so a layer running its own lines first can call it afterwards and both see the same
+  tick. `Fig2.onTick` is now those two calls; `Fig9.onTick` is the same two with the round's
+  three lines between them. Nothing is written twice, and the figures show the layering.
   **What this fixed.** The old `Store.onTick` tested `Σ.t` for its SG-root line *before*
   `Fig2.onTick` wrote the clock, so that branch compared against the previous tick's time while
   the two below it compared against this one, and `r` was the round of the previous tick's slot.

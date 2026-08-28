@@ -218,39 +218,60 @@ def Store.goldfishVote (S : Store Validator)
     return S.processGoldfishVote vote
   return S
 
+/-! ## Figure `set_clock(Σ, t)` -/
+/-- Move the store's clock to `t` and
+    with it the slot, `s = ⌊t/(4Δ)⌋`.
+
+    Every reading of `on_tick` begins here, and every line of every reading tests `Σ.t` and
+    `Σ.s` afterwards, so an instant is always compared against the tick that is running. A
+    layer that adds a line to the tick reuses this rather than writing the two assignments
+    again. -/
+def Store.setClock (S : Store Validator) (t : Int) : Store Validator := Id.run do
+  let mut S := S
+  S.t ← t
+  S.s ← (t / (4 * (Δ : Int))).toNat                            -- `s ← ⌊t/(4Δ)⌋`
+  return S
+
+/-! ## Figure `goldfish_on_tick(Σ)` -/
+/-- The slot actions of this layer:
+    whichever of them the clock now stands at, or nothing.
+
+    The instants are mutually exclusive — distinct multiples of `Δ`: a proposal at `t_s`, a
+    vote at `t_s + Δ` — so at most one branch runs, and a tick at neither instant returns
+    the store having broadcast nothing. Each branch returns its store directly, and
+    discharges its action's instant precondition from its own dependent `if`.
+
+    It reads the clock rather than taking the time, so a layer that runs its own lines first
+    can call it afterwards and both see the same tick. `isProposer` is the proposer test
+    taken as a parameter; see the module header. A `NDREB` duty, so whatever an action
+    broadcasts is in the outbox. -/
+def Store.goldfishOnTick (S : Store Validator)
+    (isProposer : (s : Nat) → (i : Validator) → Bool) [GoldfishWalk Validator] :
+    NDREB Validator (Store Validator) := do
+  let mut S := S
+  if _ : S.s > 0 ∧ S.t = slotStart S.s ∧ isProposer S.s S.id then
+    return (← S.proposeBlock)
+  if _ : S.s > 0 ∧ S.t = slotStart S.s + (Δ : Int) then
+    return (← S.goldfishVote)
+  return S
+
 /-! ## Figure `on_tick(Σ, t)` -/
-/-- Set the clock and the slot, then run whichever of
+/-- Set the clock, then run whichever of
     the slot's actions this instant is.
 
     This is the availability layer's reading. The SG layer adds one line to it — at `t = a_r`,
-    run `sg_vote` — and the graded layer writes the tick out again with its round lines in
-    place. The protocol's reading is whichever the single `Tick` instance supplies
-    (`Defs/Tick.lean`), reached as `S.onTick`.
+    run `sg_vote` — and the graded layer writes the tick out again with its round lines
+    between the two calls below. The protocol's reading is whichever the single `Tick`
+    instance supplies (`Defs/Tick.lean`), reached as `S.onTick`.
 
-    `isProposer` is the proposer test taken as a parameter; see the module header. A `NDREB` duty too,
-    so whatever an action broadcasts is in the outbox. Each action branch returns its
-    store directly: the three instants are mutually exclusive — distinct multiples of
-    `Δ`: a proposal at `t_s`, a vote at `t_s + Δ`, a confirmation evaluation at
-    `t_s + 2Δ` — so at most one branch runs, and a tick at no action instant returns the
-    re-clocked store having broadcast nothing.
-
-    Each branch discharges its action's instant precondition from its own dependent `if` —
-    the clock was written just above, so `S.t` reduces to `t` whatever came before. The
-    confirmation branch writes its `t_s + 2Δ` instant as `t_{s−1} + 6Δ` — equal whenever
-    `s > 0`, the evaluation of the *previous* slot, and the form `update_confirmation`'s
-    precondition wants. -/
-def Fig2.onTick (S : Store Validator) (t : Int)
-    (isProposer : (s : Nat) → (i : Validator) → Bool)
-  [GoldfishWalk Validator]
-    : NDREB Validator (Store Validator) := do
+    Both halves are named so that a later reading can reuse them: what a layer inserts goes
+    between them, which a call to this routine could not express. -/
+def Fig2.onTick [GoldfishWalk Validator] (S : Store Validator) (t : Int)
+    (isProposer : (s : Nat) → (i : Validator) → Bool) :
+    NDREB Validator (Store Validator) := do
   let mut S := S
-  let s := (t / (4 * (Δ : Int))).toNat                         -- `s ← ⌊t/(4Δ)⌋`
-  S.t ← t
-  S.s ← s
-  if _ : s > 0 ∧ t = slotStart s ∧ isProposer s S.id then
-    return (← S.proposeBlock)
-  if _ : s > 0 ∧ t = slotStart s + (Δ : Int) then
-    return (← S.goldfishVote)
+  S ← S.setClock t
+  S ⇐ S.goldfishOnTick isProposer
   return S
 
 end DC

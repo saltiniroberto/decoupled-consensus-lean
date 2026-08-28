@@ -95,12 +95,14 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   the layer, and `Tick` (`Defs/Tick.lean`), `on_tick` itself.
 
 - **A layer that appends to a routine calls the earlier reading; a layer that inserts writes
-  the routine out.** `Store.onTick` was the SG layer's own lines followed by `Fig2.onTick`
-  while the added line went at one end. It could not stay that once the graded layer's lines
-  had to run *between* the clock and the slot's duties, so `Fig9.onTick` writes the tick out
-  in full — as the draft prints `on_tick` again in the figure of a layer that changes it. What
-  a reading repeats from the layer below is figure content, like `Fig4.getHead` repeating the
-  walk.
+  the routine out, from named halves.** `Store.onTick` was the SG layer's own lines followed by
+  `Fig2.onTick` while the added line went at one end. That could not stay once the graded
+  layer's lines had to run *between* the clock and the slot's actions. So the tick's two halves
+  are routines of their own — `set_clock`, which every reading begins with, and
+  `goldfish_on_tick`, the slot's actions, which reads the clock rather than taking the time —
+  and each layer's reading calls them with its own lines in place. `Fig9.onTick` is three
+  lines and a call at each end. The draft's answer is to print `on_tick` whole again; this is
+  that, with the repeated halves named instead of copied.
   The round's fixed instant is a bare definition, not a field of that class —
   `heightDecisionTime r = roundStart r + 6Δ`, the protocol's `a_r` — because the formula is
   fixed and no instance may move it, and because taking `[Params]` alone lets a routine test

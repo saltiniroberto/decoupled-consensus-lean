@@ -360,14 +360,15 @@ scoped instance : GoldfishWalk Validator := Fig9.goldfishWalk
     height pair settled earlier. That broadcast is the only line in the spec that puts an
     attestation on the wire.
 
-    Then the slot, unchanged from `Fig2.onTick`. The round's lines come first because they
-    share instants with the slot's: `Γ_1` is the opening slot's vote time, and the action
-    instant is the tick at which that slot's confirmation is evaluated. A walk run in this
-    tick uses the root stored in this tick.
+    Then the slot's actions, `goldfish_on_tick`, the Goldfish layer's own. The round's lines
+    come first because they share instants with them: `Γ_1` is the opening slot's vote time,
+    and the action instant is the tick at which that slot's confirmation is evaluated. A walk
+    run in this tick uses the root stored in this tick.
 
     The reading is written out rather than composed onto `Fig2.onTick`, for the reason
     `Defs/Tick.lean` gives: a call can only put the new lines wholly before or wholly after,
-    and these go between.
+    and these go between. What it reuses instead are the two halves that reading is itself
+    made of, so nothing is written twice.
 
     The `[SGSchedule Validator]` binder is for the attestation time. There is no
     `[GoldfishWalk Validator]` binder: the instance above is in scope where this is
@@ -377,8 +378,7 @@ def Fig9.onTick [SGSchedule Validator] (S : Store Validator) (t : Int)
     (isProposer : (s : Nat) → (i : Validator) → Bool) :
     NDREB Validator (Store Validator) := do
   let mut S := S
-  S.t ← t
-  S.s ← (t / (4 * (Δ : Int))).toNat                           -- `s ← ⌊t/(4Δ)⌋`
+  S ← S.setClock t
   let r := round S.s
   -- the round's lines
   if _ : S.s > 0 ∧ S.t = roundStart r + (Δ : Int) then
@@ -392,11 +392,7 @@ def Fig9.onTick [SGSchedule Validator] (S : Store Validator) (t : Int)
     let a := Attestation.mk (validator := S.id) (round := r) (head := sgHead)
       (heightPair := S.heightPair) (finalityPair := fp)
     broadcast (Message.attestation a)
-  -- then the slot's duties, as the Goldfish layer wrote them
-  if _ : S.s > 0 ∧ S.t = slotStart S.s ∧ isProposer S.s S.id then
-    return (← S.proposeBlock)
-  if _ : S.s > 0 ∧ S.t = slotStart S.s + (Δ : Int) then
-    return (← S.goldfishVote)
+  S ⇐ S.goldfishOnTick isProposer                              -- then the slot's actions
   return S
 
 /-- The protocol's tick is this layer's reading: `Tick` (`Defs/Tick.lean`) has exactly one
