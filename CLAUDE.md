@@ -36,8 +36,8 @@ pointer is `Analysis/AccountableSafety.lean`'s, to the old proof.
 
 `deps/lean-sts` is a submodule of <https://github.com/saltiniroberto/lean-sts>, a separate
 project. This one will use its `StsMultisetLog` flavour, via the path `require` in
-[lakefile.toml](lakefile.toml); nothing imports it yet — the sts wiring is future work,
-and the duties' `NDREB.outcomes` boundary is shaped for it.
+[lakefile.toml](lakefile.toml). `lean/Sts.lean` is what imports it — the spec placed under
+the framework's `Protocol`, its own `lean_lib`, imported by nothing in `Spec/`.
 
 **Never push to it.** A push from inside a submodule goes to that repository, not this one.
 `.claude/hooks/protect-lean-sts.py` denies the tool call rather than warning about it, and

@@ -986,55 +986,38 @@ works but duplicates the sequence in a `def`.
   `doElem`, not a term macro: the enclosing `do` lifts a user's `(← …)` out of a term
   before the macro expands, and the bound variable escapes its binder.
 
-## In flight, 2026-08-28 (the tree is red)
+## Open, as of 2026-08-28
 
-Uncommitted, all in `05_SGDuty.lean`: Roberto's `Store.sgVote` now returns the vote
-rather than broadcasting it — the `fgVote` move one layer over — and `Fig5.onTick` is
-commented out on his word. Three things follow, none yet done:
+Questions raised while the healing layer went in, and not yet ruled on. Each is a protocol
+question, not a rendering one.
 
-- `sgVote`'s result type reads `NDREB (SGVote Validator)`, which is malformed — `NDREB`
-  takes the validator type *and* the payload. On the shape it now has (no broadcast, no
-  `process_sg_vote`, no store touched) it needs no monad at all: `SGVote Validator`, pure.
-  Its docstring's "A `NDREB` duty" paragraph goes with it.
-- `09_Healing.lean`'s `Store.onTick` calls the commented-out `Fig5.onTick`.
-- Nothing broadcasts an SG vote or an attestation any more: with `sgVote` and `fgVote`
-  both returning votes, and `Fig5.onTick` gone, the duty that assembles and sends is
-  missing from the spec. It is presumably the attestation duty at `sgfgVoting i r`
-  (`SGSchedule`), still unwritten.
+1. **`get_sg_root`'s fallback when no grade-3 block exists.** It answers the fork-choice
+   root, which is also what it answers when it refuses a proposal — so in exactly the rounds
+   healing exists for, no root is adopted. Roberto's instinct was the SG majority fork choice
+   instead.
+2. **`apply_G0_veto` tests `S.G0 r B`, not `B'`.** As written it drops `B` when `B` itself
+   has grade 0 and anything conflicts with it, rather than when the conflicting block does.
+3. **`Σ.latest_confirmed` has no writer.** The rule that advanced it — only when the new
+   result descends from the old — went with `Fig3.updateConfirmation`. One `if` in
+   `Store.updateConfirmation` restores it, and the draft's own figure has it.
+4. **`Σ.root_proposal[r]` has no writer**, so `get_sg_root` always takes its fallback
+   branch. Two figures would fill it: the proposer's `get_proposal_root` call, which puts a
+   root in its opening block, and the `process_block` line that registers the first round-`r`
+   opening block's root.
+5. **`SpecM/` is a second tree inside the lake build**, so its warnings — and any future
+   `sorry` — ride along with the spec's.
+6. **The order of the round's lines against the slot's**, now that `Fig9.onTick` states it:
+   the round's three lines run before `goldfish_on_tick`, so a walk in this tick uses the
+   root stored in this tick. Stated, not argued for.
 
-Design questions open at this point, in the order they were raised:
-
-1. **`get_head`'s parameters.** `k` is derivable (`Σ.s - 1` at every call site) and can
-   go; `votes` cannot, since the proposer passes every held vote and the voter passes the
-   freeze-filtered set merged with block-carried votes — one instance cannot tell them
-   apart. Roberto's better proposal: **instance the tree, not the head** — a class field
-   `getGoldfishTree : Store → NDRE (BlockTree …)`, with `get_head` a plain `def` reading
-   `S.goldfishForkChoice tree votes s`. That also puts `get_head` back in `dc.pdf`, the
-   extractor rendering figure routines from `def` only. **Blocked on one ruling**:
-   `Fig7.getHead` differs in *two* ways — the filtered tree and the height-clause
-   eligibility — so a tree-only class cannot express it; and `Fig9.getHead`, now the
-   protocol's reading, has already dropped both (it calls `goldfishForkChoice`, whose
-   condition is `Fig1.goldfishEligible`, over `Σ.T`). Deliberate or a slip?
-2. **`majority_fork_choice` taking a `BlockTree`**, which would let 07 build one pair for
-   both walks and `get_filtered_block_tree` return the pair.
-3. **`get_sg_root`'s fallback when no grade-3 block exists** — Roberto's instinct: the SG
-   majority fork choice. Today it answers `⊥` *and* refuses the proposal, which disables
-   adoption in exactly the rounds healing is for.
-4. **`apply_G0_veto` tests `S.G0 r B`, not `B'`** — as written it drops `B` when `B`
-   itself has grade 0 and anything conflicts with it.
-5. **`Σ.latest_confirmed` has no writer** and 07's Extract sentence about available
-   confirmation is false twice over (see the confirmation entry under Decisions).
-6. **`experiments/SpecM/`** is a second tree inside the lake build, so its warnings and
-   any future `sorry` ride along with the spec's.
-
-Still queued from 2026-08-25, untouched: raise `Params.R_ge` to `2 ≤ R`; rename the
+Queued from 2026-08-25 and still untouched: raise `Params.R_ge` to `2 ≤ R`, and rename the
 raising set-builder's `∈ᴹ` to `∈ᵉ`.
 
 ## Next
 
-0. **The spec is the source of truth, complete over its seven figures plus the
-   finality-vote rules and the healing functions, and everything builds** (`make check`
-   green). Open, in order of readiness:
+0. **The spec is the source of truth, complete over the protocol's figures, the
+   finality-vote rules and the healing layer, placed under the sts framework, and
+   everything builds** (`make check` green). Open, in order of readiness:
    - **Instructed by Roberto 2026-08-25, not yet executed** (his rulings on the healing
      import's crossing decisions — see the healing entry under Decisions):
      1. raise `Params.R_ge` to `2 ≤ R` (the healing source's schedule requires it; it
@@ -1049,14 +1032,16 @@ raising set-builder's `∈ᴹ` to `∈ᵉ`.
      4. rename the raising set-builder's `∈ᴹ` to `∈ᵉ` — `e` for exception (`Notation.lean`;
         the typing table in `doc/guide.md`, `doc/style.md`, `doc/nondeterminism.md` and
         the style sheet here mention the old spelling).
-   - **the healing writers** (2026-08-25): `09_Healing.lean` holds the scores, grades and
-     round-root functions, but the four store fields they read are written by no routine —
-     the `on_tick`/`on_attestation` handler lines, the `on_block` proposal-root
-     registration, the block's proposal-root field, and the `action_root[·]` field all
-     await their figures (see the healing entry under Decisions).
-   - **the sts wiring**: a step consumes a duty as `res ∈ (….outcomes)`; `deps/lean-sts`'s
-     `StsMultisetLog` is the target, and the framework-layer audit (its `Execution.lean`
-     and `Schedule.lean`) is owed before trusting it.
+   - **the healing writers**, what is left of them (2026-08-25). `Σ.sg_root[r]` is written,
+     at `Γ_1`, by `Fig9.onTick`; the head bookkeeping the scores read is the stored SG votes,
+     which `process_sg_vote` writes; and `action_root[·]` is moot, the two-step reading having
+     merged into `get_sg_majority_start`. What is left is `Σ.root_proposal[r]`: the proposer's
+     `get_proposal_root` call and the `process_block` line that registers an opening block's
+     root.
+   - **the sts wiring is in** (`lean/Sts.lean`, 2026-08-28): the handlers run on message
+     reception and `on_tick` on a tick. What is owed is a **model** — which network and
+     adversary assumptions this protocol is stated under — and the framework-layer audit of
+     `deps/lean-sts`'s own `Execution.lean` and `Schedule.lean`.
    - **`Analysis/` beyond the accountable-safety statement**: "the exception never fires"
      as `.error ∉ …` on coherent stores, "the walk does not depend on its picks" as a
      singleton outcome set. The old `coherence-invariant` branch predates this store and
@@ -1064,9 +1049,9 @@ raising set-builder's `∈ᴹ` to `∈ᵉ`.
    - **Open questions awaiting Roberto's call**: renaming the `Fig<n>.…` declaration
      prefixes. (Ruled: `R ≥ 2` — pending above; the duties read `Σ.id`, no identity
      parameter — done 2026-08-25.)
-   - **The attestation schedule is stated but unconsumed** (2026-08-25): the class
-     `SGSchedule` exists (see Decisions); no duty dispatches on `sgfgVoting i r` yet,
-     and the formula is deferred on Roberto's word.
+   - **The attestation schedule is consumed** (2026-08-28): `Fig9.onTick` broadcasts the
+     round's combined attestation at `sgfg_voting(Σ.id, r)`. The formula stays deferred on
+     Roberto's word — `SGSchedule` bounds the time and does not place it.
    - **The optimized Goldfish storage lives on the branch `optimized-goldfish`** (see
      the store decisions): whether it returns here, and whether the SG votes take the
      same treatment and meet the healing `head[·]`/`equiv[·]` bookkeeping (Roberto: "the
@@ -1074,5 +1059,7 @@ raising set-builder's `∈ᴹ` to `∈ᵉ`.
      rendering of that branch's `merge_view`/`GoldfishView` machinery is also undecided
      (Roberto: "for later").
 1. **The extractor workstream** (`extract/`): conventions in `extract/README.md`; the
-   spec drives the structure, all eight figure blocks render.
-2. `README.md` is refreshed before a push, not per commit; a push is long overdue.
+   spec drives the structure, and all eleven figure blocks render with no overfull box.
+2. `README.md` is refreshed before a push, not per commit — refreshed 2026-08-28, along with
+   `CLAUDE.md`'s submodule paragraph, `doc/README.md`'s file rows and `doc/sts.md`, all of
+   which had gone stale against the layer as assembled.

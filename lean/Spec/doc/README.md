@@ -5,15 +5,15 @@ part of the protocol; read them in this order, which is dependency order:
 
 | File | What it specifies |
 | --- | --- |
-| [`01_GoldfishWalk.lean`](../01_GoldfishWalk.lean) | the fork-choice walk: `best_child`, `ghost`, the Goldfish fork choice |
+| [`01_GoldfishWalk.lean`](../01_GoldfishWalk.lean) | the fork-choice walk: `best_child`, `ghost`, the Goldfish fork choice, and `get_head`, written once over what each layer supplies |
 | [`06_StateTransition.lean`](../06_StateTransition.lean) | the chain state: how processed attestations justify and finalize heights |
-| [`03_AvailableConfirmation.lean`](../03_AvailableConfirmation.lean) | `update_confirmation`: what a slot confirms |
+| [`03_AvailableConfirmation.lean`](../03_AvailableConfirmation.lean) | what a slot confirms: the confirmation walk, and the two routines that run it and record its answer |
 | [`02_GoldfishDuties.lean`](../02_GoldfishDuties.lean) | the slot duties: `on_tick`, `propose_block`, `goldfish_vote`, the block and vote handlers |
 | [`04_SGForkChoice.lean`](../04_SGForkChoice.lean) | `latest`, `sg_support`, the majority fork choice |
-| [`05_SGDuty.lean`](../05_SGDuty.lean) | `sg_vote`, its handler, and the protocol's `on_tick` |
-| [`07_FGStore.lean`](../07_FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, the protocol's `get_head` |
+| [`05_SGDuty.lean`](../05_SGDuty.lean) | `sg_vote`, the head a validator votes for its round, and the handler that stores one |
+| [`07_FGStore.lean`](../07_FGStore.lean) | the finality store: viability, `update_finality`, the filtered tree, and this layer's fork choice |
 | [`08_FinalityVote.lean`](../08_FinalityVote.lean) | how a validator fills the attestation it signs |
-| [`09_Healing.lean`](../09_Healing.lean) | healing: the support scores and grades, and the round-root functions (proposal, lower, SG, walk, action) |
+| [`09_Healing.lean`](../09_Healing.lean) | healing: the support scores and grades, the round-root functions, and the layer as assembled — the tree every walk descends, and `on_tick` |
 
 What the algorithms are written in terms of sits in [`Defs/`](../Defs):
 
@@ -39,6 +39,10 @@ What the algorithms are written in terms of sits in [`Defs/`](../Defs):
   mechanics live.
 - [sts.md](sts.md) — the duty boundary: the spec is shaped to be consumed as a state
   transition system, and this page says by what and how.
+
+Outside `lean/Spec/`: [`lean/Sts.lean`](../../Sts.lean) places the spec under the
+transition-system framework — which routine runs on a tick, and which handler runs on each
+kind of message received. [sts.md](sts.md) is its design page.
 
 The running record behind these pages is `CONTEXT.md` at the repository root — the dated
 entries and the section "The `DC` style sheet". Where a page here and

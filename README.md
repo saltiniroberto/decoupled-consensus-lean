@@ -6,11 +6,15 @@ It lives in [`lean/Spec/`](lean/Spec/) — one algorithm file per part of the pr
 the routines read the way they would in a paper:
 
 ```lean
-def Store.sgVote (i : Validator) (S : Store Validator) … := do
-  let r := round S.s
-  let vote := SGVote.mk (validator := i) (round := r) (head := some S.liveConfirmed)
-  broadcast (Message.sgVote vote)
-  return S.processSGVote vote
+def Store.goldfishOnTick (S : Store Validator)
+    (isProposer : (s : Nat) → (i : Validator) → Bool) [GoldfishWalk Validator] :
+    NDREB Validator (Store Validator) := do
+  let mut S := S
+  if _ : S.s > 0 ∧ S.t = slotStart S.s ∧ isProposer S.s S.id then
+    return (← S.proposeBlock)
+  if _ : S.s > 0 ∧ S.t = slotStart S.s + (Δ : Int) then
+    return (← S.goldfishVote)
+  return S
 ```
 
 Every definition carries a docstring saying what it means, so the files can be read top
@@ -24,6 +28,9 @@ are not standard pseudocode — the failure-propagating `←`, the nondeterminis
   pages: [nondeterminism](lean/Spec/doc/nondeterminism.md),
   [naming](lean/Spec/doc/naming.md), [style](lean/Spec/doc/style.md),
   [sts](lean/Spec/doc/sts.md).
+- [`lean/Sts.lean`](lean/Sts.lean) — the spec placed under the transition-system
+  framework: which routine runs on a tick, and which handler runs on each kind of message
+  received.
 - [`lean/Analysis/`](lean/Analysis/) — results stated against the spec (accountable
   safety, so far as a statement).
 
@@ -32,7 +39,8 @@ Also here:
 - [`extract/`](extract/README.md) — `make extract` renders the spec into a paper-shaped
   PDF, `extract/out/dc.pdf`.
 - [`deps/lean-sts`](https://github.com/saltiniroberto/lean-sts) — the transition-system
-  framework the spec's duty boundary is shaped for; nothing imports it yet.
+  framework, a submodule. `lean/Sts.lean` places the spec under its `StsMultisetLog`
+  flavour; no network or adversary model is instantiated yet.
 
 ## Building
 
