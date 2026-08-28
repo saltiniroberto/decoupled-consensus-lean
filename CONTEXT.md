@@ -754,21 +754,24 @@ Each entry: what stands, why, and what was declined. Dates are when the call was
   `Store.lean`; the duty monad sits in `Nondet.lean` (its own `Duty.lean` said nothing —
   merged; `Nondet` imports `Store`, acyclic).
 
-- **`lean/SpecM/` is a frozen copy of `lean/Spec/`** (2026-08-27), taken at Roberto's
+- **`experiments/SpecM/` is a frozen copy of `lean/Spec/`** (2026-08-27), taken at Roberto's
   word so that the experiment of threading the store through a monad has somewhere to
   happen: `Spec` is never the place that work is done. **Taken from the working tree at
   commit `c0ef96e` ("BlockTree: a root and the blocks a walk may descend", branch
   `healing`), with the then-uncommitted edits to `01_GoldfishWalk`, `03_AvailableConfirmation`, `04_SGForkChoice`, `07_FGStore`, `08_FinalityVote`, `09_Healing` and `Defs/Model` in place** — so the
   source state is that commit plus those edits, and the bytes of it are what the frozen
   copy's own commit records. The copy is byte-identical to its source except on its
-  `import` lines, which name `SpecM.…` (measured with `diff -r`); `lean/SpecM.lean` opens
+  `import` lines, which name `SpecM.…` (measured with `diff -r`); `experiments/SpecM.lean` opens
   with a note saying so. Only the Lean files were copied — `Spec/doc/` is not duplicated. It is its own `lean_lib` in `lakefile.toml`, in `defaultTargets`, and
-  the `orphans` target excludes its paths. Both libraries define into namespace `DC`, so
+  the `orphans` target excludes its paths. **It moved out of `lean/` on 2026-08-28**, to
+  its own `srcDir = "experiments"`, so that nothing under `lean/` is experimental; the
+  module names are unchanged, Lake deriving a path from the module name and the lib's
+  `srcDir` alone, and `orphans` now walks both directories. Both libraries define into namespace `DC`, so
   no file may import from both — `Analysis` imports `Spec`, and stays there. Nothing of
   the monad experiment is written yet.
 
 - **The store-as-monad experiment, in `SpecM/` only** (2026-08-28). Two abbrevs in
-  `SpecM/Defs/Store.lean`: `DRES Validator α` is `StateT (Store Validator) DRE α`, and
+  `experiments/SpecM/Defs/Store.lean`: `DRES Validator α` is `StateT (Store Validator) DRE α`, and
   `DRS Validator α` is `StateM (Store Validator) α` for a rule that threads the store but
   cannot fail — the letter continues the effect inventory, `S` for the store as `B` in
   `NDREB` is for the broadcasts. `raising : DRS → DRES` carries the second into the first.
@@ -1021,8 +1024,8 @@ Design questions open at this point, in the order they were raised:
    itself has grade 0 and anything conflicts with it.
 5. **`Σ.latest_confirmed` has no writer** and 07's Extract sentence about available
    confirmation is false twice over (see the confirmation entry under Decisions).
-6. **`lean/SpecM/`** is a second tree inside the lake build, so its warnings and any
-   future `sorry` ride along with the spec's.
+6. **`experiments/SpecM/`** is a second tree inside the lake build, so its warnings and
+   any future `sorry` ride along with the spec's.
 
 Still queued from 2026-08-25, untouched: raise `Params.R_ge` to `2 ≤ R`; rename the
 raising set-builder's `∈ᴹ` to `∈ᵉ`.

@@ -32,15 +32,21 @@ name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
 
-# A frozen copy of `Spec` as it stood on 2026-08-27 -- the working tree at commit c0ef96e
-# plus the uncommitted spec edits of that moment. Root `SpecM`, same `srcDir`, so
-# `SpecM.Defs.Store` is `lean/SpecM/Defs/Store.lean`. It is where the experiment of threading
-# the store through a monad is carried out; `Spec` itself is not touched by that work. The
-# copy differs from its source only in the module names its `import` lines use. Both libraries
-# define into namespace `DC`, so no file may import from both.
+# A copy of `Spec`, taken 2026-08-27 from the working tree at commit c0ef96e plus the
+# uncommitted spec edits of that moment. It is where the experiment of threading the store
+# through a monad is carried out; `Spec` itself is not touched by that work.
+#
+# It has its own `srcDir`, `experiments`, so that nothing under `lean/` is experimental:
+# `SpecM.Defs.Store` is `experiments/SpecM/Defs/Store.lean`. Lake derives a module's path
+# from its name and the lib's `srcDir` and nothing else, so the directory under `srcDir`
+# still repeats the module root.
+#
+# The copy differs from its source only in the module names its `import` lines use, apart
+# from the experiment itself. Both libraries define into namespace `DC`, so no file may
+# import from both.
 [[lean_lib]]
 name = "SpecM"
-srcDir = "lean"
+srcDir = "experiments"
 globs = ["SpecM", "SpecM.+"]
 
 # The boundary to the sts framework: the specification above placed under

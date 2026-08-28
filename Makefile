@@ -23,7 +23,7 @@ help:
 	@echo
 	@echo 'make cache      - fetch prebuilt Mathlib artefacts (do this before a first build)'
 	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
-	@echo 'make orphans    - find .lean files under lean/ that no lean_lib glob claims'
+	@echo 'make orphans    - find .lean files in a srcDir that no lean_lib glob claims'
 	@echo 'make build      - build this project'
 	@echo 'make extract    - render the spec into a paper-shaped PDF (extract/out/dc.pdf)'
 	@echo 'make submodules - report the pinned revision of each submodule'
@@ -35,19 +35,21 @@ check: nodecide orphans sorry build
 # outstanding count reported instead.
 dev: nodecide orphans sorries build
 
-# A .lean file under lean/ that no lean_lib glob claims is always a mistake: Lake never reads
-# it, so it can be stale or outright broken while every other target stays green. That has
-# happened -- an editor tab left open on a path two layout moves out of date was saved and
-# recreated a whole stale directory, invisible to the build.
+# A .lean file in a source directory that no lean_lib glob claims is always a mistake: Lake
+# never reads it, so it can be stale or outright broken while every other target stays green.
+# That has happened -- an editor tab left open on a path two layout moves out of date was
+# saved and recreated a whole stale directory, invisible to the build.
+#
+# Both srcDirs are walked: `lean` for Spec/Analysis/Sts, `experiments` for SpecM.
 orphans:
-	@bad=`find lean -name '*.lean' \
+	@bad=`find lean experiments -name '*.lean' \
 	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' \
-	    ! -path 'lean/SpecM.lean' ! -path 'lean/SpecM/*' \
 	    ! -path 'lean/Analysis.lean' ! -path 'lean/Analysis/*' \
-	    ! -path 'lean/Sts.lean'`; \
+	    ! -path 'lean/Sts.lean' \
+	    ! -path 'experiments/SpecM.lean' ! -path 'experiments/SpecM/*'`; \
 	if [ -n "$$bad" ]; then \
 		echo "$$bad"; \
-		echo 'FAIL: .lean under lean/ claimed by no lean_lib glob in lakefile.toml'; \
+		echo 'FAIL: .lean in a srcDir claimed by no lean_lib glob in lakefile.toml'; \
 		exit 1; \
 	else \
 		echo 'no orphaned .lean files'; \
