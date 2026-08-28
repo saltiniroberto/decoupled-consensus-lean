@@ -29,10 +29,6 @@ are not standard pseudocode — the failure-propagating `←`, the nondeterminis
 
 Also here:
 
-- [`experiments/SpecM/`](experiments/SpecM/) — a copy of the spec taken on 2026-08-27,
-  where the store is threaded through a monad instead of being passed to each routine and
-  handed back. **It is not the specification**: read `lean/Spec/` for that. It builds with
-  everything else, so `make check` covers it.
 - [`extract/`](extract/README.md) — `make extract` renders the spec into a paper-shaped
   PDF, `extract/out/dc.pdf`.
 - [`deps/lean-sts`](https://github.com/saltiniroberto/lean-sts) — the transition-system
