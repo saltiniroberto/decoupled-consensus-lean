@@ -45,6 +45,23 @@ Also here:
   such as that a message sitting in someone's view really was sent to them.
   [`lean/Sts.lean`](lean/Sts.lean) plugs this spec into it.
 
+## Finding the handler for an arriving message
+
+[`lean/Sts.lean`](lean/Sts.lean) is where an arriving message reaches its handler. The
+chain from a message kind to the routine that consumes it is three steps:
+
+1. `protocol` is the framework's `Protocol` record. Its `step` field defers to `reactions`.
+2. `reactions` has one arm per framework event. The `.recv m` arm is the arriving message;
+   it calls `Store.receive`.
+3. `Store.receive` matches on the kind of wire object and names the routine — a block goes
+   to `Store.processBlock` ([`07_FGStore.lean`](lean/Spec/07_FGStore.lean)), a Goldfish
+   vote to `Store.processGoldfishVote`
+   ([`02_GoldfishStore.lean`](lean/Spec/02_GoldfishStore.lean)), an attestation to
+   `Store.processSGVote` ([`05_SGDuty.lean`](lean/Spec/05_SGDuty.lean)).
+
+The other two events are shorter: `.tick` runs `Store.onTick`
+([`11_Duties.lean`](lean/Spec/11_Duties.lean)), and `.wake` leaves the store alone.
+
 ## Building
 
     make            # list the available targets
