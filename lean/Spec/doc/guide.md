@@ -87,6 +87,34 @@ The outbox becomes visible only at the boundary where a duty's overall effect is
 `(S.onTick t p).outcomes` is the set of possible results, each a final store together
 with everything broadcast on the way to it.
 
+## Finding the routine that handles a message
+
+The figure files say what each routine does, not when it runs. That is one file outside
+`Spec/`: [`lean/Sts.lean`](../../Sts.lean), which places the spec under the
+transition-system framework. To get from "an attestation arrives" to the routine that
+consumes it, read `Store.receive` there:
+
+```lean
+def Store.receive (S : Store Validator) (m : Message Validator) : NDRE (Store Validator) :=
+  match m with
+  | .block B => S.processBlock B
+  | .gfVote vote => pure (S.processGoldfishVote vote)
+  | .attestation a => pure (S.processSGVote a)
+```
+
+`match m with` is a case analysis on which kind of wire object `m` is, one line per kind,
+and each line names the routine that handles it: `S.processBlock B`
+(`07_FGStore.lean`), `S.processGoldfishVote vote` (`02_GoldfishStore.lean`),
+`S.processSGVote a` (`05_SGDuty.lean`). `pure` lifts a deterministic answer into `NDRE`,
+the return type the three arms share — `processBlock` picks, the other two do not.
+
+The two definitions below it carry the same lookup for the rest. `reactions` has one arm
+per framework event: `.recv m` calls `Store.receive`, `.tick` runs `S.onTick`
+(`11_Duties.lean`), and `.wake` returns the store unchanged. `protocol` is the record the
+framework consumes, and its step relation is `reactions`.
+
+[sts.md](sts.md) is the design page for that boundary.
+
 ## Small things you will bump into
 
 **`⊥` and `Option`.** The spec writes `⊥` for an absent block or height. In Lean such a
