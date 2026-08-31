@@ -34,7 +34,6 @@ are not standard pseudocode — the failure-propagating `←`, the nondeterminis
 - [`lean/Sts.lean`](lean/Sts.lean) — the spec placed under the transition-system
   framework: which routine runs on a tick, and which handler runs on each kind of message
   received.
-
 Also here:
 
 - [`extract/`](extract/README.md) — `make extract` renders the spec into a paper-shaped

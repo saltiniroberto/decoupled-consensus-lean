@@ -20,8 +20,10 @@ and the extractor does not read it, so no line of it reaches the document.
 Three definitions:
 
 - **`Store.receive`** sends each wire object to its handler — a block to `process_block`, a
-  Goldfish vote to `process_goldfish_vote`, an SG vote to `process_sg_vote`. This is what
-  makes the handlers handlers: each is reached here and nowhere else, and no duty calls one.
+  Goldfish vote to `process_goldfish_vote`, an attestation to `process_sg_vote`. This is
+  what makes the handlers handlers: each is reached here and nowhere else; the one duty
+  that touches a handler is the tick's attestation step, which processes its own
+  attestation as the protocol writes it.
 - **`reactions`** is the set of results available on an event. A `tick` runs `on_tick`,
   whose outcomes may differ because a walk picks, so it is a set; the other events are
   deterministic.
@@ -29,12 +31,10 @@ Three definitions:
 
 ## Four decisions the wiring had to take
 
-- **An arriving attestation runs `process_sg_vote`** on the vote it carries. The round's
-  head travels only inside an attestation, `sg_vote` having stopped broadcasting, so a
-  receiver that ignored attestations would never learn a head. A bare `Message.sgVote` runs
-  the same handler and nothing honest sends one.
-- **One tick per unit of the spec's clock**: a tick reading `r` is the instant `r`, and
-  `Σ.t = -1` until the first. Ticks on a `Δ` grid would be a stronger model, and would miss
+- **An arriving attestation runs `process_sg_vote`** — the pool holds whole attestations,
+  and there is no standalone SG-vote message.
+- **One tick per unit of the spec's clock**: a tick reading `r` is the instant `r`
+  (`Σ.t = Σ.s = 0` initially). Ticks on a `Δ` grid would be a stronger model, and would miss
   `sgfg_voting i r`, which `SGSchedule` bounds but does not place.
 - **A raise is not a step.** Only successful outcomes are reactions. Since the framework
   forbids a stuck protocol, the relation admits one fallback where nothing succeeds — the
@@ -73,6 +73,11 @@ not been read against what this protocol needs.
 
 And what belongs to a model rather than to the spec, whenever one lands: delivery and its
 timing — `Δ` is a constant here, and that objects arrive within it is a fact about
-executions; the adversary; proposer assignment (`on_tick` takes the test as a parameter);
+executions; the adversary; how the proposer assignment is drawn — the assignment itself is
+ambient (`Proposers`, `Model.lean`), its choice a model's;
 and relay — "an honest node relays every object it processes" is network behaviour, so the
 handlers have no broadcast line.
+
+(The wiring was brought back up the same day it fell behind the full-§7 rewrite: the
+message sum lost its SG-vote constructor, `process_sg_vote` takes the attestation itself,
+and `reactions`/`protocol` lost the proposer-test parameter, the assignment now ambient.)

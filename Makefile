@@ -1,4 +1,4 @@
-.PHONY: help check dev sorry sorries nodecide orphans build cache extract submodules
+.PHONY: help check dev spec sorry sorries nodecide orphans build cache extract submodules
 
 # `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
 # which no amount of later work discharges. Every target refuses it.
@@ -21,6 +21,9 @@ help:
 	@echo 'make check      - strict target: the same, except that any sorry/admit fails it.'
 	@echo '                  Nothing may be outstanding. Use before committing a proof.'
 	@echo
+	@echo 'make spec       - build the Spec lib alone: green even while Sts.lean is behind'
+	@echo '                  a spec change. Runs the native_decide check too.'
+	@echo
 	@echo 'make cache      - fetch prebuilt Mathlib artefacts (do this before a first build)'
 	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
 	@echo 'make orphans    - find .lean files in a srcDir that no lean_lib glob claims'
@@ -34,6 +37,17 @@ check: nodecide orphans sorry build
 # The working target: everything `check` does except the sorry-free requirement, with the
 # outstanding count reported instead.
 dev: nodecide orphans sorries build
+
+# The spec alone: what to run while a spec change has left Sts.lean red and what the
+# wiring should now say has not been settled. A `sorry` under lean/Spec/ still fails
+# it -- the spec never carries one.
+spec: nodecide orphans
+	@if grep -rnE '$(WIP_RE)' --include=*.lean lean/Spec; then \
+		echo 'FAIL: sorry/admit under lean/Spec'; exit 1; \
+	else \
+		echo 'no sorry/admit under lean/Spec'; \
+	fi
+	lake build Spec
 
 # A .lean file in a source directory that no lean_lib glob claims is always a mistake: Lake
 # never reads it, so it can be stale or outright broken while every other target stays green.

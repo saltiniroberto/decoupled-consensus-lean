@@ -1,53 +1,37 @@
 import Spec.Defs.Model
 
 /-!
-# The signing record
+# The anti-slashing record `Λ`
 
-The durable per-height memory behind the attestation rules: `08_FinalityVote.lean` holds
-the rules that fill the pairs a validator signs, and this record is what those rules read
-and write. The store holds one as its field `Σ.history` (`Store.lean`), because the store is
-one validator's state and the rules are store rules.
+The durable per-height memory behind the attestation rules:
+`Λ = (target[·], timeout[·], lock[·])`, one entry per height, initially `(⊥, false, ⊥)`.
+`08_FinalityVote.lean` holds the client rules that read it and the one routine that writes
+it, `record_attestation`. The store holds one as its field `Σ.history` (`Store.lean`) —
+the protocol keeps `Λ` beside the store rather than inside it, but this rendering's store
+is one validator's whole state, so the record rides along; nothing else reads or writes it.
 -/
 
 set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots]
+variable [BlockIds]
 
-/-- The durable signing record a validator keeps per height: whether it signed an
-    empty-target vote at `h`, the first named target it signed at `h`, and the target of
-    the first finality pair it signed at `h`. Only the *first* signing of each kind at a
-    height is remembered — the rules in `08_FinalityVote.lean` repeat what the record holds,
-    and they write it into the store they return before the signature is released. -/
-structure SigningHistory (Validator : Type) [Roots] where
-  /-- An empty-target vote `(h, ⊥)` was signed at height `h`. -/
-  signedEmptyTarget : (h : Nat) → Bool
-  /-- The first named target signed at height `h`. -/
-  firstTarget : (h : Nat) → Option (Block Validator)
-  /-- The target in the first finality pair signed at height `h`. -/
-  finalityTarget : (h : Nat) → Option (Block Validator)
+/-- The record `Λ`: per height, the first named target signed there, whether an
+    empty-target vote was signed there, and the lock — the target of a finality pair
+    signed there. `record_attestation` (`08_FinalityVote.lean`) is its only writer. -/
+structure SigningHistory [BlockIds] where
+  /-- `Λ.target[h]`: the first named target signed at height `h`, by identifier. -/
+  target : (h : Nat) → Option BlockId
+  /-- `Λ.timeout[h]`: an empty-target vote `(h, ⊥)` was signed at height `h`. -/
+  timeout : (h : Nat) → Bool
+  /-- `Λ.lock[h]`: the target of a finality pair signed at height `h`, by identifier. -/
+  lock : (h : Nat) → Option BlockId
 
-/-- The record of a validator that has signed nothing anywhere: every validator's start. -/
-def SigningHistory.gen : SigningHistory Validator where
-  signedEmptyTarget _ := false
-  firstTarget _ := ⊥
-  finalityTarget _ := ⊥
-
-/-- The durable write behind signing an empty-target vote `(h, ⊥)`. -/
-def SigningHistory.saveEmptyTarget (H : SigningHistory Validator) (h : Nat) :
-    SigningHistory Validator :=
-  { H with signedEmptyTarget := Function.update H.signedEmptyTarget h true }
-
-/-- The durable write behind signing a first named target `(h, T)`. -/
-def SigningHistory.saveTarget (H : SigningHistory Validator) (h : Nat)
-    (T : Block Validator) : SigningHistory Validator :=
-  { H with firstTarget := Function.update H.firstTarget h (some T) }
-
-/-- The durable write behind a finality pair's first release: record `J` as the
-    height-`h` finality target. -/
-def SigningHistory.saveFinalityTarget (H : SigningHistory Validator) (h : Nat)
-    (J : Block Validator) : SigningHistory Validator :=
-  { H with finalityTarget := Function.update H.finalityTarget h (some J) }
+/-- The record of a validator that has signed nothing anywhere: every entry `(⊥, false, ⊥)`. -/
+def SigningHistory.gen : SigningHistory where
+  target _ := ⊥
+  timeout _ := false
+  lock _ := ⊥
 
 end DC

@@ -3,7 +3,7 @@
 ## The problem
 
 The protocol makes choices it does not determine. `best_child` (`01_GoldfishWalk.lean`)
-breaks a score tie arbitrarily. `propose_block` (`02_GoldfishDuties.lean`) writes a set of votes into a
+breaks a score tie arbitrarily. `propose_block` (`11_Duties.lean`) writes a set of votes into a
 block field that is a list, without saying in which order. A deterministic rendering would
 have to invent a resolution for both — an assumption the protocol does not make, and one
 every theorem downstream would silently depend on.
@@ -39,10 +39,10 @@ A routine takes the weakest type that fits what it does:
 
 | It…                        | Return type        | Examples |
 | -------------------------- | ------------------ | -------- |
-| neither raises nor chooses | plain value        | `Store.processGoldfishVote`, `Store.sgVote` |
+| neither raises nor chooses | plain value        | `Store.processGoldfishVote`, `Store.processSGVote` |
 | raises, never chooses      | `DRE α` | `Store.viable`, `Store.processBlock` |
 | chooses, never raises      | `NDR α`            | `bestChild` |
-| both                       | `NDRE α`           | `ghost`, `Fig7.getHead` |
+| both                       | `NDRE α`           | `ghost`, `Store.getHead` |
 
 The duties sit one layer up: `NDREB α` (`Nondet.lean`) is the broadcast outbox threaded
 over `NDRE`, so a duty picks, raises, *and* broadcasts — see [style.md](style.md).

@@ -3,20 +3,19 @@ import Spec.Defs.Notation
 import Spec.Defs.FinsetM
 import Spec.Defs.Raise
 import Spec.Defs.Nondet
-import Spec.Defs.GoldfishWalk
-import Spec.Defs.Tick
 import Spec.Defs.OldDefs
 import Spec.Defs.SigningHistory
 import Spec.«06_StateTransition»
 import Spec.Defs.Store
 import Spec.«01_GoldfishWalk»
-import Spec.«03_AvailableConfirmation»
-import Spec.«02_GoldfishDuties»
+import Spec.«02_GoldfishStore»
 import Spec.«04_SGForkChoice»
 import Spec.«05_SGDuty»
 import Spec.«07_FGStore»
 import Spec.«08_FinalityVote»
 import Spec.«09_Healing»
+import Spec.«10_AvailableConfirmation»
+import Spec.«11_Duties»
 
 /-!
 # The specification
@@ -29,16 +28,19 @@ with `ghost` as a named building block, per-slot committees, block-carried Goldf
 as the only relay channel, timestamps on every object, and a relative-majority SG fork
 choice.
 
-**The layers define incrementally, and the old readings are figure-named.** Each layer
-redefines `get_head`, and the finality layer redefines `process_block` and
-`goldfish_eligible` as well; a paper-style presentation replaces a reading, and Lean
-cannot. The last reading
-of each is the protocol's and bears the plain `Store` name (`S.getHead`, `S.processBlock`,
-`S.goldfishEligible`); each superseded reading is named by its figure — `Fig1.getHead`,
-`Fig4.getHead`, `Fig2.processBlock`, `Fig1.goldfishEligible`. Store-taking routines sit in
-`DC.Store` for dot notation; everything defined once is bare (`ghost`,
-`goldfishScore`); there are no namespace blocks, every definition carrying its full name at
-its own `def`.
+**One definition per routine, in dependency order.** The protocol's layers build some
+routines up — `get_head`, `process_block`, `goldfish_eligible`, `on_tick` — and what is
+rendered here is the assembled definition of each, once. The earlier forms are not written
+out: a reader auditing this spec is auditing the protocol, not its presentation.
+
+That fixes the file order, and the file numbers follow it. A file may name only what an
+earlier file defines, so the fork choice's tree comes before the duties that walk it
+(`09_Healing.lean` before `11_Duties.lean`) and available confirmation sits between them.
+The numbers skip `03`, which the confirmation file left when it moved to `10`.
+
+Store-taking routines sit in `DC.Store` for dot notation; everything defined once and
+store-free is bare (`ghost`, `goldfishScore`); there are no namespace blocks, every
+definition carrying its full name at its own `def`.
 
 `Spec/Defs/` holds the non-algorithm files: `Model.lean` (the substrate and the wire
 objects), `Store.lean` (the store, with the fields each layer adds),

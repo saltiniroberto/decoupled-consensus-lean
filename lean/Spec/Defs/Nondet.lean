@@ -133,7 +133,8 @@ scoped instance {α : Type} {m : Type → Type} [Monad m] [MonadLiftT Set m] [De
     let l ← liftM s.toLists
     forIn l init body
 
-variable {Validator : Type} [Roots] [DecidableEq Validator]
+variable {Validator : Type} [BlockIds] [BlockIdentity Validator]
+  [DecidableEq Validator]
 
 /-- The duty monad — nondeterministic result with exception and **broadcasts**, the
     effect-inventory name continuing `DRE`/`NDR`/`NDRE`. The outbox threads over the

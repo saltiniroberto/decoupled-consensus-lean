@@ -1,28 +1,25 @@
 import Spec.«05_SGDuty»
-import Spec.«02_GoldfishDuties»
+import Spec.«02_GoldfishStore»
 
 /-!
 # The finality gadget in the fork choice
 
-Viability, and the finality layer's routines: `process_block` extended, `update_finality`, `fork_choice_root`,
-`get_filtered_block_tree`, `goldfish_eligible` extended, and `get_head` redefined.
+Viability, and the finality layer's routines: `process_block`, `update_finality`,
+`get_fg_root`, `get_filtered_block_tree`, `goldfish_eligible`, and the Goldfish fork
+choice they instantiate.
 
-**This is the protocol for `process_block`**, which bears the plain `Store` name,
-`S.processBlock`. The fork choice is not: `get_head` is one definition (`Store.getHead`,
-`01_GoldfishWalk.lean`) whose tree and eligibility condition come from the single
-`GoldfishWalk` instance (`Defs/GoldfishWalk.lean`), and the healing layer holds that
-instance. This layer supplies neither field, but both are built from what it defines here:
-its `Fig7.goldfishEligible` is what the healing layer's instance carries, unchanged, and its
-`Fig7.getFilteredBlockTree` — `get_filtered_block_tree(Σ)`, the viable blocks at or below the
-fork-choice root — is the set the healing layer's tree is filtered from.
-Every reading is named by its file's number — `Fig7.getHead` here, `Fig2.processBlock`,
-`Fig1.goldfishEligible`, `Fig1.getHead` and `Fig4.getHead` earlier. See
-`01_GoldfishWalk.lean` on the scheme.
+**This is the protocol for `process_block`.** The fork choice is assembled one layer up:
+`get_head` (`09_Healing.lean`) walks the tree the graded layer builds, and both of that
+tree's ingredients are defined here — `Store.goldfishEligible`, the condition the walk
+tests, and `Store.getFilteredBlockTree`, the viable blocks at or below the FG root, the
+set the tree carries.
 
 ## What this layer adds
 
-The store gains `Σ.σ[·]` and the finality state `(Σ.F, Σ.h_F, Σ.J, Σ.h_j,
-Σ.h_max)` — all already fields of `Store`, which carries every layer's at once. Two lines join
+The store gains `Σ.σ[·]` and the finality state `(Σ.F, Σ.J, Σ.h_j,
+Σ.h_max)` — all already fields of `Store`, which carries every layer's at once. The
+store keeps no `h_F`: the height of a finalization is read off a chain state, in
+`get_fg_vote`. Two lines join
 `process_block`: the post-state write, and `update_finality`, each marked "new at this
 layer" in the figure and here.
 
@@ -31,7 +28,7 @@ And the walk no longer starts at genesis over everything. It starts at
 condition gains a third
 disjunct — a child whose state height is below `Σ.h_max − 1` is eligible without a majority.
 
-## `Σ.F ⪯ Σ.J` is claimed, not enforced
+## `Σ.F ⪯[Σ] Σ.J` is claimed, not enforced
 
 "`Σ.F` advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯ Σ.J`
 always holds and finalization never reverts." That is a property of `update_finality`,
@@ -40,34 +37,36 @@ stores — not a fact of the `Store` type. `Analysis/` is where it belongs.
 
 ## Reading the state map, and where that lands
 
-Viability, `update_finality`'s recomputation of `Σ.h_max` and the eligibility condition's
+Viability and the eligibility condition's
 height clause read `Σ.σ[W].h` and `Σ.σ[B].h`. The bracket raises when the
 map does not record the block, so a routine reading it carries `DRE` —
 `processBlock`, `updateFinality`, `viable`, `getFilteredBlockTree`, `goldfishEligible` and
-`getHead` all do, and `forkChoiceRoot` alone does not, reading no map. A missing entry
+`getHead` all do, and `getFGRoot` alone does not, reading no map. A missing entry
 reaches the caller instead of becoming a silent answer; on a store whose `Σ.σ` covers `Σ.T`
 nothing raises at all, and that theorem belongs to `Analysis/`.
 
 A failure crosses a *set* through the fold machinery of the two `FinsetM` files:
-`Finset.filterM` collects viability's witnesses, and `Finset.imageM` collects the
-recomputation's heights. `ghost`'s condition slot is `DRE`, so `get_head` passes
+`Finset.filterM` collects viability's witnesses. `ghost`'s condition slot is `DRE`, so
+`get_head` passes
 `goldfish_eligible` itself, raising reads included — the rendering carries no deviation
 there.
 
 ## Extract
 
 The store adds a block state map `Σ.σ[·]` and finality state
-`(Σ.F, Σ.h_F, Σ.J, Σ.h_j, Σ.h_max)`. It retains every processed block; the live tree is
+`(Σ.F, Σ.J, Σ.h_j, Σ.h_max)`. It retains every processed block; the live tree is
 derived below the finalized block,
 
 [eq:T_F]
 
-[fig:07_FGStore] extends the block handler: it computes and stores the post-state,
-then folds it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
+[fig:07_FGStore] extends the block handler: it admits a block only when it is not from
+the future, not already processed, its parent is held, and it descends from the
+finalized block; then it computes and stores the post-state and
+folds it into the finality caches with `update_finality(Σ, σ)`. The pair `(Σ.J, Σ.h_j)`
 tracks the lex-greatest justification event compatible with the finalized block. `Σ.F`
 advances only to a viable proper descendant of itself below `Σ.J`, so `Σ.F ⪯ Σ.J`
-always holds and finalization never reverts. When it advances, `Σ.h_max` is recomputed
-inside the new live tree; it otherwise only grows.
+always holds and finalization never reverts. `Σ.h_max` takes the offered height and is
+never lowered.
 
 ## Extract — Definition (Viability)
 
@@ -98,8 +97,8 @@ set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator]
-  [Committees Validator] [Params]
+variable {Validator : Type} [BlockIds] [BlockIdentity Validator] [DecidableEq Validator] [Electorate Validator]
+  [Committees Validator] [Proposers Validator] [Params]
 
 open Params
 
@@ -113,9 +112,9 @@ open Params
     `Σ.h_max − 1` — and the set-builder then asks for a descendant among them. The collection
     reads `Σ.σ[W]` per live block through `Finset.filterM`, so a live block the map does not
     record raises rather than silently failing to witness. -/
-def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
+def Store.viable (S : Store Validator) : DRE (Finset BlockId) := do
   let witnesses ← {W ∈ᴹ S.liveTree | (← S.σ[W]).h ≥ S.h_max - 1}
-  return {B ∈ S.liveTree | ∃ W ∈ witnesses, B ⪯ W}
+  return {B ∈ S.liveTree | ∃ W ∈ witnesses, B ⪯[S] W}
 
 /-! ## The store handler, extended -/
 
@@ -123,67 +122,120 @@ def Store.viable (S : Store Validator) : DRE (Finset (Block Validator)) := do
 /-- Fold one offered post-state into the
     finality caches.
 
-    Three steps, in the figure's order. `Σ.h_max` takes the offered height. The justified pair
-    is replaced when the offer dominates in the lex order `(h_j, J.root)` **and** descends
-    from the finalized block — "the pair `(Σ.J, Σ.h_j)` tracks the lex-greatest justification
+    Three steps, in the figure's order. `Σ.h_max` takes the offered height and **is never
+    lowered**. The justified pair
+    is replaced when the offer dominates in the lex order — the protocol's
+    `(h_j, J.root)`, whose tie-break this rendering reads off the identifiers, blocks
+    carrying no root (`Model.lean`) — **and** descends
+    from the finalized block: "the pair `(Σ.J, Σ.h_j)` tracks the lex-greatest justification
     event compatible with the finalized block". Then `Σ.F` advances, only to a viable proper
-    descendant of itself below `Σ.J`, and `Σ.h_max` is recomputed inside the live tree the
-    advance just shrank.
+    descendant of itself below `Σ.J`.
 
-    Two reads raise. The advance test's viability, whose `(← viable S)` is evaluated before
+    One read raises: the advance test's viability, whose `(← viable S)` is evaluated before
     the conjunction is tested — the `←` lifts above the `if` — so the routine raises on a
     store with an unrecorded live block even when `σ.F` offers no advance; on a store where
-    nothing raises the two readings agree. And the recomputation's heights, collected
-    through `Finset.imageM`, so a live block the map does not record fails the
-    recomputation rather than contributing a placeholder.
-
-    The recomputed maximum is over the recorded heights of the *new* live tree, so it can
-    go down; the unconditional `max` at entry cannot. -/
+    nothing raises the two readings agree. -/
 def Store.updateFinality (S : Store Validator) (σ : ChainState Validator) :
     DRE (Store Validator) := do
   let mut S := S
   S.h_max ← max S.h_max σ.h
-  -- `(σ.h_j, σ.J.root) > (Σ.h_j, Σ.J.root)`, the lex order written out
-  if S.F ⪯ σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ S.J.root < σ.J.root)) then
+  -- `(σ.h_j, σ.J.root) > (Σ.h_j, Σ.J.root)`, the lex order written out — the tie on the
+  -- identifiers, blocks carrying no root
+  if S.F ⪯[S] σ.J ∧ (S.h_j < σ.h_j ∨ (σ.h_j = S.h_j ∧ S.J < σ.J)) then
     S.J ← σ.J
     S.h_j ← σ.h_j
-  if S.F ≺ σ.F ∧ σ.F ⪯ S.J ∧ σ.F ∈ (← S.viable) then
+  if S.F ≺[S] σ.F ∧ σ.F ⪯[S] S.J ∧ σ.F ∈ (← S.viable) then
     S.F ← σ.F
-    S.h_F ← σ.h_F
-    -- `max{Σ.σ[B].h : B ∈ T_F(Σ)}`, in the live tree that just shrank
-    S.h_max ← (← S.liveTree.imageM fun B => do return (← S.σ[B]).h).max.getD 0
   return S
 
+/-- `B` is *wanted*: not from the future, not already processed, and naming a parent —
+    the admission tests that read nothing of the parent. A wanted block whose parent is
+    missing is what waits in `Σ.pending`; `admissible` below is this plus the
+    parent-side tests. -/
+def Store.wanted (S : Store Validator) (B : Block Validator) : Prop :=
+  B.slot ≤ S.s ∧ B.id ∉ S.T ∧ B.parent ≠ ⊥
+
+instance (S : Store Validator) (B : Block Validator) : Decidable (S.wanted B) :=
+  inferInstanceAs (Decidable (_ ∧ _))
+
+/-- `B` is *admissible*: wanted with its parent held, and the parent-side tests hold —
+    the block descends from the finalized block (read at the parent: `Σ.F ⪯ B` climbs
+    `B`'s own links, and `B` is not yet in `Σ.T`; `Σ.F = B` is not a case, a processed
+    `Σ.F` never sharing an identifier with an unprocessed block), and the two facts the
+    state transition asserts — the slot's proposer, and `B.parent.slot < B.slot`, the
+    parent's slot read through `Σ.T[P]`, which **raises** where the store holds nothing —
+    unreachable behind the membership test, as every bracket read is. `DRE Bool`, the
+    `goldfish_eligible` shape. The drain in `process_block` selects by this, which is
+    what keeps a block that can never be admitted from being picked forever. -/
+def Store.admissible (S : Store Validator) (B : Block Validator) : DRE Bool := do
+  if S.wanted B then
+    let P ← B.parent                    -- a wanted block names a parent; the lift extracts
+    if P ∈ S.T then
+      return (S.F ⪯[S] P) ∧ B.proposer = ↑(Proposers.proposer B.slot : Validator) ∧
+        (← S.T[P]).slot < B.slot
+  return false
+
 /-! ## Figure -/
-/-- The Goldfish handler (`Fig2.processBlock`) with the two lines
-    this layer adds — the post-state write, and `update_finality`.
+/-- Admit one block whose turn has come: one test — `admissible`, the admission's whole
+    condition — and then the writes: the post-state from the parent's, the tree, the
+    stamp, the carried votes, `update_finality`. An inadmissible block leaves the store
+    unchanged.
 
-    The post-state is computed from the parent's, and the parent's is read with the raising
-    bracket: a block whose parent the map does not record cannot be evaluated. The protocol says
-    the handler runs "after every dependency of that object is already in the store: a block's
-    parent, and a vote's target block", so on a store that respects that, the read cannot
-    fail.
-
-    A parentless block — genesis — has no parent state to read, and the figure does not cover
-    it: genesis is in `Σ.T` from the start and is never processed. This rendering rejects it,
-    leaving the store unchanged, which is the same thing every other admission failure does. -/
-def Store.processBlock (S : Store Validator) (B : Block Validator) :
+    The two reads behind the test raise where the test cannot have passed: `B.parent`'s
+    extraction, which `admissible`'s witness names, and `Σ.σ[parent]`, whose coverage of
+    the held parent is the map-covers-tree invariant — a fact for `Analysis/`, not a
+    licence to answer silently here. -/
+def Store.admitBlock (S : Store Validator) (B : Block Validator) :
     DRE (Store Validator) := do
   let mut S := S
-  if B.slot > S.s then
+  if ¬ (← S.admissible B) then
     return S
+  let parent ← B.parent
+  let σp ← S.σ[parent]
   -- `Σ.σ[B] ← state_transition(Σ.σ[B.parent], B)` — new at this layer
-  if B.parent ≠ ⊥ then
-    let σp ← S.σ[(← B.parent)]
-    S.σ[B] ← some (stateTransition σp B)
-  else
-    return S
-  S.T ← S.T ∪ {B}
-  S.blockTime[B] ← some S.t
+  S.σ[B.id] ← some (stateTransition σp B)
+  -- `Σ.T ← Σ.T ∪ {B}`: the map admits `B` under its identifier
+  S.T ← S.T.insert B.id B
+  S.blockTime[B.id] ← some S.t
   for vote in B.gfVotes do
     S ← S.processGoldfishVote vote
   -- `update_finality(Σ, Σ.σ[B])` — new at this layer
-  return (← S.updateFinality (← S.σ[B]))
+  return (← S.updateFinality (← S.σ[B.id]))
+
+/-! ## Figure -/
+/-- The block handler: a block whose parent is not yet held **waits** in `Σ.pending` —
+    the mechanism behind the protocol's "after every dependency of that object is already
+    in the store" (Roberto, 2026-09-01) — everything else is admitted or rejected as the
+    admission says, and every admission **drains** the buffer: as long as some pending
+    block has become admissible, one is picked, removed and admitted, so a parent's
+    arrival releases its waiting descendants in cascade.
+
+    The drain's pick is a genuine nondeterministic choice — the protocol fixes no order —
+    which is what puts the handler in `NDRE`. Its loop is bounded by `|Σ.pending|`, the
+    `ghost` shape: each pass consumes one pending block, so the bound is never reached
+    with an admissible block still waiting. A pending block that never becomes
+    admissible — its branch does not descend from the finalized block, say — is never
+    picked, and simply stays. -/
+def Store.processBlock (S : Store Validator) (B : Block Validator) :
+    NDRE (Store Validator) := do
+  let mut S := S
+  -- only a block the admission would otherwise take waits for its parent: the future and
+  -- the re-received are turned away, as ever
+  if S.wanted B then
+    let P ← B.parent                    -- a wanted block names a parent; the lift extracts
+    if P ∉ S.T then
+      S.pending ← S.pending ∪ {B}
+      return S
+  S ⇐ S.admitBlock B
+  -- the drain: while some pending block has become admissible, one is admitted
+  for _ in [:|S.pending|] do
+    let ready ← {C ∈ᴹ S.pending | (← S.admissible C)}
+    if ready = ∅ then
+      return S
+    let C ←ᵖ ready
+    S.pending ← S.pending.erase C
+    S ⇐ S.admitBlock C
+  return S
 
 /-! ## The two derived views, and the redefined fork choice -/
 
@@ -191,7 +243,7 @@ def Store.processBlock (S : Store Validator) (B : Block Validator) :
 /-- `Σ.J` while the justified pair sits one
     height under the store's frontier, and `Σ.F` otherwise. The only routine of this layer
     that reads no state map, and so the only one that does not raise. -/
-def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
+def Store.getFGRoot (S : Store Validator) : BlockId := Id.run do
   if S.h_max = S.h_j + 1 then
     return S.J
   return S.F
@@ -204,17 +256,16 @@ def Store.forkChoiceRoot (S : Store Validator) : Block Validator := Id.run do
     is a constraint on the walk's *children*, not on its anchor, and the anchor is passed
     separately by `get_head`. It raises exactly where `viable` does.
 
-    It is what the healing layer's `GoldfishWalk` instance builds on: that layer's reading
-    is this one with the grade-0 veto applied. There is no earlier one — before this layer the
-    walk descended `Σ.T`. -/
-def Fig7.getFilteredBlockTree (S : Store Validator) :
-    DRE (Finset (Block Validator)) := do
-  let root := S.forkChoiceRoot
-  return {B ∈ (← S.viable) | root ⪯ B}
+    It is what the healing layer builds on: that layer's reading is this one with the grade-0
+    veto applied. There is no earlier one — before this layer the walk descended `Σ.T`. -/
+def Store.getFilteredBlockTree (S : Store Validator) :
+    DRE (Finset BlockId) := do
+  let root := S.getFGRoot
+  return {B ∈ (← S.viable) | root ⪯[S] B}
 
 /-! ## Figure -/
 /-- The Goldfish eligibility condition
-    (`Fig1.goldfishEligible`) with a third disjunct — "a child whose state height is below
+    with its third disjunct — "a child whose state height is below
     `Σ.h_max − 1` is eligible without a majority".
 
     That clause is what lets the walk descend past blocks nobody has voted on yet, which is
@@ -224,47 +275,31 @@ def Fig7.getFilteredBlockTree (S : Store Validator) :
     none — and it is what `get_head` hands the walk, `ghost`'s condition slot being
     `DRE`.
 
-    This is the reading a caller wants, and the healing layer's `GoldfishWalk` instance
-    carries it unchanged; the earlier one is `Fig1.goldfishEligible`. -/
-def Fig7.goldfishEligible (S : Store Validator) (votes : Finset (GoldfishVote Validator))
-    (s : Nat) (B : Block Validator) : DRE Bool := do
+    This is the reading every caller wants, and the healing layer's walk carries it
+    unchanged.
+
+    `B` is an identifier, so the last disjunct compares the slot of the block it names,
+    `Σ.slot_of(B)` — a second raising read, through the same bracket as the height. -/
+def Store.goldfishEligible (S : Store Validator)
+    (votes supportVotes : Finset (GoldfishVote Validator))
+    (s : Nat) (B : BlockId) : DRE Bool := do
   let σB ← S.σ[B]
-  -- `voters_count ← |{v ∈ K_s : votes holds a vote by v}|` — a `let`, as the
-  -- figure writes it
-  let votersCount := |{v ∈ Committees.K s | ∃ a ∈ votes, a.validator = v}|
+  -- `voters_count ← |{v ∈ V : votes holds a vote by v}|` — a `let`, as the
+  -- figure writes it. The denominator counts every sender, resolved or not
+  let votersCount := |{v ∈ Electorate.V | ∃ a ∈ votes, a.validator = v}|
   return σB.h < S.h_max - 1 ∨
-    2 * goldfishScore votes s B > votersCount ∨ B.slot = S.s
+    2 * S.goldfishScore votes supportVotes s B > votersCount ∨ (← S.slotOf B) = S.s
 
-/-! ## Figure `get_goldfish_tree(Σ)` -/
-/-- `get_goldfish_tree(Σ)` at this layer:
-    the SG walk from the fork-choice root over the filtered tree gives the root, and the blocks
-    are that same filtered tree. With the extended `goldfish_eligible` above, this is the
-    layer's whole change to the fork choice. -/
-def Fig7.getGoldfishFilteredBlockTree (S : Store Validator) : NDRE (BlockTree Validator) := do
-  let root := S.forkChoiceRoot
-  let tree ← Fig7.getFilteredBlockTree S
-  let anchor ← S.majorityForkChoice root tree (round S.s)
-  return { root := anchor, blocks := tree }
-
-/-- This layer's reading of what the fork choice takes from the layer. Both fields are this
-    layer's, and the healing layer's instance carries the second unchanged.
-
-    Not an `instance`, for the reason `Fig1.goldfishWalk` gives. -/
-abbrev Fig7.goldfishWalk : GoldfishWalk Validator :=
-  ⟨Fig7.getGoldfishFilteredBlockTree, Fig7.goldfishEligible⟩
-
-/-- This layer's reading of `get_head`, spelled out: the SG walk selects the anchor from the
-    fork-choice root over the filtered tree, and the Goldfish walk selects a descendant of it
-    over the same tree. It raises where the filtered tree does.
-
-    The walk receives `goldfish_eligible` itself: `ghost`'s condition slot is `DRE`, so the
-    extended condition — which raises, reading `Σ.σ[B].h` — passes directly.
-
-    Definitionally `Store.getHead` at `Fig7.goldfishWalk`, and kept as the reading a statement
-    can name; the document prints the tree above instead. -/
-def Fig7.getHead (S : Store Validator) (votes : Finset (GoldfishVote Validator)) (k : Nat) :
-    NDRE (Block Validator) := do
-  ghost (← Fig7.getGoldfishFilteredBlockTree S) (goldfishScore votes k)
-    (Fig7.goldfishEligible S votes k)
+/-! ## Figure -/
+/-- The shared walk, instantiated
+    with the Goldfish score and the eligibility condition above. It sits here, and not beside
+    `ghost`, because the condition does: this is the file that defines it. -/
+def Store.goldfishForkChoice (S : Store Validator)
+    (tree : BlockTree)
+    (votes supportVotes : Finset (GoldfishVote Validator))
+    (s : Nat) :
+    NDRE BlockId :=
+  S.ghost tree (S.goldfishScore votes supportVotes s)
+    (S.goldfishEligible votes supportVotes s)
 
 end DC

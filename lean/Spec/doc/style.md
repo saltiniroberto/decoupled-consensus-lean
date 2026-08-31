@@ -18,7 +18,7 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
 
 - Assignment arrows render the figures' `←`, including bare identifiers, two-level map
   writes, and the pair form. **`⇐` is the assignment whose right-hand side computes** —
-  `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, `H ⇐ bestChild …` — binding the value and supplying
+  `S ⇐ S.updateConfirmation (s − 1)`, `H ⇐ bestChild …` — binding the value and supplying
   an `Option` field's wrapper by coercion, so in the Lean the arrowhead is what says the step
   picks or raises. Three arrows: `←` re-assigns, `⇐` binds, `←ᵖ` picks. The distinction is
   Lean's: the extracted document writes `←` for both of the first two, as the draft does.
@@ -36,23 +36,33 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   shape (`ghost`'s loop).
 - **`return`s do not alternate.** Read top to bottom, once the returned value changes it
   never changes back: each rejection returns the fallback in its own `if`, and the value
-  the routine is about comes last (`get_round_root`, `09_Healing.lean`).
-- **A set-builder condition over an `Option` entry is a named predicate** — the inline
-  `∃ e ∈ Σ.head[k][i], …` loses the decidability search at `def` level (measured), so the
-  condition gets a name and a keyed `Decidable` instance (`Store.headSupports`,
-  `Store.equivBefore`, `09_Healing.lean`). Over a `Finset`, the inline `∃` stays
-  (`04_SGForkChoice.lean`).
+  the routine is about comes last (`process_block`, `07_FGStore.lean`). A figure whose own
+  case cascade returns different answers case by case — `height_pair`,
+  `08_FinalityVote.lean` — renders its cases in the figure's order; the ruling is about
+  rejection-and-fallback shapes, not the protocol's case analyses.
+- **A set-builder condition with nested bounded quantifiers is a named predicate** — an
+  inline one loses the decidability search at `def` level (measured, on the old per-round
+  `Option` maps), so the condition gets a name and a keyed `Decidable` instance
+  (`Store.summarySupports`, `Store.equivBefore`, `09_Healing.lean`). Over a `Finset`, the
+  inline `∃` stays (`04_SGForkChoice.lean`).
+- **No existential quantifier over an `Option`.** Not `∃ x ∈ o, …`, not
+  `∃ x, o = some x ∧ …`: test `o ≠ ⊥` and read the value through an extraction (the lift,
+  the bracket, `Option.value`), or use the `∀`-bounded form where only a constraint on
+  the value is meant.
 - **Absence is tested `x ≠ ⊥`, never `.isSome`**, and in a raising body the branch
   extracts by the lift: `let y ← x`, value or raise (the scoped
   `MonadLift Option DRE`, `Raise.lean`) — behind the `≠ ⊥` test the raise is
-  unreachable. Every extraction in the spec is that lift; the site-checked alternative
-  for a *pure* body, `Option.value`, is parked in `OldDefs.lean`. The store's map
+  unreachable. Every extraction in a monadic body is that lift; a *pure* body extracts
+  with the site-checked `Option.value` (`Raise.lean`) inside a dependent
+  `if _ : x ≠ ⊥`. The store's map
   machinery keeps `.isSome` internally; the rule is about spec bodies.
 - **No `∣` (divides)**: write `% … = 0`.
 - **A projection is the image comprehension**: `{e.vote | e ∈ S.gfVotes s}`, and with
   a condition `{e.vote | e ∈ S.gfVotes s, e.time < c}` — Python's set comprehension
   (`Notation.lean`), expanding to `Finset.map'` (`FinsetM.lean`), `image` under the name
-  a programmer expects. No bare `Finset.image` and no `biUnion` in spec bodies; the
+  a programmer expects. No bare `Finset.image` and no `biUnion` in spec bodies — a union
+  the protocol needs is a vocabulary definition a spec body reads by name
+  (`Store.allAttestations`, `Defs/Store.lean`); the
   unprimed `Finset.map` takes an embedding and cannot project; the raising fold `imageM`
   is unaffected.
 - **What the protocol writes inline stays inline.** `voters_count` and the equivocator
@@ -78,32 +88,27 @@ reasoning, is `CONTEXT.md`'s "The `DC` style sheet".
   ever unions sends, an earlier duty's broadcasts already sitting in the outbox when a
   later one runs. `DutyResult` survives only at the boundary: `NDREB.outcomes` is the
   outcome set the sts wiring ([sts.md](sts.md)) and `Analysis/` consume a duty as. The tick still returns
-  from each action branch directly (`Fig2.onTick`; the protocol's `Store.onTick` runs it
-  and then the SG layer's added line, `05_SGDuty.lean`).
+  from each action branch directly (`Store.goldfishOnTick`; `Store.onTick`,
+  `11_Duties.lean`, runs it among its own lines).
 - **Scheduled routines carry their instant as an anonymous autoparam**, discharged by
   `solve_by_elim [And.left, And.right]`, so `Store.onTick`'s dependent `if`s satisfy them
-  with no `have`s (`02_GoldfishDuties.lean` explains the tactic choice).
+  with no `have`s (`11_Duties.lean` explains the tactic choice).
 
 ## The ambient environment
 
-- **Classes, not type parameters**: `Electorate`, `Committees`, `Params`, `Roots` (the
-  abstract `Root` type, its order, genesis's root), `RootComputation` (a block's root from
-  its parent and slot), `SGSchedule` (the attestation times `sgfgVoting i r`, no formula
-  fixed, bounded to `a_r ≤ sgfgVoting i r < roundStart (r + 1)`) — all in `Model.lean` —
-  and two classes for the routines every layer redefines, each with exactly one instance
-  supplied by the layer whose reading is the protocol's: `GoldfishWalk`
-  (`Defs/GoldfishWalk.lean`), the tree and the eligibility condition `get_head` takes from
-  the layer, and `Tick` (`Defs/Tick.lean`), `on_tick` itself.
+- **Classes, not type parameters**: `Electorate`, `Committees`, `Proposers`, `Params`,
+  `BlockIds` (the abstract identifier type, its equality and its order — the lex
+  comparison's tie-break, blocks carrying no root), `BlockIdentity` (the injective `id`),
+  `SGSchedule` (the attestation times `sgfgVoting i r`, no formula
+  fixed, bounded to `a_r ≤ sgfgVoting i r < roundStart (r + 1)`) — all in `Model.lean`.
 
-- **A layer that appends to a routine calls the earlier reading; a layer that inserts writes
-  the routine out, from named halves.** `Store.onTick` was the SG layer's own lines followed by
-  `Fig2.onTick` while the added line went at one end. That could not stay once the graded
-  layer's lines had to run *between* the clock and the slot's actions. So the tick's two halves
-  are routines of their own — `set_clock`, which every reading begins with, and
-  `goldfish_on_tick`, the slot's actions, which reads the clock rather than taking the time —
-  and each layer's reading calls them with its own lines in place. `Fig9.onTick` is three
-  lines and a call at each end. The draft's answer is to print `on_tick` whole again; this is
-  that, with the repeated halves named instead of copied.
+- **A routine that inserts between another's lines is written out, from named halves.**
+  The tick's lines interleave the slot's actions with the round's, so its two reusable
+  halves are routines of their own — `set_clock`, which the tick begins with, and
+  `goldfish_on_tick`, the slot's actions, which reads the clock rather than taking the
+  time — and `Store.onTick` calls them with its own lines in place (`11_Duties.lean`).
+  The draft prints `on_tick` whole; this is that, with the repeated halves named instead
+  of copied.
   The round's fixed instant is a bare definition, not a field of that class —
   `heightDecisionTime r = roundStart r + 6Δ`, the protocol's `a_r` — because the formula is
   fixed and no instance may move it, and because taking `[Params]` alone lets a routine test

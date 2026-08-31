@@ -8,8 +8,10 @@ import Spec.Defs.Raise
 **This file is not a specification.** It holds no protocol content — no state, no routine,
 nothing that can be checked against the protocol. It is the notation layer that lets the
 figure files carry the protocol's own assignment statements — `σ.h ← σ.h + 1`,
-`σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, and its
-set-builders whose condition raises, `{x ∈ᴹ s | p}`.
+`σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, its
+set-builders whose condition raises, `{x ∈ᴹ s | p}`, and its destructuring assignment,
+`fp, Σ ← decide_finality_vote(Σ)`, written `let {vote := fp, state ← S} := …` with each
+field wearing the arrow of what happens to it.
 
 The macros are protocol-free — nothing here names anything from the protocol — and
 `scoped`, active only inside this namespace. The decisions:
@@ -155,6 +157,79 @@ macro_rules
         `(doElem| do
             let val ← ($e)
             $v:ident := { $v with $f:ident := Function.update (($v).$f:ident) $i val })
+
+/-! ## The destructuring assignment: each field wears its own arrow
+
+The protocol writes `fp, Σ ← decide_finality_vote(Σ)` — one line that introduces `fp` and
+overwrites `Σ` from the two components a routine returns. Lean's `let`-pattern cannot
+re-assign a `mut` variable (a pattern only binds new names), which used to force a
+temporary: bind `S'`, then `S ← S'` on the next line. The form below is that line
+restored, under the file's own doctrine applied at field granularity — `:=` introduces a
+name, `←` re-assigns an existing `mut` one:
+
+    let {vote := fp, state ← S} := S.decideFinalityVote
+
+The producer is evaluated exactly once, into a hygienic temporary, **before** any
+re-assignment — the same order as the two-line spelling it replaces — and each written
+field becomes a projection of that temporary, so the macro hardcodes no structure and no
+field names. A statement-level `⇐` in place of the final `:=` binds a producer that
+computes, exactly as `⇐` relates to `←` in the assignment arrows above.
+
+An all-`:=` line also parses here and expands to bindings equivalent to the core
+`let`-pattern it would otherwise be; anything this grammar does not accept — a nested or
+parenthesized pattern — backtracks to core untouched. **The expansions are checked
+against their hand-written spellings by kernel-decided equalities in
+`Analysis/NotationEquivalence.lean`**: the macro's whole competence is routing, and the
+routing is certified there rather than trusted. -/
+
+declare_syntax_cat destructField
+
+/-- `field := x` — introduce `x` from the field. -/
+syntax ident " := " ident : destructField
+
+/-- `field ← x` — re-assign the `mut` variable `x` from the field. -/
+syntax ident " ← " ident : destructField
+
+/-- The destructuring assignment of a value: see the section header. -/
+scoped syntax (name := destructAssign) (priority := high)
+  "let " "{" destructField,* "}" " := " term : doElem
+
+/-- The destructuring assignment whose producer computes: the `⇐` twin, binding the
+    producer in the enclosing monad before the fields are routed. -/
+scoped syntax (name := destructAssignBind) (priority := high)
+  "let " "{" destructField,* "}" " ⇐ " term : doElem
+
+/-- One statement per written field: `let x := __r.f` for a `:=` field, `x := __r.f` —
+    core's `mut` re-assignment — for a `←` field. All checking is deliberately left to
+    the elaborator: an unknown field, a non-`mut` target and a type mismatch fail exactly
+    as they would if the statement were written by hand. -/
+private def expandDestructFields (r : Ident) (fs : Syntax.TSepArray `destructField ",") :
+    MacroM (Array (TSyntax `doElem)) := do
+  let mut elems : Array (TSyntax `doElem) := #[]
+  for f in fs.getElems do
+    match f with
+    | `(destructField| $fld:ident := $x:ident) =>
+        elems := elems.push (← `(doElem| let $x:ident := $r.$fld))
+    | `(destructField| $fld:ident ← $x:ident) =>
+        elems := elems.push (← `(doElem| $x:ident := $r.$fld))
+    | _ => Macro.throwUnsupported
+  return elems
+
+macro_rules
+  | `(doElem| let {$fs:destructField,*} := $e) => do
+      -- the temporary is quotation-made, so it carries the macro scope: hygienic,
+      -- invisible to user code however it is spelled there
+      let r : Ident ← `(__r)
+      let elems ← expandDestructFields r fs
+      let seq ← elems.foldlM (fun acc el => `(doElem| do $acc:doElem; $el:doElem))
+        (← `(doElem| let $r:ident := $e))
+      pure seq
+  | `(doElem| let {$fs:destructField,*} ⇐ $e) => do
+      let r : Ident ← `(__r)
+      let elems ← expandDestructFields r fs
+      let seq ← elems.foldlM (fun acc el => `(doElem| do $acc:doElem; $el:doElem))
+        (← `(doElem| let $r:ident ← $e:term))
+      pure seq
 
 /-- `{x ∈ᴹ s | p}`: the set-builder whose condition can raise — `Finset.filterM` in
     set-builder clothes. The plain `{x ∈ s | p}` is a pure filter, so a condition that reads

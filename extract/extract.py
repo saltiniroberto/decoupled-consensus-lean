@@ -446,11 +446,19 @@ class Tables:
         return set(self.routines) | set(self.defs)
 
 
+def type_head(ptype: str) -> str:
+    """The head name of a parameter's type text: `Store Validator` -> `Store`. Matching a
+    struct-typed parameter needs this rather than a prefix test — `BlockTree` and `BlockId`
+    both start with `Block`."""
+    m = re.match(r"[A-Za-z_][\w'.]*", ptype.strip())
+    return m.group(0) if m else ""
+
+
 def derived_arg(t: "Tables", pname: str, ptype: str) -> str:
     """One derived paper-signature slot: a struct-typed parameter shows as its
     structure's paper symbol (the store's Σ), anything else as its snake-cased name."""
     for sname, ssym in t.struct_sym.items():
-        if ptype.startswith(sname):
+        if type_head(ptype) == sname:
             return ssym
     return snake(pname)
 
@@ -591,12 +599,42 @@ TOKEN_RE = re.compile(
 OPEN = {"(": ")", "[": "]", "{": "}"}
 
 
+ANCESTRY = {"⪯", "≺", "∼"}
+
+
 def tokenize(s: str):
     # `⇐` and `←` are one arrow in the paper. The second arrowhead is a Lean-side
     # distinction — the right-hand side computes rather than being a value — and the
     # figures write both as the draft's `←`, so the two are the same token from here on
     # and every assignment rule below sees one shape.
-    return [("←" if t == "⇐" else t) for t in TOKEN_RE.findall(s)]
+    raw = [("←" if t == "⇐" else t) for t in TOKEN_RE.findall(s)]
+    # `p ⪯[S] q` is the draft's `p ⪯ q`. A block names its parent, so ancestry needs the
+    # store it is read against, and Lean has to be told which — but there is one store in
+    # every figure and the draft leaves it ambient, so the bracket is dropped here, the way
+    # a paper signature hides a Lean-side parameter.
+    out, i = [], 0
+    while i < len(raw):
+        # `Σ.T.keys` is the draft's `Σ.T`. The store keys its processed blocks by identifier,
+        # so the set the figures range over is the map's key set; the draft writes the tree
+        # itself, and `.keys` is the accessor that gets there.
+        if raw[i] == "." and i + 1 < len(raw) and raw[i + 1] == "keys":
+            i += 2
+            continue
+        out.append(raw[i])
+        if raw[i] in ANCESTRY and i + 1 < len(raw) and raw[i + 1] == "[":
+            depth, j = 0, i + 1
+            while j < len(raw):
+                if raw[j] == "[":
+                    depth += 1
+                elif raw[j] == "]":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            i = j + 1
+            continue
+        i += 1
+    return out
 
 
 def parse_group(toks, i=0, closer=None):
@@ -763,7 +801,7 @@ class Rewriter:
         if store_param:
             sym = None
             for sname, ssym in tables.struct_sym.items():
-                if param_types.get(store_param, "").startswith(sname):
+                if type_head(param_types.get(store_param, "")) == sname:
                     sym = ssym
             if sym:
                 self.var_renames[store_param] = sym
@@ -1235,7 +1273,7 @@ class Rewriter:
         store_sym = None
         for pname, ptype in r.params:
             for sname, ssym in self.t.struct_sym.items():
-                if ptype.startswith(sname):
+                if type_head(ptype) == sname:
                     store_sym = (pname, ssym)
         values = {}
         params = list(r.params)
@@ -2306,7 +2344,7 @@ def main():
                     if auto:
                         continue
                     for sname in tables.struct_sym:
-                        if ty.startswith(sname):
+                        if type_head(ty) == sname:
                             store_param = n
                 groups[-1][2].append(routine_lines(tables, r, src, store_param, ptypes))
             for i, (caption, pres, blocks) in enumerate(groups):

@@ -18,8 +18,12 @@ order.
 
 ## Four things to know while reading
 
-**The transition is total.** Every routine returns a state; there is no `invalid`. Whether a
-block is accepted at all is the store's business (`07_FGStore.lean`), not this file's.
+**The transition is total.** Every routine returns a state; there is no `invalid`. The
+figure opens with two assertions — `B.proposer = proposer(B.slot)` and
+`B.parent.slot < B.slot` — which are validity of the block, not steps of the function:
+`process_block` (`07_FGStore.lean`) enforces both at admission, so the transition is
+never fed a block violating them, and whether a
+block is accepted at all is the store's business, not this file's.
 
 **`σ` on a right-hand side is the state at that statement.** The assignment macros expand to
 `σ := { σ with … }`, so consecutive lines read each other's effects, exactly as the figure's
@@ -57,7 +61,7 @@ progress event increments height by one.
 
 We extend the attestation to
 
-`a = (validator, round, head, height, target, finalize_height, finalize_target)`
+`a = (validator, round, confirmed, height, target, finalize_height, finalize_target)`
 
 adding the finality-relevant fields to the SG vote, carried as two pairs. The height
 pair is a target vote `(h, T)` with `T ≠ ⊥`, an empty-target vote `(h, ⊥)`, or the
@@ -111,7 +115,8 @@ set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Electorate Validator] [Params]
+variable {Validator : Type} [BlockIds] [BlockIdentity Validator]
+  [DecidableEq Validator] [Electorate Validator] [Params]
 
 open Params
 
@@ -123,17 +128,17 @@ open Params
     The three arrays hold one bit per validator; the quorum sets `Qtarget`, `Qprog` and
     `Qfinality` below are derived from them when used. -/
 structure ChainState (Validator : Type) where
-  /-- `L`, the latest block. -/
-  L : Block Validator
+  /-- `L`, the latest block, by identifier. -/
+  L : BlockId
   /-- `s`, the current slot; the protocol notes `s = L.slot`. -/
   s : Nat
   /-- `h`, the current height — the finality counter, separate from slot. It advances by
       exactly one, at a justification or a progress event. -/
   h : Nat
   /-- `T_h`, the block that carried the transition into height `h` — genesis for height 1.
-      Always a block, never `⊥`: the genesis state names genesis, and every advance names
-      the advancing block. -/
-  T_h : Block Validator
+      Always an identifier, never `⊥`: the genesis state names genesis, and every advance
+      names the advancing block. -/
+  T_h : BlockId
   /-- `nj`, computed when the chain enters `h` and fixed until the height changes: the
       height is *nonjustifiable*. See the module header on why it is stored. -/
   nj : Bool
@@ -143,12 +148,12 @@ structure ChainState (Validator : Type) where
   progress : (i : Validator) → Bool
   /-- `finalize[i]`: `i`'s finality pair matched the latest justification `(h_j, J)`. -/
   finalize : (i : Validator) → Bool
-  /-- `J`, the latest justification on the chain. -/
-  J : Block Validator
+  /-- `J`, the latest justification on the chain, by identifier. -/
+  J : BlockId
   /-- `h_j`, its height. -/
   h_j : Nat
-  /-- `F`, the latest finalization. -/
-  F : Block Validator
+  /-- `F`, the latest finalization, by identifier. -/
+  F : BlockId
   /-- `h_F`, its height. -/
   h_F : Nat
 
@@ -156,17 +161,17 @@ structure ChainState (Validator : Type) where
     `h_j = h_F = 0`, `nj = false`, and every array entry false. Genesis "is justified and
     finalized at height 0, and every chain starts at height 1". -/
 def ChainState.gen : ChainState Validator where
-  L := .genesis
+  L := genesisId Validator
   s := 0
   h := 1
-  T_h := .genesis
+  T_h := genesisId Validator
   nj := false
   targetParticipation _ := false
   progress _ := false
   finalize _ := false
-  J := .genesis
+  J := genesisId Validator
   h_j := 0
-  F := .genesis
+  F := genesisId Validator
   h_F := 0
 
 /-- `Q_target(σ) = {i : σ.target_participation[i]}`, intersected with the electorate, since
@@ -188,8 +193,9 @@ def ChainState.Qfinality (σ : ChainState Validator) : Finset Validator :=
 /-- Classify one attestation and set the
     bits it earns.
 
-    The finality test wants three things at once: an unfinalized justification,
-    `σ.F ⪯ σ.J`, and a finality pair naming that justification exactly.
+    The finality test wants two things at once: an unfinalized justification, and a finality
+    pair naming that justification exactly. It does **not** test that `σ.F` is an ancestor of
+    `σ.J`: ancestry is a question about a store, and the chain state is store-free.
 
     The height tests are an `if`/`else if`, and the first branch sets **both** bits: an exact
     target vote proves progress as well, `T_h` being on the chain by construction. An exact
@@ -200,7 +206,7 @@ def processAttestation (σ : ChainState Validator) (a : Attestation Validator) :
     ChainState Validator := Id.run do
   let mut σ := σ
   let i := a.validator
-  if σ.h_j > σ.h_F ∧ σ.F ⪯ σ.J ∧ a.finalityPair = .pair σ.h_j σ.J then
+  if σ.h_j > σ.h_F ∧ a.finalityPair = .pair σ.h_j σ.J then
     σ.finalize[i] ← true
   if a.heightPair = .target σ.h σ.T_h then
     σ.targetParticipation[i] ← true
@@ -238,7 +244,7 @@ def advanceHeight (σ : ChainState Validator) : ChainState Validator := Id.run d
     `σ.nj` is read, not recomputed — see the module header. -/
 def processHeightEvents (σ : ChainState Validator) : ChainState Validator := Id.run do
   let mut σ := σ
-  if σ.h_j > σ.h_F ∧ σ.F ⪯ σ.J ∧ w(σ.Qfinality)≥q then
+  if σ.h_j > σ.h_F ∧ w(σ.Qfinality)≥q then
     σ.F ← σ.J                                                 -- `(σ.F, σ.h_F) ← (σ.J, σ.h_j)`
     σ.h_F ← σ.h_j
   if ¬ σ.nj ∧ w(σ.Qtarget)≥q then
@@ -261,7 +267,7 @@ def stateTransition (σ : ChainState Validator) (B : Block Validator) :
   σ.s ← B.slot
   for a in B.attestations do
     σ ← processAttestation σ a
-  σ.L ← B
+  σ.L ← B.id
   return processHeightEvents σ
 
 end DC

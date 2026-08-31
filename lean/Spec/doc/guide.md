@@ -8,7 +8,7 @@ write proofs.
 
 ## The shape of a file
 
-A figure file (`02_GoldfishDuties.lean`, say) contains one routine per pseudocode
+A figure file (`05_SGDuty.lean`, say) contains one routine per pseudocode
 routine. Everything between `/--` and `-/` is documentation for the definition below it;
 `--` starts a line comment, which the rendered figure shows as a margin note.
 The files under `Defs/` hold the data types and the plumbing; the ones whose
@@ -18,23 +18,22 @@ exist so the figure files can read like pseudocode.
 A routine looks like this:
 
 ```lean
-def Store.processSGVote (S : Store Validator) (vote : SGVote Validator) :
+def Store.processSGVote (S : Store Validator) (a : Attestation Validator) :
     Store Validator := Id.run do
 ```
 
-Read: a function named `processSGVote`, taking a store `S` and a `vote`, returning a
+Read: a function named `processSGVote`, taking a store `S` and an attestation `a`,
+returning a
 `Store`. The `Store.` prefix makes call sites read like pseudocode — `S.processSGVote
-vote` is `process_sg_vote(Σ, vote)`, with the store written `S` because `Σ` is reserved
+a` is `process_sg_vote(Σ, a)`, with the store written `S` because `Σ` is reserved
 in Lean. `Id.run do` opens an imperative block: statements in order, early `return`
 allowed. Inside one, `let x := e` names a value, `let mut S := S` makes a local mutable
 copy, and assignments keep the imperative arrow — `S.t ← t`,
 `S.gfVotes[k] ← …`. A function without `do` is a single expression.
 
-One convention needs saying once: the protocol builds its layers incrementally, and a
-later layer redefines some routines. Lean cannot redefine, so the final reading carries the plain name
-(`S.getHead`, `S.processBlock`) and each superseded one is named after its figure
-(`Fig1.getHead`, `Fig4.getHead`). If you are looking for "the" fork choice, it is the
-one without a figure prefix.
+Every routine is defined exactly once, the assembled protocol's reading — there are no
+per-layer variants to pick between. If you are looking for "the" fork choice, it is
+`S.getHead` (`09_Healing.lean`), and the tree it walks is built beside it.
 
 ## Reading the types: what a routine can do
 
@@ -73,18 +72,18 @@ construction exists to avoid. Claims like "the answer does not depend on the tie
 provable statements — the outcome set has one element.
 
 Broadcasting last. A duty broadcasts and then processes its own message —
-`broadcast vote; process_sg_vote(Σ, vote)` — and the Lean says the same:
+`broadcast vote; process_goldfish_vote(Σ, vote)` — and the Lean says the same:
 
 ```lean
-broadcast (Message.sgVote vote)
-return S.processSGVote vote
+broadcast (Message.gfVote vote)
+return S.processGoldfishVote vote
 ```
 
 `broadcast` drops the message into an outbox that accumulates silently across everything
 a duty calls; the duty itself just returns the new store. When the tick runs a duty after
 another duty, both of their messages are in the outbox — no code collects or merges them.
 The outbox becomes visible only at the boundary where a duty's overall effect is stated:
-`(S.onTick t p).outcomes` is the set of possible results, each a final store together
+`(S.onTick t).outcomes` is the set of possible results, each a final store together
 with everything broadcast on the way to it.
 
 ## Finding the routine that handles a message
@@ -145,11 +144,11 @@ as "given the protocol's parameters"; no caller passes them explicitly.
 hypothesis:
 
 ```lean
-def Store.sgVote (i : Validator) (S : Store Validator)
-    (_ : S.t = heightDecisionTime (round S.s) := by …) : …
+def Store.proposeBlock (S : Store Validator)
+    (_ : S.t = slotStart S.s := by …) : …
 ```
 
-Read the underscore argument as "requires: the clock is at `a_r`". The `:= by …` part
+Read the underscore argument as "requires: the clock is at `t_s`". The `:= by …` part
 makes Lean find the justification automatically at each call site — in practice from the
 `if` around the call — so the calls stay clean and a call at the wrong instant
 simply does not compile.
@@ -184,6 +183,6 @@ store as `S`.)
 
 The pages beside this one cover the two designs with real depth:
 [nondeterminism.md](nondeterminism.md) for the choice machinery and how results are
-consumed, [naming.md](naming.md) for the numbered readings, and
+consumed, [naming.md](naming.md) for the naming scheme, and
 [style.md](style.md) for the full list of conventions. Every definition's own docstring
 states what it means without assuming you have read anything else.

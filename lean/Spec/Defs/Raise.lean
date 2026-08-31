@@ -64,6 +64,18 @@ instance : Subsingleton Error := ⟨fun e e' => by cases e; cases e'; rfl⟩
     friends — while signatures and `#check` output read `DRE α`. -/
 abbrev DRE (α : Type) := Except Error α
 
+/-- The pure extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis discharged
+    from a dependent `if _ : x ≠ ⊥` branch by the instants' own tactic. The raising lift
+    below — `let y ← x` behind a plain `≠ ⊥` test — covers the monadic bodies; this is
+    the *pure* bodies' extraction, where no lift can fire. The extraction must sit
+    inside the dependent `if`'s then-branch — a do join point does not carry the
+    hypothesis into the continuation (measured). The trap it carries: dot notation
+    resolves fields in the type's own namespace only, hence the `_root_.` (a
+    `DC.Option.value` is invisible to `x.value`). -/
+def _root_.Option.value {α : Type} (x : Option α)
+    (h : x ≠ ⊥ := by solve_by_elim [And.left, And.right]) : α :=
+  x.get (Option.ne_none_iff_isSome.mp h)
+
 /-- `Finset.unionM` at `DRE` is commutative — **and only because the failure
     carries no payload**. The failure-failure case needs the two failures to be equal, which
     is `Subsingleton Error`. -/

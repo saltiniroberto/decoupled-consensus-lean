@@ -2,176 +2,131 @@ import Spec.Defs.Store
 import Spec.Defs.Nondet
 
 /-!
-# The finality-vote rules: how an attestation's pairs are determined
+# The validator client: how an attestation's pairs are filled
 
-The attestation's shape is `Model.lean`'s, and `06_StateTransition.lean` says how processed attestations
-move the chain state; this file holds the rule a validator uses to *fill* the height pair
-and the finality pair it signs.
+The attestation's shape is `Model.lean`'s, and `06_StateTransition.lean` says how processed
+attestations move the chain state; this file holds the client rules that fill the height
+pair and the finality pair a validator signs. **No rule here reads the store.** Everything
+a rule needs from the chain arrives as an argument — `get_fg_vote` (`09_Healing.lean`)
+derives those arguments — and the one durable input is the anti-slashing record `Λ`
+(`SigningHistory.lean`), which `record_attestation` below is the only writer of.
 
-The strategy, in plain words. A validator keeps a durable per-height record of what it has
-signed — `Σ.history`, a `SigningHistory` (the field in `Store.lean`): whether it signed an
-empty target at a height, the first named target it signed there, and the target of the
-first finality pair it signed there. Two store rules read that record and the store's
-view, and each
-carries its pair on the updated store — the record write rides that store, so
-no signature is released before its record is durable:
+The strategy, in plain words. `Λ` remembers, per height, the first named target signed
+there, whether an empty target was signed there, and the lock — the target of a finality
+pair signed there. `finality_pair` signs the offered justification exactly when it is
+ahead of the offered finalization and the record allows it; `height_pair` decides the
+current-height pair in five cases, the record having precedence over anything new; and
+one attestation's own finality pair stands in as the lock its height pair reads, so an
+attestation cannot form E1 evidence against itself.
 
-* `Store.decideFinalityVote` signs `(h_j, J)` — the latest justification — exactly when it is
-  ahead of the finalization, on its chain, and consistent with the record: the
-  validator already signed `J` as its target at `h_j`, signed no empty target there, and
-  its recorded finality target there is empty or `J` itself — written on first release. It
-  returns the pair with the store.
-* `Store.computeHeightVote` chooses the current-height pair under the ceiling `Σ.live_confirmed`,
-  the block the validator currently takes as confirmed: it repeats what its record forces
-  (an empty-target vote or a recorded target), and only with a silent record does it sign
-  something new — an empty target when the height is nonjustifiable, else the confirmed
-  state's target when that target sits at or below the ceiling. It writes nothing;
-  `Store.decideHeightVote` is what records the signing and stores the pair as
-  `Σ.height_pair`.
+The two pair rules run in order — finality first, then height — and `record_attestation`
+makes their writes durable before the attestation is released. In this rendering the pairs
+are decided at the round's action instant `a_r` and staged, and the assembled attestation
+goes out at the validator's own voting time (`Store.onTick`, `11_Duties.lean`).
 
-`Store.fgVote` composes them, finality first, so the finality target written by the
-finality rule is visible to the height rule's record read within the same vote, and
-returns the two pairs as one `FGVote` with the store that carries both record writes. The
-wire object is an attestation, which adds a head and a round; assembling and broadcasting
-one belongs to whoever holds the head.
+## What `get_fg_vote` hands over
+
+`FGVote` below is the tuple `(h_c, T_c, ν, h_j, J, h_F)` the protocol's `get_fg_vote`
+returns: the height inputs — the confirmed state's height, target and nonjustifiable
+flag, offered together or not at all — and the current-slot head state's justification
+and finalization facts. The height inputs are `⊥` exactly when no fresh grade-2 quorum
+exists.
 -/
 
 set_option autoImplicit false
 
 namespace DC
 
-variable {Validator : Type} [Roots] [DecidableEq Validator] [Params]
+variable [BlockIds]
 
-/-- What a signing rule produces: the vote it signed — a height pair, a finality pair, or
-    the two together — and the store afterwards, its `Σ.history` already carrying the
-    rule's record write. A named structure, where a bare product would make the caller
-    remember which component is which. -/
-structure VoteAndStore (Validator : Type) [Roots] (α : Type) where
-  /-- The vote the rule signed. -/
-  vote : α
-  /-- The store afterwards. -/
-  state : Store Validator
+/-- The height inputs of an FG vote: `(h_c, T_c, ν)` — the height, target and
+    nonjustifiable flag of one chain state, the confirmed state `get_fg_vote` selects.
+    One structure rather than three `Option`s, because the three are offered together or
+    not at all. -/
+structure HeightInputs [BlockIds] where
+  /-- `h_c`, the state's height. -/
+  h : Nat
+  /-- `T_c`, the state's height target. -/
+  T : BlockId
+  /-- `ν`, the state's nonjustifiable flag. -/
+  ν : Bool
+deriving DecidableEq
 
-/-- An FG vote: the two pairs a validator signs for the current height and for the
-    finality it commits to. It is not itself a wire object — an attestation carries these
-    two pairs together with a head and a round — so nothing outside the pairs belongs
-    here. -/
-structure FGVote (Validator : Type) [Roots] where
-  /-- The current-height pair. -/
-  heightPair : HeightPair Validator
-  /-- The finality pair. -/
-  finalityPair : FinalityPair Validator
+/-- What `get_fg_vote` returns: the height inputs — `⊥` when no fresh grade-2 quorum
+    exists — and the justification and finalization facts `(h_j, J, h_F)` of the
+    current-slot head's chain state. The client rules below turn these into the two pairs
+    an attestation carries. -/
+structure FGVote [BlockIds] where
+  /-- `(h_c, T_c, ν)`, or `⊥` when no height pair is to be offered. -/
+  heightInputs : Option HeightInputs
+  /-- `h_j`, the head state's justification height. -/
+  h_j : Nat
+  /-- `J`, the head state's justified block. -/
+  J : BlockId
+  /-- `h_F`, the head state's finalization height. -/
+  h_F : Nat
 
-/-- The current-height signing rule: which height pair to sign, in five cases tried in
-    order, the record having precedence over anything new.
+/-! ## Figure `finality_pair(Λ, h_j, J, h_F)` -/
+/-- The finality pair: sign `(h_j, J)` — a justification not yet finalized — exactly when
+    the record allows it: the validator already signed `J` as its target at `h_j`, signed
+    no empty target there, and its lock there is empty or `J` itself. No ancestry test:
+    the client has no store to read one in. -/
+def SigningHistory.finalityPair (Λ : SigningHistory) (h_j : Nat) (J : BlockId)
+    (h_F : Nat) : FinalityPair := Id.run do
+  if h_j > h_F ∧ Λ.target h_j = some J ∧ ¬ Λ.timeout h_j ∧
+      (Λ.lock h_j = ⊥ ∨ Λ.lock h_j = some J) then
+    return .pair h_j J
+  return .empty
 
-    Reads from the store: the record `Σ.history`, the ceiling `Σ.live_confirmed` — the validator
-    vouches for nothing beyond it, so a target is signed only when it lies on that block's
-    chain — and, through the raising read of the ceiling's stored state, the current
-    height `h`, its target and the nonjustifiable flag.
+/-! ## Figure `height_pair(Λ, h_c, T_c, ν, h_f, T_f)` -/
+/-- The height pair, in five cases tried in order, the record having precedence over
+    anything new: (1) empty inputs sign the empty pair; (2) a recorded timeout repeats as
+    an empty-target vote; (3) a lock repeats when it is the offered target, and otherwise
+    the height is waited out with the empty pair — where the lock read is `Λ.lock[h_c]`
+    **unless this attestation's own finality pair is at `h_c`, whose target then stands in**,
+    so one attestation cannot form E1 evidence against itself; (4) a recorded target
+    repeats when it is the offered target; (5) with a silent record, the offered target is
+    adopted unless the height is nonjustifiable. Anything else times the height out. -/
+def SigningHistory.heightPair (Λ : SigningHistory) (hi : Option HeightInputs)
+    (fp : FinalityPair) : HeightPair := Id.run do
+  if _ : hi ≠ ⊥ then
+    let h := hi.value.h
+    let T := hi.value.T
+    let ν := hi.value.ν
+    -- `lock ← Λ.lock[h_c]; if h_c = h_f then lock ← T_f` — this attestation's own lock
+    let mut lock := Λ.lock h
+    if fp.h = some h then
+      lock ← fp.T
+    if Λ.timeout h then                               -- case 2: a timeout repeats
+      return .emptyTarget h
+    if lock ≠ ⊥ then                                  -- case 3: a lock repeats
+      if lock = some T then
+        return .target h T
+      return .empty                                   --   locked elsewhere: wait out the height
+    if Λ.target h ≠ ⊥ then                            -- case 4: a recorded target repeats
+      if Λ.target h = some T then
+        return .target h T
+    else if ¬ ν then                                  -- case 5: no record, adopt the target
+      return .target h T
+    return .emptyTarget h                             -- otherwise time out at `h_c`
+  return .empty                                       -- case 1: nothing offered
 
-    The cases: (1) an empty target already signed at `h` is repeated; (2) a recorded
-    finality target at `h` is repeated as a target; (3) a named target already signed at
-    `h` is repeated, and when it
-    no longer sits below the ceiling, an empty target is signed instead; (4) with a silent
-    record and the height nonjustifiable, an empty target is signed; (5) with a silent
-    record otherwise, the state's target is signed when it sits below the ceiling, else an
-    empty target. It touches no store field: `decide_height_vote` below is what records the
-    signing and stores the pair.
--/
-def Store.computeHeightVote (S : Store Validator) :
-    DRE (HeightPair Validator) := do
-  let C := S.liveConfirmed
-  let σC ← S.σ[C]
-  let h := σC.h
-  if S.history.signedEmptyTarget h then                   -- case 1: repeat the empty target
-    return .emptyTarget h
-  if S.history.finalityTarget h ≠ ⊥ then                  -- case 2: repeat the finality target
-    let finalityTarget ← S.history.finalityTarget h
-    if finalityTarget ⪯ C then
-      return .target h finalityTarget
-    return .empty
-  if S.history.firstTarget h ≠ ⊥ then                     -- case 3: repeat the named target
-    let target ← S.history.firstTarget h
-    if target ⪯ C then
-      return .target h target
-    return .emptyTarget h
-  if σC.nj then                                     -- case 4: no record, nonjustifiable
-    return .emptyTarget h
-  let T := σC.T_h                                   -- case 5: no record, sign the state's
-  if T ⪯ C then                                     --   target when it sits below `C`
-    return .target h T
-  return .emptyTarget h
-
-/-- Sign the height pair `compute_height_vote` chose: store it as `Σ.height_pair`, and make
-    its record durable — a named target as the height-`h` first target, an empty target as
-    the height-`h` empty-target flag, the empty pair recording nothing.
-
-    Both writes overwrite with the value a repeat already holds, so signing a pair the record
-    already carries leaves the record unchanged. The one case where the write is new to this
-    routine is a finality target repeated as a height target: it is now recorded as the
-    height-`h` first target as well.
-
-    Which of the two writes a pair asks for is read off `hp.T` and `hp.h` (`Defs/Model.lean`),
-    the empty pair asking for neither. -/
-def Store.decideHeightVote (S : Store Validator) :
-    DRE (Store Validator) := do
-  let mut S := S
-  let hp ← S.computeHeightVote
-  -- a named target is recorded as the height's first target
-  if hp.T ≠ ⊥ then
-    S.history ← S.history.saveTarget (← hp.h) (← hp.T)
-  -- an empty target sets the height's flag
-  if hp.T = ⊥ ∧ hp.h ≠ ⊥ then
-    S.history ← S.history.saveEmptyTarget (← hp.h)
-  S.heightPair ← hp
-  return S
-
-/-- Decide the finality pair: sign `(h_j, J)` — the latest justification, read with its
-    height and the finalization from the store — exactly when it is ahead of the
-    finalization (`h_F < h_j`), on its chain (`F ⪯ J`), and consistent with the record:
-    the validator already signed `J` as its target at `h_j`, signed no empty target
-    there, and its recorded finality target there is empty or `J` itself. Otherwise the pair
-    is empty. The rule is total — every branch returns.
-
-    Deciding and signing are one routine here, unlike the current-height pair, which splits
-    into `compute_height_vote` and `decide_height_vote`. On first release this one writes the
-    height-`h_j` finality target into the record and hands back the store carrying it, so no
-    signature is released before its record is durable. It stores the pair in no field: a
-    caller that wants it takes it from the result, which is why the result is a pair and a
-    store rather than a store alone.
-
-    No separate knowledge of the justification is asked for: justification is an
-    on-chain fact — `Σ.J` and `Σ.h_j` read off replayed states whose justifying
-    attestations sit inside blocks the validator has processed — so a coherent store's
-    own chain is the evidence.
--/
-def Store.decideFinalityVote (S : Store Validator) :
-    VoteAndStore Validator (FinalityPair Validator) := Id.run do
-  let mut S := S
-  if S.h_F < S.h_j ∧ S.F ⪯ S.J ∧ S.history.firstTarget S.h_j = S.J ∧
-      ¬ S.history.signedEmptyTarget S.h_j ∧
-      (S.history.finalityTarget S.h_j = ⊥ ∨ S.history.finalityTarget S.h_j = S.J) then
-    S.history ← S.history.saveFinalityTarget S.h_j S.J
-    return { vote := .pair S.h_j S.J, state := S }
-  return { vote := .empty, state := S }
-
-/-- The FG vote: the two pair rules evaluated **in order** — first the finality pair,
-    whose record write rides the store the current-height rule then reads. That ordering
-    is what keeps the two pairs of one vote from contradicting each other; the claim
-    itself is `Analysis/` matter.
-
-    It returns the vote and the store, whose `Σ.history` carries both record writes — so
-    no signature is released before its record is durable. The height pair is read back from
-    the `Σ.height_pair` that `decide_height_vote` wrote. What reaches the wire is an
-    attestation, which adds a head and a round to these two pairs; assembling and
-    broadcasting one is the concern of whoever holds the head, not of the rules that fill
-    the pairs.
--/
-def Store.fgVote (S : Store Validator) :
-    DRE (VoteAndStore Validator (FGVote Validator)) := do
-  let { vote := fp, state := S } := S.decideFinalityVote  -- first the finality pair
-  let S ← S.decideHeightVote                        -- then the current-height pair
-  return { vote := { heightPair := S.heightPair, finalityPair := fp }, state := S }
+/-! ## Figure `record_attestation(Λ, a)` -/
+/-- The only writer of `Λ`. It reads exactly the attestation's two pairs, so it takes
+    exactly those: a finality pair `(h_f, T_f)` writes the lock at `h_f`; a height pair
+    with a named target records it as the height's first target, only when none is
+    recorded yet; an empty-target vote sets the height's timeout. The empty pairs write
+    nothing. -/
+def SigningHistory.recordAttestation (Λ : SigningHistory) (hp : HeightPair)
+    (fp : FinalityPair) : SigningHistory := Id.run do
+  let mut Λ := Λ
+  if _ : fp.h ≠ ⊥ then                                -- `Λ.lock[h_f] ← T_f`
+    Λ.lock[fp.h.value] ← fp.T
+  if _ : hp.T ≠ ⊥ ∧ hp.h ≠ ⊥ then                    -- the first named target is kept
+    if Λ.target hp.h.value = ⊥ then
+      Λ.target[hp.h.value] ← hp.T
+  if _ : hp.T = ⊥ ∧ hp.h ≠ ⊥ then                    -- `Λ.timeout[h] ← true`
+    Λ.timeout[hp.h.value] ← true
+  return Λ
 
 end DC
