@@ -34,8 +34,6 @@ are not standard pseudocode — the failure-propagating `←`, the nondeterminis
 - [`lean/Sts.lean`](lean/Sts.lean) — the spec placed under the transition-system
   framework: which routine runs on a tick, and which handler runs on each kind of message
   received.
-- [`lean/Analysis/`](lean/Analysis/) — results stated against the spec (accountable
-  safety, so far as a statement).
 
 Also here:
 
@@ -57,4 +55,3 @@ Also here:
 
 Toolchain pinned in [`lean-toolchain`](lean-toolchain) (Lean 4.32.2); Mathlib's rev in
 `lakefile.toml` and the rev the `deps/lean-sts` submodule requires must match it.
-`CONTEXT.md` is the running record of design decisions.

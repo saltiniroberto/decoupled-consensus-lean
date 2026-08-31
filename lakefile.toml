@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["Spec", "SpecM", "Analysis"]
+defaultTargets = ["Spec"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -32,23 +32,6 @@ name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
 
-# A copy of `Spec`, taken 2026-08-27 from the working tree at commit c0ef96e plus the
-# uncommitted spec edits of that moment. It is where the experiment of threading the store
-# through a monad is carried out; `Spec` itself is not touched by that work.
-#
-# It has its own `srcDir`, `experiments`, so that nothing under `lean/` is experimental:
-# `SpecM.Defs.Store` is `experiments/SpecM/Defs/Store.lean`. Lake derives a module's path
-# from its name and the lib's `srcDir` and nothing else, so the directory under `srcDir`
-# still repeats the module root.
-#
-# The copy differs from its source only in the module names its `import` lines use, apart
-# from the experiment itself. Both libraries define into namespace `DC`, so no file may
-# import from both.
-[[lean_lib]]
-name = "SpecM"
-srcDir = "experiments"
-globs = ["SpecM", "SpecM.+"]
-
 # The boundary to the sts framework: the specification above placed under
 # `StsMultisetLog`'s `Protocol`. Root `Sts`, same `srcDir`. Nothing in `Spec` imports it, and
 # the extractor does not read it, so no line of it reaches the document.
@@ -56,11 +39,3 @@ globs = ["SpecM", "SpecM.+"]
 name = "Sts"
 srcDir = "lean"
 globs = ["Sts"]
-
-# The analysis: results stated (and eventually proved) against the specification above.
-# Root `Analysis`, same `srcDir`, so `Analysis.AccountableSafety` is
-# `lean/Analysis/AccountableSafety.lean`.
-[[lean_lib]]
-name = "Analysis"
-srcDir = "lean"
-globs = ["Analysis", "Analysis.+"]

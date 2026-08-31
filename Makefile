@@ -40,13 +40,11 @@ dev: nodecide orphans sorries build
 # That has happened -- an editor tab left open on a path two layout moves out of date was
 # saved and recreated a whole stale directory, invisible to the build.
 #
-# Both srcDirs are walked: `lean` for Spec/Analysis/Sts, `experiments` for SpecM.
+# The one srcDir is `lean`, holding Spec and Sts.
 orphans:
-	@bad=`find lean experiments -name '*.lean' \
+	@bad=`find lean -name '*.lean' \
 	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' \
-	    ! -path 'lean/Analysis.lean' ! -path 'lean/Analysis/*' \
-	    ! -path 'lean/Sts.lean' \
-	    ! -path 'experiments/SpecM.lean' ! -path 'experiments/SpecM/*'`; \
+	    ! -path 'lean/Sts.lean'`; \
 	if [ -n "$$bad" ]; then \
 		echo "$$bad"; \
 		echo 'FAIL: .lean in a srcDir claimed by no lean_lib glob in lakefile.toml'; \
