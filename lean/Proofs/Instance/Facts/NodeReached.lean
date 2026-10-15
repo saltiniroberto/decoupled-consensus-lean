@@ -1,15 +1,15 @@
 import Proofs.Instance.Facts.GradesRun
 
 /-!
-# Node facts at reached node states of `Model.specDraft`
+# Node facts at reached node states of `Model.spec`
 
-Proofs of fields of `NodeFacts` and `NodeRunFacts` at `Model.specDraft` that hold at node states (or
+Proofs of fields of `NodeFacts` and `NodeRunFacts` at `Model.spec` that hold at node states (or
 named stores) a run reaches: the cache fields, the stamp fields and the finality of the core call.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NodeReached
+namespace SpecRecord.NodeReached
 
 open Spec
 open scoped DC
@@ -223,11 +223,11 @@ theorem stamp_step {a b : Store V} (ha : NoRaise.StoreOk a) (hb : NoRaise.StoreO
           rw [← e, Store.blockOfImage_toProof_of_injOn a hinja hX]; exact h
         exact (hclock B c h').trans hab
 
-end SpecDraftRecord.NodeReached
+end SpecRecord.NodeReached
 
 /-! ## The receipt and the tick at the instance: the tree grows -/
 
-namespace SpecDraftRecord.NodeReached
+namespace SpecRecord.NodeReached
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
@@ -235,10 +235,10 @@ open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The tick of `Model.specDraft` keeps every block of the node's tree. -/
-theorem tick_T_subset (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out) :
+/-- The tick of `Model.spec` keeps every block of the node's tree. -/
+theorem tick_T_subset (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out) :
     n.val.st.T ⊆ out.1.val.st.T := by
   obtain ⟨sg, ⟨h, -⟩ | ⟨B, -, h⟩⟩ := NodeFacts.tick_shape S v n t out hout
   · rw [h.1]
@@ -246,15 +246,15 @@ theorem tick_T_subset (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (
     exact (NodeFacts.keeps_receipt_process S
       { n.val.st with saved_grades := sg, t := t, s := (Setup.toSpec S).C.slotOf t } (.block B)).2.2.1
 
-/-- The node state the receipt of `o` returns at `Model.specDraft` has the store
+/-- The node state the receipt of `o` returns at `Model.spec` has the store
     `make_grades_compatible_with_finalized` of the member `receipt_process` on `n`'s store. -/
-theorem process_st (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V)
-    (n' : (Model.specDraft (V := V)).N) (hn' : (Model.specDraft (V := V)).process S n o ⇢ n') :
+theorem process_st (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V)
+    (n' : (Model.spec (V := V)).N) (hn' : (Model.spec (V := V)).process S n o ⇢ n') :
     n'.val.st = Spec.make_grades_compatible_with_finalized
       (Member.receipt_process S n.val.st o) := by
   rw [(NodeFacts.process_returns_iff S n.val n'.val o).mp hn', NodeFacts.receiveNamedObject_eq]
 
-end SpecDraftRecord.NodeReached
+end SpecRecord.NodeReached
 
 /-! ## The cache fields -/
 
@@ -264,13 +264,13 @@ variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
 open DecoupledConsensusModel.Execution
 open scoped DC
-open SpecDraftRecord
+open SpecRecord
 
-/-- The field `process_cache_eq` of `NodeFacts` at `Model.specDraft`: at a reached node state, the
+/-- The field `process_cache_eq` of `NodeFacts` at `Model.spec`: at a reached node state, the
     cache after a receipt is the record's clip of the cache before at the new finalized block. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_process_cache_eq :
-    ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-      (hn' : (Model.specDraft (V := V)).process S n o ⇢ n') (hn : (Model.specDraft (V := V)).reachedNode n), n'.cache = (Model.specDraft (V := V)).clipCache n'.st.core.F n.cache := by
+theorem _root_.SpecRecord.NodeFacts.spec_process_cache_eq :
+    ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+      (hn' : (Model.spec (V := V)).process S n o ⇢ n') (hn : (Model.spec (V := V)).reachedNode n), n'.cache = (Model.spec (V := V)).clipCache n'.st.core.F n.cache := by
   intro S n o n' hn' hn
   obtain ⟨hinv, hconf, hcontract⟩ := reached_elim hn
   obtain ⟨-, hd, hpc, hF⟩ := n'.property
@@ -287,28 +287,28 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_process_cache_eq :
   rw [NodeFacts.receipt_process_saved_grades]
   rfl
 
-/-- The field `namedNode_process_cache` of `NodeFacts` at `Model.specDraft`: at a reached node
+/-- The field `namedNode_process_cache` of `NodeFacts` at `Model.spec`: at a reached node
     state, the cache after a receipt is the record's clip of the cache before at the new finalized
     block. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_namedNode_process_cache :
-    ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-      (hn' : (Model.specDraft (V := V)).process S n o ⇢ n') (hn : (Model.specDraft (V := V)).reachedNode n), n'.cache = (Model.specDraft (V := V)).clipCache n'.st.core.F n.cache := by
+theorem _root_.SpecRecord.NodeFacts.spec_namedNode_process_cache :
+    ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+      (hn' : (Model.spec (V := V)).process S n o ⇢ n') (hn : (Model.spec (V := V)).reachedNode n), n'.cache = (Model.spec (V := V)).clipCache n'.st.core.F n.cache := by
   intro S n o n' hn' hn
-  exact SpecDraftRecord.NodeFacts.specDraft_process_cache_eq S n o n' hn' hn
+  exact SpecRecord.NodeFacts.spec_process_cache_eq S n o n' hn' hn
 
-/-- The field `tick_cache_eq` of `NodeFacts` at `Model.specDraft`: at a reached node state, the
+/-- The field `tick_cache_eq` of `NodeFacts` at `Model.spec`: at a reached node state, the
     cache after a tick is the record's clip, at the tick's final finalized block, of the outcome `c`
     of the phase tick on the node's store and cache. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_tick_cache_eq :
-    ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-      (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
-      (c : (Model.specDraft (V := V)).Cache) (hcache : (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
-      (hn : (Model.specDraft (V := V)).reachedNode n),
-      out.1.cache = (Model.specDraft (V := V)).clipCache out.1.st.core.F c := by
+theorem _root_.SpecRecord.NodeFacts.spec_tick_cache_eq :
+    ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+      (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
+      (c : (Model.spec (V := V)).Cache) (hcache : (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
+      (hn : (Model.spec (V := V)).reachedNode n),
+      out.1.cache = (Model.spec (V := V)).clipCache out.1.st.core.F c := by
   intro S v n t out hout c hcache hn
   obtain ⟨hinv, hconf, hcontract⟩ := reached_elim hn
   obtain ⟨S', hS', rfl, -⟩ := GradesFacts.sd_onPhaseTick_ok hcache
-  have hout' : (Model.specDraftBase (V := V)).tick S v n.val t ⇢ (out.1.val, out.2) := hout
+  have hout' : (Model.specBase (V := V)).tick S v n.val t ⇢ (out.1.val, out.2) := hout
   obtain ⟨st0, h0, hsaved⟩ := GradesRunFacts.tick_saved hout'
   have e : Spec.Protocol.update_grades (Setup.toSpec S).C (Setup.toSpec S).P n.val.st t =
       .ok S' := hS'
@@ -324,24 +324,24 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_tick_cache_eq :
     (NodeReached.contractInTree_mono (NodeReached.tick_T_subset S v n t out hout) hmem)]
   exact hsaved
 
-/-- The field `namedNode_tick_cache` of `NodeFacts` at `Model.specDraft`: at a reached node state,
+/-- The field `namedNode_tick_cache` of `NodeFacts` at `Model.spec`: at a reached node state,
     the cache after a tick is the record's clip, at the tick's final finalized block, of the outcome
     of the phase tick on the node's store and cache. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_namedNode_tick_cache :
-    ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Int)
-      (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
-      (c : (Model.specDraft (V := V)).Cache) (hcache : (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
-      (hn : (Model.specDraft (V := V)).reachedNode n),
+theorem _root_.SpecRecord.NodeFacts.spec_namedNode_tick_cache :
+    ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Int)
+      (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
+      (c : (Model.spec (V := V)).Cache) (hcache : (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
+      (hn : (Model.spec (V := V)).reachedNode n),
       out.1.cache
-        = (Model.specDraft (V := V)).clipCache out.1.st.core.F c := by
+        = (Model.spec (V := V)).clipCache out.1.st.core.F c := by
   intro S v n t out hout c hcache hn
-  exact SpecDraftRecord.NodeFacts.specDraft_tick_cache_eq S v n t out hout c hcache hn
+  exact SpecRecord.NodeFacts.spec_tick_cache_eq S v n t out hout c hcache hn
 
-/-- The field `process_node_of_store_id` of `NodeFacts` at `Model.specDraft`: at a reached node
+/-- The field `process_node_of_store_id` of `NodeFacts` at `Model.spec`: at a reached node
     state, a receipt that keeps the store, at a node whose cache the record's clip keeps, returns
     the node state unchanged. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_process_node_of_store_id :
-    ∀ (S : DecoupledConsensusModel.Execution.Setup V) (n : (Model.specDraft (V := V)).N) (o : DecoupledConsensusModel.Execution.NamedObject V), (Model.specDraft (V := V)).receipt_process S n.st o = n.st → (Model.specDraft (V := V)).clipCache n.st.core.F n.cache = n.cache → ∀ (n' : (Model.specDraft (V := V)).N), (Model.specDraft (V := V)).process S n o ⇢ n' → ∀ (hn : (Model.specDraft (V := V)).reachedNode n), n' = n := by
+theorem _root_.SpecRecord.NodeFacts.spec_process_node_of_store_id :
+    ∀ (S : DecoupledConsensusModel.Execution.Setup V) (n : (Model.spec (V := V)).N) (o : DecoupledConsensusModel.Execution.NamedObject V), (Model.spec (V := V)).receipt_process S n.st o = n.st → (Model.spec (V := V)).clipCache n.st.core.F n.cache = n.cache → ∀ (n' : (Model.spec (V := V)).N), (Model.spec (V := V)).process S n o ⇢ n' → ∀ (hn : (Model.spec (V := V)).reachedNode n), n' = n := by
   intro S n o h₁ h₂ n' h₃ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reached_elim hn
   obtain ⟨-, hd, hpc, hF⟩ := n.property
@@ -386,7 +386,7 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_process_node_of_store_id :
           exact hne (hd' Y hY' _ hX' hroot)
         · rw [hrp, Handlers.on_block_eq, if_neg hadm]
     · have hv := congrArg Subtype.val h₁
-      have e : ((Model.specDraft (V := V)).receipt_process S n.st o).val =
+      have e : ((Model.spec (V := V)).receipt_process S n.st o).val =
           Member.receipt_process S n.val.st o := by
         show (OkMember.receipt_process S n.st o).val = _
         unfold OkMember.receipt_process
@@ -400,17 +400,17 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_process_node_of_store_id :
 
 /-! ## The stamp fields -/
 
-/-- The field `blockStep_process` of `NodeRunFacts` at `Model.specDraft`: at a reached node state
+/-- The field `blockStep_process` of `NodeRunFacts` at `Model.spec`: at a reached node state
     whose block stamps meet the three clauses (tree blocks stamped, stamped blocks in the tree,
     stamps at most the clock), a receipt keeps the tree and the old stamps, and its outcome meets
     the three clauses. -/
-theorem _root_.SpecDraftRecord.NodeRunFacts.specDraft_blockStep_process :
-    ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N), (Model.specDraft (V := V)).process S n o ⇢ n' →
+theorem _root_.SpecRecord.NodeRunFacts.spec_blockStep_process :
+    ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N), (Model.spec (V := V)).process S n o ⇢ n' →
       ((∀ B : Block V, B ∈ n.st.core.T → (n.st.core.timestamp_block B).isSome = true) ∧
         (∀ B : Block V, (n.st.core.timestamp_block B).isSome = true → B ∈ n.st.core.T) ∧
         (∀ (B : Block V) (c : Stamp), n.st.core.timestamp_block B = some c →
           c ≤ (n.st.core.t : Stamp))) →
-      ∀ (hn : (Model.specDraft (V := V)).reachedNode n),
+      ∀ (hn : (Model.spec (V := V)).reachedNode n),
       ((∀ B : Block V, B ∈ n.st.core.T → B ∈ n'.st.core.T) ∧
         (∀ (B : Block V) (c : Stamp), n.st.core.timestamp_block B = some c →
           n'.st.core.timestamp_block B = some c)) ∧
@@ -437,18 +437,18 @@ theorem _root_.SpecDraftRecord.NodeRunFacts.specDraft_blockStep_process :
   exact NodeReached.stamp_step (a := n.val.st) (b := n'.val.st) n.property n'.property (fun X hX => (hinv.2.2 X hX).2) h₂.2.2
     (le_of_eq (by rw [ht])) (le_of_eq (by rw [ht])) hstep
 
-/-- The field `blockStep_tick` of `NodeRunFacts` at `Model.specDraft`: at a reached node state whose
+/-- The field `blockStep_tick` of `NodeRunFacts` at `Model.spec`: at a reached node state whose
     block stamps meet the three clauses (tree blocks stamped, stamped blocks in the tree, stamps at
     most the clock), a tick at a time `t` not before the node's clock keeps the tree and the old
     stamps, and its outcome meets the three clauses. -/
-theorem _root_.SpecDraftRecord.NodeRunFacts.specDraft_blockStep_tick :
-    ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : DecoupledConsensusModel.Time)
-      (out : (Model.specDraft (V := V)).N × List (NamedObject V)), (Model.specDraft (V := V)).tick S v n t ⇢ out → n.st.core.t ≤ t →
+theorem _root_.SpecRecord.NodeRunFacts.spec_blockStep_tick :
+    ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : DecoupledConsensusModel.Time)
+      (out : (Model.spec (V := V)).N × List (NamedObject V)), (Model.spec (V := V)).tick S v n t ⇢ out → n.st.core.t ≤ t →
       ((∀ B : Block V, B ∈ n.st.core.T → (n.st.core.timestamp_block B).isSome = true) ∧
         (∀ B : Block V, (n.st.core.timestamp_block B).isSome = true → B ∈ n.st.core.T) ∧
         (∀ (B : Block V) (c : Stamp), n.st.core.timestamp_block B = some c →
           c ≤ (n.st.core.t : Stamp))) →
-      ∀ (hn : (Model.specDraft (V := V)).reachedNode n),
+      ∀ (hn : (Model.spec (V := V)).reachedNode n),
       ((∀ B : Block V, B ∈ n.st.core.T → B ∈ out.1.st.core.T) ∧
         (∀ (B : Block V) (c : Stamp), n.st.core.timestamp_block B = some c →
           out.1.st.core.timestamp_block B = some c)) ∧
@@ -486,36 +486,36 @@ theorem _root_.SpecDraftRecord.NodeRunFacts.specDraft_blockStep_tick :
 
 /-! ## The core call's finality -/
 
-/-- The field `postCore_absorbs_finality` of `NodeFacts` at `Model.specDraft`: at a reached coherent
+/-- The field `postCore_absorbs_finality` of `NodeFacts` at `Model.spec`: at a reached coherent
     named store `before`, under the field's conditions on the new block `B`, `B`'s derived finalized
     block is an ancestor of the finalized block of the store the core call leaves. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_postCore_absorbs_finality :
-    ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-      DecoupledConsensusModel.Sts.Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) S.E S.cfg before →
+theorem _root_.SpecRecord.NodeFacts.spec_postCore_absorbs_finality :
+    ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V),
+      DecoupledConsensusModel.Sts.Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) S.E S.cfg before →
       B.erase ∉ before.core.T →
-      B.erase ∈ ((Model.specDraft (V := V)).postCore S before B).core.T →
-      Block.Preceq before.core.F ((Model.specDraft (V := V)).derive_named S.E S.cfg B).F →
+      B.erase ∈ ((Model.spec (V := V)).postCore S before B).core.T →
+      Block.Preceq before.core.F ((Model.spec (V := V)).derive_named S.E S.cfg B).F →
       (∀ A ∈ before.bodies,
-        ((Model.specDraft (V := V)).derive_named S.E S.cfg A).J = ((Model.specDraft (V := V)).derive_named S.E S.cfg B).F →
-        ((Model.specDraft (V := V)).derive_named S.E S.cfg A).h_j = ((Model.specDraft (V := V)).derive_named S.E S.cfg B).h_F →
-        Block.Preceq ((Model.specDraft (V := V)).derive_named S.E S.cfg B).F before.core.J) →
-      (∃ D ∈ before.bodies, ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h = before.core.h_max) →
+        ((Model.spec (V := V)).derive_named S.E S.cfg A).J = ((Model.spec (V := V)).derive_named S.E S.cfg B).F →
+        ((Model.spec (V := V)).derive_named S.E S.cfg A).h_j = ((Model.spec (V := V)).derive_named S.E S.cfg B).h_F →
+        Block.Preceq ((Model.spec (V := V)).derive_named S.E S.cfg B).F before.core.J) →
+      (∃ D ∈ before.bodies, ((Model.spec (V := V)).derive_named S.E S.cfg D).h = before.core.h_max) →
       (∀ D ∈ before.bodies,
-        ((Model.specDraft (V := V)).derive_named S.E S.cfg B).h_F < ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h →
-        Block.Preceq ((Model.specDraft (V := V)).derive_named S.E S.cfg B).F D.erase) →
-      ∀ (hn : (Model.specDraft (V := V)).reachedStore before),
-      Block.Preceq ((Model.specDraft (V := V)).derive_named S.E S.cfg B).F ((Model.specDraft (V := V)).postCore S before B).core.F := by
+        ((Model.spec (V := V)).derive_named S.E S.cfg B).h_F < ((Model.spec (V := V)).derive_named S.E S.cfg D).h →
+        Block.Preceq ((Model.spec (V := V)).derive_named S.E S.cfg B).F D.erase) →
+      ∀ (hn : (Model.spec (V := V)).reachedStore before),
+      Block.Preceq ((Model.spec (V := V)).derive_named S.E S.cfg B).F ((Model.spec (V := V)).postCore S before B).core.F := by
   intro S before B h₁ h₂ h₃ h₄ h₅ h₆ h₇ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   by_cases hroot : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
   · exfalso
-    have e : (Model.specDraft (V := V)).postCore S before B = before := by
+    have e : (Model.spec (V := V)).postCore S before B = before := by
       show OkMember.postCore S before B = before
       unfold OkMember.postCore
       rw [dif_pos hroot]
     rw [e] at h₃
     exact h₂ h₃
-  · have hval : ((Model.specDraft (V := V)).postCore S before B).val =
+  · have hval : ((Model.spec (V := V)).postCore S before B).val =
         Handlers.admitBlockCore (Spec.Config.toSpec S.E S.hc S.cfg)
           (Spec.Provisional.toSpec S.E) before.val
           (Spec.Block.toSpecNamed B) := by
@@ -523,7 +523,7 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_postCore_absorbs_finality :
       unfold OkMember.postCore
       rw [dif_neg hroot]
       rfl
-    have hpost : ((Model.specDraft (V := V)).postCore S before B).val.toProofNamed =
+    have hpost : ((Model.spec (V := V)).postCore S before B).val.toProofNamed =
         DecoupledConsensusModel.Execution.NamedReceiptCalls.postCore S before.val.toProofNamed B := by
       rw [hval, SubtypeEqualities.toProofNamed_admitBlockCore S.E S.hc S.cfg before.property hinv
         _ hroot, Spec.Block.toProofNamed_toSpecNamed]

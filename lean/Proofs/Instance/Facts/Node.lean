@@ -4,17 +4,17 @@ import Proofs.Instance.Facts.Handlers
 import Proofs.Vocabulary.ModelVocabularyFacts
 
 /-!
-# The node facts at `Model.specDraft`
+# The node facts at `Model.spec`
 
-Proofs of fields of `NodeFacts` and `NodeRunFacts` at the model `Model.specDraft`, one theorem
-`specDraft_<field>` per field. The receipt facts are read off `Keeps`, which every admission routine
+Proofs of fields of `NodeFacts` and `NodeRunFacts` at the model `Model.spec`, one theorem
+`spec_<field>` per field. The receipt facts are read off `Keeps`, which every admission routine
 satisfies; the facts of the initial node state hold by computation; the tick's facts are read off a
 run of the tick, step by step.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NodeFacts
+namespace SpecRecord.NodeFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
@@ -301,10 +301,10 @@ theorem receipt_process_saved_grades (S : Setup V) (st : Spec.Store V)
     (Member.receipt_process S st o).saved_grades = st.saved_grades :=
   (keeps_receipt_process S st o).2.2.2.2.1
 
-/-- At `Model.specDraftBase`, the receipt of `o` by `n` returns exactly `receiveNamedObject S n o`. -/
+/-- At `Model.specBase`, the receipt of `o` by `n` returns exactly `receiveNamedObject S n o`. -/
 theorem process_returns_iff (S : Setup V) (n n' : Spec.NodeState V)
     (o : NamedObject V) :
-    (Model.specDraftBase (V := V)).process S n o ⇢ n' ↔ n' = receiveNamedObject S n o :=
+    (Model.specBase (V := V)).process S n o ⇢ n' ↔ n' = receiveNamedObject S n o :=
   returns_pure _ _
 
 omit [Inhabited V] in
@@ -348,27 +348,27 @@ theorem toProof_initial (S : Setup V) (v : V) :
   simp only [NamedNode.initial, toProof_ns_initial, ← hrec, ← hcache]
   rfl
 
-/-- The member `initial` of `Model.vocabulary` is the image of that of `Model.specDraftBase`. -/
+/-- The member `initial` of `Model.vocabulary` is the image of that of `Model.specBase`. -/
 theorem vocabulary_initial (S : Setup V) (v : V) :
-    (Model.vocabulary (V := V)).initial S v = ((Model.specDraftBase (V := V)).initial S v).toProof :=
+    (Model.vocabulary (V := V)).initial S v = ((Model.specBase (V := V)).initial S v).toProof :=
   (toProof_initial S v).symm
 
 /-! ## The node's receipt of an object -/
 
-/-- The field `process_record_eq` of `NodeFacts` at `Model.specDraftBase`: every node state `n'`
+/-- The field `process_record_eq` of `NodeFacts` at `Model.specBase`: every node state `n'`
     that `n`'s receipt of the object `o` can return has the signing record of `n`. -/
-theorem specDraftBase_process_record_eq : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n'.record = n.record := by
+theorem specBase_process_record_eq : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n'.record = n.record := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   rfl
 
-/-- The field `process_record_eq` of `NodeFacts` at `Model.specDraft`: every node state `n'` that
+/-- The field `process_record_eq` of `NodeFacts` at `Model.spec`: every node state `n'` that
     `n`'s receipt of the object `o` can return has the signing record of `n`. -/
-theorem specDraft_process_record_eq : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.record = n.record :=
-  fun S n o n' hn' => specDraftBase_process_record_eq S n.val o n'.val hn'
+theorem spec_process_record_eq : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.record = n.record :=
+  fun S n o n' hn' => specBase_process_record_eq S n.val o n'.val hn'
 
 omit [Inhabited V] in
 /-- If the member `receipt_process` keeps the store and the saved grades are already clipped at the
@@ -386,41 +386,41 @@ theorem process_node_of_store_id_aux (S : Setup V) (n : Spec.NodeState V)
     rw [hcache]
     rfl
 
-/-- The field `namedNodeProcess_setupWithGST` of `NodeFacts` at `Model.specDraft`: a node's
+/-- The field `namedNodeProcess_setupWithGST` of `NodeFacts` at `Model.spec`: a node's
     processing of a delivered object is the same at the setup `S` and at `S` with its GST replaced
     by `g`. -/
-theorem specDraft_namedNodeProcess_setupWithGST : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (g : ℤ) (hg : 0 ≤ g) (n : (Model.specDraft (V := V)).N) (o : DecoupledConsensusModel.Execution.NamedObject V), (Model.specDraft (V := V)).process (DecoupledConsensusModel.Sts.setupWithGST S g hg) n o = (Model.specDraft (V := V)).process S n o := by
+theorem spec_namedNodeProcess_setupWithGST : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (g : ℤ) (hg : 0 ≤ g) (n : (Model.spec (V := V)).N) (o : DecoupledConsensusModel.Execution.NamedObject V), (Model.spec (V := V)).process (DecoupledConsensusModel.Sts.setupWithGST S g hg) n o = (Model.spec (V := V)).process S n o := by
   intro S g hg n o
   rfl
 
 /-! ## The member `receipt_process` -/
 
-/-- The field `process_block` of `NodeFacts` at `Model.specDraft`: processing the block `B` at the
+/-- The field `process_block` of `NodeFacts` at `Model.spec`: processing the block `B` at the
     store `st` gives the store the block handler `on_block_with` returns, admitting the attestations
     `B` includes. -/
-theorem specDraft_process_block : ∀ (S : Setup V) (st : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-    (Model.specDraft (V := V)).receipt_process S st (.block B) = (Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B := by
+theorem spec_process_block : ∀ (S : Setup V) (st : (Model.spec (V := V)).NS) (B : NamedBlock V),
+    (Model.spec (V := V)).receipt_process S st (.block B) = (Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B := by
   intro S st B
   rfl
 
-/-- The field `process_attest` of `NodeFacts` at `Model.specDraft`: processing the attestation `a`
+/-- The field `process_attest` of `NodeFacts` at `Model.spec`: processing the attestation `a`
     at the store `st` gives the store the row admission `admit_row` returns. -/
-theorem specDraft_process_attest : ∀ (S : Setup V) (st : (Model.specDraft (V := V)).NS) (a : NamedAttestation V),
-    (Model.specDraft (V := V)).receipt_process S st (.attest a) = (Model.specDraft (V := V)).admit_row S.hc st a := by
+theorem spec_process_attest : ∀ (S : Setup V) (st : (Model.spec (V := V)).NS) (a : NamedAttestation V),
+    (Model.spec (V := V)).receipt_process S st (.attest a) = (Model.spec (V := V)).admit_row S.hc st a := by
   intro S st a
   rfl
 
-/-- The field `process_gfVote` of `NodeFacts` at `Model.specDraft`: processing the Goldfish vote `u`
+/-- The field `process_gfVote` of `NodeFacts` at `Model.spec`: processing the Goldfish vote `u`
     at the store `st` replaces `st`'s store part by the one the checked vote handler returns and
     keeps the rest of `st`. -/
-theorem specDraft_process_gfVote : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (st : (Model.specDraft (V := V)).NS) (u : DecoupledConsensusModel.GoldfishVote V), (Model.specDraft (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u) = (Model.specDraft (V := V)).ns_with_core st ((Model.specDraft (V := V)).on_goldfish_vote_checked S.E st.core u) := by
+theorem spec_process_gfVote : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (st : (Model.spec (V := V)).NS) (u : DecoupledConsensusModel.GoldfishVote V), (Model.spec (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u) = (Model.spec (V := V)).ns_with_core st ((Model.spec (V := V)).on_goldfish_vote_checked S.E st.core u) := by
   intro S st u
   rfl
 
-/-- The field `process_gfVote_of_mem_pool` of `NodeFacts` at `Model.specDraftBase`: delivering a
+/-- The field `process_gfVote_of_mem_pool` of `NodeFacts` at `Model.specBase`: delivering a
     Goldfish vote that the store part of `st` already holds for that vote's slot leaves `st` as it
     was. -/
-theorem specDraftBase_process_gfVote_of_mem_pool : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (st : (Model.specDraftBase (V := V)).NS) (u : DecoupledConsensusModel.GoldfishVote V), u ∈ st.core.pool u.slot → (Model.specDraftBase (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u) = st := by
+theorem specBase_process_gfVote_of_mem_pool : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (st : (Model.specBase (V := V)).NS) (u : DecoupledConsensusModel.GoldfishVote V), u ∈ st.core.pool u.slot → (Model.specBase (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u) = st := by
   intro S st u hu
   have hu1 : u ∈ (st.pool u.slot).map Spec.GoldfishVote.toProofEmb := hu
   rw [Finset.mem_map] at hu1
@@ -442,10 +442,10 @@ theorem specDraftBase_process_gfVote_of_mem_pool : ∀ (S : DecoupledConsensusMo
     exact h2.2 hw'
   · rfl
 
-/-- The field `process_gfVote_of_mem_pool` of `NodeFacts` at `Model.specDraft`: delivering a
+/-- The field `process_gfVote_of_mem_pool` of `NodeFacts` at `Model.spec`: delivering a
     Goldfish vote that the store part of `st` already holds for that vote's slot leaves `st` as it
     was. -/
-theorem specDraft_process_gfVote_of_mem_pool : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (st : (Model.specDraft (V := V)).NS) (u : DecoupledConsensusModel.GoldfishVote V), u ∈ st.core.pool u.slot → (Model.specDraft (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u) = st :=
+theorem spec_process_gfVote_of_mem_pool : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (st : (Model.spec (V := V)).NS) (u : DecoupledConsensusModel.GoldfishVote V), u ∈ st.core.pool u.slot → (Model.spec (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u) = st :=
 by
   intro S st u hu
   by_cases hr : objectRootHeldByOther st.val.T (NamedObject.gfVote u)
@@ -453,13 +453,13 @@ by
   · apply Subtype.ext
     show (OkMember.receipt_process S st (NamedObject.gfVote u)).val = st.val
     rw [OkMember.receipt_process_val_of_not_held hr]
-    exact specDraftBase_process_gfVote_of_mem_pool S st.val u hu
+    exact specBase_process_gfVote_of_mem_pool S st.val u hu
 
-/-- The field `process_attest_of_mem_rows` of `NodeFacts` at `Model.specDraftBase`: delivering an
+/-- The field `process_attest_of_mem_rows` of `NodeFacts` at `Model.specBase`: delivering an
     attestation that `st` already holds among its named rows for that round leaves `st` as it was. -/
-theorem specDraftBase_process_attest_of_mem_rows : ∀ (S : Setup V) (st : (Model.specDraftBase (V := V)).NS) (a : NamedAttestation V)
+theorem specBase_process_attest_of_mem_rows : ∀ (S : Setup V) (st : (Model.specBase (V := V)).NS) (a : NamedAttestation V)
     (hPool : ∀ r, st.core.sg_votes r = (st.sg_rows r).map NamedAttestation.erase)
-    (ha : a ∈ st.sg_rows a.round), (Model.specDraftBase (V := V)).receipt_process S st (NamedObject.attest a) = st := by
+    (ha : a ∈ st.sg_rows a.round), (Model.specBase (V := V)).receipt_process S st (NamedObject.attest a) = st := by
   intro S st a _ ha
   have ha1 : a ∈ (st.attestations a.round).map Spec.Attestation.toProofNamed := ha
   rw [List.mem_map] at ha1
@@ -478,11 +478,11 @@ theorem specDraftBase_process_attest_of_mem_rows : ∀ (S : Setup V) (st : (Mode
     simp [Spec.Protocol.attestation_admissible, Id.run, hmem] at h1
   · rfl
 
-/-- The field `process_attest_of_mem_rows` of `NodeFacts` at `Model.specDraft`: delivering an
+/-- The field `process_attest_of_mem_rows` of `NodeFacts` at `Model.spec`: delivering an
     attestation that `st` already holds among its named rows for that round leaves `st` as it was. -/
-theorem specDraft_process_attest_of_mem_rows : ∀ (S : Setup V) (st : (Model.specDraft (V := V)).NS) (a : NamedAttestation V)
+theorem spec_process_attest_of_mem_rows : ∀ (S : Setup V) (st : (Model.spec (V := V)).NS) (a : NamedAttestation V)
     (hPool : ∀ r, st.core.sg_votes r = (st.sg_rows r).map NamedAttestation.erase)
-    (ha : a ∈ st.sg_rows a.round), (Model.specDraft (V := V)).receipt_process S st (NamedObject.attest a) = st :=
+    (ha : a ∈ st.sg_rows a.round), (Model.spec (V := V)).receipt_process S st (NamedObject.attest a) = st :=
 by
   intro S st a hPool ha
   by_cases hr : objectRootHeldByOther st.val.T (NamedObject.attest a)
@@ -490,24 +490,24 @@ by
   · apply Subtype.ext
     show (OkMember.receipt_process S st (NamedObject.attest a)).val = st.val
     rw [OkMember.receipt_process_val_of_not_held hr]
-    exact specDraftBase_process_attest_of_mem_rows S st.val a hPool ha
+    exact specBase_process_attest_of_mem_rows S st.val a hPool ha
 
-/-- The field `process_block_of_mem_bodies` of `NodeFacts` at `Model.specDraftBase`: delivering a
+/-- The field `process_block_of_mem_bodies` of `NodeFacts` at `Model.specBase`: delivering a
     block that `st` already holds among its bodies leaves `st` as it was. -/
-theorem specDraftBase_process_block_of_mem_bodies : ∀ (S : Setup V) (st : (Model.specDraftBase (V := V)).NS) (B : NamedBlock V)
+theorem specBase_process_block_of_mem_bodies : ∀ (S : Setup V) (st : (Model.specBase (V := V)).NS) (B : NamedBlock V)
     (hT : st.core.T = st.bodies.image NamedBlock.erase) (hB : B ∈ st.bodies),
-    (Model.specDraftBase (V := V)).receipt_process S st (NamedObject.block B) = st := by
+    (Model.specBase (V := V)).receipt_process S st (NamedObject.block B) = st := by
   intro S st B _ hB
   have hB' := (mem_bodies_iff st B).mp hB
   show Spec.Protocol.on_block _ _ st (Spec.Block.toSpecNamed B) = st
   rw [Handlers.on_block_eq, block_admissible_of_mem _ _ hB']
   rfl
 
-/-- The field `process_block_of_mem_bodies` of `NodeFacts` at `Model.specDraft`: delivering a block
+/-- The field `process_block_of_mem_bodies` of `NodeFacts` at `Model.spec`: delivering a block
     that `st` already holds among its bodies leaves `st` as it was. -/
-theorem specDraft_process_block_of_mem_bodies : ∀ (S : Setup V) (st : (Model.specDraft (V := V)).NS) (B : NamedBlock V)
+theorem spec_process_block_of_mem_bodies : ∀ (S : Setup V) (st : (Model.spec (V := V)).NS) (B : NamedBlock V)
     (hT : st.core.T = st.bodies.image NamedBlock.erase) (hB : B ∈ st.bodies),
-    (Model.specDraft (V := V)).receipt_process S st (NamedObject.block B) = st :=
+    (Model.spec (V := V)).receipt_process S st (NamedObject.block B) = st :=
 by
   intro S st B hT hB
   by_cases hr : objectRootHeldByOther st.val.T (NamedObject.block B)
@@ -515,49 +515,49 @@ by
   · apply Subtype.ext
     show (OkMember.receipt_process S st (NamedObject.block B)).val = st.val
     rw [OkMember.receipt_process_val_of_not_held hr]
-    exact specDraftBase_process_block_of_mem_bodies S st.val B hT hB
+    exact specBase_process_block_of_mem_bodies S st.val B hT hB
 
 /-! ## The core call, the node's parts and the initial node state -/
 
-/-- The field `postCore_clock` of `NodeFacts` at `Model.specDraftBase`: the core call on `B` keeps
+/-- The field `postCore_clock` of `NodeFacts` at `Model.specBase`: the core call on `B` keeps
     the clock `t` and the slot `s` of `before`'s store part. -/
-theorem specDraftBase_postCore_clock : ∀ (S : Setup V) (before : (Model.specDraftBase (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraftBase (V := V)).postCore S before B).core.t = before.core.t ∧
-      ((Model.specDraftBase (V := V)).postCore S before B).core.s = before.core.s := by
+theorem specBase_postCore_clock : ∀ (S : Setup V) (before : (Model.specBase (V := V)).NS) (B : NamedBlock V),
+    ((Model.specBase (V := V)).postCore S before B).core.t = before.core.t ∧
+      ((Model.specBase (V := V)).postCore S before B).core.s = before.core.s := by
   intro S before B
   have h := (admitBlockCore_keeps (Spec.Config.toSpec S.E S.hc S.cfg)
     (Spec.Provisional.toSpec S.E) before (Spec.Block.toSpecNamed B)).2
   exact ⟨h.1, h.2.1⟩
 
-/-- The field `postCore_clock` of `NodeFacts` at `Model.specDraft`: the core call on `B` keeps the
+/-- The field `postCore_clock` of `NodeFacts` at `Model.spec`: the core call on `B` keeps the
     clock `t` and the slot `s` of `before`'s store part. -/
-theorem specDraft_postCore_clock : ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraft (V := V)).postCore S before B).core.t = before.core.t ∧
-      ((Model.specDraft (V := V)).postCore S before B).core.s = before.core.s :=
+theorem spec_postCore_clock : ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V),
+    ((Model.spec (V := V)).postCore S before B).core.t = before.core.t ∧
+      ((Model.spec (V := V)).postCore S before B).core.s = before.core.s :=
 by
   intro S before B
   by_cases hr : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
-  · have e : (Model.specDraft (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
+  · have e : (Model.spec (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
     rw [e]
     exact ⟨rfl, rfl⟩
-  · have e : ((Model.specDraft (V := V)).postCore S before B).val = (Model.specDraftBase (V := V)).postCore S before.val B :=
+  · have e : ((Model.spec (V := V)).postCore S before B).val = (Model.specBase (V := V)).postCore S before.val B :=
       OkMember.postCore_val_of_not_held hr
-    have hb := specDraftBase_postCore_clock S before.val B
+    have hb := specBase_postCore_clock S before.val B
     rw [← e] at hb
     exact hb
 
-/-- The field `postCore_eq_process_block_core` of `NodeFacts` at `Model.specDraft`: the core call on
+/-- The field `postCore_eq_process_block_core` of `NodeFacts` at `Model.spec`: the core call on
     `B` from `before` is the member `ns_process_block_core` at the setup's environment, healing
     configuration and height configuration. -/
-theorem specDraft_postCore_eq_process_block_core : ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-    (Model.specDraft (V := V)).postCore S before B = (Model.specDraft (V := V)).ns_process_block_core S.E S.hc S.cfg before B := by
+theorem spec_postCore_eq_process_block_core : ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V),
+    (Model.spec (V := V)).postCore S before B = (Model.spec (V := V)).ns_process_block_core S.E S.hc S.cfg before B := by
   intro S before B
   rfl
 
-/-- The field `postCore_of_parent_not_mem` of `NodeFacts` at `Model.specDraftBase`: if `before` does
+/-- The field `postCore_of_parent_not_mem` of `NodeFacts` at `Model.specBase`: if `before` does
     not hold the parent body of `B`, the core call on `B` returns `before`. -/
-theorem specDraftBase_postCore_of_parent_not_mem : ∀ (S : Setup V) {before : (Model.specDraftBase (V := V)).NS} {B : NamedBlock V}
-    (h : B.parent ∉ before.bodies), (Model.specDraftBase (V := V)).postCore S before B = before := by
+theorem specBase_postCore_of_parent_not_mem : ∀ (S : Setup V) {before : (Model.specBase (V := V)).NS} {B : NamedBlock V}
+    (h : B.parent ∉ before.bodies), (Model.specBase (V := V)).postCore S before B = before := by
   intro S before B h
   have h' : (Spec.Block.toSpecNamed B).parent ∉ before.T := by
     rw [toSpecNamed_parent]
@@ -567,24 +567,24 @@ theorem specDraftBase_postCore_of_parent_not_mem : ∀ (S : Setup V) {before : (
   rw [block_admissible_of_parent_not_mem _ _ h']
   rfl
 
-/-- The field `postCore_of_parent_not_mem` of `NodeFacts` at `Model.specDraft`: if `before` does not
+/-- The field `postCore_of_parent_not_mem` of `NodeFacts` at `Model.spec`: if `before` does not
     hold the parent body of `B`, the core call on `B` returns `before`. -/
-theorem specDraft_postCore_of_parent_not_mem : ∀ (S : Setup V) {before : (Model.specDraft (V := V)).NS} {B : NamedBlock V}
-    (h : B.parent ∉ before.bodies), (Model.specDraft (V := V)).postCore S before B = before :=
+theorem spec_postCore_of_parent_not_mem : ∀ (S : Setup V) {before : (Model.spec (V := V)).NS} {B : NamedBlock V}
+    (h : B.parent ∉ before.bodies), (Model.spec (V := V)).postCore S before B = before :=
 by
   intro S before B h
   by_cases hr : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
   · exact OkMember.postCore_of_held hr
   · apply Subtype.ext
-    have e : ((Model.specDraft (V := V)).postCore S before B).val = (Model.specDraftBase (V := V)).postCore S before.val B :=
+    have e : ((Model.spec (V := V)).postCore S before B).val = (Model.specBase (V := V)).postCore S before.val B :=
       OkMember.postCore_val_of_not_held hr
     rw [e]
-    exact specDraftBase_postCore_of_parent_not_mem S (before := before.val) (B := B) h
+    exact specBase_postCore_of_parent_not_mem S (before := before.val) (B := B) h
 
-/-- The field `postCore_sg_rows` of `NodeFacts` at `Model.specDraftBase`: the core call on `B` keeps
+/-- The field `postCore_sg_rows` of `NodeFacts` at `Model.specBase`: the core call on `B` keeps
     the named SG rows of `before`. -/
-theorem specDraftBase_postCore_sg_rows : ∀ (S : Setup V) (before : (Model.specDraftBase (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraftBase (V := V)).postCore S before B).sg_rows = before.sg_rows := by
+theorem specBase_postCore_sg_rows : ∀ (S : Setup V) (before : (Model.specBase (V := V)).NS) (B : NamedBlock V),
+    ((Model.specBase (V := V)).postCore S before B).sg_rows = before.sg_rows := by
   intro S before B
   have h := (admitBlockCore_keeps (Spec.Config.toSpec S.E S.hc S.cfg)
     (Spec.Provisional.toSpec S.E) before (Spec.Block.toSpecNamed B)).2.2.2.1
@@ -594,25 +594,25 @@ theorem specDraftBase_postCore_sg_rows : ∀ (S : Setup V) (before : (Model.spec
     (before.attestations r).map Spec.Attestation.toProofNamed
   rw [h]
 
-/-- The field `postCore_sg_rows` of `NodeFacts` at `Model.specDraft`: the core call on `B` keeps the
+/-- The field `postCore_sg_rows` of `NodeFacts` at `Model.spec`: the core call on `B` keeps the
     named SG rows of `before`. -/
-theorem specDraft_postCore_sg_rows : ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraft (V := V)).postCore S before B).sg_rows = before.sg_rows :=
+theorem spec_postCore_sg_rows : ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V),
+    ((Model.spec (V := V)).postCore S before B).sg_rows = before.sg_rows :=
 by
   intro S before B
   by_cases hr : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
-  · have e : (Model.specDraft (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
+  · have e : (Model.spec (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
     rw [e]
-  · have e : ((Model.specDraft (V := V)).postCore S before B).val = (Model.specDraftBase (V := V)).postCore S before.val B :=
+  · have e : ((Model.spec (V := V)).postCore S before B).val = (Model.specBase (V := V)).postCore S before.val B :=
       OkMember.postCore_val_of_not_held hr
-    have hb := specDraftBase_postCore_sg_rows S before.val B
+    have hb := specBase_postCore_sg_rows S before.val B
     rw [← e] at hb
     exact hb
 
-/-- The field `postCore_timestamp_sg_vote` of `NodeFacts` at `Model.specDraftBase`: the core call on
+/-- The field `postCore_timestamp_sg_vote` of `NodeFacts` at `Model.specBase`: the core call on
     `B` keeps the SG vote stamps of `before`. -/
-theorem specDraftBase_postCore_timestamp_sg_vote : ∀ (S : Setup V) (before : (Model.specDraftBase (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraftBase (V := V)).postCore S before B).core.timestamp_sg_vote = before.core.timestamp_sg_vote := by
+theorem specBase_postCore_timestamp_sg_vote : ∀ (S : Setup V) (before : (Model.specBase (V := V)).NS) (B : NamedBlock V),
+    ((Model.specBase (V := V)).postCore S before B).core.timestamp_sg_vote = before.core.timestamp_sg_vote := by
   intro S before B
   have h := (admitBlockCore_keeps (Spec.Config.toSpec S.E S.hc S.cfg)
     (Spec.Provisional.toSpec S.E) before (Spec.Block.toSpecNamed B)).2.2.2.2
@@ -622,27 +622,27 @@ theorem specDraftBase_postCore_timestamp_sg_vote : ∀ (S : Setup V) (before : (
     before.timestamp_sg_vote (Spec.Protocol.SGVote.toSpec u)
   rw [h]
 
-/-- The field `postCore_timestamp_sg_vote` of `NodeFacts` at `Model.specDraft`: the core call on `B`
+/-- The field `postCore_timestamp_sg_vote` of `NodeFacts` at `Model.spec`: the core call on `B`
     keeps the SG vote stamps of `before`. -/
-theorem specDraft_postCore_timestamp_sg_vote : ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraft (V := V)).postCore S before B).core.timestamp_sg_vote = before.core.timestamp_sg_vote :=
+theorem spec_postCore_timestamp_sg_vote : ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V),
+    ((Model.spec (V := V)).postCore S before B).core.timestamp_sg_vote = before.core.timestamp_sg_vote :=
 by
   intro S before B
   by_cases hr : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
-  · have e : (Model.specDraft (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
+  · have e : (Model.spec (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
     rw [e]
-  · have e : ((Model.specDraft (V := V)).postCore S before B).val = (Model.specDraftBase (V := V)).postCore S before.val B :=
+  · have e : ((Model.spec (V := V)).postCore S before B).val = (Model.specBase (V := V)).postCore S before.val B :=
       OkMember.postCore_val_of_not_held hr
-    have hb := specDraftBase_postCore_timestamp_sg_vote S before.val B
+    have hb := specBase_postCore_timestamp_sg_vote S before.val B
     rw [← e] at hb
     exact hb
 
-/-- The field `on_block_with_eq_postCore_of_not_new` of `NodeFacts` at `Model.specDraftBase`: unless
+/-- The field `on_block_with_eq_postCore_of_not_new` of `NodeFacts` at `Model.specBase`: unless
     `B` is not among the bodies of `before` and is among the bodies after the core call on `B`, the
     block handler `on_block_with` on `B` at `before` returns the store after the core call. -/
-theorem specDraftBase_on_block_with_eq_postCore_of_not_new : ∀ (S : Setup V) (before : (Model.specDraftBase (V := V)).NS) (B : NamedBlock V)
-    (h : ¬ (B ∉ before.bodies ∧ B ∈ ((Model.specDraftBase (V := V)).postCore S before B).bodies)),
-    (Model.specDraftBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B = (Model.specDraftBase (V := V)).postCore S before B := by
+theorem specBase_on_block_with_eq_postCore_of_not_new : ∀ (S : Setup V) (before : (Model.specBase (V := V)).NS) (B : NamedBlock V)
+    (h : ¬ (B ∉ before.bodies ∧ B ∈ ((Model.specBase (V := V)).postCore S before B).bodies)),
+    (Model.specBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B = (Model.specBase (V := V)).postCore S before B := by
   intro S before B h
   show Spec.Protocol.on_block _ _ before (Spec.Block.toSpecNamed B) =
     Handlers.admitBlockCore _ _ before (Spec.Block.toSpecNamed B)
@@ -662,35 +662,35 @@ theorem specDraftBase_on_block_with_eq_postCore_of_not_new : ∀ (S : Setup V) (
       exact (blockCore_keeps _ _ before _).2.2
   · rfl
 
-/-- The field `on_block_with_eq_postCore_of_not_new` of `NodeFacts` at `Model.specDraft`: unless `B`
+/-- The field `on_block_with_eq_postCore_of_not_new` of `NodeFacts` at `Model.spec`: unless `B`
     is not among the bodies of `before` and is among the bodies after the core call on `B`, the
     block handler `on_block_with` on `B` at `before` returns the store after the core call. -/
-theorem specDraft_on_block_with_eq_postCore_of_not_new : ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V)
-    (h : ¬ (B ∉ before.bodies ∧ B ∈ ((Model.specDraft (V := V)).postCore S before B).bodies)),
-    (Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B = (Model.specDraft (V := V)).postCore S before B :=
+theorem spec_on_block_with_eq_postCore_of_not_new : ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V)
+    (h : ¬ (B ∉ before.bodies ∧ B ∈ ((Model.spec (V := V)).postCore S before B).bodies)),
+    (Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B = (Model.spec (V := V)).postCore S before B :=
 by
   intro S before B h
   by_cases hr : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
-  · have e1 : (Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B = before := OkMember.on_block_with_of_held hr
-    have e2 : (Model.specDraft (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
+  · have e1 : (Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B = before := OkMember.on_block_with_of_held hr
+    have e2 : (Model.spec (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
     rw [e1, e2]
-  · have e1 : ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B).val = (Model.specDraftBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before.val B := OkMember.on_block_with_val_of_not_held hr
-    have e2 : ((Model.specDraft (V := V)).postCore S before B).val = (Model.specDraftBase (V := V)).postCore S before.val B :=
+  · have e1 : ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B).val = (Model.specBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before.val B := OkMember.on_block_with_val_of_not_held hr
+    have e2 : ((Model.spec (V := V)).postCore S before B).val = (Model.specBase (V := V)).postCore S before.val B :=
       OkMember.postCore_val_of_not_held hr
     apply Subtype.ext
     rw [e1, e2]
-    refine specDraftBase_on_block_with_eq_postCore_of_not_new S before.val B ?_
+    refine specBase_on_block_with_eq_postCore_of_not_new S before.val B ?_
     rw [← e2]
     exact h
 
-/-- The field `on_block_with_eq_admit_rows_postCore` of `NodeFacts` at `Model.specDraftBase`: if `B`
+/-- The field `on_block_with_eq_admit_rows_postCore` of `NodeFacts` at `Model.specBase`: if `B`
     is not among the bodies of `before` and is among the bodies after the core call on `B`, the
     block handler `on_block_with` on `B` at `before` returns the store that admitting the
     attestations `B` includes, one by one, returns from the store after the core call. -/
-theorem specDraftBase_on_block_with_eq_admit_rows_postCore : ∀ (S : Setup V) (before : (Model.specDraftBase (V := V)).NS) (B : NamedBlock V)
-    (hnew : B ∉ before.bodies) (hheld : B ∈ ((Model.specDraftBase (V := V)).postCore S before B).bodies),
-    (Model.specDraftBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B =
-      (Model.specDraftBase (V := V)).admit_rows S.hc ((Model.specDraftBase (V := V)).postCore S before B) B.attestations := by
+theorem specBase_on_block_with_eq_admit_rows_postCore : ∀ (S : Setup V) (before : (Model.specBase (V := V)).NS) (B : NamedBlock V)
+    (hnew : B ∉ before.bodies) (hheld : B ∈ ((Model.specBase (V := V)).postCore S before B).bodies),
+    (Model.specBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B =
+      (Model.specBase (V := V)).admit_rows S.hc ((Model.specBase (V := V)).postCore S before B) B.attestations := by
   intro S before B hnew hheld
   show Spec.Protocol.on_block _ _ before (Spec.Block.toSpecNamed B) =
     Spec.Protocol.admit_attestations _
@@ -706,234 +706,234 @@ theorem specDraftBase_on_block_with_eq_admit_rows_postCore : ∀ (S : Setup V) (
     rw [if_neg hadm] at hheld'
     exact hnew hheld'
 
-/-- The field `on_block_with_eq_admit_rows_postCore` of `NodeFacts` at `Model.specDraft`: if `B` is
+/-- The field `on_block_with_eq_admit_rows_postCore` of `NodeFacts` at `Model.spec`: if `B` is
     not among the bodies of `before` and is among the bodies after the core call on `B`, the block
     handler `on_block_with` on `B` at `before` returns the store that admitting the attestations `B`
     includes, one by one, returns from the store after the core call. -/
-theorem specDraft_on_block_with_eq_admit_rows_postCore : ∀ (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V)
-    (hnew : B ∉ before.bodies) (hheld : B ∈ ((Model.specDraft (V := V)).postCore S before B).bodies),
-    (Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B =
-      (Model.specDraft (V := V)).admit_rows S.hc ((Model.specDraft (V := V)).postCore S before B) B.attestations :=
+theorem spec_on_block_with_eq_admit_rows_postCore : ∀ (S : Setup V) (before : (Model.spec (V := V)).NS) (B : NamedBlock V)
+    (hnew : B ∉ before.bodies) (hheld : B ∈ ((Model.spec (V := V)).postCore S before B).bodies),
+    (Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B =
+      (Model.spec (V := V)).admit_rows S.hc ((Model.spec (V := V)).postCore S before B) B.attestations :=
 by
   intro S before B hnew hheld
   by_cases hr : RootHeldByOther before.val.T (Spec.Block.toSpecNamed B)
   · exfalso
-    have e2 : (Model.specDraft (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
+    have e2 : (Model.spec (V := V)).postCore S before B = before := OkMember.postCore_of_held hr
     rw [e2] at hheld
     exact hnew hheld
-  · have e1 : ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B).val = (Model.specDraftBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before.val B := OkMember.on_block_with_val_of_not_held hr
-    have e2 : ((Model.specDraft (V := V)).postCore S before B).val = (Model.specDraftBase (V := V)).postCore S before.val B :=
+  · have e1 : ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before B).val = (Model.specBase (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg before.val B := OkMember.on_block_with_val_of_not_held hr
+    have e2 : ((Model.spec (V := V)).postCore S before B).val = (Model.specBase (V := V)).postCore S before.val B :=
       OkMember.postCore_val_of_not_held hr
-    have e3 : ((Model.specDraft (V := V)).admit_rows S.hc ((Model.specDraft (V := V)).postCore S before B) B.attestations).val =
-        (Model.specDraftBase (V := V)).admit_rows S.hc ((Model.specDraft (V := V)).postCore S before B).val B.attestations := rfl
+    have e3 : ((Model.spec (V := V)).admit_rows S.hc ((Model.spec (V := V)).postCore S before B) B.attestations).val =
+        (Model.specBase (V := V)).admit_rows S.hc ((Model.spec (V := V)).postCore S before B).val B.attestations := rfl
     apply Subtype.ext
     rw [e1, e3, e2]
-    refine specDraftBase_on_block_with_eq_admit_rows_postCore S before.val B hnew ?_
+    refine specBase_on_block_with_eq_admit_rows_postCore S before.val B hnew ?_
     rw [← e2]
     exact hheld
 
-/-- The field `process_h_max_mono` of `NodeFacts` at `Model.specDraftBase`: every node state `n'`
+/-- The field `process_h_max_mono` of `NodeFacts` at `Model.specBase`: every node state `n'`
     that `n`'s receipt of `o` can return has an `h_max` at least `n`'s. -/
-theorem specDraftBase_process_h_max_mono : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n.st.core.h_max ≤ n'.st.core.h_max := by
+theorem specBase_process_h_max_mono : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n.st.core.h_max ≤ n'.st.core.h_max := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   exact (keeps_receipt_process S n.st o).2.2.2.1
 
-/-- The field `process_h_max_mono` of `NodeFacts` at `Model.specDraft`: every node state `n'` that
+/-- The field `process_h_max_mono` of `NodeFacts` at `Model.spec`: every node state `n'` that
     `n`'s receipt of `o` can return has an `h_max` at least `n`'s. -/
-theorem specDraft_process_h_max_mono : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n.st.core.h_max ≤ n'.st.core.h_max :=
-  fun S n o n' hn' => specDraftBase_process_h_max_mono S n.val o n'.val hn'
+theorem spec_process_h_max_mono : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n.st.core.h_max ≤ n'.st.core.h_max :=
+  fun S n o n' hn' => specBase_process_h_max_mono S n.val o n'.val hn'
 
-/-- The field `node_process_F` of `NodeFacts` at `Model.specDraftBase`: for every node state `n'`
+/-- The field `node_process_F` of `NodeFacts` at `Model.specBase`: for every node state `n'`
     that `n`'s receipt of `o` can return, `n`'s finalized block is an ancestor of, or equal to,
     `n'`'s. -/
-theorem specDraftBase_node_process_F : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), Block.Preceq n.st.core.F n'.st.core.F := by
+theorem specBase_node_process_F : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), Block.Preceq n.st.core.F n'.st.core.F := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   exact (keeps_receipt_process S n.st o).2.2.2.2.2.2.2.2
 
-/-- The field `node_process_F` of `NodeFacts` at `Model.specDraft`: for every node state `n'` that
+/-- The field `node_process_F` of `NodeFacts` at `Model.spec`: for every node state `n'` that
     `n`'s receipt of `o` can return, `n`'s finalized block is an ancestor of, or equal to, `n'`'s. -/
-theorem specDraft_node_process_F : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), Block.Preceq n.st.core.F n'.st.core.F :=
-  fun S n o n' hn' => specDraftBase_node_process_F S n.val o n'.val hn'
+theorem spec_node_process_F : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), Block.Preceq n.st.core.F n'.st.core.F :=
+  fun S n o n' hn' => specBase_node_process_F S n.val o n'.val hn'
 
-/-- The field `process_cache_round` of `NodeFacts` at `Model.specDraftBase`: every node state `n'`
+/-- The field `process_cache_round` of `NodeFacts` at `Model.specBase`: every node state `n'`
     that `n`'s receipt of `o` can return has a grade cache of the round of `n`'s. -/
-theorem specDraftBase_process_cache_round : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n'.cache.round = n.cache.round := by
+theorem specBase_process_cache_round : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n'.cache.round = n.cache.round := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   show (Member.receipt_process S n.st o).saved_grades.round = n.st.saved_grades.round
   rw [receipt_process_saved_grades]
 
-/-- The field `process_cache_round` of `NodeFacts` at `Model.specDraft`: every node state `n'` that
+/-- The field `process_cache_round` of `NodeFacts` at `Model.spec`: every node state `n'` that
     `n`'s receipt of `o` can return has a grade cache of the round of `n`'s. -/
-theorem specDraft_process_cache_round : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.cache.round = n.cache.round :=
-  fun S n o n' hn' => specDraftBase_process_cache_round S n.val o n'.val hn'
+theorem spec_process_cache_round : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.cache.round = n.cache.round :=
+  fun S n o n' hn' => specBase_process_cache_round S n.val o n'.val hn'
 
-/-- The field `process_clock` of `NodeFacts` at `Model.specDraftBase`: every node state `n'` that
+/-- The field `process_clock` of `NodeFacts` at `Model.specBase`: every node state `n'` that
     `n`'s receipt of `o` can return has the clock `t` and the slot `s` of `n`'s store part. -/
-theorem specDraftBase_process_clock : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n'.st.core.t = n.st.core.t ∧ n'.st.core.s = n.st.core.s := by
+theorem specBase_process_clock : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n'.st.core.t = n.st.core.t ∧ n'.st.core.s = n.st.core.s := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   exact ⟨(keeps_receipt_process S n.st o).1, (keeps_receipt_process S n.st o).2.1⟩
 
-/-- The field `process_clock` of `NodeFacts` at `Model.specDraft`: every node state `n'` that `n`'s
+/-- The field `process_clock` of `NodeFacts` at `Model.spec`: every node state `n'` that `n`'s
     receipt of `o` can return has the clock `t` and the slot `s` of `n`'s store part. -/
-theorem specDraft_process_clock : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.st.core.t = n.st.core.t ∧ n'.st.core.s = n.st.core.s :=
-  fun S n o n' hn' => specDraftBase_process_clock S n.val o n'.val hn'
+theorem spec_process_clock : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.st.core.t = n.st.core.t ∧ n'.st.core.s = n.st.core.s :=
+  fun S n o n' hn' => specBase_process_clock S n.val o n'.val hn'
 
-/-- The field `node_process_latest` of `NodeFacts` at `Model.specDraftBase`: every node state `n'`
+/-- The field `node_process_latest` of `NodeFacts` at `Model.specBase`: every node state `n'`
     that `n`'s receipt of `o` can return has the `latest_confirmed` of `n`'s store part. -/
-theorem specDraftBase_node_process_latest : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n'.st.core.latest_confirmed = n.st.core.latest_confirmed := by
+theorem specBase_node_process_latest : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n'.st.core.latest_confirmed = n.st.core.latest_confirmed := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   show (Member.receipt_process S n.st o).latest_confirmed.toProof = n.st.latest_confirmed.toProof
   rw [(keeps_receipt_process S n.st o).2.2.2.2.2.2.1]
 
-/-- The field `node_process_latest` of `NodeFacts` at `Model.specDraft`: every node state `n'` that
+/-- The field `node_process_latest` of `NodeFacts` at `Model.spec`: every node state `n'` that
     `n`'s receipt of `o` can return has the `latest_confirmed` of `n`'s store part. -/
-theorem specDraft_node_process_latest : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.st.core.latest_confirmed = n.st.core.latest_confirmed :=
-  fun S n o n' hn' => specDraftBase_node_process_latest S n.val o n'.val hn'
+theorem spec_node_process_latest : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.st.core.latest_confirmed = n.st.core.latest_confirmed :=
+  fun S n o n' hn' => specBase_node_process_latest S n.val o n'.val hn'
 
-/-- The field `node_process_stable` of `NodeFacts` at `Model.specDraftBase`: every node state `n'`
+/-- The field `node_process_stable` of `NodeFacts` at `Model.specBase`: every node state `n'`
     that `n`'s receipt of `o` can return has the `latest_stable` of `n`'s store part. -/
-theorem specDraftBase_node_process_stable : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n'.st.core.latest_stable = n.st.core.latest_stable := by
+theorem specBase_node_process_stable : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n'.st.core.latest_stable = n.st.core.latest_stable := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   show (Member.receipt_process S n.st o).latest_stable.toProof = n.st.latest_stable.toProof
   rw [(keeps_receipt_process S n.st o).2.2.2.2.2.2.2.1]
 
-/-- The field `node_process_stable` of `NodeFacts` at `Model.specDraft`: every node state `n'` that
+/-- The field `node_process_stable` of `NodeFacts` at `Model.spec`: every node state `n'` that
     `n`'s receipt of `o` can return has the `latest_stable` of `n`'s store part. -/
-theorem specDraft_node_process_stable : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.st.core.latest_stable = n.st.core.latest_stable :=
-  fun S n o n' hn' => specDraftBase_node_process_stable S n.val o n'.val hn'
+theorem spec_node_process_stable : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.st.core.latest_stable = n.st.core.latest_stable :=
+  fun S n o n' hn' => specBase_node_process_stable S n.val o n'.val hn'
 
-/-- The field `process_record` of `NodeFacts` at `Model.specDraft`: every node state `n'` that `n`'s
+/-- The field `process_record` of `NodeFacts` at `Model.spec`: every node state `n'` that `n`'s
     receipt of `o` can return has the signing record of `n`. -/
-theorem specDraft_process_record : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.record = n.record := by
-  exact specDraft_process_record_eq
+theorem spec_process_record : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.record = n.record := by
+  exact spec_process_record_eq
 
-/-- The field `mkNode_record` of `NodeFacts` at `Model.specDraft`: the signing record of
+/-- The field `mkNode_record` of `NodeFacts` at `Model.spec`: the signing record of
     `mkNode st rc c` is `rc`. -/
-theorem specDraft_mkNode_record : ∀ (st : (Model.specDraft (V := V)).NS) (rc : (Model.specDraft (V := V)).NR) (c : (Model.specDraft (V := V)).Cache), ((Model.specDraft (V := V)).mkNode st rc c).record = rc := by
+theorem spec_mkNode_record : ∀ (st : (Model.spec (V := V)).NS) (rc : (Model.spec (V := V)).NR) (c : (Model.spec (V := V)).Cache), ((Model.spec (V := V)).mkNode st rc c).record = rc := by
   intro st rc c
   rfl
 
-/-- The field `mkNode_st` of `NodeFacts` at `Model.specDraft`: the named store of `mkNode st rc c`
+/-- The field `mkNode_st` of `NodeFacts` at `Model.spec`: the named store of `mkNode st rc c`
     is `store_with_cache st c`. -/
-theorem specDraft_mkNode_st : ∀ (st : (Model.specDraft (V := V)).NS) (rc : (Model.specDraft (V := V)).NR) (c : (Model.specDraft (V := V)).Cache), ((Model.specDraft (V := V)).mkNode st rc c).st = (Model.specDraft (V := V)).store_with_cache st c := by
+theorem spec_mkNode_st : ∀ (st : (Model.spec (V := V)).NS) (rc : (Model.spec (V := V)).NR) (c : (Model.spec (V := V)).Cache), ((Model.spec (V := V)).mkNode st rc c).st = (Model.spec (V := V)).store_with_cache st c := by
   intro st rc c
   rfl
 
-/-- The field `mkNode_cache` of `NodeFacts` at `Model.specDraft`: the cache of `mkNode st rc c` is
+/-- The field `mkNode_cache` of `NodeFacts` at `Model.spec`: the cache of `mkNode st rc c` is
     `c`. -/
-theorem specDraft_mkNode_cache : ∀ (st : (Model.specDraft (V := V)).NS) (rc : (Model.specDraft (V := V)).NR) (c : (Model.specDraft (V := V)).Cache), ((Model.specDraft (V := V)).mkNode st rc c).cache = c := by
+theorem spec_mkNode_cache : ∀ (st : (Model.spec (V := V)).NS) (rc : (Model.spec (V := V)).NR) (c : (Model.spec (V := V)).Cache), ((Model.spec (V := V)).mkNode st rc c).cache = c := by
   intro st rc c
   rfl
 
-/-- The field `wake_st_record` of `NodeFacts` at `Model.specDraft`: a wake keeps the node's store
+/-- The field `wake_st_record` of `NodeFacts` at `Model.spec`: a wake keeps the node's store
     and its signing record. -/
-theorem specDraft_wake_st_record : ∀ n : (Model.specDraft (V := V)).N, ((Model.specDraft (V := V)).wake n).st = n.st ∧ ((Model.specDraft (V := V)).wake n).record = n.record := by
+theorem spec_wake_st_record : ∀ n : (Model.spec (V := V)).N, ((Model.spec (V := V)).wake n).st = n.st ∧ ((Model.spec (V := V)).wake n).record = n.record := by
   intro n
   exact ⟨rfl, rfl⟩
 
-/-- The field `gradeContract_sgVote` of `NodeFacts` at `Model.specDraft`: the SG vote of the
+/-- The field `gradeContract_sgVote` of `NodeFacts` at `Model.spec`: the SG vote of the
     contract built from any cache `c` is `currentSGVote`. -/
-theorem specDraft_gradeContract_sgVote : ∀ (c : (Model.specDraft (V := V)).Cache), ((Model.specDraft (V := V)).gradeContract c).sgVote = (Model.specDraft (V := V)).currentSGVote := by
+theorem spec_gradeContract_sgVote : ∀ (c : (Model.spec (V := V)).Cache), ((Model.spec (V := V)).gradeContract c).sgVote = (Model.spec (V := V)).currentSGVote := by
   intro c
   rfl
 
-/-- The field `cache_clipped_initial` of `NodeFacts` at `Model.specDraft`: the grade cache of the
+/-- The field `cache_clipped_initial` of `NodeFacts` at `Model.spec`: the grade cache of the
     initial node state, clipped at the finalized block of its store, is that cache. -/
-theorem specDraft_cache_clipped_initial : ∀ (S : Setup V) (v : V),
-    (Model.specDraft (V := V)).clipCache ((Model.specDraft (V := V)).initial S v).st.core.F ((Model.specDraft (V := V)).initial S v).cache = ((Model.specDraft (V := V)).initial S v).cache := by
+theorem spec_cache_clipped_initial : ∀ (S : Setup V) (v : V),
+    (Model.spec (V := V)).clipCache ((Model.spec (V := V)).initial S v).st.core.F ((Model.spec (V := V)).initial S v).cache = ((Model.spec (V := V)).initial S v).cache := by
   intro S v
   rfl
 
-/-- The field `initial_cache_current_phase` of `NodeFacts` at `Model.specDraft`: for every phase
+/-- The field `initial_cache_current_phase` of `NodeFacts` at `Model.spec`: for every phase
     `p`, the current frame of the initial node state's grade cache has the result `some none` for
     `p`. -/
-theorem specDraft_initial_cache_current_phase : ∀ (S : Setup V) (v : V) (p : DecoupledConsensusModel.Protocol.Phase), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).initial S v).cache.current p = Option.some Option.none := by
+theorem spec_initial_cache_current_phase : ∀ (S : Setup V) (v : V) (p : DecoupledConsensusModel.Protocol.Phase), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).initial S v).cache.current p = Option.some Option.none := by
   intro S v p
   cases p <;> rfl
 
-/-- The field `initial_cache_round` of `NodeFacts` at `Model.specDraft`: the round of the initial
+/-- The field `initial_cache_round` of `NodeFacts` at `Model.spec`: the round of the initial
     node state's grade cache is `0`. -/
-theorem specDraft_initial_cache_round : ∀ (S : Setup V) (v : V), ((Model.specDraft (V := V)).initial S v).cache.round = 0 := by
+theorem spec_initial_cache_round : ∀ (S : Setup V) (v : V), ((Model.spec (V := V)).initial S v).cache.round = 0 := by
   intro S v
   rfl
 
-/-- The field `initial_record_legacy_lock` of `NodeFacts` at `Model.specDraft`: the initial signing
+/-- The field `initial_record_legacy_lock` of `NodeFacts` at `Model.spec`: the initial signing
     record holds no lock at any height. -/
-theorem specDraft_initial_record_legacy_lock : ∀ (S : Setup V) (v : V) (H : Height), ((Model.specDraft (V := V)).initial S v).record.legacy.lock H = none := by
+theorem spec_initial_record_legacy_lock : ∀ (S : Setup V) (v : V) (H : Height), ((Model.spec (V := V)).initial S v).record.legacy.lock H = none := by
   intro S v H
   rfl
 
-/-- The field `initial_record_legacy_target` of `NodeFacts` at `Model.specDraft`: the initial
+/-- The field `initial_record_legacy_target` of `NodeFacts` at `Model.spec`: the initial
     signing record records no target at any height. -/
-theorem specDraft_initial_record_legacy_target : ∀ (S : Setup V) (v : V) (h : Height), ((Model.specDraft (V := V)).initial S v).record.legacy.target h = none := by
+theorem spec_initial_record_legacy_target : ∀ (S : Setup V) (v : V) (h : Height), ((Model.spec (V := V)).initial S v).record.legacy.target h = none := by
   intro S v h
   rfl
 
-/-- The field `initial_record_legacy_timeout` of `NodeFacts` at `Model.specDraft`: the initial
+/-- The field `initial_record_legacy_timeout` of `NodeFacts` at `Model.spec`: the initial
     signing record records no timeout at any height. -/
-theorem specDraft_initial_record_legacy_timeout : ∀ (S : Setup V) (v : V) (h : Height),
-    ((Model.specDraft (V := V)).initial S v).record.legacy.timeout h = false := by
+theorem spec_initial_record_legacy_timeout : ∀ (S : Setup V) (v : V) (h : Height),
+    ((Model.spec (V := V)).initial S v).record.legacy.timeout h = false := by
   intro S v h
   rfl
 
-/-- The field `initial_record_lock` of `NodeFacts` at `Model.specDraft`: the initial signing record
+/-- The field `initial_record_lock` of `NodeFacts` at `Model.spec`: the initial signing record
     holds no lock at any height. -/
-theorem specDraft_initial_record_lock : ∀ (S : Setup V) (v : V) (h : Height), ((Model.specDraft (V := V)).initial S v).record.legacy.lock h = none := by
+theorem spec_initial_record_lock : ∀ (S : Setup V) (v : V) (h : Height), ((Model.spec (V := V)).initial S v).record.legacy.lock h = none := by
   intro S v h
   rfl
 
-/-- The field `initial_record_target` of `NodeFacts` at `Model.specDraft`: the initial signing
+/-- The field `initial_record_target` of `NodeFacts` at `Model.spec`: the initial signing
     record records no target at any height. -/
-theorem specDraft_initial_record_target : ∀ (S : Setup V) (v : V) (h : Height), ((Model.specDraft (V := V)).initial S v).record.legacy.target h = none := by
+theorem spec_initial_record_target : ∀ (S : Setup V) (v : V) (h : Height), ((Model.spec (V := V)).initial S v).record.legacy.target h = none := by
   intro S v h
   rfl
 
-/-- The field `initial_st` of `NodeFacts` at `Model.specDraft`: the store of the initial node state
+/-- The field `initial_st` of `NodeFacts` at `Model.spec`: the store of the initial node state
     is `ns_initial`. -/
-theorem specDraft_initial_st : ∀ (S : Setup V) (v : V), ((Model.specDraft (V := V)).initial S v).st = (Model.specDraft (V := V)).ns_initial := by
+theorem spec_initial_st : ∀ (S : Setup V) (v : V), ((Model.spec (V := V)).initial S v).st = (Model.spec (V := V)).ns_initial := by
   intro S v
   rfl
 
-/-- The field `initial_st_inclG2` of `NodeFacts` at `Model.specDraft`: the store of the initial node
+/-- The field `initial_st_inclG2` of `NodeFacts` at `Model.spec`: the store of the initial node
     state is `ns_initial`. -/
-theorem specDraft_initial_st_inclG2 : ∀ (S : Setup V) (v : V), ((Model.specDraft (V := V)).initial S v).st = ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS) := by
+theorem spec_initial_st_inclG2 : ∀ (S : Setup V) (v : V), ((Model.spec (V := V)).initial S v).st = ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS) := by
   intro S v
   rfl
 
-/-- The field `initial_clock_eq_zero` of `NodeFacts` at `Model.specDraft`: the clock of the initial
+/-- The field `initial_clock_eq_zero` of `NodeFacts` at `Model.spec`: the clock of the initial
     node state's store is `0`. -/
-theorem specDraft_initial_clock_eq_zero : ∀ (S : Setup V) (v : V), ((Model.specDraft (V := V)).initial S v).st.core.t = 0 := by
+theorem spec_initial_clock_eq_zero : ∀ (S : Setup V) (v : V), ((Model.spec (V := V)).initial S v).st.core.t = 0 := by
   intro S v
   rfl
 
-/-- The field `initial_body_eq_genesis` of `NodeFacts` at `Model.specDraft`: every body of the
+/-- The field `initial_body_eq_genesis` of `NodeFacts` at `Model.spec`: every body of the
     initial node state is genesis. -/
-theorem specDraft_initial_body_eq_genesis : ∀ (S : Setup V) (v : V) {D : NamedBlock V} (hD : D ∈ ((Model.specDraft (V := V)).initial S v).st.bodies),
+theorem spec_initial_body_eq_genesis : ∀ (S : Setup V) (v : V) {D : NamedBlock V} (hD : D ∈ ((Model.spec (V := V)).initial S v).st.bodies),
     D = NamedBlock.genesis := by
   intro S v D hD
   have hD' : D ∈ (Spec.Store.init : Spec.Store V).T.map
@@ -943,42 +943,42 @@ theorem specDraft_initial_body_eq_genesis : ∀ (S : Setup V) (v : V) {D : Named
   rw [hD']
   rfl
 
-/-- The field `initial_timestamp_genesis` of `NodeFacts` at `Model.specDraftBase`: in the initial
+/-- The field `initial_timestamp_genesis` of `NodeFacts` at `Model.specBase`: in the initial
     node state, genesis carries the stamp `⊥`. -/
-theorem specDraftBase_initial_timestamp_genesis : ∀ (S : Setup V) (v : V), ((Model.specDraftBase (V := V)).initial S v).st.core.timestamp_block Block.genesis = some ⊥ := by
+theorem specBase_initial_timestamp_genesis : ∀ (S : Setup V) (v : V), ((Model.specBase (V := V)).initial S v).st.core.timestamp_block Block.genesis = some ⊥ := by
   intro S v
   have h := (Model.vocabulary_facts_node (V := V)).initial_timestamp_genesis S v
   rw [vocabulary_initial] at h
   exact h
 
-/-- The field `initial_timestamp_genesis` of `NodeFacts` at `Model.specDraft`: in the initial node
+/-- The field `initial_timestamp_genesis` of `NodeFacts` at `Model.spec`: in the initial node
     state, genesis carries the stamp `⊥`. -/
-theorem specDraft_initial_timestamp_genesis : ∀ (S : Setup V) (v : V), ((Model.specDraft (V := V)).initial S v).st.core.timestamp_block Block.genesis = some ⊥ :=
-  fun S v => specDraftBase_initial_timestamp_genesis S v
+theorem spec_initial_timestamp_genesis : ∀ (S : Setup V) (v : V), ((Model.spec (V := V)).initial S v).st.core.timestamp_block Block.genesis = some ⊥ :=
+  fun S v => specBase_initial_timestamp_genesis S v
 
-/-- The field `initial_cache_phaseResult_ne` of `NodeFacts` at `Model.specDraftBase`: no round's
+/-- The field `initial_cache_phaseResult_ne` of `NodeFacts` at `Model.specBase`: no round's
     frame of the initial node state's grade cache has a phase result of the form `some (some root)`. -/
-theorem specDraftBase_initial_cache_phaseResult_ne : ∀ (S : Setup V) (v : V) (r₁ : Round) (p : Protocol.Phase) (root : Block V),
-    (Model.specDraftBase (V := V)).phaseResult ((Model.specDraftBase (V := V)).cacheAtRound ((Model.specDraftBase (V := V)).initial S v).cache r₁) p ≠ some (some root) := by
+theorem specBase_initial_cache_phaseResult_ne : ∀ (S : Setup V) (v : V) (r₁ : Round) (p : Protocol.Phase) (root : Block V),
+    (Model.specBase (V := V)).phaseResult ((Model.specBase (V := V)).cacheAtRound ((Model.specBase (V := V)).initial S v).cache r₁) p ≠ some (some root) := by
   intro S v r₁ p root
   have h := (Model.vocabulary_facts_node (V := V)).initial_cache_phaseResult_ne S v r₁ p root
   rw [vocabulary_initial] at h
   have e1 := toProof_phaseResult
-    (Spec.Protocol.saved_round_grades ((Model.specDraftBase (V := V)).initial S v).st.saved_grades r₁)
+    (Spec.Protocol.saved_round_grades ((Model.specBase (V := V)).initial S v).st.saved_grades r₁)
     (Spec.Protocol.Phase.toSpec p)
   rw [Spec.Protocol.Phase.toProof_toSpec] at e1
-  have e2 := toProof_cacheAtRound ((Model.specDraftBase (V := V)).initial S v).st.saved_grades r₁
+  have e2 := toProof_cacheAtRound ((Model.specBase (V := V)).initial S v).st.saved_grades r₁
   show (Spec.Protocol.phaseResult
-    (Spec.Protocol.saved_round_grades ((Model.specDraftBase (V := V)).initial S v).st.saved_grades r₁)
+    (Spec.Protocol.saved_round_grades ((Model.specBase (V := V)).initial S v).st.saved_grades r₁)
       (Spec.Protocol.Phase.toSpec p)).toProof ≠ _
   rw [← e1, ← e2]
   exact h
 
-/-- The field `initial_cache_phaseResult_ne` of `NodeFacts` at `Model.specDraft`: no round's frame
+/-- The field `initial_cache_phaseResult_ne` of `NodeFacts` at `Model.spec`: no round's frame
     of the initial node state's grade cache has a phase result of the form `some (some root)`. -/
-theorem specDraft_initial_cache_phaseResult_ne : ∀ (S : Setup V) (v : V) (r₁ : Round) (p : Protocol.Phase) (root : Block V),
-    (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound ((Model.specDraft (V := V)).initial S v).cache r₁) p ≠ some (some root) :=
-  fun S v r₁ p root => specDraftBase_initial_cache_phaseResult_ne S v r₁ p root
+theorem spec_initial_cache_phaseResult_ne : ∀ (S : Setup V) (v : V) (r₁ : Round) (p : Protocol.Phase) (root : Block V),
+    (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound ((Model.spec (V := V)).initial S v).cache r₁) p ≠ some (some root) :=
+  fun S v r₁ p root => specBase_initial_cache_phaseResult_ne S v r₁ p root
 
 /-! ## The tick -/
 
@@ -1302,12 +1302,12 @@ theorem record_awake_eq (n : Spec.NodeState V) (t : Spec.Time) :
   simp only [Spec.record_awake, Id.run]
   split_ifs <;> rfl
 
-/-- The member `tick` of `Model.specDraftBase` can return `out` exactly when the spec's tick, run
+/-- The member `tick` of `Model.specBase` can return `out` exactly when the spec's tick, run
     from the empty list, answers with `out`'s node state and objects whose images are those `out`
     sends. -/
 theorem tick_returns_iff (S : Setup V) (v : V) (n : Spec.NodeState V) (t : Time)
     (out : Spec.NodeState V × List (NamedObject V)) :
-    (Model.specDraftBase (V := V)).tick S v n t ⇢ out ↔
+    (Model.specBase (V := V)).tick S v n t ⇢ out ↔
       ∃ n' sent, (Spec.tick (Setup.toSpec S).C (Setup.toSpec S).P (Setup.toSpec S).X n
           t).run [] = .ok (n', sent) ∧ out = (n', sent.map Spec.NamedObject.toProof) := by
   show Returns (successOutcomes _) out ↔ _
@@ -1407,7 +1407,7 @@ theorem admit_attestation_eq_receipt (S : Setup V) (st : Spec.Store V)
     the round of `t`'s slot. -/
 theorem tick_store {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
     {out : Spec.NodeState V × List (NamedObject V)}
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out) :
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out) :
     ∃ (sg : Spec.SavedGrades V) (st5 : Spec.Store V),
       TickSteps S { n.st with saved_grades := sg, t := t, s := (Setup.toSpec S).C.slotOf t } st5 ∧
       out.1.st = Spec.make_grades_compatible_with_finalized st5 ∧
@@ -1460,7 +1460,7 @@ theorem receive_nodeOf (S : Setup V) (st : Spec.Store V) (o : NamedObject V) :
     its tick. -/
 theorem tick_store_rel {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
     {out : Spec.NodeState V × List (NamedObject V)}
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out)
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out)
     (R : Spec.Store V → Spec.Store V → Prop)
     (hrefl : ∀ a, R a a) (htrans : ∀ a b c, R a b → R b c → R a c)
     (hrec : ∀ st o, R st (Member.receipt_process S st o))
@@ -1473,32 +1473,32 @@ theorem tick_store_rel {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
   rw [hst]
   exact htrans _ _ _ (htrans _ _ _ (hstart sg) (hsteps.rel R hrefl htrans hrec hconf)) (hend st5)
 
-/-- The field `tick_h_max_mono` of `NodeFacts` at `Model.specDraftBase`: every outcome `out` of
+/-- The field `tick_h_max_mono` of `NodeFacts` at `Model.specBase`: every outcome `out` of
     `v`'s tick at `t` from `n` has an `h_max` at least `n`'s. -/
-theorem specDraftBase_tick_h_max_mono : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
+theorem specBase_tick_h_max_mono : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
     n.st.core.h_max ≤ out.1.st.core.h_max := by
   intro S v n t out hout
   refine tick_store_rel hout (fun a b => a.h_max ≤ b.h_max) (fun _ => le_refl _)
     (fun _ _ _ h1 h2 => le_trans h1 h2) ?_ ?_ (fun _ => le_refl _) (fun _ => le_refl _)
   · intro st o
-    have h := specDraftBase_process_h_max_mono S (nodeOf st) o _ ((process_returns_iff _ _ _ _).mpr rfl)
+    have h := specBase_process_h_max_mono S (nodeOf st) o _ ((process_returns_iff _ _ _ _).mpr rfl)
     rw [receive_nodeOf] at h
     exact h
   · intro st s st' hc
     rw [update_confirmation_ok hc]
 
-/-- The field `tick_h_max_mono` of `NodeFacts` at `Model.specDraft`: every outcome `out` of `v`'s
+/-- The field `tick_h_max_mono` of `NodeFacts` at `Model.spec`: every outcome `out` of `v`'s
     tick at `t` from `n` has an `h_max` at least `n`'s. -/
-theorem specDraft_tick_h_max_mono : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+theorem spec_tick_h_max_mono : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     n.st.core.h_max ≤ out.1.st.core.h_max :=
-  fun S v n t out hout => specDraftBase_tick_h_max_mono S v n.val t (out.1.val, out.2) hout
+  fun S v n t out hout => specBase_tick_h_max_mono S v n.val t (out.1.val, out.2) hout
 
-/-- The field `node_tick_F` of `NodeFacts` at `Model.specDraftBase`: for every outcome `out` of
+/-- The field `node_tick_F` of `NodeFacts` at `Model.specBase`: for every outcome `out` of
     `v`'s tick at `t` from `n`, `n`'s finalized block is an ancestor of, or equal to, `out.1`'s. -/
-theorem specDraftBase_node_tick_F : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
+theorem specBase_node_tick_F : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
     Block.Preceq n.st.core.F out.1.st.core.F := by
   intro S v n t out hout
   refine tick_store_rel (R := fun a b => Block.Preceq a.F.toProof b.F.toProof) hout
@@ -1506,19 +1506,19 @@ theorem specDraftBase_node_tick_F : ∀ (S : Setup V) (v : V) (n : (Model.specDr
     (fun _ _ _ h1 h2 => Proofs.ModelProperties.Preceq_trans h1 h2) ?_ ?_
     (fun _ => Proofs.ModelProperties.Preceq_self _) (fun _ => Proofs.ModelProperties.Preceq_self _)
   · intro st o
-    have h := specDraftBase_node_process_F S (nodeOf st) o _ ((process_returns_iff _ _ _ _).mpr rfl)
+    have h := specBase_node_process_F S (nodeOf st) o _ ((process_returns_iff _ _ _ _).mpr rfl)
     rw [receive_nodeOf] at h
     exact h
   · intro st s st' hc
     rw [update_confirmation_ok hc]
     exact Proofs.ModelProperties.Preceq_self _
 
-/-- The field `node_tick_F` of `NodeFacts` at `Model.specDraft`: for every outcome `out` of `v`'s
+/-- The field `node_tick_F` of `NodeFacts` at `Model.spec`: for every outcome `out` of `v`'s
     tick at `t` from `n`, `n`'s finalized block is an ancestor of, or equal to, `out.1`'s. -/
-theorem specDraft_node_tick_F : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+theorem spec_node_tick_F : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     Block.Preceq n.st.core.F out.1.st.core.F :=
-  fun S v n t out hout => specDraftBase_node_tick_F S v n.val t (out.1.val, out.2) hout
+  fun S v n t out hout => specBase_node_tick_F S v n.val t (out.1.val, out.2) hout
 
 omit [Inhabited V] in
 /-- The slot of a time under the spec's parameters read from `S` is `S.E.slotOf t`. -/
@@ -1526,17 +1526,17 @@ theorem slotOf_eq (S : Setup V) (t : Time) : (Setup.toSpec S).C.slotOf t = S.E.s
   simp only [Spec.Config.slotOf, Env.slotOf, slotOfTime]
   rfl
 
-/-- The field `tick_clock` of `NodeFacts` at `Model.specDraftBase`: for every outcome `out` of `v`'s
+/-- The field `tick_clock` of `NodeFacts` at `Model.specBase`: for every outcome `out` of `v`'s
     tick at `t` from `n`, `out.1`'s store part has the clock `t` and the slot `S.E.slotOf t`. -/
-theorem specDraftBase_tick_clock : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
+theorem specBase_tick_clock : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
     out.1.st.core.t = t ∧ out.1.st.core.s = S.E.slotOf t := by
   intro S v n t out hout
   obtain ⟨sg, st5, hsteps, hst, -, -⟩ := tick_store hout
   have h := hsteps.rel (fun a b => b.t = a.t ∧ b.s = a.s) (fun _ => ⟨rfl, rfl⟩)
     (fun _ _ _ h1 h2 => ⟨h2.1.trans h1.1, h2.2.trans h1.2⟩)
     (fun st o => by
-      have h := specDraftBase_process_clock S (nodeOf st) o _ ((process_returns_iff _ _ _ _).mpr rfl)
+      have h := specBase_process_clock S (nodeOf st) o _ ((process_returns_iff _ _ _ _).mpr rfl)
       rw [receive_nodeOf] at h
       exact h)
     (fun st s st' hc => by rw [update_confirmation_ok hc]; exact ⟨rfl, rfl⟩)
@@ -1544,18 +1544,18 @@ theorem specDraftBase_tick_clock : ∀ (S : Setup V) (v : V) (n : (Model.specDra
   rw [hst, ← slotOf_eq]
   exact h
 
-/-- The field `tick_clock` of `NodeFacts` at `Model.specDraft`: for every outcome `out` of `v`'s
+/-- The field `tick_clock` of `NodeFacts` at `Model.spec`: for every outcome `out` of `v`'s
     tick at `t` from `n`, `out.1`'s store part has the clock `t` and the slot `S.E.slotOf t`. -/
-theorem specDraft_tick_clock : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+theorem spec_tick_clock : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     out.1.st.core.t = t ∧ out.1.st.core.s = S.E.slotOf t :=
-  fun S v n t out hout => specDraftBase_tick_clock S v n.val t (out.1.val, out.2) hout
+  fun S v n t out hout => specBase_tick_clock S v n.val t (out.1.val, out.2) hout
 
-/-- The field `tick_cache_round` of `NodeFacts` at `Model.specDraftBase`: for every outcome `out` of
+/-- The field `tick_cache_round` of `NodeFacts` at `Model.specBase`: for every outcome `out` of
     `v`'s tick at `t` from `n`, the round of `out.1`'s grade cache is the round of the slot of `t`. -/
-theorem specDraftBase_tick_cache_round : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
-    out.1.cache.round = (Model.specDraftBase (V := V)).round_of S.hc (S.E.slotOf t) := by
+theorem specBase_tick_cache_round : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
+    out.1.cache.round = (Model.specBase (V := V)).round_of S.hc (S.E.slotOf t) := by
   intro S v n t out hout
   obtain ⟨sg, st5, hsteps, hst, hsg, hround⟩ := tick_store hout
   show (Spec.NodeState.st out.1).saved_grades.round = _
@@ -1564,12 +1564,12 @@ theorem specDraftBase_tick_cache_round : ∀ (S : Setup V) (v : V) (n : (Model.s
   rw [hsg, hround, slotOf_eq]
   rfl
 
-/-- The field `tick_cache_round` of `NodeFacts` at `Model.specDraft`: for every outcome `out` of
+/-- The field `tick_cache_round` of `NodeFacts` at `Model.spec`: for every outcome `out` of
     `v`'s tick at `t` from `n`, the round of `out.1`'s grade cache is the round of the slot of `t`. -/
-theorem specDraft_tick_cache_round : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
-    out.1.cache.round = (Model.specDraft (V := V)).round_of S.hc (S.E.slotOf t) :=
-  fun S v n t out hout => specDraftBase_tick_cache_round S v n.val t (out.1.val, out.2) hout
+theorem spec_tick_cache_round : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
+    out.1.cache.round = (Model.spec (V := V)).round_of S.hc (S.E.slotOf t) :=
+  fun S v n t out hout => specBase_tick_cache_round S v n.val t (out.1.val, out.2) hout
 
 /-- The spec's attestation input as the input of `NamedRecord.create`, the roots mapped by
     `toProof`. -/
@@ -1661,7 +1661,7 @@ theorem toProof_create (sh : Spec.SigningHistory)
     returns is among the objects sent. -/
 theorem tick_signing {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
     {out : Spec.NodeState V × List (NamedObject V)}
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out) :
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out) :
     out.1.signingHistory = n.signingHistory ∨
       ∃ x : Spec.Protocol.AttestationInput V,
         out.1.signingHistory = (Spec.Protocol.create n.signingHistory x).1 ∧
@@ -1688,12 +1688,12 @@ theorem tick_signing {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
   · left
     rfl
 
-/-- The field `timeout_mono_on_tick_emit` of `NodeFacts` at `Model.specDraftBase`: if `n`'s signing
+/-- The field `timeout_mono_on_tick_emit` of `NodeFacts` at `Model.specBase`: if `n`'s signing
     record holds a timeout entry at height `h`, so does the signing record of every outcome `out` of
     `v`'s tick at `t` from `n`. -/
-theorem specDraftBase_timeout_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
+theorem specBase_timeout_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
     {h : Height} (hs : n.record.legacy.timeout h = true)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
     out.1.record.legacy.timeout h = true := by
   intro S v n t h hs out hout
   show (Spec.NodeState.signingHistory out.1).toProof.legacy.timeout h = true
@@ -1702,21 +1702,21 @@ theorem specDraftBase_timeout_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n :
   · rw [heq, (toProof_create n.signingHistory x).1, Proofs.NamedRecord.create_legacy_records_erasure]
     exact Proofs.HealingSurface.record_attestation_timeout_mono _ hs
 
-/-- The field `timeout_mono_on_tick_emit` of `NodeFacts` at `Model.specDraft`: if `n`'s signing
+/-- The field `timeout_mono_on_tick_emit` of `NodeFacts` at `Model.spec`: if `n`'s signing
     record holds a timeout entry at height `h`, so does the signing record of every outcome `out` of
     `v`'s tick at `t` from `n`. -/
-theorem specDraft_timeout_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_timeout_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
     {h : Height} (hs : n.record.legacy.timeout h = true)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     out.1.record.legacy.timeout h = true :=
-  fun S v n t {h} hs out hout => specDraftBase_timeout_mono_on_tick_emit S v n.val t (h := h) hs (out.1.val, out.2) hout
+  fun S v n t {h} hs out hout => specBase_timeout_mono_on_tick_emit S v n.val t (h := h) hs (out.1.val, out.2) hout
 
-/-- The field `lock_mono_on_tick_emit` of `NodeFacts` at `Model.specDraftBase`: if `n`'s signing
+/-- The field `lock_mono_on_tick_emit` of `NodeFacts` at `Model.specBase`: if `n`'s signing
     record holds the lock `T` at height `h`, so does the signing record of every outcome `out` of
     `v`'s tick at `t` from `n`. -/
-theorem specDraftBase_lock_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
+theorem specBase_lock_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hs : n.record.legacy.lock h = some T)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
     out.1.record.legacy.lock h = some T := by
   intro S v n t h T hs out hout
   show (Spec.NodeState.signingHistory out.1).toProof.legacy.lock h = some T
@@ -1727,21 +1727,21 @@ theorem specDraftBase_lock_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (M
     exact Proofs.HealingSurface.create_attestation_lock_mono
       (Λ := n.signingHistory.toProof.legacy) hs _ _ _ _ _ _ _
 
-/-- The field `lock_mono_on_tick_emit` of `NodeFacts` at `Model.specDraft`: if `n`'s signing record
+/-- The field `lock_mono_on_tick_emit` of `NodeFacts` at `Model.spec`: if `n`'s signing record
     holds the lock `T` at height `h`, so does the signing record of every outcome `out` of `v`'s
     tick at `t` from `n`. -/
-theorem specDraft_lock_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_lock_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hs : n.record.legacy.lock h = some T)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     out.1.record.legacy.lock h = some T :=
-  fun S v n t {h} {T} hs out hout => specDraftBase_lock_mono_on_tick_emit S v n.val t (h := h) (T := T) hs (out.1.val, out.2) hout
+  fun S v n t {h} {T} hs out hout => specBase_lock_mono_on_tick_emit S v n.val t (h := h) (T := T) hs (out.1.val, out.2) hout
 
-/-- The field `target_mono_on_tick_emit` of `NodeFacts` at `Model.specDraftBase`: if `n`'s signing
+/-- The field `target_mono_on_tick_emit` of `NodeFacts` at `Model.specBase`: if `n`'s signing
     record holds the target `T` at height `h`, so does the signing record of every outcome `out` of
     `v`'s tick at `t` from `n`. -/
-theorem specDraftBase_target_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
+theorem specBase_target_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hs : n.record.legacy.target h = some T)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
     out.1.record.legacy.target h = some T := by
   intro S v n t h T hs out hout
   show (Spec.NodeState.signingHistory out.1).toProof.legacy.target h = some T
@@ -1750,22 +1750,22 @@ theorem specDraftBase_target_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : 
   · rw [heq, (toProof_create n.signingHistory x).1, Proofs.NamedRecord.create_legacy_records_erasure]
     exact Proofs.HealingSurface.record_attestation_target_mono _ _ hs
 
-/-- The field `target_mono_on_tick_emit` of `NodeFacts` at `Model.specDraft`: if `n`'s signing
+/-- The field `target_mono_on_tick_emit` of `NodeFacts` at `Model.spec`: if `n`'s signing
     record holds the target `T` at height `h`, so does the signing record of every outcome `out` of
     `v`'s tick at `t` from `n`. -/
-theorem specDraft_target_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_target_mono_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hs : n.record.legacy.target h = some T)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     out.1.record.legacy.target h = some T :=
-  fun S v n t {h} {T} hs out hout => specDraftBase_target_mono_on_tick_emit S v n.val t (h := h) (T := T) hs (out.1.val, out.2) hout
+  fun S v n t {h} {T} hs out hout => specBase_target_mono_on_tick_emit S v n.val t (h := h) (T := T) hs (out.1.val, out.2) hout
 
-/-- The field `lockCompatible_on_tick_emit` of `NodeFacts` at `Model.specDraftBase`: if `n`'s
+/-- The field `lockCompatible_on_tick_emit` of `NodeFacts` at `Model.specBase`: if `n`'s
     signing record is `LockCompatible`, so is the signing record of every outcome `out` of `v`'s
     tick at `t` from `n`. -/
-theorem specDraftBase_lockCompatible_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (hla : Restated.Vocabulary.Proofs.Records.LockCompatible (Model.specDraftBase (V := V)) n.record.legacy)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
-    Restated.Vocabulary.Proofs.Records.LockCompatible (Model.specDraftBase (V := V)) out.1.record.legacy := by
+theorem specBase_lockCompatible_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
+    (hla : Restated.Vocabulary.Proofs.Records.LockCompatible (Model.specBase (V := V)) n.record.legacy)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
+    Restated.Vocabulary.Proofs.Records.LockCompatible (Model.specBase (V := V)) out.1.record.legacy := by
   intro S v n t hla out hout
   show Proofs.Records.LockCompatible (Spec.NodeState.signingHistory out.1).toProof.legacy
   rcases tick_signing hout with heq | ⟨x, heq, -⟩
@@ -1773,22 +1773,22 @@ theorem specDraftBase_lockCompatible_on_tick_emit : ∀ (S : Setup V) (v : V) (n
   · rw [heq, (toProof_create n.signingHistory x).1]
     exact Proofs.NamedRecord.lock_compatible_create _ _ hla
 
-/-- The field `lockCompatible_on_tick_emit` of `NodeFacts` at `Model.specDraft`: if `n`'s signing
+/-- The field `lockCompatible_on_tick_emit` of `NodeFacts` at `Model.spec`: if `n`'s signing
     record is `LockCompatible`, so is the signing record of every outcome `out` of `v`'s tick at `t`
     from `n`. -/
-theorem specDraft_lockCompatible_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (hla : Restated.Vocabulary.Proofs.Records.LockCompatible (Model.specDraft (V := V)) n.record.legacy)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
-    Restated.Vocabulary.Proofs.Records.LockCompatible (Model.specDraft (V := V)) out.1.record.legacy :=
-  fun S v n t hla out hout => specDraftBase_lockCompatible_on_tick_emit S v n.val t hla (out.1.val, out.2) hout
+theorem spec_lockCompatible_on_tick_emit : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (hla : Restated.Vocabulary.Proofs.Records.LockCompatible (Model.spec (V := V)) n.record.legacy)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
+    Restated.Vocabulary.Proofs.Records.LockCompatible (Model.spec (V := V)) out.1.record.legacy :=
+  fun S v n t hla out hout => specBase_lockCompatible_on_tick_emit S v n.val t hla (out.1.val, out.2) hout
 
-/-- The field `record_invariant_tick` of `NodeFacts` at `Model.specDraftBase`: if `n`'s named
+/-- The field `record_invariant_tick` of `NodeFacts` at `Model.specBase`: if `n`'s named
     signing record satisfies `NamedTickRecord.Invariant`, so does that of every outcome `out` of
     `v`'s tick at `t` from `n`. -/
-theorem specDraftBase_record_invariant_tick : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (h : Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.specDraftBase (V := V)) n.record)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
-    Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.specDraftBase (V := V)) out.1.record := by
+theorem specBase_record_invariant_tick : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
+    (h : Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.specBase (V := V)) n.record)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
+    Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.specBase (V := V)) out.1.record := by
   intro S v n t h out hout
   show Proofs.NamedRecord.HistoryConsistent (Spec.NodeState.signingHistory out.1).toProof ∧
     Proofs.Records.LockCompatible (Spec.NodeState.signingHistory out.1).toProof.legacy
@@ -1798,22 +1798,22 @@ theorem specDraftBase_record_invariant_tick : ∀ (S : Setup V) (v : V) (n : (Mo
     exact ⟨Proofs.NamedRecord.history_consistent_create _ _ h.1,
       Proofs.NamedRecord.lock_compatible_create _ _ h.2⟩
 
-/-- The field `record_invariant_tick` of `NodeFacts` at `Model.specDraft`: if `n`'s named signing
+/-- The field `record_invariant_tick` of `NodeFacts` at `Model.spec`: if `n`'s named signing
     record satisfies `NamedTickRecord.Invariant`, so does that of every outcome `out` of `v`'s tick
     at `t` from `n`. -/
-theorem specDraft_record_invariant_tick : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (h : Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.specDraft (V := V)) n.record)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
-    Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.specDraft (V := V)) out.1.record :=
-  fun S v n t h out hout => specDraftBase_record_invariant_tick S v n.val t h (out.1.val, out.2) hout
+theorem spec_record_invariant_tick : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+    (h : Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.spec (V := V)) n.record)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
+    Restated.Vocabulary.Proofs.NamedTickRecord.Invariant (Model.spec (V := V)) out.1.record :=
+  fun S v n t h out hout => specBase_record_invariant_tick S v n.val t h (out.1.val, out.2) hout
 
-/-- The field `on_tick_emit_timeout_introduced` of `NodeFacts` at `Model.specDraftBase`: if `n`'s
+/-- The field `on_tick_emit_timeout_introduced` of `NodeFacts` at `Model.specBase`: if `n`'s
     signing record holds no timeout entry at height `h` and the signing record of an outcome `out`
     of `v`'s tick at `t` from `n` holds one, then `out` sends an attestation whose height pair is
     the timeout at `h`. -/
-theorem specDraftBase_on_tick_emit_timeout_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
+theorem specBase_on_tick_emit_timeout_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
     {h : Height} (hpre : n.record.legacy.timeout h = false)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out)
     (hpost : out.1.record.legacy.timeout h = true),
     ∃ a : NamedAttestation V,
       NamedObject.attest a ∈ out.2 ∧ a.erase.height_pair = HeightPair.timeout h := by
@@ -1830,25 +1830,25 @@ theorem specDraftBase_on_tick_emit_timeout_introduced : ∀ (S : Setup V) (v : V
     rw [(toProof_create n.signingHistory x).2]
     exact Proofs.HealingSurface.record_attestation_timeout_introduced hpre hpost
 
-/-- The field `on_tick_emit_timeout_introduced` of `NodeFacts` at `Model.specDraft`: if `n`'s
+/-- The field `on_tick_emit_timeout_introduced` of `NodeFacts` at `Model.spec`: if `n`'s
     signing record holds no timeout entry at height `h` and the signing record of an outcome `out`
     of `v`'s tick at `t` from `n` holds one, then `out` sends an attestation whose height pair is
     the timeout at `h`. -/
-theorem specDraft_on_tick_emit_timeout_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_on_tick_emit_timeout_introduced : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
     {h : Height} (hpre : n.record.legacy.timeout h = false)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
     (hpost : out.1.record.legacy.timeout h = true),
     ∃ a : NamedAttestation V,
       NamedObject.attest a ∈ out.2 ∧ a.erase.height_pair = HeightPair.timeout h :=
-  fun S v n t {h} hpre out hout hpost => specDraftBase_on_tick_emit_timeout_introduced S v n.val t (h := h) hpre (out.1.val, out.2) hout hpost
+  fun S v n t {h} hpre out hout hpost => specBase_on_tick_emit_timeout_introduced S v n.val t (h := h) hpre (out.1.val, out.2) hout hpost
 
-/-- The field `on_tick_emit_lock_introduced` of `NodeFacts` at `Model.specDraftBase`: if `n`'s
+/-- The field `on_tick_emit_lock_introduced` of `NodeFacts` at `Model.specBase`: if `n`'s
     signing record holds no lock at height `h` and the signing record of an outcome `out` of `v`'s
     tick at `t` from `n` holds the lock `T` at `h`, then `out` sends an attestation whose finality
     pair is `(h, T)`. -/
-theorem specDraftBase_on_tick_emit_lock_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
+theorem specBase_on_tick_emit_lock_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hpre : n.record.legacy.lock h = none)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out)
     (hpost : out.1.record.legacy.lock h = some T),
     ∃ a : NamedAttestation V,
       NamedObject.attest a ∈ out.2 ∧ a.finality_pair = some ⟨h, T⟩ := by
@@ -1866,25 +1866,25 @@ theorem specDraftBase_on_tick_emit_lock_introduced : ∀ (S : Setup V) (v : V) (
     have hl := Protocol.record_attestation_lock_introduced hpre hpost
     simpa only [NamedAttestation.erase] using hl
 
-/-- The field `on_tick_emit_lock_introduced` of `NodeFacts` at `Model.specDraft`: if `n`'s signing
+/-- The field `on_tick_emit_lock_introduced` of `NodeFacts` at `Model.spec`: if `n`'s signing
     record holds no lock at height `h` and the signing record of an outcome `out` of `v`'s tick at
     `t` from `n` holds the lock `T` at `h`, then `out` sends an attestation whose finality pair is
     `(h, T)`. -/
-theorem specDraft_on_tick_emit_lock_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_on_tick_emit_lock_introduced : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hpre : n.record.legacy.lock h = none)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
     (hpost : out.1.record.legacy.lock h = some T),
     ∃ a : NamedAttestation V,
       NamedObject.attest a ∈ out.2 ∧ a.finality_pair = some ⟨h, T⟩ :=
-  fun S v n t {h} {T} hpre out hout hpost => specDraftBase_on_tick_emit_lock_introduced S v n.val t (h := h) (T := T) hpre (out.1.val, out.2) hout hpost
+  fun S v n t {h} {T} hpre out hout hpost => specBase_on_tick_emit_lock_introduced S v n.val t (h := h) (T := T) hpre (out.1.val, out.2) hout hpost
 
-/-- The field `on_tick_emit_target_introduced` of `NodeFacts` at `Model.specDraftBase`: if `n`'s
+/-- The field `on_tick_emit_target_introduced` of `NodeFacts` at `Model.specBase`: if `n`'s
     signing record holds no target at height `h` and the signing record of an outcome `out` of `v`'s
     tick at `t` from `n` holds the target `T` at `h`, then `out` sends an attestation whose height
     pair is the target `(h, T)`. -/
-theorem specDraftBase_on_tick_emit_target_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specDraftBase (V := V)).N) (t : Time)
+theorem specBase_on_tick_emit_target_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specBase (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hpre : n.record.legacy.target h = none)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V)) (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V)) (hout : (Model.specBase (V := V)).tick S v n t ⇢ out)
     (hpost : out.1.record.legacy.target h = some T),
     ∃ a : NamedAttestation V,
       NamedObject.attest a ∈ out.2 ∧ a.erase.height_pair = HeightPair.target h T := by
@@ -1901,24 +1901,24 @@ theorem specDraftBase_on_tick_emit_target_introduced : ∀ (S : Setup V) (v : V)
     rw [(toProof_create n.signingHistory x).2]
     exact Protocol.record_attestation_target_introduced hpre hpost
 
-/-- The field `on_tick_emit_target_introduced` of `NodeFacts` at `Model.specDraft`: if `n`'s signing
+/-- The field `on_tick_emit_target_introduced` of `NodeFacts` at `Model.spec`: if `n`'s signing
     record holds no target at height `h` and the signing record of an outcome `out` of `v`'s tick at
     `t` from `n` holds the target `T` at `h`, then `out` sends an attestation whose height pair is
     the target `(h, T)`. -/
-theorem specDraft_on_tick_emit_target_introduced : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_on_tick_emit_target_introduced : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
     {h : Height} {T : BlockId} (hpre : n.record.legacy.target h = none)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
     (hpost : out.1.record.legacy.target h = some T),
     ∃ a : NamedAttestation V,
       NamedObject.attest a ∈ out.2 ∧ a.erase.height_pair = HeightPair.target h T :=
-  fun S v n t {h} {T} hpre out hout hpost => specDraftBase_on_tick_emit_target_introduced S v n.val t (h := h) (T := T) hpre (out.1.val, out.2) hout hpost
+  fun S v n t {h} {T} hpre out hout hpost => specBase_on_tick_emit_target_introduced S v n.val t (h := h) (T := T) hpre (out.1.val, out.2) hout hpost
 
 /-- The store of every outcome of the member `tick`, step by step: an optional receipt of a block,
     an optional receipt of a Goldfish vote, an optional confirmation update, an optional receipt of
     an attestation, then the clip of the saved grades. -/
 theorem tick_chain {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
     {out : Spec.NodeState V × List (NamedObject V)}
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out) :
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out) :
     ∃ (sg : Spec.SavedGrades V) (st2 st3 st4 st5 : Spec.Store V),
       (st2 = { n.st with saved_grades := sg, t := t, s := (Setup.toSpec S).C.slotOf t } ∨
         ∃ B : NamedBlock V, st2 = Member.receipt_process S
@@ -1974,22 +1974,22 @@ theorem receipt_bodies_subset (S : Setup V) (st : Spec.Store V) (o : NamedObject
 /-- The member `tick` keeps every body. -/
 theorem tick_bodies_subset {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
     {out : Spec.NodeState V × List (NamedObject V)}
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out) :
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out) :
     Member.bodies n.st ⊆ Member.bodies out.1.st :=
   tick_store_rel (R := fun a b => Member.bodies a ⊆ Member.bodies b) hout (fun _ => subset_refl _)
     (fun _ _ _ h1 h2 => subset_trans h1 h2) (receipt_bodies_subset S)
     (fun st s st' hc => by rw [update_confirmation_ok hc]; exact subset_refl _) (fun _ => subset_refl _)
     (fun _ => subset_refl _)
 
-/-- The field `step_bodies_subset` of `NodeFacts` at `Model.specDraftBase`: for every world `w'`
+/-- The field `step_bodies_subset` of `NodeFacts` at `Model.specBase`: for every world `w'`
     that the event `e` can lead to from the world `w`, every named block validator `v` holds in `w`
     it also holds in `w'`. -/
-theorem specDraftBase_step_bodies_subset : ∀ (S : Setup V) (w : V → (Model.specDraftBase (V := V)).N) (e : Record.Event V) (v : V)
-    (w' : V → (Model.specDraftBase (V := V)).N) (hw' : w' ∈ worldStepOf (Model.specDraftBase (V := V)) S w e), (w v).st.bodies ⊆ (w' v).st.bodies := by
+theorem specBase_step_bodies_subset : ∀ (S : Setup V) (w : V → (Model.specBase (V := V)).N) (e : Record.Event V) (v : V)
+    (w' : V → (Model.specBase (V := V)).N) (hw' : w' ∈ worldStepOf (Model.specBase (V := V)) S w e), (w v).st.bodies ⊆ (w' v).st.bodies := by
   intro S w e v w' hw'
   cases e with
   | wake v' t =>
-    have hw'' : w' = Function.update w v' ((Model.specDraftBase (V := V)).wake (w v')) := hw'
+    have hw'' : w' = Function.update w v' ((Model.specBase (V := V)).wake (w v')) := hw'
     subst hw''
     by_cases hv : v = v'
     · subst hv
@@ -2016,19 +2016,19 @@ theorem specDraftBase_step_bodies_subset : ∀ (S : Setup V) (w : V → (Model.s
       · rw [Function.update_of_ne hv]
     · exact subset_refl _
 
-/-- A world `w'` that the event `e` can lead to from `w` at `Model.specDraft` is, at the values of
-    its node states, a world the event can lead to at `Model.specDraftBase` from the values of `w`,
+/-- A world `w'` that the event `e` can lead to from `w` at `Model.spec` is, at the values of
+    its node states, a world the event can lead to at `Model.specBase` from the values of `w`,
     or it is `w` itself. -/
-theorem worldStepOf_specDraft_val {S : Setup V} {w w' : V → (Model.specDraft (V := V)).N} {e : Record.Event V}
-    (hw' : w' ∈ worldStepOf (Model.specDraft (V := V)) S w e) :
-    (fun u => (w' u).val) ∈ worldStepOf (Model.specDraftBase (V := V)) S (fun u => (w u).val) e ∨ w' = w := by
+theorem worldStepOf_spec_val {S : Setup V} {w w' : V → (Model.spec (V := V)).N} {e : Record.Event V}
+    (hw' : w' ∈ worldStepOf (Model.spec (V := V)) S w e) :
+    (fun u => (w' u).val) ∈ worldStepOf (Model.specBase (V := V)) S (fun u => (w u).val) e ∨ w' = w := by
   cases e with
   | wake v t =>
-    have h : w' = Function.update w v ((Model.specDraft (V := V)).wake (w v)) := hw'
+    have h : w' = Function.update w v ((Model.spec (V := V)).wake (w v)) := hw'
     subst h
     refine Or.inl ?_
-    show (fun u => (Function.update w v ((Model.specDraft (V := V)).wake (w v)) u).val) =
-      Function.update (fun u => (w u).val) v ((Model.specDraftBase (V := V)).wake (w v).val)
+    show (fun u => (Function.update w v ((Model.spec (V := V)).wake (w v)) u).val) =
+      Function.update (fun u => (w u).val) v ((Model.specBase (V := V)).wake (w v).val)
     funext u
     by_cases hu : u = v
     · subst hu
@@ -2054,29 +2054,29 @@ theorem worldStepOf_specDraft_val {S : Setup V} {w w' : V → (Model.specDraft (
       · simp only [Function.update_of_ne hu]
     · exact Or.inr rfl
 
-/-- The field `step_bodies_subset` of `NodeFacts` at `Model.specDraft`: for every world `w'` that
+/-- The field `step_bodies_subset` of `NodeFacts` at `Model.spec`: for every world `w'` that
     the event `e` can lead to from the world `w`, every named block validator `v` holds in `w` it
     also holds in `w'`. -/
-theorem specDraft_step_bodies_subset : ∀ (S : Setup V) (w : V → (Model.specDraft (V := V)).N) (e : Record.Event V) (v : V)
-    (w' : V → (Model.specDraft (V := V)).N) (hw' : w' ∈ worldStepOf (Model.specDraft (V := V)) S w e), (w v).st.bodies ⊆ (w' v).st.bodies :=
+theorem spec_step_bodies_subset : ∀ (S : Setup V) (w : V → (Model.spec (V := V)).N) (e : Record.Event V) (v : V)
+    (w' : V → (Model.spec (V := V)).N) (hw' : w' ∈ worldStepOf (Model.spec (V := V)) S w e), (w v).st.bodies ⊆ (w' v).st.bodies :=
 by
   intro S w e v w' hw'
-  rcases worldStepOf_specDraft_val hw' with h | rfl
-  · exact specDraftBase_step_bodies_subset S (fun u => (w u).val) e v (fun u => (w' u).val) h
+  rcases worldStepOf_spec_val hw' with h | rfl
+  · exact specBase_step_bodies_subset S (fun u => (w u).val) e v (fun u => (w' u).val) h
   · exact subset_refl _
 
-/-- The field `namedNodeTick_setupWithGST` of `NodeFacts` at `Model.specDraft`: a node's tick is the
+/-- The field `namedNodeTick_setupWithGST` of `NodeFacts` at `Model.spec`: a node's tick is the
     same at the setup `S` and at `S` with its GST replaced by `g`. -/
-theorem specDraft_namedNodeTick_setupWithGST : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (g : ℤ) (hg : 0 ≤ g) (v : V) (n : (Model.specDraft (V := V)).N) (t : ℤ), (Model.specDraft (V := V)).tick (DecoupledConsensusModel.Sts.setupWithGST S g hg) v n t = (Model.specDraft (V := V)).tick S v n t := by
+theorem spec_namedNodeTick_setupWithGST : ∀ (S : DecoupledConsensusModel.Execution.Setup V) (g : ℤ) (hg : 0 ≤ g) (v : V) (n : (Model.spec (V := V)).N) (t : ℤ), (Model.spec (V := V)).tick (DecoupledConsensusModel.Sts.setupWithGST S g hg) v n t = (Model.spec (V := V)).tick S v n t := by
   intro S g hg v n t
   rfl
 
 /-! ## Receipt facts at the subtype -/
 
-/-- The store of a node state that the receipt of `Model.specDraft` returns is the spec's receipt on
+/-- The store of a node state that the receipt of `Model.spec` returns is the spec's receipt on
     `n`'s store, its saved grades clipped at its finalized block. -/
-theorem process_val_st (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V)
-    (n' : (Model.specDraft (V := V)).N) (hn' : (Model.specDraft (V := V)).process S n o ⇢ n') :
+theorem process_val_st (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V)
+    (n' : (Model.spec (V := V)).N) (hn' : (Model.spec (V := V)).process S n o ⇢ n') :
     n'.val.st = Spec.make_grades_compatible_with_finalized
       (Member.receipt_process S n.val.st o) := by
   rw [(process_returns_iff S n.val n'.val o).mp hn', receiveNamedObject_eq]
@@ -2097,12 +2097,12 @@ theorem σ_read (st : Spec.Store V) (hd : NoRaise.DistinctRoots st.T)
   rw [Spec.Store.blockOfImage_toProof_of_injOn st
     (SubtypeEqualities.injOn_of_distinctRoots hd) hX]
 
-/-- The field `frozen_process_preceq` of `NodeFacts` at `Model.specDraft`: if the finalized block of
+/-- The field `frozen_process_preceq` of `NodeFacts` at `Model.spec`: if the finalized block of
     `n`'s store is an ancestor of, or equal to, its justified block, the same holds of every node
     state `n`'s receipt of `o` can return. -/
-theorem specDraft_frozen_process_preceq : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
+theorem spec_frozen_process_preceq : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
     (o : NamedObject V) (h : Block.Preceq n.st.core.F n.st.core.J)
-    (n' : (Model.specDraft (V := V)).N) (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
+    (n' : (Model.spec (V := V)).N) (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
     Block.Preceq n'.st.core.F n'.st.core.J := by
   intro S n o h n' hn'
   show Block.Preceq n'.val.st.F.toProof n'.val.st.J.toProof
@@ -2124,12 +2124,12 @@ theorem specDraft_frozen_process_preceq : ∀ (S : Setup V) (n : (Model.specDraf
       unfold DecoupledConsensusModel.Block.Preceq
       exact Spec.Block.toProof_preceq_of_ancestorEq _ _ hFJ
 
-/-- The field `process_proposerOk` of `NodeFacts` at `Model.specDraft`: if every block of `n`'s tree
+/-- The field `process_proposerOk` of `NodeFacts` at `Model.spec`: if every block of `n`'s tree
     is genesis or has its slot's proposer, the same holds of every node state `n`'s receipt of `o`
     can return. -/
-theorem specDraft_process_proposerOk : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
+theorem spec_process_proposerOk : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
     (∀ B ∈ n.st.core.T, B = Block.genesis ∨ B.proposer? = some (S.E.proposer B.slot)) →
       ∀ B ∈ n'.st.core.T, B = Block.genesis ∨ B.proposer? = some (S.E.proposer B.slot) := by
   intro S n o n' hn' h B hB
@@ -2150,12 +2150,12 @@ theorem specDraft_process_proposerOk : ∀ (S : Setup V) (n : (Model.specDraft (
       rw [SubtypeEqualities.toProof_proposer?, SubtypeEqualities.toProof_slot, hprop]
       rfl
 
-/-- The field `process_core_bound` of `NodeFacts` at `Model.specDraft`: if every block of `n`'s tree
+/-- The field `process_core_bound` of `NodeFacts` at `Model.spec`: if every block of `n`'s tree
     has a chain-state height at most `n`'s `h_max`, the same holds of every node state `n`'s receipt
     of `o` can return. -/
-theorem specDraft_process_core_bound : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
+theorem spec_process_core_bound : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
     (∀ B ∈ n.st.core.T, (n.st.core.σ B).h ≤ n.st.core.h_max) →
       ∀ B ∈ n'.st.core.T, (n'.st.core.σ B).h ≤ n'.st.core.h_max := by
   intro S n o n' hn' h B hB
@@ -2187,13 +2187,13 @@ theorem specDraft_process_core_bound : ∀ (S : Setup V) (n : (Model.specDraft (
         · exact absurd (Finset.mem_singleton.mp h') hXX
       exact le_trans (hold X hXT) (le_max_left _ _)
 
-/-- The field `node_process_h_max_le_succ` of `NodeFacts` at `Model.specDraft`: if every block of
+/-- The field `node_process_h_max_le_succ` of `NodeFacts` at `Model.spec`: if every block of
     `n`'s tree has a chain-state height at most `n`'s `h_max`, then every node state `n'` that `n`'s
     receipt of `o` can return has an `h_max` at most `n`'s plus one. -/
-theorem specDraft_node_process_h_max_le_succ : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
+theorem spec_node_process_h_max_le_succ : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
     (o : NamedObject V)
     (hbound : ∀ B ∈ n.st.core.T, (n.st.core.σ B).h ≤ n.st.core.h_max)
-    (n' : (Model.specDraft (V := V)).N) (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
+    (n' : (Model.spec (V := V)).N) (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
     n'.st.core.h_max ≤ n.st.core.h_max + 1 := by
   intro S n o hbound n' hn'
   show n'.val.st.h_max ≤ n.val.st.h_max + 1
@@ -2213,13 +2213,13 @@ theorem specDraft_node_process_h_max_le_succ : ∀ (S : Setup V) (n : (Model.spe
       (Spec.Block.toSpecNamed B0)
     exact max_le (Nat.le_succ _) (le_trans hv (Nat.succ_le_succ hpar))
 
-/-- The field `process_core_justifier` of `NodeFacts` at `Model.specDraft`: if some block of `n`'s
+/-- The field `process_core_justifier` of `NodeFacts` at `Model.spec`: if some block of `n`'s
     tree has a chain state whose justification and justification height are the store's own, the
     same holds of every node state `n'` that `n`'s receipt of `o` can return. -/
-theorem specDraft_process_core_justifier : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) S.E S.cfg n.st →
+theorem spec_process_core_justifier : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) S.E S.cfg n.st →
     (∃ D ∈ n.st.core.T, (n.st.core.σ D).J = n.st.core.J ∧ (n.st.core.σ D).h_j = n.st.core.h_j) →
       ∃ D ∈ n'.st.core.T, (n'.st.core.σ D).J = n'.st.core.J ∧
         (n'.st.core.σ D).h_j = n'.st.core.h_j := by
@@ -2282,12 +2282,12 @@ theorem specDraft_process_core_justifier : ∀ (S : Setup V) (n : (Model.specDra
           (Member.receipt_process S n.val.st o).h_j
         rw [hσ, hj, Function.update_self]
 
-/-- The field `node_process_body_stamp` of `NodeFacts` at `Model.specDraft`: for every node state
+/-- The field `node_process_body_stamp` of `NodeFacts` at `Model.spec`: for every node state
     `n'` that `n`'s receipt of `o` can return, a named block `n'` holds and `n` did not is stamped
     in `n'`'s store at `n`'s clock. -/
-theorem specDraft_node_process_body_stamp : ∀ (S' : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S' n o ⇢ n') (B : NamedBlock V)
+theorem spec_node_process_body_stamp : ∀ (S' : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S' n o ⇢ n') (B : NamedBlock V)
     (h0 : B ∉ n.st.bodies) (h1 : B ∈ n'.st.bodies),
     n'.st.core.timestamp_block B.erase = some ((n.st.core.t : Int) : Stamp) := by
   intro S n o n' hn' B h0 h1
@@ -2371,14 +2371,14 @@ theorem receipt_sg_pool_mono (S : Setup V) (st : Spec.Store V) (o : NamedObject 
       rw [hatt]
     · exact subset_refl _
 
-/-- The field `sg_pool_subset_process` of `NodeFacts` at `Model.specDraft`: every node state `n'`
+/-- The field `sg_pool_subset_process` of `NodeFacts` at `Model.spec`: every node state `n'`
     that `n`'s receipt of `o` can return holds every attestation of round `r` that `n`'s store part
     holds. -/
-theorem specDraft_sg_pool_subset_process : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (r : Round) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
-    (Model.specDraft (V := V)).store_sg_pool n.st.core r ⊆
-      (Model.specDraft (V := V)).store_sg_pool n'.st.core r := by
+theorem spec_sg_pool_subset_process : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (r : Round) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
+    (Model.spec (V := V)).store_sg_pool n.st.core r ⊆
+      (Model.spec (V := V)).store_sg_pool n'.st.core r := by
   intro S n o r n' hn'
   show (n.val.st.sg_pool r).image Spec.Attestation.toProof ⊆
     (n'.val.st.sg_pool r).image Spec.Attestation.toProof
@@ -2386,16 +2386,16 @@ theorem specDraft_sg_pool_subset_process : ∀ (S : Setup V) (n : (Model.specDra
   rw [process_val_st S n o n' hn', mgc_eq]
   exact receipt_sg_pool_mono S n.val.st o r
 
-/-- The field `committeePools_process` of `NodeFacts` at `Model.specDraft`: if every Goldfish vote
+/-- The field `committeePools_process` of `NodeFacts` at `Model.spec`: if every Goldfish vote
     of slot `k` in `n`'s store part is signed by a member of `S.E.committee k`, for every `k`, the
     same holds of every outcome `n'` of `n`'s receipt of `o`. -/
-theorem specDraft_committeePools_process : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N),
-    (Model.specDraft (V := V)).process S n o ⇢ n' →
+theorem spec_committeePools_process : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N),
+    (Model.spec (V := V)).process S n o ⇢ n' →
     (∀ (k : Slot) (u : GoldfishVote V), u ∈ n.st.core.gf_votes k → u.val_index ∈ S.E.committee k) →
     ∀ (k : Slot) (u : GoldfishVote V), u ∈ n'.st.core.gf_votes k → u.val_index ∈ S.E.committee k := by
   intro S n o n' hn' h k u hu
-  have hr := HandlersRunFacts.specDraft_process_reach S n n' o hn' 0
+  have hr := HandlersRunFacts.spec_process_reach S n n' o hn' 0
   have hvic : StoreSteps.VotesInCommittee (Setup.toSpec S).P n.val.st := by
     intro k' u' hu'
     have h' := h k' u'.toProof (by
@@ -2421,21 +2421,21 @@ theorem receipt_reach (S : Setup V) (st : Spec.Store V) (o : NamedObject V) (τ 
   | gfVote u => exact Relation.ReflTransGen.single (StoreSteps.StoreStep.vote _ _)
   | attest a => exact Relation.ReflTransGen.single (StoreSteps.StoreStep.attest _ _)
 
-/-- The field `rawRelay_process_data` of `NodeFacts` at `Model.specDraft`: if the named store `st`
+/-- The field `rawRelay_process_data` of `NodeFacts` at `Model.spec`: if the named store `st`
     is coherent, its clock is at or before `bound`, and every named attestation it holds in its rows
     of a round `k` has round `k` and a receipt stamp at or before `bound`, then the same holds of
     the store the receipt of `o` returns on `st`. -/
-theorem specDraft_rawRelay_process_data : ∀ (S : Setup V) (bound : Time)
-    (st : (Model.specDraft (V := V)).NS) (o : NamedObject V),
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) S.E S.cfg st →
+theorem spec_rawRelay_process_data : ∀ (S : Setup V) (bound : Time)
+    (st : (Model.spec (V := V)).NS) (o : NamedObject V),
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) S.E S.cfg st →
     (st.core.t ≤ bound ∧ ∀ k (a : NamedAttestation V), a ∈ st.sg_rows k →
       a.round = k ∧ ∃ stamp : Time, stamp ≤ bound ∧
-        st.core.timestamp_sg_vote ((Model.specDraft (V := V)).sgVote a.erase) = some (stamp : Stamp)) →
-    (((Model.specDraft (V := V)).receipt_process S st o).core.t ≤ bound ∧
-      ∀ k (a : NamedAttestation V), a ∈ ((Model.specDraft (V := V)).receipt_process S st o).sg_rows k →
+        st.core.timestamp_sg_vote ((Model.spec (V := V)).sgVote a.erase) = some (stamp : Stamp)) →
+    (((Model.spec (V := V)).receipt_process S st o).core.t ≤ bound ∧
+      ∀ k (a : NamedAttestation V), a ∈ ((Model.spec (V := V)).receipt_process S st o).sg_rows k →
         a.round = k ∧ ∃ stamp : Time, stamp ≤ bound ∧
-          ((Model.specDraft (V := V)).receipt_process S st o).core.timestamp_sg_vote
-            ((Model.specDraft (V := V)).sgVote a.erase) = some (stamp : Stamp)) := by
+          ((Model.spec (V := V)).receipt_process S st o).core.timestamp_sg_vote
+            ((Model.spec (V := V)).sgVote a.erase) = some (stamp : Stamp)) := by
   intro S bound st o _ hst
   obtain ⟨ht, hrows⟩ := hst
   have hI : StoreSteps.RowsErasuresHeld st.val := fun r b hb =>
@@ -2620,12 +2620,12 @@ theorem justifier_iff (st : Spec.Store V) (hd : NoRaise.DistinctRoots st.T) :
     · exact h1
     · exact h2
 
-/-- The field `tick_core_bound` of `NodeFacts` at `Model.specDraft`: if every block of `n`'s tree
+/-- The field `tick_core_bound` of `NodeFacts` at `Model.spec`: if every block of `n`'s tree
     has a chain-state height at most `n`'s `h_max`, the same holds of the store of every outcome
     `out` of `v`'s tick at `t` from `n`. -/
-theorem specDraft_tick_core_bound : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
-    (t : Time) (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+theorem spec_tick_core_bound : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
+    (t : Time) (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     (∀ B ∈ n.st.core.T, (n.st.core.σ B).h ≤ n.st.core.h_max) →
       ∀ B ∈ out.1.st.core.T, (out.1.st.core.σ B).h ≤ out.1.st.core.h_max := by
   intro S v n t out hout h
@@ -2636,12 +2636,12 @@ theorem specDraft_tick_core_bound : ∀ (S : Setup V) (v : V) (n : (Model.specDr
     ((bound_iff n.val.st n.property.2.1).mp h)
   exact (bound_iff out.1.val.st out.1.property.2.1).mpr hfin
 
-/-- The field `tick_proposerOk` of `NodeFacts` at `Model.specDraft`: if every block of `n`'s tree is
+/-- The field `tick_proposerOk` of `NodeFacts` at `Model.spec`: if every block of `n`'s tree is
     genesis or was proposed by its slot's proposer, the same holds of the store of every outcome
     `out` of `v`'s tick at `t` from `n`. -/
-theorem specDraft_tick_proposerOk : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
-    (t : Time) (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+theorem spec_tick_proposerOk : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
+    (t : Time) (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     (∀ B ∈ n.st.core.T, B = Block.genesis ∨ B.proposer? = some (S.E.proposer B.slot)) →
       ∀ B ∈ out.1.st.core.T, B = Block.genesis ∨ B.proposer? = some (S.E.proposer B.slot) := by
   intro S v n t out hout h
@@ -2653,15 +2653,15 @@ theorem specDraft_tick_proposerOk : ∀ (S : Setup V) (v : V) (n : (Model.specDr
     (fun _ => id) (fun _ _ _ h1 h2 => h2 ∘ h1) (fun st o => proposerOk_receipt S st o)
     (fun st s st' hc => by rw [update_confirmation_ok hc]; exact id) (fun _ => id) (fun _ => id) h
 
-/-- The field `sg_pool_subset_on_tick_emit` of `NodeFacts` at `Model.specDraft`: the store of every
+/-- The field `sg_pool_subset_on_tick_emit` of `NodeFacts` at `Model.spec`: the store of every
     outcome `out` of `v`'s tick at `t` from `n` holds every attestation of round `r` that `n`'s
     store part holds. -/
-theorem specDraft_sg_pool_subset_on_tick_emit : ∀ (S : Setup V) (v : V)
-    (n : (Model.specDraft (V := V)).N) (t : Time) (r : Round)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
-    (Model.specDraft (V := V)).store_sg_pool n.st.core r ⊆
-      (Model.specDraft (V := V)).store_sg_pool out.1.st.core r := by
+theorem spec_sg_pool_subset_on_tick_emit : ∀ (S : Setup V) (v : V)
+    (n : (Model.spec (V := V)).N) (t : Time) (r : Round)
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
+    (Model.spec (V := V)).store_sg_pool n.st.core r ⊆
+      (Model.spec (V := V)).store_sg_pool out.1.st.core r := by
   intro S v n t r out hout
   show (n.val.st.sg_pool r).image Spec.Attestation.toProof ⊆
     (out.1.val.st.sg_pool r).image Spec.Attestation.toProof
@@ -2672,13 +2672,13 @@ theorem specDraft_sg_pool_subset_on_tick_emit : ∀ (S : Setup V) (v : V)
     (fun st s st' hc => by rw [update_confirmation_ok hc]; exact subset_refl _)
     (fun _ => subset_refl _) (fun _ => subset_refl _)
 
-/-- The field `frozen_tick_preceq` of `NodeFacts` at `Model.specDraft`: if the finalized block of
+/-- The field `frozen_tick_preceq` of `NodeFacts` at `Model.spec`: if the finalized block of
     `n`'s store is an ancestor of, or equal to, its justified block, the same holds of the store of
     every outcome `out` of `v`'s tick at `t` from `n`. -/
-theorem specDraft_frozen_tick_preceq : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
+theorem spec_frozen_tick_preceq : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
     (t : Time) (h : Block.Preceq n.st.core.F n.st.core.J)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     Block.Preceq out.1.st.core.F out.1.st.core.J := by
   intro S v n t h out hout
   exact tick_store_rel (v := v) (t := t) (n := n.val) (out := (out.1.val, out.2)) hout
@@ -2686,13 +2686,13 @@ theorem specDraft_frozen_tick_preceq : ∀ (S : Setup V) (v : V) (n : (Model.spe
     (fun _ => id) (fun _ _ _ h1 h2 => h2 ∘ h1) (fun st o => frozen_receipt S st o)
     (fun st s st' hc => by rw [update_confirmation_ok hc]; exact id) (fun _ => id) (fun _ => id) h
 
-/-- The field `tick_core_justifier` of `NodeFacts` at `Model.specDraft`: if some block of `n`'s tree
+/-- The field `tick_core_justifier` of `NodeFacts` at `Model.spec`: if some block of `n`'s tree
     has a chain state whose justification and justification height are the store's own, the same
     holds of the store of every outcome `out` of `v`'s tick at `t` from `n`. -/
-theorem specDraft_tick_core_justifier : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
-    (t : Time) (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) S.E S.cfg n.st →
+theorem spec_tick_core_justifier : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
+    (t : Time) (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) S.E S.cfg n.st →
     (∃ D ∈ n.st.core.T, (n.st.core.σ D).J = n.st.core.J ∧ (n.st.core.σ D).h_j = n.st.core.h_j) →
       ∃ D ∈ out.1.st.core.T, (out.1.st.core.σ D).J = out.1.st.core.J ∧
         (out.1.st.core.σ D).h_j = out.1.st.core.h_j := by
@@ -2705,14 +2705,14 @@ theorem specDraft_tick_core_justifier : ∀ (S : Setup V) (v : V) (n : (Model.sp
     ((justifier_iff n.val.st n.property.2.1).mp h)
   exact (justifier_iff out.1.val.st out.1.property.2.1).mpr hfin
 
-/-- The field `node_tick_h_max_le_succ` of `NodeFacts` at `Model.specDraft`: if every block of `n`'s
+/-- The field `node_tick_h_max_le_succ` of `NodeFacts` at `Model.spec`: if every block of `n`'s
     tree has a chain-state height at most `n`'s `h_max`, then the store of every outcome `out` of
     `v`'s tick at `t` from `n` has an `h_max` at most `n`'s plus one. -/
-theorem specDraft_node_tick_h_max_le_succ : ∀ (S : Setup V) (v : V)
-    (n : (Model.specDraft (V := V)).N) (t : Time)
+theorem spec_node_tick_h_max_le_succ : ∀ (S : Setup V) (v : V)
+    (n : (Model.spec (V := V)).N) (t : Time)
     (hbound : ∀ B ∈ n.st.core.T, (n.st.core.σ B).h ≤ n.st.core.h_max)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
     out.1.st.core.h_max ≤ n.st.core.h_max + 1 := by
   intro S v n t hbound out hout
   have h' := (bound_iff n.val.st n.property.2.1).mp hbound
@@ -2738,13 +2738,13 @@ theorem specDraft_node_tick_h_max_le_succ : ∀ (S : Setup V) (v : V)
   · exact Nat.le_succ _
   · exact h_max_receipt S _ (.block B) h'
 
-/-- The field `node_tick_body_stamp` of `NodeFacts` at `Model.specDraft`: for every outcome `out` of
+/-- The field `node_tick_body_stamp` of `NodeFacts` at `Model.spec`: for every outcome `out` of
     `v`'s tick at `t` from `n`, a named block `out.1` holds and `n` did not is stamped in `out.1`'s
     store at `t`. -/
-theorem specDraft_node_tick_body_stamp : ∀ (S' : Setup V) (v : V)
-    (n : (Model.specDraft (V := V)).N) (t : Int)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S' v n t ⇢ out) (B : NamedBlock V)
+theorem spec_node_tick_body_stamp : ∀ (S' : Setup V) (v : V)
+    (n : (Model.spec (V := V)).N) (t : Int)
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S' v n t ⇢ out) (B : NamedBlock V)
     (h0 : B ∉ n.st.bodies) (h1 : B ∈ out.1.st.bodies),
     out.1.st.core.timestamp_block B.erase = some (t : Stamp) := by
   intro S v n t out hout B h0 h1
@@ -2791,35 +2791,35 @@ theorem specDraft_node_tick_body_stamp : ∀ (S' : Setup V) (v : V)
 
 /-! ## The cache facts at the subtype -/
 
-/-- The field `cache_clipped_process` of `NodeFacts` at `Model.specDraftBase`: for every node state
+/-- The field `cache_clipped_process` of `NodeFacts` at `Model.specBase`: for every node state
     `n'` that `n`'s receipt of `o` can return, `n'`'s grade cache clipped at the finalized block of
     its store is that cache. -/
-theorem specDraftBase_cache_clipped_process : ∀ (S : Setup V)
-    (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V)
-    (n' : (Model.specDraftBase (V := V)).N) (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'),
-    (Model.specDraftBase (V := V)).clipCache n'.st.core.F n'.cache = n'.cache := by
+theorem specBase_cache_clipped_process : ∀ (S : Setup V)
+    (n : (Model.specBase (V := V)).N) (o : NamedObject V)
+    (n' : (Model.specBase (V := V)).N) (hn' : (Model.specBase (V := V)).process S n o ⇢ n'),
+    (Model.specBase (V := V)).clipCache n'.st.core.F n'.cache = n'.cache := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   exact SubtypeEqualities.clipCache_make_saved_grades_compatible_with _ _
 
-/-- The field `cache_clipped_process` of `NodeFacts` at `Model.specDraft`: for every node state `n'`
+/-- The field `cache_clipped_process` of `NodeFacts` at `Model.spec`: for every node state `n'`
     that `n`'s receipt of `o` can return, `n'`'s grade cache clipped at the finalized block of its
     store is that cache. -/
-theorem specDraft_cache_clipped_process : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'),
-    (Model.specDraft (V := V)).clipCache n'.st.core.F n'.cache = n'.cache :=
-  fun S n o n' hn' => specDraftBase_cache_clipped_process S n.val o n'.val hn'
+theorem spec_cache_clipped_process : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'),
+    (Model.spec (V := V)).clipCache n'.st.core.F n'.cache = n'.cache :=
+  fun S n o n' hn' => specBase_cache_clipped_process S n.val o n'.val hn'
 
-/-- The field `cache_clipped_tick` of `NodeFacts` at `Model.specDraftBase`: for every outcome `out`
+/-- The field `cache_clipped_tick` of `NodeFacts` at `Model.specBase`: for every outcome `out`
     of `v`'s tick at `t` from `n`, `out.1`'s grade cache clipped at the finalized block of its store
     is that cache. -/
-theorem specDraftBase_cache_clipped_tick : ∀ (S : Setup V) (v : V)
-    (n : (Model.specDraftBase (V := V)).N) (t : Time)
-    (out : (Model.specDraftBase (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out),
-    (Model.specDraftBase (V := V)).clipCache out.1.st.core.F out.1.cache = out.1.cache := by
+theorem specBase_cache_clipped_tick : ∀ (S : Setup V) (v : V)
+    (n : (Model.specBase (V := V)).N) (t : Time)
+    (out : (Model.specBase (V := V)).N × List (NamedObject V))
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out),
+    (Model.specBase (V := V)).clipCache out.1.st.core.F out.1.cache = out.1.cache := by
   intro S v n t out hout
   obtain ⟨sg, st5, -, hst, -, -⟩ := tick_store hout
   show Member.clipCache (Spec.NodeState.st out.1).F.toProof
@@ -2828,52 +2828,52 @@ theorem specDraftBase_cache_clipped_tick : ∀ (S : Setup V) (v : V)
   rw [hst]
   exact SubtypeEqualities.clipCache_make_saved_grades_compatible_with _ _
 
-/-- The field `cache_clipped_tick` of `NodeFacts` at `Model.specDraft`: for every outcome `out` of
+/-- The field `cache_clipped_tick` of `NodeFacts` at `Model.spec`: for every outcome `out` of
     `v`'s tick at `t` from `n`, `out.1`'s grade cache clipped at the finalized block of its store is
     that cache. -/
-theorem specDraft_cache_clipped_tick : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
-    (t : Time) (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out),
-    (Model.specDraft (V := V)).clipCache out.1.st.core.F out.1.cache = out.1.cache :=
-  fun S v n t out hout => specDraftBase_cache_clipped_tick S v n.val t (out.1.val, out.2) hout
+theorem spec_cache_clipped_tick : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
+    (t : Time) (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out),
+    (Model.spec (V := V)).clipCache out.1.st.core.F out.1.cache = out.1.cache :=
+  fun S v n t out hout => specBase_cache_clipped_tick S v n.val t (out.1.val, out.2) hout
 
-end SpecDraftRecord.NodeFacts
+end SpecRecord.NodeFacts
 
-namespace SpecDraftRecord.NodeRunFacts
+namespace SpecRecord.NodeRunFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NodeFacts
+open SpecRecord.NodeFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `process_live_confirmed` of `NodeRunFacts` at `Model.specDraftBase`: every node state
+/-- The field `process_live_confirmed` of `NodeRunFacts` at `Model.specBase`: every node state
     `n'` that `n`'s receipt of `o` can return has the `live_confirmed` of `n`'s store. -/
-theorem specDraftBase_process_live_confirmed : ∀ (S : Setup V) (n : (Model.specDraftBase (V := V)).N) (o : NamedObject V) (n' : (Model.specDraftBase (V := V)).N)
-    (hn' : (Model.specDraftBase (V := V)).process S n o ⇢ n'), n'.st.core.live_confirmed = n.st.core.live_confirmed := by
+theorem specBase_process_live_confirmed : ∀ (S : Setup V) (n : (Model.specBase (V := V)).N) (o : NamedObject V) (n' : (Model.specBase (V := V)).N)
+    (hn' : (Model.specBase (V := V)).process S n o ⇢ n'), n'.st.core.live_confirmed = n.st.core.live_confirmed := by
   intro S n o n' hn'
   obtain rfl := (process_returns_iff S n n' o).mp hn'
   rw [receiveNamedObject_eq]
   show (Member.receipt_process S n.st o).live_confirmed.toProof = n.st.live_confirmed.toProof
   rw [(keeps_receipt_process S n.st o).2.2.2.2.2.1]
 
-/-- The field `process_live_confirmed` of `NodeRunFacts` at `Model.specDraft`: every node state `n'`
+/-- The field `process_live_confirmed` of `NodeRunFacts` at `Model.spec`: every node state `n'`
     that `n`'s receipt of `o` can return has the `live_confirmed` of `n`'s store. -/
-theorem specDraft_process_live_confirmed : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N) (o : NamedObject V) (n' : (Model.specDraft (V := V)).N)
-    (hn' : (Model.specDraft (V := V)).process S n o ⇢ n'), n'.st.core.live_confirmed = n.st.core.live_confirmed :=
-  fun S n o n' hn' => specDraftBase_process_live_confirmed S n.val o n'.val hn'
+theorem spec_process_live_confirmed : ∀ (S : Setup V) (n : (Model.spec (V := V)).N) (o : NamedObject V) (n' : (Model.spec (V := V)).N)
+    (hn' : (Model.spec (V := V)).process S n o ⇢ n'), n'.st.core.live_confirmed = n.st.core.live_confirmed :=
+  fun S n o n' hn' => specBase_process_live_confirmed S n.val o n'.val hn'
 
-/-- The field `stateBefore_zero_body_eq_genesis` of `NodeRunFacts` at `Model.specDraft`: for every
+/-- The field `stateBefore_zero_body_eq_genesis` of `NodeRunFacts` at `Model.spec`: for every
     world `w` that the run `rho` can reach before its first event, every body that `v` holds in `w`
     is genesis. -/
-theorem specDraft_stateBefore_zero_body_eq_genesis : ∀ (S : Setup V) (rho : Record.Run V) (v : V) (w : V → (Model.specDraft (V := V)).N)
-    (hw : w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho 0) {D : NamedBlock V} (hD : D ∈ (w v).st.bodies),
+theorem spec_stateBefore_zero_body_eq_genesis : ∀ (S : Setup V) (rho : Record.Run V) (v : V) (w : V → (Model.spec (V := V)).N)
+    (hw : w ∈ stateBeforeOf (Model.spec (V := V)) S rho 0) {D : NamedBlock V} (hD : D ∈ (w v).st.bodies),
     D = NamedBlock.genesis := by
   intro S rho v w hw D hD
-  have hw' : w = fun u => (Model.specDraft (V := V)).initial S u := hw
+  have hw' : w = fun u => (Model.spec (V := V)).initial S u := hw
   subst hw'
-  exact specDraft_initial_body_eq_genesis S v hD
+  exact spec_initial_body_eq_genesis S v hD
 
-end SpecDraftRecord.NodeRunFacts
+end SpecRecord.NodeRunFacts
 

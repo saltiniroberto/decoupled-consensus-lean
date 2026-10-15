@@ -13,7 +13,7 @@ views, events and step results, and `protocolOnVocabularyObjects S`, the spec's 
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Framework.StsMultisetLog
 open Spec (NodeState Config Provisional External)
@@ -202,4 +202,4 @@ theorem protocolOnVocabularyObjects_step_iff (S : DecoupledConsensusModel.Execut
   · intro h
     rw [reactionOnVocabularyObjects, ← h, NodeStepResult.toProof_toSpec]
 
-end SpecDraftRecord
+end SpecRecord

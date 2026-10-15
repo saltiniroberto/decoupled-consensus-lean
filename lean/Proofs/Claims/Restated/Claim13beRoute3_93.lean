@@ -150,8 +150,7 @@ theorem preceq_openingProposal_of_heads_f2b (facts : Record.Facts M)
     (hopening : S.E.proposer ((M.opening_slot S.hc c)) ∈
       notHeldAt Sched (M.confirmation_time S.E ((M.opening_slot S.hc c))))
     {P : NamedBlock V}
-    {X : Block V} {s₀ : Slot} (hX : Restated.AncestorOfHonestHeadsFrom M S Sched x X s₀)
-    (hs₀ : s₀ ≤ (M.opening_slot S.hc c)) :
+    {X : Block V} (hX : Restated.HeadsBelow M S Sched x X (M.opening_slot S.hc c)) :
     let R : Record.Run V :=
       { Restated.runAll M S Sched x v₀ N with honest := notHeldAt Sched (x[N].time : Int) }
     let W := Restated.runAllPath M S Sched x v₀ N
@@ -171,7 +170,7 @@ theorem preceq_openingProposal_of_heads_f2b (facts : Record.Facts M)
   have hmaj := Restated.majority_of_committeeSleepinessW facts S Sched hcs (s := (M.opening_slot S.hc c)) hcsC
   obtain ⟨w, hw⟩ : ((S.E.committee ((M.opening_slot S.hc c))) ∩
       Restated.HonSlot M S Sched ((M.opening_slot S.hc c))).Nonempty := by
-    rw [← Finset.card_pos]; omega
+    rw [Finset.inter_eq_right.2 (Restated.HonSlot_subset_committee facts S Sched _), ← Finset.card_pos]; omega
   have hwS : w ∈ Restated.HonSlot M S Sched ((M.opening_slot S.hc c)) := (Finset.mem_inter.mp hw).2
   obtain ⟨m, hm⟩ := Restated.exists_tickStepAt facts x htd
     (facts.sch.Optimistic_proposal_time_nonneg S.E ((M.opening_slot S.hc c)) |>.trans_lt
@@ -191,7 +190,7 @@ theorem preceq_openingProposal_of_heads_f2b (facts : Record.Facts M)
     notHeldAt_anti hmono hvc (mem_notHeldAt.mpr ((Restated.mem_HonSlot facts).mp hwS).2.2)
   obtain ⟨G, cc, hcc, Tr, hTr, L, hL, L', hL', hG⟩ := (p86g% exists_headOutcome₈₆g) facts S
     (x[m][w].st) (M.vote_time S.E (M.opening_slot S.hc c))
-  have hhead := hX ((M.opening_slot S.hc c)) hs₀ w m hwS hm G
+  have hhead := hX w m hwS hm G
     (((p73% gfHeadFrom_returns_iff₇₃) facts S _ _ G).2 ⟨cc, hcc, _, rfl, Tr, hTr, L, hL, L', hL', hG⟩)
   have hst := Restated.stateBeforeTime_runAll_tick facts S Sched x v₀ hm hmN w
   have hadoptw := hadopt w hwv

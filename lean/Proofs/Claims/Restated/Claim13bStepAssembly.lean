@@ -73,4 +73,31 @@ theorem gst_le_switchOpening (facts : Record.Facts M) (S : Setup V) (tGAT tE : I
 
 end
 
+section
+set_option autoImplicit false
+open Framework.StsMultisetLog
+open DecoupledConsensusModel.Execution
+
+end
+
+section
+set_option autoImplicit false
+open Framework.StsMultisetLog
+open DecoupledConsensusModel.Execution
+
+/-- After a healing phase from `tGAT` (at or after GST) of length `healingLengthη` ending at `tE`,
+    GST is at or before the action instant of every round from the switch round on. -/
+theorem gst_le_action_of_switchRound_le (facts : Record.Facts M) (S : Setup V) (tGAT tE : Int)
+    (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
+    {r : Round} (hr : Restated.switchRound M S tE ≤ r) :
+    S.E.t_GST ≤ Restated.Vocabulary.Execution.Setup.a M S r := by
+  have hopen : M.opening S.E S.hc r ≤ Restated.Vocabulary.Execution.Setup.a M S r := by
+    show _ ≤ M.a S.hc S.E.Δ r
+    rw [facts.gr.opening_eq_proposal_time, facts.sch.a_eq_confirmation_time]
+    exact facts.sch.proposal_time_le_confirmation_time _ _
+  exact le_trans (Restated.gst_le_switchOpening facts S tGAT tE gap hgst hlen)
+    (le_trans (Restated.switchOpening_le_opening facts S hr) hopen)
+
+end
+
 end DecoupledConsensusModel.Sts.Restated

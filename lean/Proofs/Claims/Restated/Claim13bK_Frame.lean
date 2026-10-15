@@ -123,7 +123,7 @@ theorem framePhaseProvenance_sts (facts : Record.Facts M) (S : Setup V) (Sched :
           have _hr_w : M.reachedNode (Record.wakeStage M Sched (τ : Int) x[k] v) :=
             Record.reachedNode_wakeStage facts S Sched x k v τ
           rcases Restated.st_succ_of_tick facts S Sched x v hl with
-            ⟨-, -, out₁, hout, hst⟩ | hst
+            ⟨-, out₁, hout, hst⟩ | hst
           · obtain ⟨c, hc⟩ := facts.gr.onPhaseTick_nonempty S.E S.hc
               (x[k][v].st).st.core.toHealing (τ : Int) (x[k][v].st).cache
             have hc' : M.onPhaseTick S.E S.hc

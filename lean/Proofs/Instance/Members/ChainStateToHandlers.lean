@@ -1,17 +1,17 @@
 import Proofs.Instance.Members.Base
 
 /-!
-# Members of `Model.specDraft`: chain state to handlers
+# Members of `Model.spec`: chain state to handlers
 
 One definition per member of `Model V` in the families of the chain state, the schedule, the store,
 the validator client, the handlers and the evidence, each named as the member in the namespace
-`SpecDraftRecord.Member` and given by the spec's behaviour. The instance `Model.specDraft` fills the
+`SpecRecord.Member` and given by the spec's behaviour. The instance `Model.spec` fills the
 record with them.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open DecoupledConsensusModel (Block GoldfishVote CombinedAttestation NamedBlock NamedAttestation
   Env BlockId HeightPair FinalityPair NamedHeightPair Height Slot Round Time TimestampMap)
@@ -729,4 +729,4 @@ def HasIntersectionWeight (E : Env V) (S : Finset V) : Prop :=
 
 end Member
 
-end SpecDraftRecord
+end SpecRecord

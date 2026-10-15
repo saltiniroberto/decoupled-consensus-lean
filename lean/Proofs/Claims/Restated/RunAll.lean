@@ -36,12 +36,12 @@ open DecoupledConsensusModel.Execution
 /-! ## One step's events -/
 
 /-- If `tick v₁ t'` is among `v₀`'s events of one step with label `a`, then `a` is `tickAllAwake τ`
-    with `τ = t'`, `v₁` is awake and not adversarial at `τ`, and `τ` is a whole multiple of `S.E.Δ`. -/
+    with `τ = t'`, and `v₁` is awake and not adversarial at `τ`. -/
 theorem tickAllAwake_of_mem_actionEventsOf {S : Setup V} {Sched : Schedule V} {v₀ v₁ : V}
     {t t' : Int} {a : AtomicAction V (NamedObject V) Empty}
     (he : (Record.Event.tick v₁ t' : Record.Event V) ∈ Record.actionEventsOf M S Sched v₀ t a) :
     ∃ τ : Nat, a = AtomicAction.tickAllAwake τ ∧ (τ : Int) = t' ∧
-      v₁ ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧ (τ : Int) % S.E.Δ = 0 := by
+      v₁ ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) := by
   cases a with
   | tickAllAwake τ =>
       simp only [Record.actionEventsOf, List.mem_append] at he
@@ -54,7 +54,7 @@ theorem tickAllAwake_of_mem_actionEventsOf {S : Setup V} {Sched : Schedule V} {v
           rw [List.mem_singleton] at he
           injection he with h1 h2
           subst h1
-          exact ⟨τ, rfl, h2.symm, h.1, h.2⟩
+          exact ⟨τ, rfl, h2.symm, h⟩
         · simp at he
   | deliver p m =>
       simp only [Record.actionEventsOf] at he
@@ -670,7 +670,7 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- At a `tickAllAwake t` step, if `v` reacts at `t`, `t` is a whole multiple of `S.E.Δ`, and the
+/-- At a `tickAllAwake t` step, if `v` reacts at `t` and the
     tick of `v` from the node state its wake stage leaves at `t` has an outcome, then `v`'s tick
     result is `{ state := out.1, send := out.2 }` for some outcome `out` of that tick. -/
 private theorem tick_outcome_of_step {M : Record.Model V} (S : Setup V) (Sched : Schedule V)
@@ -680,7 +680,6 @@ private theorem tick_outcome_of_step {M : Record.Model V} (S : Setup V) (Sched :
     (htick : ∀ p ∈ Sched.awake (t : Int) \ Sched.adv (t : Int),
       (Record.protocolOf M S).step p t c[p].view (w p).state .tick (tk p))
     (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     (hne : ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) c v) (t : Int) ⇢ out) :
     ∃ out : M.N × List (NamedObject V),
@@ -696,16 +695,16 @@ private theorem tick_outcome_of_step {M : Record.Model V} (S : Setup V) (Sched :
       have h' : ({ state := out.1, send := (out.2 : Multiset (NamedObject V)) } :
           NodeStepResult M.N (NamedObject V)) ∈
           Record.reactionsOf M S v ((w v).state) (t : Int) .tick := by
-        simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq]
+        simp only [Record.reactionsOf, Set.mem_setOf_eq]
         exact ⟨out, by rw [hwst]; exact hout, rfl⟩
       rw [hempty] at h'
       exact h'
-  simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq] at hmem
+  simp only [Record.reactionsOf, Set.mem_setOf_eq] at hmem
   obtain ⟨out, hout, htkv⟩ := hmem
   rw [hwst] at hout
   exact ⟨out, hout, htkv⟩
 
-/-- If the tick of `v` at a tick step `k`, whose instant is a whole multiple of `S.E.Δ`, from the
+/-- If the tick of `v` at a tick step `k`, from the
     node state its wake stage leaves, has an outcome, and every outcome sends `o`, then `o`, signed
     by `v`, is in the sent log `x[k + 1].sent`. -/
 theorem mem_sent_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
@@ -713,7 +712,6 @@ theorem mem_sent_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedul
     {k t : Nat} {v : V} {o : NamedObject V}
     (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     (ho : ∀ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out → o ∈ out.2)
     (hne : ∃ out : M.N × List (NamedObject V),
@@ -722,7 +720,7 @@ theorem mem_sent_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedul
   have hs : AtomicStep (Record.protocolOf M S) Sched (x.lbl k) x[k] x[k + 1] := x.step k
   rw [hl] at hs
   obtain ⟨-, w, tk, hwake, htick, hc⟩ := hs
-  obtain ⟨out, hout, htkv⟩ := tick_outcome_of_step S Sched hwake htick haw hdvd hne
+  obtain ⟨out, hout, htkv⟩ := tick_outcome_of_step S Sched hwake htick haw hne
   have hsent : x[k + 1].sent = x[k].sent
       + (Sched.awake (t : Int) \ Sched.adv (t : Int)).sum
           (fun q => ((w q).send + (tk q).send).map (SignedMsg.mk q)) := by
@@ -801,7 +799,7 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- If the tick of `v` at a tick step `k`, whose instant is a whole multiple of `S.E.Δ`, from the
+/-- If the tick of `v` at a tick step `k`, from the
     node state its wake stage leaves, has an outcome, and every outcome sends `o`, then `o`, signed
     by `v`, is in the multiset difference `x[k + 1].sent - x[k].sent`. -/
 theorem mem_sent_diff_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
@@ -809,7 +807,6 @@ theorem mem_sent_diff_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     {k t : Nat} {v : V} {o : NamedObject V}
     (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     (ho : ∀ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out → o ∈ out.2)
     (hne : ∃ out : M.N × List (NamedObject V),
@@ -818,7 +815,7 @@ theorem mem_sent_diff_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   have hs : AtomicStep (Record.protocolOf M S) Sched (x.lbl k) x[k] x[k + 1] := x.step k
   rw [hl] at hs
   obtain ⟨-, w, tk, hwake, htick, hc⟩ := hs
-  obtain ⟨out, hout, htkv⟩ := tick_outcome_of_step S Sched hwake htick haw hdvd hne
+  obtain ⟨out, hout, htkv⟩ := tick_outcome_of_step S Sched hwake htick haw hne
   have hsent : x[k + 1].sent = x[k].sent
       + (Sched.awake (t : Int) \ Sched.adv (t : Int)).sum
           (fun q => ((w q).send + (tk q).send).map (SignedMsg.mk q)) := by
@@ -1051,7 +1048,7 @@ private theorem onePath_of_follows (M : Record.Model V) (S : Setup V) (rho : Rec
   rw [Nat.add_sub_cancel_left]
   exact hW i
 
-/-- For every outcome of `v₀`'s tick at a step `k < n` whose instant is a whole multiple of `S.E.Δ`,
+/-- For every outcome of `v₀`'s tick at a step `k < n`,
     from the node state its wake stage leaves, with `o` in its list, some path of the run emits `o`
     from `v₀` at the time of that tick. -/
 theorem emits_runAll_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
@@ -1060,7 +1057,6 @@ theorem emits_runAll_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     {o : NamedObject V}
     (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v₀ ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     {out : M.N × List (NamedObject V)}
     (hout : M.tick (Setup.alwaysAwake S) v₀ (Record.wakeStage M Sched (t : Int) x[k] v₀) (t : Int) ⇢ out)
     (ho : o ∈ out.2) :
@@ -1069,8 +1065,7 @@ theorem emits_runAll_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Sch
         (Restated.runAll M S Sched x v n) W ∧
       Restated.Vocabulary.Execution.NamedRun.emitsAlong M (Setup.alwaysAwake S)
         (Restated.runAll M S Sched x v n) W v₀ o (t : Int) := by
-  have hcond : v₀ ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0 :=
-    ⟨haw, hdvd⟩
+  have hcond : v₀ ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) := haw
   have hev : (Record.Event.tick v₀ (t : Int) : Record.Event V)
       ∈ Record.actionEventsOf M S Sched v₀ (x[k].time : Int) (x.lbl k) := by
     rw [hl]
@@ -1394,13 +1389,12 @@ theorem honest_upTo_of_mono {Sched : Schedule V} (hmono : Sched.MonotoneCorrupti
   fun t' ht' h => (Finset.mem_sdiff.1 hv).2 (hmono t' τ ht' h)
 
 /-- A tick event of `u` at `t` among the events a step labelled `a` gives `u` means `a` is
-    `tickAllAwake τ` with `t = τ`, `u` is awake and not adversarial at `τ`, and `τ` is a whole
-    multiple of `S.E.Δ`. -/
+    `tickAllAwake τ` with `t = τ`, and `u` is awake and not adversarial at `τ`. -/
 theorem tick_mem_actionEventsOf {S : Setup V} {Sched : Schedule V} {u : V} {now : Int}
     {a : AtomicAction V (NamedObject V) Empty} {t : Int}
     (h : Record.Event.tick u t ∈ Record.actionEventsOf M S Sched u now a) :
     ∃ τ : Nat, a = AtomicAction.tickAllAwake τ ∧ t = (τ : Int) ∧
-      u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧ (τ : Int) % S.E.Δ = 0 := by
+      u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) := by
   cases a with
   | tickAllAwake τ =>
       refine ⟨τ, rfl, ?_⟩
@@ -1427,10 +1421,10 @@ theorem tick_mem_actionEventsOf {S : Setup V} {Sched : Schedule V} {u : V} {now 
 theorem tick_outcome_runAllPath (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (v : V) (n : Nat)
     (hmono : Sched.MonotoneCorruption)
-    -- Every tick at a tick step at a whole multiple of `S.E.Δ`, of a validator awake there and
-    -- never adversarial up to it, has an outcome from the node state that tick reads.
+    -- Every tick at a tick step, of a validator awake there and never adversarial up to it, has
+    -- an outcome from the node state that tick reads.
     (hsts : ∀ (k τ : Nat) (u : V), x.lbl k = AtomicAction.tickAllAwake τ →
-      (τ : Int) % S.E.Δ = 0 → u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
+      u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
       (∀ t' ≤ (τ : Int), u ∉ Sched.adv t') →
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) u (Record.wakeStage M Sched (τ : Int) x[k] u) (τ : Int) ⇢ out) :
@@ -1442,13 +1436,13 @@ theorem tick_outcome_runAllPath (facts : Record.Facts M) (S : Setup V) (Sched : 
   obtain ⟨k, -, hmem, hcases⟩ := Restated.runAllPath_at_event facts S Sched x v n i he
   have hnode : Record.Event.node (Record.Event.tick u t : Record.Event V) = u := rfl
   simp only [hnode] at hmem hcases
-  obtain ⟨τ, hl, hτ, hv, hΔ⟩ := tick_mem_actionEventsOf hmem
+  obtain ⟨τ, hl, hτ, hv⟩ := tick_mem_actionEventsOf hmem
   rcases hcases with ⟨t', he', -, -⟩ | ⟨t', he', hb, -⟩ | ⟨o, t', he', -, -⟩
   · cases he'
   · have htt : t = t' := (Record.Event.tick.inj he').2
     subst htt
     rw [hb, hτ]
-    exact hsts k τ u hl hΔ hv (honest_upTo_of_mono hmono hv)
+    exact hsts k τ u hl hv (honest_upTo_of_mono hmono hv)
   · cases he'
 
 /-- If no two blocks in play have two ancestors with one root, an honest proposer never already
@@ -1489,7 +1483,7 @@ theorem tick_outcome_of_tickStepAt (facts : Record.Facts M) (S : Setup V) (Sched
     ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched t x[m] q) t ⇢ out := by
   obtain ⟨τ, hl, rfl⟩ := hm
-  exact facts.ndRun.tick_outcome_sts S Sched x hroot hnew m τ q hl hΔ hq (honest_upTo_of_mono hmono hq)
+  exact facts.ndRun.tick_outcome_sts S Sched x hroot hnew m τ q hl hq (honest_upTo_of_mono hmono hq)
 
 /-- If `u`'s events among the first `idx` and among the first `idx'` events of the run are the same,
     `runAllPath` holds the same node state at `u` before both. -/
@@ -1503,13 +1497,12 @@ private theorem runAllPath_congr (S : Setup V) (Sched : Schedule V)
   simp only [Restated.runAllPath]
   rw [h]
 
-/-- If step `k` is the tick step at `τ`, `u` is awake and not adversarial there, `τ` is a whole
-    multiple of `S.E.Δ`, and `W` holds at `u` its wake stage at `τ`, then the tick event of `u` at
+/-- If step `k` is the tick step at `τ`, `u` is awake and not adversarial there, and `W` holds at `u` its wake stage at `τ`, then the tick event of `u` at
     `τ` can lead from `W` to a world holding `x[k + 1][u].st` at `u`. -/
 private theorem tick_step_world (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) {k τ : Nat} {u : V}
     (hl : x.lbl k = AtomicAction.tickAllAwake τ)
-    (hu : u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int)) (hdvd : (τ : Int) % S.E.Δ = 0)
+    (hu : u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int))
     (W : V → M.N) (hW : W u = Record.wakeStage M Sched (τ : Int) x[k] u) :
     ∃ w' ∈ Record.worldStepOf M (Setup.alwaysAwake S) W (Record.Event.tick u (τ : Int)),
       w' u = x[k + 1][u].st := by
@@ -1522,13 +1515,10 @@ private theorem tick_step_world (S : Setup V) (Sched : Schedule V)
   have hwst := Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake u)
   have htk := Record.protocolOf_step_tick M S (htick u hu)
   rw [hwst, ← hW] at htk
-  rcases htk with ⟨-, out, hout, hst⟩ | ⟨hno, hst⟩
+  rcases htk with ⟨out, hout, hst⟩ | ⟨hno, hst⟩
   · exact ⟨Function.update W u out.1, Or.inl ⟨out, hout, rfl⟩,
       by rw [Function.update_self, hx1, hst]⟩
-  · refine ⟨W, Or.inr ⟨?_, rfl⟩, by rw [hx1, hst]⟩
-    rcases hno with hnd | hno
-    · exact absurd hdvd hnd
-    · exact hno
+  · exact ⟨W, Or.inr ⟨hno, rfl⟩, by rw [hx1, hst]⟩
 
 /-- If step `k` delivers `m` to `u` and `W` holds `x[k][u].st` at `u`, then the delivery event of
     `m`'s payload to `u` can lead from `W` to a world holding `x[k + 1][u].st` at `u`. -/
@@ -1601,17 +1591,16 @@ theorem OnePath_runAllPath (facts : Record.Facts M) (S : Setup V) (Sched : Sched
         · refine hfin (Function.update (Restated.runAllPath M S Sched x v n j) u
             (M.wake (Restated.runAllPath M S Sched x v n j u))) (Set.mem_singleton _) ?_
           rw [Function.update_self, ha, hb, wakeStage_of_mem_wake x[k] hmem]
-        · obtain ⟨τ, hl, hτ, hu', hdvd⟩ := tickAllAwake_of_mem_actionEventsOf hmem
+        · obtain ⟨τ, hl, hτ, hu'⟩ := tickAllAwake_of_mem_actionEventsOf hmem
           subst hτ
-          obtain ⟨w', hw', hw'v⟩ := tick_step_world S Sched x hl hu' hdvd _ hb
+          obtain ⟨w', hw', hw'v⟩ := tick_step_world S Sched x hl hu' _ hb
           exact hfin w' hw' (hw'v.trans ha.symm)
         · obtain ⟨m, hl, hmsg, -⟩ := deliver_of_mem_actionEventsOf hmem
           subst hmsg
           obtain ⟨w', hw', hw'v⟩ := deliver_step_world S Sched x hl t _ hb
           exact hfin w' hw' (hw'v.trans ha.symm)
 
-/-- If `out` is an outcome of `v₀`'s tick at a step `k < n` whose instant is a whole multiple of
-    `S.E.Δ`, from the node state its wake stage leaves, and its node state is `v₀`'s node state
+/-- If `out` is an outcome of `v₀`'s tick at a step `k < n`, from the node state its wake stage leaves, and its node state is `v₀`'s node state
     after step `k`, then every object in `out`'s list is emitted by `v₀` at `t` along `runAllPath`. -/
 theorem emits_runAllPath_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (v : V)
@@ -1619,14 +1608,12 @@ theorem emits_runAllPath_of_tick (facts : Record.Facts M) (S : Setup V) (Sched :
     {o : NamedObject V}
     (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v₀ ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     {out : M.N × List (NamedObject V)}
     (hout : M.tick (Setup.alwaysAwake S) v₀ (Record.wakeStage M Sched (t : Int) x[k] v₀) (t : Int) ⇢ out)
     (hst : x[k + 1][v₀].st = out.1) (ho : o ∈ out.2) :
     Restated.Vocabulary.Execution.NamedRun.emits M (Setup.alwaysAwake S)
       (Restated.runAll M S Sched x v n) (Restated.runAllPath M S Sched x v n) v₀ o (t : Int) := by
-  have hcond : v₀ ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0 :=
-    ⟨haw, hdvd⟩
+  have hcond : v₀ ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) := haw
   have hev : (Record.Event.tick v₀ (t : Int) : Record.Event V)
       ∈ Record.actionEventsOf M S Sched v₀ (x[k].time : Int) (x.lbl k) := by
     rw [hl]
@@ -1650,7 +1637,7 @@ theorem emits_runAllPath_of_tick (facts : Record.Facts M) (S : Setup V) (Sched :
   · cases he'
 
 /-- If `⟨v, o⟩` is in the sent log `x[k + 1].sent` after the tick step `k` and not in `x[k].sent`,
-    then `v` reacts at `t`, `t` is a whole multiple of `S.E.Δ`, and some outcome of `v`'s tick at
+    then `v` reacts at `t`, and some outcome of `v`'s tick at
     `t`, from the node state its wake stage leaves, has `v`'s node state after the step as its node
     state and `o` in its list. -/
 theorem tick_outcome_of_mem_sent_succ (facts : Record.Facts M) (S : Setup V)
@@ -1659,7 +1646,7 @@ theorem tick_outcome_of_mem_sent_succ (facts : Record.Facts M) (S : Setup V)
     {o : NamedObject V} (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (hnew : (⟨v, o⟩ : SignedMsg V (NamedObject V)) ∈ x[k + 1].sent)
     (hold : (⟨v, o⟩ : SignedMsg V (NamedObject V)) ∉ x[k].sent) :
-    v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0 ∧
+    v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out ∧
           x[k + 1][v].st = out.1 ∧ o ∈ out.2 := by
@@ -1695,19 +1682,15 @@ theorem tick_outcome_of_mem_sent_succ (facts : Record.Facts M) (S : Setup V)
       (Record.reactionsOf M S q ((w q).state) (t : Int) .tick = ∅ ∧
         tk q = { state := (w q).state, send := 0 }) := htick q hq
   rcases htk with htk | ⟨-, htk⟩
-  · by_cases hp : (t : Int) % S.E.Δ = 0
-    · simp only [Record.reactionsOf, if_pos hp, Set.mem_setOf_eq] at htk
-      obtain ⟨out, hout, htkv⟩ := htk
-      rw [htkv] at ho' hx1
-      rw [hwst.1] at hout
-      exact ⟨hq, hp, out, hout, hx1, Multiset.mem_coe.1 ho'⟩
-    · simp only [Record.reactionsOf, if_neg hp, Set.mem_singleton_iff] at htk
-      rw [htk] at ho'
-      exact absurd ho' (by simp)
+  · simp only [Record.reactionsOf, Set.mem_setOf_eq] at htk
+    obtain ⟨out, hout, htkv⟩ := htk
+    rw [htkv] at ho' hx1
+    rw [hwst.1] at hout
+    exact ⟨hq, out, hout, hx1, Multiset.mem_coe.1 ho'⟩
   · rw [htk] at ho'
     exact absurd ho' (by simp)
 
-/-- If `out` is an outcome of `v`'s tick at the tick step `k`, at a whole multiple of `S.E.Δ`, from
+/-- If `out` is an outcome of `v`'s tick at the tick step `k`, from
     the node state its wake stage leaves, its node state is `v`'s node state after the step, and two
     outcomes of that tick with one node state send the same objects (`hsend`), then every object of
     `out`'s list, signed by `v`, is in the sent log `x[k + 1].sent`. -/
@@ -1716,7 +1699,6 @@ theorem mem_sent_of_tick_of_state (facts : Record.Facts M) (S : Setup V) (Sched 
     {k t : Nat} {v : V} {o : NamedObject V}
     (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     (hsend : ∀ out out' : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out →
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out' →
@@ -1728,7 +1710,7 @@ theorem mem_sent_of_tick_of_state (facts : Record.Facts M) (S : Setup V) (Sched 
   have hs : AtomicStep (Record.protocolOf M S) Sched (x.lbl k) x[k] x[k + 1] := x.step k
   rw [hl] at hs
   obtain ⟨-, w, tk, hwake, htick, hc⟩ := hs
-  obtain ⟨out', hout', htkv⟩ := tick_outcome_of_step S Sched hwake htick haw hdvd ⟨out, hout⟩
+  obtain ⟨out', hout', htkv⟩ := tick_outcome_of_step S Sched hwake htick haw ⟨out, hout⟩
   have hx1 : x[k + 1][v].st = (tk v).state := by
     have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
     rw [h2, tickAllAwakeUpdate_getElem_awake (Finset.mem_sdiff.1 haw).1 (Finset.mem_sdiff.1 haw).2]

@@ -5,14 +5,14 @@ import Proofs.Instance.NoRaise.GradesDue
 # The spec's tick answers
 
 `tick_ok`: from a node state whose tree has distinct roots, whose store is stamped and whose grades
-are due, the tick at a non-negative multiple `t` of `C.Δ` that follows a wake or the store's clock
-by one delay answers, and its answer is stamped and has its grades due.
+are due, the tick at a non-negative time `t` that follows a wake or the store's clock by one time
+unit answers, and its answer is stamped and has its grades due.
 -/
 
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 open Spec Spec.Protocol
 
@@ -118,15 +118,15 @@ theorem slot_duties_ok (C : Config) (P : Provisional V) (X : External V) (v : V)
 /-! ## The tick -/
 
 /-- From a node state whose tree has distinct roots, whose store is stamped and whose grades are
-    due, the tick at a non-negative multiple `t` of `C.Δ` that follows a wake or the store's clock
-    by one delay answers, and its answer's store is stamped and has its grades due. -/
+    due, the tick at a non-negative time `t` that follows a wake or the store's clock by one time
+    unit answers, and its answer's store is stamped and has its grades due. -/
 theorem tick_ok (C : Config) (P : Provisional V) (X : External V) (n : NodeState V) (t : Time)
     (hroots : DistinctRoots n.st.T) (hst : Stamped n.st) (hdue : GradesDue C n)
-    (hcons : n.awakeSince = none ∨ t = n.st.t + C.Δ) (ht : 0 ≤ t) (hmod : t % C.Δ = 0) :
+    (hcons : n.awakeSince = none ∨ t = n.st.t + 1) (ht : 0 ≤ t) :
     ∃ out, (tick C P X n t).run [] = .ok out ∧ Stamped out.1.st ∧ GradesDue C out.1 := by
   suffices hex : ∃ out, (tick C P X n t).run [] = .ok out by
     obtain ⟨out, h⟩ := hex
-    exact ⟨out, h, stamped_tick h hst, gradesDue_tick h hdue ht hmod hcons⟩
+    exact ⟨out, h, stamped_tick h hst, gradesDue_tick h hdue ht hcons⟩
   have hΔ := C.Δ_pos
   have hn0 := record_awake_st n t
   -- the grades update answers `st0`
@@ -160,18 +160,18 @@ theorem tick_ok (C : Config) (P : Provisional V) (X : External V) (n : NodeState
         simp only [Bool.and_eq_true] at hc
         show (saved_round_grades st0.saved_grades (C.round_of (C.slotOf t))).g1 ≠ .pending
         rw [hg]
-        exact (due_g1 hdue h0 ht hmod hcons hc.2).2
+        exact (due_g1 hdue h0 ht hcons hc.2).2
       · intro hc
         simp only [Bool.and_eq_true] at hc
         show (saved_round_grades st0.saved_grades (C.round_of (C.slotOf t))).g1 ≠ .pending
         rw [hg]
-        exact (due_g1 hdue h0 ht hmod hcons hc.2).2
+        exact (due_g1 hdue h0 ht hcons hc.2).2
       · intro hc
         simp only [Bool.and_eq_true] at hc
         show (saved_round_grades st0.saved_grades (C.round_of (C.slotOf t))).g1 ≠ .pending ∧
           (saved_round_grades st0.saved_grades (C.round_of (C.slotOf t))).g2 ≠ .pending
         rw [hg]
-        exact (due_g2 hdue h0 ht hmod hcons hc.2).2
+        exact (due_g2 hdue h0 ht hcons hc.2).2
       · intro hc1 hc2
         simp only [Bool.and_eq_true, decide_eq_true_eq] at hc1 hc2
         rw [Config.vote_time] at hc2
@@ -200,7 +200,7 @@ theorem tick_ok (C : Config) (P : Provisional V) (X : External V) (n : NodeState
     split_ifs with h4
     · obtain ⟨hT4, hg4, hs4⟩ := hq h4
       simp only [Bool.and_eq_true, decide_eq_true_eq] at h4
-      obtain ⟨-, hd0, hd1, hd2⟩ := due_attest hdue h0 ht hmod hcons h4.1 h4.2
+      obtain ⟨-, hd0, hd1, hd2⟩ := due_attest hdue h0 ht hcons h4.1 h4.2
       have hgr : saved_round_grades st4.saved_grades (C.round_of st4.s) =
           st0.saved_grades.current := by rw [hg4, hs4, hg]
       refine attest_ok C _ (hT4 ▸ hT0) ?_ ?_ ?_ _ _
@@ -209,4 +209,4 @@ theorem tick_ok (C : Config) (P : Provisional V) (X : External V) (n : NodeState
       · rw [hgr]; exact hd0
     · exact ⟨_, rfl⟩
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise

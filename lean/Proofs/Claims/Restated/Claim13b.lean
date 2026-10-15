@@ -37,8 +37,8 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
 /-- One step of the sent log, for a validator `v` the adversary does not hold at the step's instant:
-    a message under `v`'s signature was already sent, or is in the list of an outcome of `v`'s tick
-    at an instant that is a whole multiple of `S.E.Δ`, or is forwarded by this step, or is re-sent
+    a message under `v`'s signature was already sent, or is in the list of an outcome of `v`'s tick,
+    or is forwarded by this step, or is re-sent
     by a delivery to `v` of a message that is the payload or includes it. -/
 theorem sent_step_of_honest_at (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     {a : AtomicAction V (NamedObject V) Empty}
@@ -49,7 +49,6 @@ theorem sent_step_of_honest_at (facts : Record.Facts M) (S : Setup V) (Sched : S
       (⟨v, o⟩ : SignedMsg V (NamedObject V)) ∈ cfg.sent ∨
         (∃ t : Nat, a = AtomicAction.tickAllAwake t ∧
           v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
-          (t : Int) % S.E.Δ = 0 ∧
           ∃ out : M.N × List (NamedObject V),
             M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) cfg v) (t : Int) ⇢ out ∧ o ∈ out.2) ∨
         (∃ p : V, a = AtomicAction.forward p ⟨v, o⟩) ∨
@@ -62,7 +61,6 @@ theorem sent_step_of_honest_at (facts : Record.Facts M) (S : Setup V) (Sched : S
           (⟨v, o⟩ : SignedMsg V (NamedObject V)) ∈ d.sent ∨
             (∃ t : Nat, a = AtomicAction.tickAllAwake t ∧
               v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
-              (t : Int) % S.E.Δ = 0 ∧
               ∃ out : M.N × List (NamedObject V),
                 M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) d v) (t : Int) ⇢ out ∧ o ∈ out.2) ∨
             (∃ p : V, a = AtomicAction.forward p ⟨v, o⟩) ∨
@@ -95,16 +93,11 @@ theorem sent_step_of_honest_at (facts : Record.Facts M) (S : Setup V) (Sched : S
           (Record.reactionsOf M S q ((w q).state) (t : Int) .tick = ∅ ∧
             tk q = { state := (w q).state, send := 0 }) := htick q hq
       rcases htk with htk | ⟨-, htk⟩
-      · by_cases hp : (t : Int) % S.E.Δ = 0
-        · simp only [Record.reactionsOf, if_pos hp, Set.mem_setOf_eq] at htk
-          obtain ⟨out, hout, htkv⟩ := htk
-          rw [htkv] at ho'
-          rw [hwst.1] at hout
-          exact Or.inr (Or.inl ⟨t, rfl, hq, hp, out, hout, Multiset.mem_coe.1 ho'⟩)
-        · -- the instant is not a whole multiple of `S.E.Δ`: the tick branch sends nothing
-          simp only [Record.reactionsOf, if_neg hp, Set.mem_singleton_iff] at htk
-          rw [htk] at ho'
-          exact absurd ho' (by simp)
+      · simp only [Record.reactionsOf, Set.mem_setOf_eq] at htk
+        obtain ⟨out, hout, htkv⟩ := htk
+        rw [htkv] at ho'
+        rw [hwst.1] at hout
+        exact Or.inr (Or.inl ⟨t, rfl, hq, out, hout, Multiset.mem_coe.1 ho'⟩)
       · -- the tick has no outcome: the step sends nothing for `q`
         rw [htk] at ho'
         exact absurd ho' (by simp)
@@ -167,8 +160,7 @@ open DecoupledConsensusModel.Execution
 
 /-- A message sent at a step whose real time is at or before `tB`, under the signature of a
     validator `v` the adversary does not hold at any instant at or before `tB`, with a payload `v`
-    authored, is in the list of an outcome of `v`'s own tick at an earlier step `k` whose instant is
-    a whole multiple of `S.E.Δ`, provided signatures are unforgeable. -/
+    authored, is in the list of an outcome of `v`'s own tick at an earlier step `k`, provided signatures are unforgeable. -/
 theorem tick_of_honest_signed_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched)
     (v : V) (o : NamedObject V) (tB : Int)
@@ -177,7 +169,7 @@ theorem tick_of_honest_signed_upTo (facts : Record.Facts M) (S : Setup V) (Sched
     ∀ i : Nat, (x[i].time : Int) ≤ tB →
       (⟨v, o⟩ : SignedMsg V (NamedObject V)) ∈ x[i].sent →
       ∃ k < i, ∃ t : Nat, x.lbl k = AtomicAction.tickAllAwake t ∧
-        v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0 ∧
+        v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
         ∃ out : M.N × List (NamedObject V),
           M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out ∧ o ∈ out.2
   | 0, _, ho => by
@@ -188,11 +180,11 @@ theorem tick_of_honest_signed_upTo (facts : Record.Facts M) (S : Setup V) (Sched
         exact_mod_cast Restated.time_mono facts S Sched x (Nat.le_succ i)
       have hi' : (x[i].time : Int) ≤ tB := le_trans hstep hi
       rcases Restated.sent_step_of_honest_at facts S Sched (x.step i) (hv _ hi') ho with
-        ho | ⟨t, hlbl, haw, hdvd, hemit⟩ | ⟨p, hlbl⟩ | ⟨sm, hlbl, hcov⟩
+        ho | ⟨t, hlbl, haw, hemit⟩ | ⟨p, hlbl⟩ | ⟨sm, hlbl, hcov⟩
       · obtain ⟨k, hk, hrest⟩ :=
           tick_of_honest_signed_upTo facts S Sched x v o tB hv hunf hauth i hi' ho
         exact ⟨k, Nat.lt_succ_of_lt hk, hrest⟩
-      · exact ⟨i, Nat.lt_succ_self i, t, hlbl, haw, hdvd, hemit⟩
+      · exact ⟨i, Nat.lt_succ_self i, t, hlbl, haw, hemit⟩
       · have hen : (atomicSpec (Record.protocolOf M S) Sched (x.lbl i)).Enabled x[i] := (x.step i).1
         rw [hlbl] at hen
         have hen' : p ∈ Sched.awake (x[i].time : Int) ∧
@@ -234,7 +226,7 @@ theorem tick_of_honest_signed_upTo_taken (facts : Record.Facts M) (S : Setup V)
     ∀ i : Nat, (x[i].time : Int) ≤ tB →
       (⟨v, o⟩ : SignedMsg V (NamedObject V)) ∈ x[i].sent →
       ∃ k < i, ∃ t : Nat, x.lbl k = AtomicAction.tickAllAwake t ∧
-        v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0 ∧
+        v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
         ∃ out : M.N × List (NamedObject V),
           M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out ∧
             x[k + 1][v].st = out.1 ∧ o ∈ out.2
@@ -250,11 +242,11 @@ theorem tick_of_honest_signed_upTo_taken (facts : Record.Facts M) (S : Setup V)
           tick_of_honest_signed_upTo_taken facts S Sched x v o tB hv hunf hauth i hi' hold
         exact ⟨k, Nat.lt_succ_of_lt hk, hrest⟩
       rcases Restated.sent_step_of_honest_at facts S Sched (x.step i) (hv _ hi') ho with
-        ho' | ⟨t, hlbl, -, -, -⟩ | ⟨p, hlbl⟩ | ⟨sm, hlbl, hcov⟩
+        ho' | ⟨t, hlbl, -, -⟩ | ⟨p, hlbl⟩ | ⟨sm, hlbl, hcov⟩
       · exact absurd ho' hold
-      · obtain ⟨haw, hdvd, out, hout, hst, hmem⟩ :=
+      · obtain ⟨haw, out, hout, hst, hmem⟩ :=
           Restated.tick_outcome_of_mem_sent_succ facts S Sched x hlbl ho hold
-        exact ⟨i, Nat.lt_succ_self i, t, hlbl, haw, hdvd, out, hout, hst, hmem⟩
+        exact ⟨i, Nat.lt_succ_self i, t, hlbl, haw, out, hout, hst, hmem⟩
       · have hen : (atomicSpec (Record.protocolOf M S) Sched (x.lbl i)).Enabled x[i] := (x.step i).1
         rw [hlbl] at hen
         have hen' : p ∈ Sched.awake (x[i].time : Int) ∧
@@ -302,7 +294,7 @@ theorem attestationAuthenticity_runAll_upTo (facts : Record.Facts M) (S : Setup 
     rw [author_attest, hav]
   have hhonest : Restated.HonestThrough M Sched x k v := fun t' ht' => hv t' (le_trans ht' hkt)
   have hcar := hunf.carried k sm (.attest a) v hsm hcarries hauthor hhonest
-  obtain ⟨j, hjk, τ, hlbl, haw, hdvd, out, hout, hst, hemit⟩ :=
+  obtain ⟨j, hjk, τ, hlbl, haw, out, hout, hst, hemit⟩ :=
     tick_of_honest_signed_upTo_taken facts S Sched x v (.attest a) tB hv hunf hauthor k hkt
       hcar
   refine ⟨(τ : Int), ?_, ?_⟩
@@ -312,7 +304,7 @@ theorem attestationAuthenticity_runAll_upTo (facts : Record.Facts M) (S : Setup 
     exact_mod_cast hj2 ▸ hj1
   · rw [hav]
     exact Restated.emits_runAllPath_of_tick facts S Sched x v (Nat.lt_of_lt_of_le hjk hkn) hlbl
-      haw hdvd hout hst hemit
+      haw hout hst hemit
 
 /-- If corruption is monotone, signatures are unforgeable and the adversary at `tB` holds less than
     a third of the weight, then the attestations of any two stores of the execution, read at steps

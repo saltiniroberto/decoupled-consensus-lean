@@ -4,15 +4,15 @@ import Proofs.Instance.Equalities.ForkChoiceImages
 import Proofs.Instance.Equalities.ContractImages
 
 /-!
-# The fork-choice facts of `Model.specDraft`
+# The fork-choice facts of `Model.spec`
 
-The fields of `ForkChoiceFacts` proved at the model `Model.specDraft`, one theorem per field, and
-the bundle `Model.specDraft_runFacts_forkChoice`.
+The fields of `ForkChoiceFacts` proved at the model `Model.spec`, one theorem per field, and
+the bundle `Model.spec_runFacts_forkChoice`.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.ForkChoiceFacts
+namespace SpecRecord.ForkChoiceFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Protocol
 open DecoupledConsensusModel.Sts.Record
@@ -43,9 +43,9 @@ theorem map_goldfishVoteToSpec_toProof (T : Finset (GoldfishVote V)) :
   ext u
   simp [ChainStateToHandlers.goldfishVoteToSpecEmb]
 
-/-- The member `no_second_vote_in` of `Model.specDraft` is `Protocol.no_second_vote_in`. -/
-theorem specDraft_no_second_vote_in_eq :
-    (Model.specDraft (V := V)).no_second_vote_in =
+/-- The member `no_second_vote_in` of `Model.spec` is `Protocol.no_second_vote_in`. -/
+theorem spec_no_second_vote_in_eq :
+    (Model.spec (V := V)).no_second_vote_in =
       DecoupledConsensusModel.Protocol.no_second_vote_in := by
   funext late vote
   show Spec.Protocol.no_second_vote_in (late.map ForkChoiceGrades.voteToSpecEmb)
@@ -53,24 +53,24 @@ theorem specDraft_no_second_vote_in_eq :
   rw [← toProof_no_second_vote_in, map_voteToSpec_toProof,
     Spec.GoldfishVote.toProof_toSpec]
 
-/-- The member `voters_count` of `Model.specDraft` is `Protocol.voters_count`. -/
-theorem specDraft_voters_count_eq :
-    (Model.specDraft (V := V)).voters_count = DecoupledConsensusModel.Protocol.voters_count := by
+/-- The member `voters_count` of `Model.spec` is `Protocol.voters_count`. -/
+theorem spec_voters_count_eq :
+    (Model.spec (V := V)).voters_count = DecoupledConsensusModel.Protocol.voters_count := by
   funext E votes s
   show Spec.Protocol.raw_voters_count (votes.map ForkChoiceGrades.voteToSpecEmb) = _
   rw [← toProof_voters_count E _ s, map_voteToSpec_toProof]
 
-/-- The member `participates` of `Model.specDraft` is `Protocol.participates`. -/
-theorem specDraft_participates_eq :
-    (Model.specDraft (V := V)).participates = DecoupledConsensusModel.Protocol.participates := by
+/-- The member `participates` of `Model.spec` is `Protocol.participates`. -/
+theorem spec_participates_eq :
+    (Model.spec (V := V)).participates = DecoupledConsensusModel.Protocol.participates := by
   funext votes v
   show Spec.Protocol.participates
     (votes.map ChainStateToHandlers.goldfishVoteToSpecEmb) v = _
   rw [← toProof_participates, map_goldfishVoteToSpec_toProof]
 
-/-- The member `latest_window` of `Model.specDraft` is `Protocol.latest_window`. -/
-theorem specDraft_latest_window_eq :
-    (Model.specDraft (V := V)).latest_window = DecoupledConsensusModel.Protocol.latest_window := by
+/-- The member `latest_window` of `Model.spec` is `Protocol.latest_window`. -/
+theorem spec_latest_window_eq :
+    (Model.spec (V := V)).latest_window = DecoupledConsensusModel.Protocol.latest_window := by
   funext η r
   exact (toProof_latest_window η r).symm
 
@@ -103,11 +103,11 @@ theorem toSpec_ancestorEq (A B : Block V) :
       rw [e, Spec.Block.ancestorEq, ← e, Block.preceq, ih]
       simp only [blockToSpec_inj]
 
-/-- The member `viable_tree` of `Model.specDraft` at a chain-state map `σ` is `Protocol.viable_tree`
+/-- The member `viable_tree` of `Model.spec` at a chain-state map `σ` is `Protocol.viable_tree`
     at the map `fun C => (σ C).toProof`. -/
-theorem specDraft_viable_tree_eq (σ : Block V → Spec.Protocol.ChainState V)
+theorem spec_viable_tree_eq (σ : Block V → Spec.Protocol.ChainState V)
     (F : Block V) (h_max : Height) (T : Finset (Block V)) :
-    (Model.specDraft (V := V)).viable_tree σ F h_max T =
+    (Model.spec (V := V)).viable_tree σ F h_max T =
       DecoupledConsensusModel.Protocol.viable_tree (fun C => (σ C).toProof) F h_max T := by
   show (Spec.Protocol.viable_tree (fun C => σ C.toProof) (Spec.Block.toSpec F)
     h_max (T.map ForkChoiceGrades.blockToSpecEmb)).image Spec.Block.toProof = _
@@ -130,9 +130,9 @@ theorem specDraft_viable_tree_eq (σ : Block V → Spec.Protocol.ChainState V)
     · rw [toSpec_ancestorEq]; exact hBW
     · simpa using hh
 
-/-- Unfolds the members of `Model.vocabulary` and `Model.specDraft` and rewrites every routine read at
+/-- Unfolds the members of `Model.vocabulary` and `Model.spec` and rewrites every routine read at
     a `toProof` image of a spec store into the spec's routine. -/
-local macro "sd_normalize" : tactic => `(tactic| simp only [Model.vocabulary, Model.specDraft, Model.specDraftBase,
+local macro "sd_normalize" : tactic => `(tactic| simp only [Model.vocabulary, Model.spec, Model.specBase,
   DecoupledConsensusModel.Sts.Record.vocabulary,
   Model.S.F, Model.S.J, Model.S.h_j, Model.S.h_max, Model.S.T, Model.S.s, Model.S.t, Model.S.σ,
   Model.S.gf_votes, Model.S.sg_votes, Model.S.live_confirmed, Model.S.timestamp_block,
@@ -160,299 +160,299 @@ local macro "sd_normalize" : tactic => `(tactic| simp only [Model.vocabulary, Mo
 
 /-! ## `ForkChoiceFacts` -/
 
-/-- The field `get_fg_root_toHealing_clock` of `ForkChoiceFacts` at `Model.specDraft`: setting the
+/-- The field `get_fg_root_toHealing_clock` of `ForkChoiceFacts` at `Model.spec`: setting the
     store's time and slot does not change the FG root of its healing view. -/
-theorem specDraft_get_fg_root_toHealing_clock :
-    ∀ (st : (Model.specDraft (V := V)).S) (t : Time) (s : Slot),
-    (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).store_with_t_s st t s).toHealing.toFG = (Model.specDraft (V := V)).get_fg_root st.toHealing.toFG :=
+theorem spec_get_fg_root_toHealing_clock :
+    ∀ (st : (Model.spec (V := V)).S) (t : Time) (s : Slot),
+    (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).store_with_t_s st t s).toHealing.toFG = (Model.spec (V := V)).get_fg_root st.toHealing.toFG :=
   fun _ _ _ => rfl
 
-/-- The field `get_filtered_block_tree_toHealing_clock` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `get_filtered_block_tree_toHealing_clock` of `ForkChoiceFacts` at `Model.spec`:
     setting the store's time and slot does not change the filtered tree of its healing view. -/
-theorem specDraft_get_filtered_block_tree_toHealing_clock :
-    ∀ (st : (Model.specDraft (V := V)).S) (t : Time) (s : Slot),
-    (Model.specDraft (V := V)).get_filtered_block_tree ((Model.specDraft (V := V)).store_with_t_s st t s).toHealing.toFG =
-      (Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG :=
+theorem spec_get_filtered_block_tree_toHealing_clock :
+    ∀ (st : (Model.spec (V := V)).S) (t : Time) (s : Slot),
+    (Model.spec (V := V)).get_filtered_block_tree ((Model.spec (V := V)).store_with_t_s st t s).toHealing.toFG =
+      (Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG :=
   fun _ _ _ => rfl
 
-/-- The field `mem_viable_tree_iff` of `ForkChoiceFacts` at `Model.specDraft`: `B` is in the viable
+/-- The field `mem_viable_tree_iff` of `ForkChoiceFacts` at `Model.spec`: `B` is in the viable
     tree of `σ`, `F`, `h_max` and `T` exactly when `B` is in `T`, `F ⪯ B`, and some `W` in `T` with
     `B ⪯ W` has chain-state height at least `h_max - 1`. -/
-theorem specDraft_mem_viable_tree_iff :
-    ∀ (σ : Block V → (Model.specDraft (V := V)).CS) (F : Block V) (h_max : Height)
+theorem spec_mem_viable_tree_iff :
+    ∀ (σ : Block V → (Model.spec (V := V)).CS) (F : Block V) (h_max : Height)
     (T : Finset (Block V)) (B : Block V),
-    B ∈ (Model.specDraft (V := V)).viable_tree σ F h_max T ↔
+    B ∈ (Model.spec (V := V)).viable_tree σ F h_max T ↔
       (B ∈ T ∧ Block.Preceq F B) ∧ ∃ W ∈ T, Block.Preceq B W ∧ h_max - 1 ≤ (σ W).h := by
   intro σ F h_max T B
-  rw [specDraft_viable_tree_eq]
+  rw [spec_viable_tree_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_viable_tree_iff (fun C => (σ C).toProof) F h_max T B
 
-/-- The field `get_fg_root_set_clock_slot` of `ForkChoiceFacts` at `Model.specDraft`: setting the
+/-- The field `get_fg_root_set_clock_slot` of `ForkChoiceFacts` at `Model.spec`: setting the
     store's time and slot does not change its FG root. -/
-theorem specDraft_get_fg_root_set_clock_slot :
-    ∀ (st : (Model.specDraft (V := V)).S) (t : Int) (s : Slot),
-    (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).store_with_t_s st t s).toHealing.toFG = (Model.specDraft (V := V)).get_fg_root st.toHealing.toFG :=
+theorem spec_get_fg_root_set_clock_slot :
+    ∀ (st : (Model.spec (V := V)).S) (t : Int) (s : Slot),
+    (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).store_with_t_s st t s).toHealing.toFG = (Model.spec (V := V)).get_fg_root st.toHealing.toFG :=
   fun _ _ _ => rfl
 
-/-- The field `get_filtered_block_tree_set_clock_slot` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `get_filtered_block_tree_set_clock_slot` of `ForkChoiceFacts` at `Model.spec`:
     setting the store's time and slot does not change its filtered block tree. -/
-theorem specDraft_get_filtered_block_tree_set_clock_slot :
-    ∀ (st : (Model.specDraft (V := V)).S) (t : Int) (s : Slot),
-    (Model.specDraft (V := V)).get_filtered_block_tree ((Model.specDraft (V := V)).store_with_t_s st t s).toHealing.toFG =
-      (Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG :=
+theorem spec_get_filtered_block_tree_set_clock_slot :
+    ∀ (st : (Model.spec (V := V)).S) (t : Int) (s : Slot),
+    (Model.spec (V := V)).get_filtered_block_tree ((Model.spec (V := V)).store_with_t_s st t s).toHealing.toFG =
+      (Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG :=
   fun _ _ _ => rfl
 
-/-- The field `no_second_vote_in_eq_true_iff` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `no_second_vote_in_eq_true_iff` of `ForkChoiceFacts` at `Model.spec`:
     `no_second_vote_in late vote` is `true` exactly when every vote of `late` is `vote` or has
     another signer. -/
-theorem specDraft_no_second_vote_in_eq_true_iff :
+theorem spec_no_second_vote_in_eq_true_iff :
     ∀ (late : Finset (GoldfishVote V)) (vote : GoldfishVote V),
-    (Model.specDraft (V := V)).no_second_vote_in late vote = true ↔ ∀ u ∈ late, u = vote ∨ u.val_index ≠ vote.val_index := by
+    (Model.spec (V := V)).no_second_vote_in late vote = true ↔ ∀ u ∈ late, u = vote ∨ u.val_index ≠ vote.val_index := by
   intro late vote
-  rw [specDraft_no_second_vote_in_eq]
+  rw [spec_no_second_vote_in_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).no_second_vote_in_eq_true_iff late vote
 
-/-- The field `no_second_vote_in_of_forall` of `ForkChoiceFacts` at `Model.specDraft`: if every vote
+/-- The field `no_second_vote_in_of_forall` of `ForkChoiceFacts` at `Model.spec`: if every vote
     of `late` is `vote` or has another signer, then `no_second_vote_in late vote` is `true`. -/
-theorem specDraft_no_second_vote_in_of_forall :
+theorem spec_no_second_vote_in_of_forall :
     ∀ {late : Finset (GoldfishVote V)} {vote : GoldfishVote V},
-    (∀ u ∈ late, u = vote ∨ u.val_index ≠ vote.val_index) → (Model.specDraft (V := V)).no_second_vote_in late vote = true := by
+    (∀ u ∈ late, u = vote ∨ u.val_index ≠ vote.val_index) → (Model.spec (V := V)).no_second_vote_in late vote = true := by
   intro late vote h
-  rw [specDraft_no_second_vote_in_eq]
+  rw [spec_no_second_vote_in_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).no_second_vote_in_of_forall h
 
-/-- The field `proposer_view_set_clock_slot` of `ForkChoiceFacts` at `Model.specDraft`: setting the
+/-- The field `proposer_view_set_clock_slot` of `ForkChoiceFacts` at `Model.spec`: setting the
     store's time and slot does not change its slot-`k` proposer view. -/
-theorem specDraft_proposer_view_set_clock_slot :
-    ∀ (st : (Model.specDraft (V := V)).S) (t : Int) (s k : Slot),
-    (Model.specDraft (V := V)).proposer_view ((Model.specDraft (V := V)).store_with_t_s st t s).toHealing.toFG.toSG.toGoldfishStore k =
-      (Model.specDraft (V := V)).proposer_view st.toHealing.toFG.toSG.toGoldfishStore k :=
+theorem spec_proposer_view_set_clock_slot :
+    ∀ (st : (Model.spec (V := V)).S) (t : Int) (s k : Slot),
+    (Model.spec (V := V)).proposer_view ((Model.spec (V := V)).store_with_t_s st t s).toHealing.toFG.toSG.toGoldfishStore k =
+      (Model.spec (V := V)).proposer_view st.toHealing.toFG.toSG.toGoldfishStore k :=
   fun _ _ _ _ => rfl
 
-/-- The field `get_fg_root_toHealing_eq_of_fields` of `ForkChoiceFacts` at `Model.specDraftBase`:
+/-- The field `get_fg_root_toHealing_eq_of_fields` of `ForkChoiceFacts` at `Model.specBase`:
     two stores with the same finalized block, justified block, justified height and height maximum
     have the same FG root. -/
-theorem specDraftBase_get_fg_root_toHealing_eq_of_fields :
-    ∀ {st st' : (Model.specDraftBase (V := V)).S} (hF : st.F = st'.F) (hJ : st.J = st'.J) (hhj : st.h_j = st'.h_j) (hmax : st.h_max = st'.h_max), (Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st).toFG = (Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st').toFG := by
+theorem specBase_get_fg_root_toHealing_eq_of_fields :
+    ∀ {st st' : (Model.specBase (V := V)).S} (hF : st.F = st'.F) (hJ : st.J = st'.J) (hhj : st.h_j = st'.h_j) (hmax : st.h_max = st'.h_max), (Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st).toFG = (Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st').toFG := by
   intro st st' hF hJ hhj hmax
   have := (Model.vocabulary_facts_forkChoice (V := V)).get_fg_root_toHealing_eq_of_fields (st := st.toProof) (st' := st'.toProof)
   sd_normalize
   exact this hF hJ hhj hmax
 
-/-- The field `get_fg_root_toHealing_eq_of_fields` of `ForkChoiceFacts` at `Model.specDraft`: two
+/-- The field `get_fg_root_toHealing_eq_of_fields` of `ForkChoiceFacts` at `Model.spec`: two
     stores with the same finalized block, justified block, justified height and height maximum have
     the same FG root. -/
-theorem specDraft_get_fg_root_toHealing_eq_of_fields :
-    ∀ {st st' : (Model.specDraft (V := V)).S} (hF : st.F = st'.F) (hJ : st.J = st'.J) (hhj : st.h_j = st'.h_j) (hmax : st.h_max = st'.h_max), (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG = (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st').toFG :=
-  fun {st} {st'} hF hJ hhj hmax => specDraftBase_get_fg_root_toHealing_eq_of_fields (st := st.val) (st' := st'.val) hF hJ hhj hmax
+theorem spec_get_fg_root_toHealing_eq_of_fields :
+    ∀ {st st' : (Model.spec (V := V)).S} (hF : st.F = st'.F) (hJ : st.J = st'.J) (hhj : st.h_j = st'.h_j) (hmax : st.h_max = st'.h_max), (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG = (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st').toFG :=
+  fun {st} {st'} hF hJ hhj hmax => specBase_get_fg_root_toHealing_eq_of_fields (st := st.val) (st' := st'.val) hF hJ hhj hmax
 
-/-- The field `get_fg_root_toHealing_of_eq` of `ForkChoiceFacts` at `Model.specDraftBase`: when the
+/-- The field `get_fg_root_toHealing_of_eq` of `ForkChoiceFacts` at `Model.specBase`: when the
     store's height maximum is its justified height plus one, its FG root is its justified block. -/
-theorem specDraftBase_get_fg_root_toHealing_of_eq :
-    ∀ (st : (Model.specDraftBase (V := V)).S) (h : st.h_max = st.h_j + 1), (Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st).toFG = st.J := by
+theorem specBase_get_fg_root_toHealing_of_eq :
+    ∀ (st : (Model.specBase (V := V)).S) (h : st.h_max = st.h_j + 1), (Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st).toFG = st.J := by
   intro st h
   have := (Model.vocabulary_facts_forkChoice (V := V)).get_fg_root_toHealing_of_eq st.toProof
   sd_normalize
   exact this h
 
-/-- The field `get_fg_root_toHealing_of_eq` of `ForkChoiceFacts` at `Model.specDraft`: when the
+/-- The field `get_fg_root_toHealing_of_eq` of `ForkChoiceFacts` at `Model.spec`: when the
     store's height maximum is its justified height plus one, its FG root is its justified block. -/
-theorem specDraft_get_fg_root_toHealing_of_eq :
-    ∀ (st : (Model.specDraft (V := V)).S) (h : st.h_max = st.h_j + 1), (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG = st.J :=
-  fun st h => specDraftBase_get_fg_root_toHealing_of_eq st.val h
+theorem spec_get_fg_root_toHealing_of_eq :
+    ∀ (st : (Model.spec (V := V)).S) (h : st.h_max = st.h_j + 1), (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG = st.J :=
+  fun st h => specBase_get_fg_root_toHealing_of_eq st.val h
 
-/-- The field `get_fg_root_toHealing_of_ne` of `ForkChoiceFacts` at `Model.specDraftBase`: when the
+/-- The field `get_fg_root_toHealing_of_ne` of `ForkChoiceFacts` at `Model.specBase`: when the
     store's height maximum is not its justified height plus one, its FG root is its finalized block. -/
-theorem specDraftBase_get_fg_root_toHealing_of_ne :
-    ∀ (st : (Model.specDraftBase (V := V)).S) (h : ¬ st.h_max = st.h_j + 1), (Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st).toFG = st.F := by
+theorem specBase_get_fg_root_toHealing_of_ne :
+    ∀ (st : (Model.specBase (V := V)).S) (h : ¬ st.h_max = st.h_j + 1), (Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st).toFG = st.F := by
   intro st h
   have := (Model.vocabulary_facts_forkChoice (V := V)).get_fg_root_toHealing_of_ne st.toProof
   sd_normalize
   exact this h
 
-/-- The field `get_fg_root_toHealing_of_ne` of `ForkChoiceFacts` at `Model.specDraft`: when the
+/-- The field `get_fg_root_toHealing_of_ne` of `ForkChoiceFacts` at `Model.spec`: when the
     store's height maximum is not its justified height plus one, its FG root is its finalized block. -/
-theorem specDraft_get_fg_root_toHealing_of_ne :
-    ∀ (st : (Model.specDraft (V := V)).S) (h : ¬ st.h_max = st.h_j + 1), (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG = st.F :=
-  fun st h => specDraftBase_get_fg_root_toHealing_of_ne st.val h
+theorem spec_get_fg_root_toHealing_of_ne :
+    ∀ (st : (Model.spec (V := V)).S) (h : ¬ st.h_max = st.h_j + 1), (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG = st.F :=
+  fun st h => specBase_get_fg_root_toHealing_of_ne st.val h
 
-/-- The field `mem_latest_window` of `ForkChoiceFacts` at `Model.specDraft`: if `r − eta ≤ k` and
+/-- The field `mem_latest_window` of `ForkChoiceFacts` at `Model.spec`: if `r − eta ≤ k` and
     `k < r`, then `k` is in `latest_window eta r`. -/
-theorem specDraft_mem_latest_window :
-    ∀ {eta r k : Round} (hlo : r - eta ≤ k) (hhi : k < r), k ∈ (Model.specDraft (V := V)).latest_window eta r := by
+theorem spec_mem_latest_window :
+    ∀ {eta r k : Round} (hlo : r - eta ≤ k) (hhi : k < r), k ∈ (Model.spec (V := V)).latest_window eta r := by
   intro eta r k hlo hhi
-  rw [specDraft_latest_window_eq]
+  rw [spec_latest_window_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_latest_window hlo hhi
 
-/-- The field `window_bounds` of `ForkChoiceFacts` at `Model.specDraft`: a round `k` in
+/-- The field `window_bounds` of `ForkChoiceFacts` at `Model.spec`: a round `k` in
     `latest_window eta r` has `r − eta ≤ k` and `k < r`. -/
-theorem specDraft_window_bounds :
-    ∀ {eta r k : Nat} (hk : k ∈ (Model.specDraft (V := V)).latest_window eta r), r - eta ≤ k ∧ k < r := by
+theorem spec_window_bounds :
+    ∀ {eta r k : Nat} (hk : k ∈ (Model.spec (V := V)).latest_window eta r), r - eta ≤ k ∧ k < r := by
   intro eta r k hk
-  rw [specDraft_latest_window_eq] at hk
+  rw [spec_latest_window_eq] at hk
   exact (Model.vocabulary_facts_forkChoice (V := V)).window_bounds hk
 
-/-- The field `preceq_get_fg_root_of_F` of `ForkChoiceFacts` at `Model.specDraftBase`: if the FG
+/-- The field `preceq_get_fg_root_of_F` of `ForkChoiceFacts` at `Model.specBase`: if the FG
     store's finalized block is an ancestor of its justified block or that block, it is an ancestor
     of its FG root or that root. -/
-theorem specDraftBase_preceq_get_fg_root_of_F :
-    ∀ {st : (Model.specDraftBase (V := V)).FGS} (hFJ : Block.preceq st.F st.J = true), Block.preceq st.F ((Model.specDraftBase (V := V)).get_fg_root st) = true := by
+theorem specBase_preceq_get_fg_root_of_F :
+    ∀ {st : (Model.specBase (V := V)).FGS} (hFJ : Block.preceq st.F st.J = true), Block.preceq st.F ((Model.specBase (V := V)).get_fg_root st) = true := by
   intro st hFJ
   have := (Model.vocabulary_facts_forkChoice (V := V)).preceq_get_fg_root_of_F (st := st.toProof.toHealing.toFG)
   sd_normalize
   exact this hFJ
 
-/-- The field `preceq_get_fg_root_of_F` of `ForkChoiceFacts` at `Model.specDraft`: if the FG store's
+/-- The field `preceq_get_fg_root_of_F` of `ForkChoiceFacts` at `Model.spec`: if the FG store's
     finalized block is an ancestor of its justified block or that block, it is an ancestor of its FG
     root or that root. -/
-theorem specDraft_preceq_get_fg_root_of_F :
-    ∀ {st : (Model.specDraft (V := V)).FGS} (hFJ : Block.preceq st.F st.J = true), Block.preceq st.F ((Model.specDraft (V := V)).get_fg_root st) = true :=
-  fun {st} hFJ => specDraftBase_preceq_get_fg_root_of_F (st := st.val) hFJ
+theorem spec_preceq_get_fg_root_of_F :
+    ∀ {st : (Model.spec (V := V)).FGS} (hFJ : Block.preceq st.F st.J = true), Block.preceq st.F ((Model.spec (V := V)).get_fg_root st) = true :=
+  fun {st} hFJ => specBase_preceq_get_fg_root_of_F (st := st.val) hFJ
 
-/-- The field `pred_mem_latest_window` of `ForkChoiceFacts` at `Model.specDraft`: if `1 ≤ etaSG` and
+/-- The field `pred_mem_latest_window` of `ForkChoiceFacts` at `Model.spec`: if `1 ≤ etaSG` and
     `0 < r`, then `r − 1` is in `latest_window etaSG r`. -/
-theorem specDraft_pred_mem_latest_window :
-    ∀ (etaSG r : Round) (heta : 1 ≤ etaSG) (hr : 0 < r), r - 1 ∈ (Model.specDraft (V := V)).latest_window etaSG r := by
+theorem spec_pred_mem_latest_window :
+    ∀ (etaSG r : Round) (heta : 1 ≤ etaSG) (hr : 0 < r), r - 1 ∈ (Model.spec (V := V)).latest_window etaSG r := by
   intro etaSG r heta hr
-  rw [specDraft_latest_window_eq]
+  rw [spec_latest_window_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).pred_mem_latest_window etaSG r heta hr
 
-/-- The field `voters_count_le_committee` of `ForkChoiceFacts` at `Model.specDraft`: for a vote set
+/-- The field `voters_count_le_committee` of `ForkChoiceFacts` at `Model.spec`: for a vote set
     valid at slot `s`, the participant count is at most the size of slot `s`'s committee. -/
-theorem specDraft_voters_count_le_committee :
-    ∀ (E : Env V) (late : Finset (GoldfishVote V)) (s : Slot) (hvalid : Protocol.VoteSetValid E s late), (Model.specDraft (V := V)).voters_count E late s ≤ (E.committee s).card := by
+theorem spec_voters_count_le_committee :
+    ∀ (E : Env V) (late : Finset (GoldfishVote V)) (s : Slot) (hvalid : Protocol.VoteSetValid E s late), (Model.spec (V := V)).voters_count E late s ≤ (E.committee s).card := by
   intro E late s hvalid
-  rw [specDraft_voters_count_eq]
+  rw [spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).voters_count_le_committee E late s hvalid
 
-/-- The field `card_le_voters_count_of_participates` of `ForkChoiceFacts` at `Model.specDraft`: if
+/-- The field `card_le_voters_count_of_participates` of `ForkChoiceFacts` at `Model.spec`: if
     every validator of `X` participates in `votes`, then `X` has at most as many members as the
     participant count of `votes`. -/
-theorem specDraft_card_le_voters_count_of_participates :
-    ∀ (E : Env V) (votes : Finset (GoldfishVote V)) (s : Slot) (X : Finset V) (h : ∀ x ∈ X, (Model.specDraft (V := V)).participates votes x = true), X.card ≤ (Model.specDraft (V := V)).voters_count E votes s := by
+theorem spec_card_le_voters_count_of_participates :
+    ∀ (E : Env V) (votes : Finset (GoldfishVote V)) (s : Slot) (X : Finset V) (h : ∀ x ∈ X, (Model.spec (V := V)).participates votes x = true), X.card ≤ (Model.spec (V := V)).voters_count E votes s := by
   intro E votes s X h
-  rw [specDraft_participates_eq] at h
-  rw [specDraft_voters_count_eq]
+  rw [spec_participates_eq] at h
+  rw [spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).card_le_voters_count_of_participates E votes s X h
 
-/-- The field `fgRoot_compatible_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.specDraftBase`:
+/-- The field `fgRoot_compatible_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.specBase`:
     the FG root of `stH` is compatible with `T` when the finalized block is an ancestor of `T` and,
     if `h_max = h_j + 1`, the justified block is compatible with `T`. -/
-theorem specDraftBase_fgRoot_compatible_ofJustifiedBranch :
-    ∀ {stH : (Model.specDraftBase (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J T = true), Block.compatible ((Model.specDraftBase (V := V)).get_fg_root stH.toFG) T = true := by
+theorem specBase_fgRoot_compatible_ofJustifiedBranch :
+    ∀ {stH : (Model.specBase (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J T = true), Block.compatible ((Model.specBase (V := V)).get_fg_root stH.toFG) T = true := by
   intro stH T hF hJ
   have := (Model.vocabulary_facts_forkChoice (V := V)).fgRoot_compatible_ofJustifiedBranch (stH := stH.toProof.toHealing) (T := T)
   sd_normalize
   exact this hF hJ
 
-/-- The field `fgRoot_compatible_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.specDraft`: the
+/-- The field `fgRoot_compatible_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.spec`: the
     FG root of `stH` is compatible with `T` when the finalized block is an ancestor of `T` and, if
     `h_max = h_j + 1`, the justified block is compatible with `T`. -/
-theorem specDraft_fgRoot_compatible_ofJustifiedBranch :
-    ∀ {stH : (Model.specDraft (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J T = true), Block.compatible ((Model.specDraft (V := V)).get_fg_root stH.toFG) T = true :=
-  fun {stH} {T} hF hJ => specDraftBase_fgRoot_compatible_ofJustifiedBranch (stH := stH.val) (T := T) hF hJ
+theorem spec_fgRoot_compatible_ofJustifiedBranch :
+    ∀ {stH : (Model.spec (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J T = true), Block.compatible ((Model.spec (V := V)).get_fg_root stH.toFG) T = true :=
+  fun {stH} {T} hF hJ => specBase_fgRoot_compatible_ofJustifiedBranch (stH := stH.val) (T := T) hF hJ
 
-/-- The field `fgRoot_compatible_of_compatible` of `ForkChoiceFacts` at `Model.specDraftBase`: the
+/-- The field `fgRoot_compatible_of_compatible` of `ForkChoiceFacts` at `Model.specBase`: the
     FG root of `stH` is compatible with `B` when the finalized block is and, if `h_max = h_j + 1`,
     the justified block is too. -/
-theorem specDraftBase_fgRoot_compatible_of_compatible :
-    ∀ {stH : (Model.specDraftBase (V := V)).HS} {B : Block V} (hF : Block.compatible stH.toFG.F B = true) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J B = true), Block.compatible ((Model.specDraftBase (V := V)).get_fg_root stH.toFG) B = true := by
+theorem specBase_fgRoot_compatible_of_compatible :
+    ∀ {stH : (Model.specBase (V := V)).HS} {B : Block V} (hF : Block.compatible stH.toFG.F B = true) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J B = true), Block.compatible ((Model.specBase (V := V)).get_fg_root stH.toFG) B = true := by
   intro stH B hF hJ
   have := (Model.vocabulary_facts_forkChoice (V := V)).fgRoot_compatible_of_compatible (stH := stH.toProof.toHealing) (B := B)
   sd_normalize
   exact this hF hJ
 
-/-- The field `fgRoot_compatible_of_compatible` of `ForkChoiceFacts` at `Model.specDraft`: the FG
+/-- The field `fgRoot_compatible_of_compatible` of `ForkChoiceFacts` at `Model.spec`: the FG
     root of `stH` is compatible with `B` when the finalized block is and, if `h_max = h_j + 1`, the
     justified block is too. -/
-theorem specDraft_fgRoot_compatible_of_compatible :
-    ∀ {stH : (Model.specDraft (V := V)).HS} {B : Block V} (hF : Block.compatible stH.toFG.F B = true) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J B = true), Block.compatible ((Model.specDraft (V := V)).get_fg_root stH.toFG) B = true :=
-  fun {stH} {B} hF hJ => specDraftBase_fgRoot_compatible_of_compatible (stH := stH.val) (B := B) hF hJ
+theorem spec_fgRoot_compatible_of_compatible :
+    ∀ {stH : (Model.spec (V := V)).HS} {B : Block V} (hF : Block.compatible stH.toFG.F B = true) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.compatible stH.toFG.J B = true), Block.compatible ((Model.spec (V := V)).get_fg_root stH.toFG) B = true :=
+  fun {stH} {B} hF hJ => specBase_fgRoot_compatible_of_compatible (stH := stH.val) (B := B) hF hJ
 
-/-- The field `fgRoot_preceq` of `ForkChoiceFacts` at `Model.specDraftBase`: the FG root is an
+/-- The field `fgRoot_preceq` of `ForkChoiceFacts` at `Model.specBase`: the FG root is an
     ancestor of `T` when the finalized and justified blocks both are. -/
-theorem specDraftBase_fgRoot_preceq :
-    ∀ {stH : (Model.specDraftBase (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : Block.Preceq stH.toFG.J T), Block.Preceq ((Model.specDraftBase (V := V)).get_fg_root stH.toFG) T := by
+theorem specBase_fgRoot_preceq :
+    ∀ {stH : (Model.specBase (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : Block.Preceq stH.toFG.J T), Block.Preceq ((Model.specBase (V := V)).get_fg_root stH.toFG) T := by
   intro stH T hF hJ
   have := (Model.vocabulary_facts_forkChoice (V := V)).fgRoot_preceq (stH := stH.toProof.toHealing) (T := T)
   sd_normalize
   exact this hF hJ
 
-/-- The field `fgRoot_preceq` of `ForkChoiceFacts` at `Model.specDraft`: the FG root is an ancestor
+/-- The field `fgRoot_preceq` of `ForkChoiceFacts` at `Model.spec`: the FG root is an ancestor
     of `T` when the finalized and justified blocks both are. -/
-theorem specDraft_fgRoot_preceq :
-    ∀ {stH : (Model.specDraft (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : Block.Preceq stH.toFG.J T), Block.Preceq ((Model.specDraft (V := V)).get_fg_root stH.toFG) T :=
-  fun {stH} {T} hF hJ => specDraftBase_fgRoot_preceq (stH := stH.val) (T := T) hF hJ
+theorem spec_fgRoot_preceq :
+    ∀ {stH : (Model.spec (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : Block.Preceq stH.toFG.J T), Block.Preceq ((Model.spec (V := V)).get_fg_root stH.toFG) T :=
+  fun {stH} {T} hF hJ => specBase_fgRoot_preceq (stH := stH.val) (T := T) hF hJ
 
-/-- The field `fgRoot_preceq_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.specDraftBase`: the
+/-- The field `fgRoot_preceq_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.specBase`: the
     FG root of `stH` is an ancestor of `T` when the finalized block is and, if `h_max = h_j + 1`,
     the justified block is too. -/
-theorem specDraftBase_fgRoot_preceq_ofJustifiedBranch :
-    ∀ {stH : (Model.specDraftBase (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.Preceq stH.toFG.J T), Block.Preceq ((Model.specDraftBase (V := V)).get_fg_root stH.toFG) T := by
+theorem specBase_fgRoot_preceq_ofJustifiedBranch :
+    ∀ {stH : (Model.specBase (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.Preceq stH.toFG.J T), Block.Preceq ((Model.specBase (V := V)).get_fg_root stH.toFG) T := by
   intro stH T hF hJ
   have := (Model.vocabulary_facts_forkChoice (V := V)).fgRoot_preceq_ofJustifiedBranch (stH := stH.toProof.toHealing) (T := T)
   sd_normalize
   exact this hF hJ
 
-/-- The field `fgRoot_preceq_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.specDraft`: the FG
+/-- The field `fgRoot_preceq_ofJustifiedBranch` of `ForkChoiceFacts` at `Model.spec`: the FG
     root of `stH` is an ancestor of `T` when the finalized block is and, if `h_max = h_j + 1`, the
     justified block is too. -/
-theorem specDraft_fgRoot_preceq_ofJustifiedBranch :
-    ∀ {stH : (Model.specDraft (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.Preceq stH.toFG.J T), Block.Preceq ((Model.specDraft (V := V)).get_fg_root stH.toFG) T :=
-  fun {stH} {T} hF hJ => specDraftBase_fgRoot_preceq_ofJustifiedBranch (stH := stH.val) (T := T) hF hJ
+theorem spec_fgRoot_preceq_ofJustifiedBranch :
+    ∀ {stH : (Model.spec (V := V)).HS} {T : Block V} (hF : Block.Preceq stH.toFG.F T) (hJ : stH.toFG.h_max = stH.toFG.h_j + 1 → Block.Preceq stH.toFG.J T), Block.Preceq ((Model.spec (V := V)).get_fg_root stH.toFG) T :=
+  fun {stH} {T} hF hJ => specBase_fgRoot_preceq_ofJustifiedBranch (stH := stH.val) (T := T) hF hJ
 
-/-- The field `finalized_preceq_get_fg_root` of `ForkChoiceFacts` at `Model.specDraftBase`: if the
+/-- The field `finalized_preceq_get_fg_root` of `ForkChoiceFacts` at `Model.specBase`: if the
     store's finalized block is an ancestor of its justified block, it is an ancestor of its FG root. -/
-theorem specDraftBase_finalized_preceq_get_fg_root :
-    ∀ (st : (Model.specDraftBase (V := V)).S) (hFJ : Block.Preceq st.F st.J), Block.Preceq st.F ((Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st).toFG) := by
+theorem specBase_finalized_preceq_get_fg_root :
+    ∀ (st : (Model.specBase (V := V)).S) (hFJ : Block.Preceq st.F st.J), Block.Preceq st.F ((Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st).toFG) := by
   intro st hFJ
   have := (Model.vocabulary_facts_forkChoice (V := V)).finalized_preceq_get_fg_root st.toProof
   sd_normalize
   exact this hFJ
 
-/-- The field `finalized_preceq_get_fg_root` of `ForkChoiceFacts` at `Model.specDraft`: if the
+/-- The field `finalized_preceq_get_fg_root` of `ForkChoiceFacts` at `Model.spec`: if the
     store's finalized block is an ancestor of its justified block, it is an ancestor of its FG root. -/
-theorem specDraft_finalized_preceq_get_fg_root :
-    ∀ (st : (Model.specDraft (V := V)).S) (hFJ : Block.Preceq st.F st.J), Block.Preceq st.F ((Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG) :=
-  fun st hFJ => specDraftBase_finalized_preceq_get_fg_root st.val hFJ
+theorem spec_finalized_preceq_get_fg_root :
+    ∀ (st : (Model.spec (V := V)).S) (hFJ : Block.Preceq st.F st.J), Block.Preceq st.F ((Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG) :=
+  fun st hFJ => specBase_finalized_preceq_get_fg_root st.val hFJ
 
-/-- The field `get_fg_root_eq_J_or_F` of `ForkChoiceFacts` at `Model.specDraftBase`: a store's FG
+/-- The field `get_fg_root_eq_J_or_F` of `ForkChoiceFacts` at `Model.specBase`: a store's FG
     root is its justified block `J` or its finalized block `F`. -/
-theorem specDraftBase_get_fg_root_eq_J_or_F :
-    ∀ (st : (Model.specDraftBase (V := V)).S), (Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st).toFG = st.J ∨
-    (Model.specDraftBase (V := V)).get_fg_root ((Model.specDraftBase (V := V)).toHealing st).toFG = st.F := by
+theorem specBase_get_fg_root_eq_J_or_F :
+    ∀ (st : (Model.specBase (V := V)).S), (Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st).toFG = st.J ∨
+    (Model.specBase (V := V)).get_fg_root ((Model.specBase (V := V)).toHealing st).toFG = st.F := by
   intro st
   have := (Model.vocabulary_facts_forkChoice (V := V)).get_fg_root_eq_J_or_F st.toProof
   sd_normalize
   exact this
 
-/-- The field `get_fg_root_eq_J_or_F` of `ForkChoiceFacts` at `Model.specDraft`: a store's FG root
+/-- The field `get_fg_root_eq_J_or_F` of `ForkChoiceFacts` at `Model.spec`: a store's FG root
     is its justified block `J` or its finalized block `F`. -/
-theorem specDraft_get_fg_root_eq_J_or_F :
-    ∀ (st : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG = st.J ∨
-    (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG = st.F :=
-  fun st => specDraftBase_get_fg_root_eq_J_or_F st.val
+theorem spec_get_fg_root_eq_J_or_F :
+    ∀ (st : (Model.spec (V := V)).S), (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG = st.J ∨
+    (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG = st.F :=
+  fun st => specBase_get_fg_root_eq_J_or_F st.val
 
-/-- The field `mem_latest_window_ge` of `ForkChoiceFacts` at `Model.specDraft`: a round in
+/-- The field `mem_latest_window_ge` of `ForkChoiceFacts` at `Model.spec`: a round in
     `latest_window eta r` is at least `r − eta`. -/
-theorem specDraft_mem_latest_window_ge :
-    ∀ {eta r k : Round} (hk : k ∈ (Model.specDraft (V := V)).latest_window eta r), r - eta ≤ k := by
+theorem spec_mem_latest_window_ge :
+    ∀ {eta r k : Round} (hk : k ∈ (Model.spec (V := V)).latest_window eta r), r - eta ≤ k := by
   intro eta r k hk
-  rw [specDraft_latest_window_eq] at hk
+  rw [spec_latest_window_eq] at hk
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_latest_window_ge hk
 
-/-- The field `mem_latest_window_lt` of `ForkChoiceFacts` at `Model.specDraft`: a round in
+/-- The field `mem_latest_window_lt` of `ForkChoiceFacts` at `Model.spec`: a round in
     `latest_window eta r` is less than `r`. -/
-theorem specDraft_mem_latest_window_lt :
-    ∀ {eta r k : Round} (hk : k ∈ (Model.specDraft (V := V)).latest_window eta r), k < r := by
+theorem spec_mem_latest_window_lt :
+    ∀ {eta r k : Round} (hk : k ∈ (Model.spec (V := V)).latest_window eta r), k < r := by
   intro eta r k hk
-  rw [specDraft_latest_window_eq] at hk
+  rw [spec_latest_window_eq] at hk
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_latest_window_lt hk
 
-/-- The field `proposer_view_eq` of `ForkChoiceFacts` at `Model.specDraftBase`: the slot-`s`
+/-- The field `proposer_view_eq` of `ForkChoiceFacts` at `Model.specBase`: the slot-`s`
     proposer view of `gs` is `gs`'s list of slot-`(s − 1)` Goldfish votes. -/
-theorem specDraftBase_proposer_view_eq :
-    ∀ (gs : (Model.specDraftBase (V := V)).GS) (s : Slot), (Model.specDraftBase (V := V)).proposer_view gs s = gs.gf_votes (s - 1) := by
+theorem specBase_proposer_view_eq :
+    ∀ (gs : (Model.specBase (V := V)).GS) (s : Slot), (Model.specBase (V := V)).proposer_view gs s = gs.gf_votes (s - 1) := by
   intro gs s
   have := (Model.vocabulary_facts_forkChoice (V := V)).proposer_view_eq gs.toProof.toHealing.toFG.toSG.toGoldfishStore s
   change DecoupledConsensusModel.Protocol.proposer_view
@@ -460,16 +460,16 @@ theorem specDraftBase_proposer_view_eq :
   rw [toProof_proposer_view] at this
   exact this
 
-/-- The field `proposer_view_eq` of `ForkChoiceFacts` at `Model.specDraft`: the slot-`s` proposer
+/-- The field `proposer_view_eq` of `ForkChoiceFacts` at `Model.spec`: the slot-`s` proposer
     view of `gs` is `gs`'s list of slot-`(s − 1)` Goldfish votes. -/
-theorem specDraft_proposer_view_eq :
-    ∀ (gs : (Model.specDraft (V := V)).GS) (s : Slot), (Model.specDraft (V := V)).proposer_view gs s = gs.gf_votes (s - 1) :=
-  fun gs s => specDraftBase_proposer_view_eq gs.val s
+theorem spec_proposer_view_eq :
+    ∀ (gs : (Model.spec (V := V)).GS) (s : Slot), (Model.spec (V := V)).proposer_view gs s = gs.gf_votes (s - 1) :=
+  fun gs s => specBase_proposer_view_eq gs.val s
 
-/-- The field `proposer_view_toFinset` of `ForkChoiceFacts` at `Model.specDraftBase`: the votes of
+/-- The field `proposer_view_toFinset` of `ForkChoiceFacts` at `Model.specBase`: the votes of
     the slot-`s` proposer view of `gs` are `gs_pool gs (s − 1)`. -/
-theorem specDraftBase_proposer_view_toFinset :
-    ∀ (gs : (Model.specDraftBase (V := V)).GS) (s : Slot), ((Model.specDraftBase (V := V)).proposer_view gs s).toFinset = ((Model.specDraftBase (V := V)).gs_pool gs (s - 1)) := by
+theorem specBase_proposer_view_toFinset :
+    ∀ (gs : (Model.specBase (V := V)).GS) (s : Slot), ((Model.specBase (V := V)).proposer_view gs s).toFinset = ((Model.specBase (V := V)).gs_pool gs (s - 1)) := by
   intro gs s
   have := (Model.vocabulary_facts_forkChoice (V := V)).proposer_view_toFinset gs.toProof.toHealing.toFG.toSG.toGoldfishStore s
   change (DecoupledConsensusModel.Protocol.proposer_view
@@ -479,178 +479,227 @@ theorem specDraftBase_proposer_view_toFinset :
   rw [toProof_proposer_view, toProof_gs_pool] at this
   exact this
 
-/-- The field `proposer_view_toFinset` of `ForkChoiceFacts` at `Model.specDraft`: the votes of the
+/-- The field `proposer_view_toFinset` of `ForkChoiceFacts` at `Model.spec`: the votes of the
     slot-`s` proposer view of `gs` are `gs_pool gs (s − 1)`. -/
-theorem specDraft_proposer_view_toFinset :
-    ∀ (gs : (Model.specDraft (V := V)).GS) (s : Slot), ((Model.specDraft (V := V)).proposer_view gs s).toFinset = ((Model.specDraft (V := V)).gs_pool gs (s - 1)) :=
-  fun gs s => specDraftBase_proposer_view_toFinset gs.val s
+theorem spec_proposer_view_toFinset :
+    ∀ (gs : (Model.spec (V := V)).GS) (s : Slot), ((Model.spec (V := V)).proposer_view gs s).toFinset = ((Model.spec (V := V)).gs_pool gs (s - 1)) :=
+  fun gs s => specBase_proposer_view_toFinset gs.val s
 
-/-- The field `voters_count_eq_of_participates` of `ForkChoiceFacts` at `Model.specDraft`: two vote
+/-- The field `voters_count_eq_of_participates` of `ForkChoiceFacts` at `Model.spec`: two vote
     sets with the same participating validators have the same participant count, at any two slots. -/
-theorem specDraft_voters_count_eq_of_participates :
-    ∀ (E : Env V) {votes votes' : Finset (GoldfishVote V)} (s s' : Slot) (h : ∀ w : V, (Model.specDraft (V := V)).participates votes w = (Model.specDraft (V := V)).participates votes' w), (Model.specDraft (V := V)).voters_count E votes s = (Model.specDraft (V := V)).voters_count E votes' s' := by
+theorem spec_voters_count_eq_of_participates :
+    ∀ (E : Env V) {votes votes' : Finset (GoldfishVote V)} (s s' : Slot) (h : ∀ w : V, (Model.spec (V := V)).participates votes w = (Model.spec (V := V)).participates votes' w), (Model.spec (V := V)).voters_count E votes s = (Model.spec (V := V)).voters_count E votes' s' := by
   intro E votes votes' s s' h
-  rw [specDraft_participates_eq] at h
-  rw [specDraft_voters_count_eq]
+  rw [spec_participates_eq] at h
+  rw [spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).voters_count_eq_of_participates E s s' h
 
 /-! ## The Goldfish fork choice, the walk and the supporters -/
 
-/-- The field `goldfish_passes_cone` of `ForkChoiceFacts` at `Model.specDraft`: if an honest,
+/-- The field `goldfish_passes_cone` of `ForkChoiceFacts` at `Model.spec`: if an honest,
     non-equivocating majority of slot `k`'s committee has votes in `support ⊆ votes`, valid for slot
     `k`, whose heads resolve to descendants of `B`, `A` is an ancestor of `B`, and the blocks after
     `A` up to `B` are in `tree`, then every outcome of the Goldfish fork choice from `A` over `tree`
     is a descendant of `B`. -/
-theorem specDraft_goldfish_passes_cone :
-    ∀ (E : Env V) (σ : Block V → (Model.specDraft (V := V)).CS) (h_max : Height) (T tree : Finset (Block V)) (cur : Slot) (votes support : Finset (GoldfishVote V)) (k : Slot) (Hon : Finset V) {A B : Block V} (hmaj : (E.committee k).card < 2 * ((E.committee k) ∩ Hon).card) (hcounted : votes ⊆ votes) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee k, x ∈ Hon → (Model.specDraft (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee k, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = k ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hvalid : Protocol.VoteSetValid E k votes) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (X : Block V) (hX : (Model.specDraft (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support k ⇢ X), Block.Preceq B X
+theorem spec_goldfish_passes_cone :
+    ∀ (E : Env V) (σ : Block V → (Model.spec (V := V)).CS) (h_max : Height) (T tree : Finset (Block V)) (cur : Slot) (votes support : Finset (GoldfishVote V)) (k : Slot) (Hon : Finset V) {A B : Block V} (hmaj : (E.committee k).card < 2 * ((E.committee k) ∩ Hon).card) (hcounted : votes ⊆ votes) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee k, x ∈ Hon → (Model.spec (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee k, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = k ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hvalid : Protocol.VoteSetValid E k votes) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (X : Block V) (hX : (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support k ⇢ X), Block.Preceq B X
     := by
   intro E σ h_max T tree cur votes support k Hon A B hmaj hcounted hsub hno hvote hvalid hAB hpath X hX
-  rw [ForkChoiceImages.specDraft_equivocates_eq] at hno
+  rw [ForkChoiceImages.spec_equivocates_eq] at hno
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_passes_cone E (fun C => (σ C).toProof)
     h_max T tree cur votes support k Hon hmaj hcounted hsub hno hvote hvalid hAB hpath X
-    (ForkChoiceImages.vocabulary_returns_of_specDraft_goldfish_fork_choice E σ h_max T cur A tree
+    (ForkChoiceImages.vocabulary_returns_of_spec_goldfish_fork_choice E σ h_max T cur A tree
       votes support k hX)
 
-/-- The field `ghost_passes_cone` of `ForkChoiceFacts` at `Model.specDraft`: if
+/-- The field `ghost_passes_cone` of `ForkChoiceFacts` at `Model.spec`: if
     `support ⊆ votes ⊆ late`, the late votes are valid for slot `s`, an honest, non-equivocating
     majority of slot `s`'s committee has votes in `support` whose heads resolve to descendants of
     `B`, `A` is an ancestor of `B`, and the blocks after `A` up to `B` are in `tree`, then every
     outcome of the walk `ghost` from `A`, scored by a choice of Goldfish scores and admitting blocks
     whose score is more than half of the late voters, is a descendant of `B`. -/
-theorem specDraft_ghost_passes_cone :
-    ∀ (E : Env V) (T tree : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) {A B : Block V} (hmaj : (E.committee s).card < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → (Model.specDraft (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hvalid : Protocol.VoteSetValid E s late) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (score : Block V → ℕ) (hscore : ∀ C, (Model.specDraft (V := V)).goldfish_score E T votes support s C ⇢ score C) (X : Block V) (hX : (Model.specDraft (V := V)).ghost A tree score (fun C => decide ((Model.specDraft (V := V)).voters_count E late s < 2 * score C)) ⇢ X), Block.Preceq B X
+theorem spec_ghost_passes_cone :
+    ∀ (E : Env V) (T tree : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) {A B : Block V} (hmaj : (E.committee s).card < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → (Model.spec (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hvalid : Protocol.VoteSetValid E s late) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (score : Block V → ℕ) (hscore : ∀ C, (Model.spec (V := V)).goldfish_score E T votes support s C ⇢ score C) (X : Block V) (hX : (Model.spec (V := V)).ghost A tree score (fun C => decide ((Model.spec (V := V)).voters_count E late s < 2 * score C)) ⇢ X), Block.Preceq B X
     := by
-  rw [ForkChoiceImages.specDraft_equivocates_eq, ForkChoiceImages.specDraft_goldfish_score_eq,
-    ForkChoiceImages.specDraft_ghost_eq, ForkChoiceImages.specDraft_voters_count_eq]
+  rw [ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_goldfish_score_eq,
+    ForkChoiceImages.spec_ghost_eq, ForkChoiceImages.spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_passes_cone
 
-/-- The field `eligible_compatible` of `ForkChoiceFacts` at `Model.specDraft`: if each of two views
+/-- The field `goldfish_passes_cone_count` of `ForkChoiceFacts` at `Model.spec`: if the voters
+    of `votes` at slot `k` are fewer than twice the committee members in `Hon`, none of those
+    equivocates, each has a vote in `support ⊆ votes` whose head resolves to a descendant of `B`,
+    `A` is an ancestor of `B`, and the blocks after `A` up to `B` are in `tree`, then every outcome
+    of the Goldfish fork choice from `A` over `tree` is a descendant of `B`. -/
+theorem spec_goldfish_passes_cone_count :
+    ∀ (E : Env V) (σ : Block V → (Model.spec (V := V)).CS) (h_max : Height) (T tree : Finset (Block V)) (cur : Slot) (votes support : Finset (GoldfishVote V)) (k : Slot) (Hon : Finset V) {A B : Block V} (hcount : (Model.spec (V := V)).voters_count E votes k < 2 * ((E.committee k) ∩ Hon).card) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee k, x ∈ Hon → (Model.spec (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee k, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = k ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (X : Block V) (hX : (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support k ⇢ X), Block.Preceq B X
+    := by
+  intro E σ h_max T tree cur votes support k Hon A B hcount hsub hno hvote hAB hpath X hX
+  rw [ForkChoiceImages.spec_equivocates_eq] at hno
+  rw [spec_voters_count_eq] at hcount
+  exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_passes_cone_count E (fun C => (σ C).toProof)
+    h_max T tree cur votes support k Hon hcount hsub hno hvote hAB hpath X
+    (ForkChoiceImages.vocabulary_returns_of_spec_goldfish_fork_choice E σ h_max T cur A tree
+      votes support k hX)
+
+/-- The field `ghost_passes_cone_count` of `ForkChoiceFacts` at `Model.spec`: if the voters of
+    `late` at slot `s` are fewer than twice the committee members in `Hon`, `support ⊆ votes ⊆
+    late`, none of those members equivocates, each has a vote in `support` whose head resolves to a
+    descendant of `B`, `A` is an ancestor of `B`, and the blocks after `A` up to `B` are in `tree`,
+    then every outcome of the walk `ghost` from `A`, scored by a choice of Goldfish scores and
+    admitting blocks whose score is more than half of the late voters, is a descendant of `B`. -/
+theorem spec_ghost_passes_cone_count :
+    ∀ (E : Env V) (T tree : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) {A B : Block V} (hcount : (Model.spec (V := V)).voters_count E late s < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → (Model.spec (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (score : Block V → ℕ) (hscore : ∀ C, (Model.spec (V := V)).goldfish_score E T votes support s C ⇢ score C) (X : Block V) (hX : (Model.spec (V := V)).ghost A tree score (fun C => decide ((Model.spec (V := V)).voters_count E late s < 2 * score C)) ⇢ X), Block.Preceq B X
+    := by
+  rw [ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_goldfish_score_eq,
+    ForkChoiceImages.spec_ghost_eq, ForkChoiceImages.spec_voters_count_eq]
+  exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_passes_cone_count
+
+/-- The field `ConeSupport_eligible_count` of `ForkChoiceFacts` at `Model.spec`: if the voters
+    of `late` at slot `s` are fewer than twice the committee members in `Hon`, `support ⊆ votes ⊆
+    late`, none of those members equivocates, each has a vote in `support` whose head resolves to a
+    block `tgt` admits, and `C` is an ancestor of every such block, then the late voters of slot `s`
+    are fewer than twice every Goldfish score of `C`. -/
+theorem spec_ConeSupport_eligible_count :
+    ∀ (E : Env V) (T : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) (tgt : Block V → Prop) {C : Block V} (hcount : (Model.spec (V := V)).voters_count E late s < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → (Model.spec (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X) (hC : ∀ X : Block V, tgt X → Block.preceq C X = true) (g : ℕ) (hg : (Model.spec (V := V)).goldfish_score E T votes support s C ⇢ g), (Model.spec (V := V)).voters_count E late s < 2 * g
+    := by
+  rw [ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_goldfish_score_eq,
+    ForkChoiceImages.spec_voters_count_eq]
+  exact (Model.vocabulary_facts_forkChoice (V := V)).ConeSupport_eligible_count
+
+/-- The field `voters_count_le_card_of_valIndex` of `ForkChoiceFacts` at `Model.spec`: if every
+    vote of `votes` names a member of `X`, the participant count is at most the size of `X`. -/
+theorem spec_voters_count_le_card_of_valIndex :
+    ∀ (E : Env V) (votes : Finset (GoldfishVote V)) (s : Slot) (X : Finset V) (h : ∀ u ∈ votes, u.val_index ∈ X), (Model.spec (V := V)).voters_count E votes s ≤ X.card := by
+  intro E votes s X h
+  rw [spec_voters_count_eq]
+  exact (Model.vocabulary_facts_forkChoice (V := V)).voters_count_le_card_of_valIndex E votes s X h
+
+/-- The field `eligible_compatible` of `ForkChoiceFacts` at `Model.spec`: if each of two views
     counts its early votes with no second vote in its late votes, every vote one view counts is in
     the other's late votes or its validator equivocates there, the two trees resolve counted heads
     to the same block, and each view gives its block a Goldfish score more than half of its late
     voters, then the two blocks are ancestor-comparable. -/
-theorem specDraft_eligible_compatible :
+theorem spec_eligible_compatible :
     ∀ {E : Env V} {Tv Tw : Finset (Block V)}
     {earlyv latev votesv earlyw latew votesw : Finset (GoldfishVote V)} {s : Slot}
     {C D : Block V}
     (hNv_early_late : earlyv ⊆ latev)
-    (hNv_filtered : votesv = earlyv.filter (fun u => (Model.specDraft (V := V)).no_second_vote_in latev u = true))
+    (hNv_filtered : votesv = earlyv.filter (fun u => (Model.spec (V := V)).no_second_vote_in latev u = true))
     (hNw_early_late : earlyw ⊆ latew)
-    (hNw_filtered : votesw = earlyw.filter (fun u => (Model.specDraft (V := V)).no_second_vote_in latew u = true))
-    (hvw_transfer : ∀ u ∈ votesv, u ∈ latew ∨ (Model.specDraft (V := V)).equivocates latew u.val_index = true)
+    (hNw_filtered : votesw = earlyw.filter (fun u => (Model.spec (V := V)).no_second_vote_in latew u = true))
+    (hvw_transfer : ∀ u ∈ votesv, u ∈ latew ∨ (Model.spec (V := V)).equivocates latew u.val_index = true)
     (hvw_resolve : ∀ u ∈ votesv, ∀ B C : Block V,
       Block.find? Tv u.head = some B → Block.find? Tw u.head = some C → B = C)
-    (hwv_transfer : ∀ u ∈ votesw, u ∈ latev ∨ (Model.specDraft (V := V)).equivocates latev u.val_index = true)
+    (hwv_transfer : ∀ u ∈ votesw, u ∈ latev ∨ (Model.spec (V := V)).equivocates latev u.val_index = true)
     (hwv_resolve : ∀ u ∈ votesw, ∀ B C : Block V,
       Block.find? Tw u.head = some B → Block.find? Tv u.head = some C → B = C)
-    (gC : ℕ) (hgC : (Model.specDraft (V := V)).goldfish_score E Tv votesv votesv s C ⇢ gC)
-    (hC : (Model.specDraft (V := V)).voters_count E latev s < 2 * gC)
-    (gD : ℕ) (hgD : (Model.specDraft (V := V)).goldfish_score E Tw votesw votesw s D ⇢ gD)
-    (hD : (Model.specDraft (V := V)).voters_count E latew s < 2 * gD),
+    (gC : ℕ) (hgC : (Model.spec (V := V)).goldfish_score E Tv votesv votesv s C ⇢ gC)
+    (hC : (Model.spec (V := V)).voters_count E latev s < 2 * gC)
+    (gD : ℕ) (hgD : (Model.spec (V := V)).goldfish_score E Tw votesw votesw s D ⇢ gD)
+    (hD : (Model.spec (V := V)).voters_count E latew s < 2 * gD),
     Block.compatible C D = true
     := by
-  rw [ForkChoiceImages.specDraft_no_second_vote_in_eq, ForkChoiceImages.specDraft_equivocates_eq,
-    ForkChoiceImages.specDraft_goldfish_score_eq, ForkChoiceImages.specDraft_voters_count_eq]
+  rw [ForkChoiceImages.spec_no_second_vote_in_eq, ForkChoiceImages.spec_equivocates_eq,
+    ForkChoiceImages.spec_goldfish_score_eq, ForkChoiceImages.spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).eligible_compatible
 
-/-- The field `confirmation_adoption` of `ForkChoiceFacts` at `Model.specDraft`: if the source
+/-- The field `confirmation_adoption` of `ForkChoiceFacts` at `Model.spec`: if the source
     counts its early votes with no second vote in its late votes, every source vote supporting `B`
     is a supporting target vote or its validator equivocates at the target, every target vote is a
     source late vote or its validator equivocates at the source, and `B`'s Goldfish score at the
     source is more than half of the source voters, then the source supporters of `B` are among the
     target supporters, which are more than half of the target voters. -/
-theorem specDraft_confirmation_adoption :
+theorem spec_confirmation_adoption :
     ∀ {E : Env V} {sourceTree targetTree : Finset (Block V)}
     {sourceEarly sourceLate sourceVotes targetVotes targetSupport : Finset (GoldfishVote V)}
     {s : Slot} {B : Block V}
     (hN_early_late : sourceEarly ⊆ sourceLate)
-    (hN_filtered : sourceVotes = sourceEarly.filter (fun u => (Model.specDraft (V := V)).no_second_vote_in sourceLate u = true))
-    (tS : GoldfishVote V → Bool) (htS : ∀ u, (Model.specDraft (V := V)).targets_under sourceTree B u ⇢ tS u)
-    (tT : GoldfishVote V → Bool) (htT : ∀ u, (Model.specDraft (V := V)).targets_under targetTree B u ⇢ tT u)
+    (hN_filtered : sourceVotes = sourceEarly.filter (fun u => (Model.spec (V := V)).no_second_vote_in sourceLate u = true))
+    (tS : GoldfishVote V → Bool) (htS : ∀ u, (Model.spec (V := V)).targets_under sourceTree B u ⇢ tS u)
+    (tT : GoldfishVote V → Bool) (htT : ∀ u, (Model.spec (V := V)).targets_under targetTree B u ⇢ tT u)
     (hT_forward : ∀ u ∈ sourceVotes, tS u = true →
       (u ∈ targetSupport ∧ tT u = true) ∨
-        (Model.specDraft (V := V)).equivocates targetVotes u.val_index = true)
-    (hT_backward : ∀ u ∈ targetVotes, u ∈ sourceLate ∨ (Model.specDraft (V := V)).equivocates sourceLate u.val_index = true)
-    (g : ℕ) (hg : (Model.specDraft (V := V)).goldfish_score E sourceTree sourceVotes sourceVotes s B ⇢ g)
-    (heligible : (Model.specDraft (V := V)).voters_count E sourceLate s < 2 * g)
-    (sS : Finset V) (hsS : (Model.specDraft (V := V)).raw_supporters sourceTree sourceVotes sourceVotes s B ⇢ sS)
-    (sT : Finset V) (hsT : (Model.specDraft (V := V)).raw_supporters targetTree targetVotes targetSupport s B ⇢ sT),
-    sS ⊆ sT ∧ (Model.specDraft (V := V)).voters_count E targetVotes s < 2 * sT.card
+        (Model.spec (V := V)).equivocates targetVotes u.val_index = true)
+    (hT_backward : ∀ u ∈ targetVotes, u ∈ sourceLate ∨ (Model.spec (V := V)).equivocates sourceLate u.val_index = true)
+    (g : ℕ) (hg : (Model.spec (V := V)).goldfish_score E sourceTree sourceVotes sourceVotes s B ⇢ g)
+    (heligible : (Model.spec (V := V)).voters_count E sourceLate s < 2 * g)
+    (sS : Finset V) (hsS : (Model.spec (V := V)).raw_supporters sourceTree sourceVotes sourceVotes s B ⇢ sS)
+    (sT : Finset V) (hsT : (Model.spec (V := V)).raw_supporters targetTree targetVotes targetSupport s B ⇢ sT),
+    sS ⊆ sT ∧ (Model.spec (V := V)).voters_count E targetVotes s < 2 * sT.card
     := by
-  rw [ForkChoiceImages.specDraft_no_second_vote_in_eq, ForkChoiceImages.specDraft_targets_under_eq,
-    ForkChoiceImages.specDraft_equivocates_eq, ForkChoiceImages.specDraft_goldfish_score_eq,
-    ForkChoiceImages.specDraft_voters_count_eq, ForkChoiceImages.specDraft_raw_supporters_eq]
+  rw [ForkChoiceImages.spec_no_second_vote_in_eq, ForkChoiceImages.spec_targets_under_eq,
+    ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_goldfish_score_eq,
+    ForkChoiceImages.spec_voters_count_eq, ForkChoiceImages.spec_raw_supporters_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).confirmation_adoption
 
 /-- The field `goldfish_fork_choice_captures_supporter_majority` of `ForkChoiceFacts` at
-    `Model.specDraft`: if `support ⊆ votes`, the supporters of `B` are more than half of the
+    `Model.spec`: if `support ⊆ votes`, the supporters of `B` are more than half of the
     participant count, `A` and `B` are compatible, and, when `A ⪯ B`, the blocks after `A` up to `B`
     are in `tree`, then `B` is an ancestor of every outcome of the Goldfish fork choice from `A`, or
     that outcome itself. -/
-theorem specDraft_goldfish_fork_choice_captures_supporter_majority :
-    ∀ (E : Env V) (σ : Block V → (Model.specDraft (V := V)).CS)
+theorem spec_goldfish_fork_choice_captures_supporter_majority :
+    ∀ (E : Env V) (σ : Block V → (Model.spec (V := V)).CS)
     (h_max : Height) (T tree : Finset (Block V)) (cur : Slot)
     (votes support : Finset (GoldfishVote V)) (s : Slot) {A B : Block V}
     (hsub : support ⊆ votes)
-    (sup : Finset V) (hsup : (Model.specDraft (V := V)).raw_supporters T votes support s B ⇢ sup)
-    (hmajority : (Model.specDraft (V := V)).voters_count E votes s < 2 * sup.card)
+    (sup : Finset V) (hsup : (Model.spec (V := V)).raw_supporters T votes support s B ⇢ sup)
+    (hmajority : (Model.spec (V := V)).voters_count E votes s < 2 * sup.card)
     (hcompatible : Block.compatible A B = true)
     (hpath : Block.Preceq A B → ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree)
-    (X : Block V) (hX : (Model.specDraft (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support s ⇢ X),
+    (X : Block V) (hX : (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support s ⇢ X),
     Block.Preceq B X
     := by
   intro E σ h_max T tree cur votes support s A B hsub sup hsup hmajority hcompatible hpath X hX
-  rw [ForkChoiceImages.specDraft_raw_supporters_eq] at hsup
-  rw [ForkChoiceImages.specDraft_voters_count_eq] at hmajority
+  rw [ForkChoiceImages.spec_raw_supporters_eq] at hsup
+  rw [ForkChoiceImages.spec_voters_count_eq] at hmajority
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_fork_choice_captures_supporter_majority
     E (fun C => (σ C).toProof) h_max T tree cur votes support s hsub sup hsup hmajority hcompatible
-    hpath X (ForkChoiceImages.vocabulary_returns_of_specDraft_goldfish_fork_choice E σ h_max T cur A
+    hpath X (ForkChoiceImages.vocabulary_returns_of_spec_goldfish_fork_choice E σ h_max T cur A
       tree votes support s hX)
 
-/-- The field `mem_supporters_iff` of `ForkChoiceFacts` at `Model.specDraft`: for every outcome `R`
+/-- The field `mem_supporters_iff` of `ForkChoiceFacts` at `Model.spec`: for every outcome `R`
     of `raw_supporters T votes support_votes s B` and every choice `t` of outcomes of the supporter
     test `targets_under T B u`, `x` is in `R` exactly when `x` does not equivocate in `votes` and
     has a slot-`s` vote `u` in `support_votes` with `t u = true`. -/
-theorem specDraft_mem_supporters_iff :
-    ∀ {_E : Env V} {T : Finset (Block V)} {votes support_votes : Finset (GoldfishVote V)} {s : Slot} {B : Block V} {x : V} (R : Finset V) (hR : (Model.specDraft (V := V)).raw_supporters T votes support_votes s B ⇢ R) (t : GoldfishVote V → Bool) (ht : ∀ u, (Model.specDraft (V := V)).targets_under T B u ⇢ t u), x ∈ R ↔ (Model.specDraft (V := V)).equivocates votes x = false ∧ ∃ u ∈ (Model.specDraft (V := V)).votes_by support_votes x, u.slot = s ∧ t u = true
+theorem spec_mem_supporters_iff :
+    ∀ {_E : Env V} {T : Finset (Block V)} {votes support_votes : Finset (GoldfishVote V)} {s : Slot} {B : Block V} {x : V} (R : Finset V) (hR : (Model.spec (V := V)).raw_supporters T votes support_votes s B ⇢ R) (t : GoldfishVote V → Bool) (ht : ∀ u, (Model.spec (V := V)).targets_under T B u ⇢ t u), x ∈ R ↔ (Model.spec (V := V)).equivocates votes x = false ∧ ∃ u ∈ (Model.spec (V := V)).votes_by support_votes x, u.slot = s ∧ t u = true
     := by
-  rw [ForkChoiceImages.specDraft_raw_supporters_eq, ForkChoiceImages.specDraft_targets_under_eq,
-    ForkChoiceImages.specDraft_equivocates_eq, ForkChoiceImages.specDraft_votes_by_eq]
+  rw [ForkChoiceImages.spec_raw_supporters_eq, ForkChoiceImages.spec_targets_under_eq,
+    ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_votes_by_eq]
   exact fun {_E} => (Model.vocabulary_facts_forkChoice (V := V)).mem_supporters_iff (_E := _E)
 
-/-- The field `ghost_step_child` of `ForkChoiceFacts` at `Model.specDraft`: if one step of the walk
+/-- The field `ghost_step_child` of `ForkChoiceFacts` at `Model.spec`: if one step of the walk
     from `H` returns `some C`, then `C` is in the tree, its parent is `H`, and it is eligible. -/
-theorem specDraft_ghost_step_child :
+theorem spec_ghost_step_child :
     ∀ {tree : Finset (Block V)} {score : Block V → ℕ}
     {eligible : Block V → Bool} {H C : Block V} (o : Option (Block V)),
-    (Model.specDraft (V := V)).ghost_step tree score eligible H ⇢ o → o = some C →
+    (Model.spec (V := V)).ghost_step tree score eligible H ⇢ o → o = some C →
       C ∈ tree ∧ C.parent? = some H ∧ eligible C = true
     := by
-  rw [ForkChoiceImages.specDraft_ghost_step_eq]
+  rw [ForkChoiceImages.spec_ghost_step_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_step_child
 
 /-- The field `ghost_transport_via_bridge_of_target_passes` of `ForkChoiceFacts` at
-    `Model.specDraft`: suppose both trees have injective roots, the source walk from `sourceAnchor`
+    `Model.spec`: suppose both trees have injective roots, the source walk from `sourceAnchor`
     ends at `H`, `sourceAnchor ⪯ bridge ⪯ H`, `targetAnchor ⪯ H` with the blocks after
     `targetAnchor` up to `H` in the target tree, `bridge` is an ancestor of the target walk's
     outcome `G'`, the source steps from `bridge` towards `H` land on target-eligible blocks of the
     target tree, every target-eligible child of a block between `bridge` and `H` is a
     source-eligible block of the source tree, and the two scores agree on both trees; then no child
     of `H` in the target tree is target-eligible, and `G'` is `H`. -/
-theorem specDraft_ghost_transport_via_bridge_of_target_passes :
+theorem spec_ghost_transport_via_bridge_of_target_passes :
     ∀ {sourceTree targetTree : Finset (Block V)}
     {sourceScore targetScore : Block V → ℕ} {sourceEligible targetEligible : Block V → Bool}
     {sourceAnchor targetAnchor bridge H : Block V},
     DecoupledConsensusModel.Execution.RootInjectiveBelow sourceTree →
     DecoupledConsensusModel.Execution.RootInjectiveBelow targetTree →
-    ∀ G : Block V, (Model.specDraft (V := V)).ghost sourceAnchor sourceTree sourceScore sourceEligible ⇢ G → G = H →
+    ∀ G : Block V, (Model.spec (V := V)).ghost sourceAnchor sourceTree sourceScore sourceEligible ⇢ G → G = H →
     Block.Preceq sourceAnchor bridge → Block.Preceq bridge H → Block.Preceq targetAnchor H →
     (∀ (C : Block V), Block.Preceq targetAnchor C → C ≠ targetAnchor → Block.Preceq C H →
       C ∈ targetTree) →
-    ∀ G' : Block V, (Model.specDraft (V := V)).ghost targetAnchor targetTree targetScore targetEligible ⇢ G' →
+    ∀ G' : Block V, (Model.spec (V := V)).ghost targetAnchor targetTree targetScore targetEligible ⇢ G' →
     Block.Preceq bridge G' →
     ∀ step : Block V → Option (Block V),
-    (∀ X, (Model.specDraft (V := V)).ghost_step sourceTree sourceScore sourceEligible X ⇢ step X) →
+    (∀ X, (Model.spec (V := V)).ghost_step sourceTree sourceScore sourceEligible X ⇢ step X) →
     (∀ (X C : Block V), Block.Preceq bridge X → Block.Preceq X H → X ≠ H →
       step X = some C → Block.Preceq C H →
       C ∈ targetTree ∧ targetEligible C = true) →
@@ -660,208 +709,208 @@ theorem specDraft_ghost_transport_via_bridge_of_target_passes :
     (∀ C ∈ sourceTree, C ∈ targetTree → targetScore C = sourceScore C) →
     (∀ C ∈ targetTree, C.parent? = some H → targetEligible C = false) ∧ G' = H
     := by
-  rw [ForkChoiceImages.specDraft_ghost_eq, ForkChoiceImages.specDraft_ghost_step_eq]
+  rw [ForkChoiceImages.spec_ghost_eq, ForkChoiceImages.spec_ghost_step_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_transport_via_bridge_of_target_passes
 
 /-- The field `ghost_eq_of_compatible_anchor_and_terminal` of `ForkChoiceFacts` at
-    `Model.specDraft`: if `A` and `B` are compatible, `B ⪯ G` whenever `A ⪯ B`, `A = B` whenever
+    `Model.spec`: if `A` and `B` are compatible, `B ⪯ G` whenever `A ⪯ B`, `A = B` whenever
     `B ⪯ A`, and no block of `tree` other than `B` descends from `B`, then the outcome `G` of the
     walk from `A` is `B`. -/
-theorem specDraft_ghost_eq_of_compatible_anchor_and_terminal :
-    ∀ {tree : Finset (Block V)} {score : Block V → Nat} {eligible : Block V → Bool} {A B : Block V} (G : Block V) (hG : (Model.specDraft (V := V)).ghost A tree score eligible ⇢ G) (hcompat : Block.compatible A B = true) (hforward : Block.Preceq A B →
+theorem spec_ghost_eq_of_compatible_anchor_and_terminal :
+    ∀ {tree : Finset (Block V)} {score : Block V → Nat} {eligible : Block V → Bool} {A B : Block V} (G : Block V) (hG : (Model.spec (V := V)).ghost A tree score eligible ⇢ G) (hcompat : Block.compatible A B = true) (hforward : Block.Preceq A B →
     Block.Preceq B G) (hanchorTerminal : Block.Preceq B A → A = B) (htreeTerminal : ∀ X ∈ tree, Block.Preceq B X → X = B), G = B
     := by
-  rw [ForkChoiceImages.specDraft_ghost_eq]
+  rw [ForkChoiceImages.spec_ghost_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_eq_of_compatible_anchor_and_terminal
 
-/-- The field `ghost_insert_eq` of `ForkChoiceFacts` at `Model.specDraft`: if the walk from `A` over
+/-- The field `ghost_insert_eq` of `ForkChoiceFacts` at `Model.spec`: if the walk from `A` over
     `tree` ends at `H`, and `B` is an eligible child of `H` not in `tree`, with no eligible sibling
     and no child in `tree`, then the walk from `A` over `insert B tree` ends at `B`. -/
-theorem specDraft_ghost_insert_eq :
-    ∀ {tree : Finset (Block V)} {score : Block V → Nat} {eligible : Block V → Bool} {A B H : Block V} (hpar : B.parent? = some H) (helig : eligible B = true) (hnotin : B ∉ tree) (hstop : ∀ C ∈ tree, C.parent? = some H → eligible C = false) (hfresh : ∀ C ∈ tree, C.parent? ≠ some B) (G : Block V) (hG : (Model.specDraft (V := V)).ghost A tree score eligible ⇢ G) (hwalk : G = H) (G' : Block V) (hG' : (Model.specDraft (V := V)).ghost A (insert B tree) score eligible ⇢ G'), G' = B
+theorem spec_ghost_insert_eq :
+    ∀ {tree : Finset (Block V)} {score : Block V → Nat} {eligible : Block V → Bool} {A B H : Block V} (hpar : B.parent? = some H) (helig : eligible B = true) (hnotin : B ∉ tree) (hstop : ∀ C ∈ tree, C.parent? = some H → eligible C = false) (hfresh : ∀ C ∈ tree, C.parent? ≠ some B) (G : Block V) (hG : (Model.spec (V := V)).ghost A tree score eligible ⇢ G) (hwalk : G = H) (G' : Block V) (hG' : (Model.spec (V := V)).ghost A (insert B tree) score eligible ⇢ G'), G' = B
     := by
-  rw [ForkChoiceImages.specDraft_ghost_eq]
+  rw [ForkChoiceImages.spec_ghost_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_insert_eq
 
-/-- The field `goldfish_eligible_iff` of `ForkChoiceFacts` at `Model.specDraft`: an outcome of
+/-- The field `goldfish_eligible_iff` of `ForkChoiceFacts` at `Model.spec`: an outcome of
     `goldfish_eligible` for `B` is `true` exactly when the chain-state height of `B`'s parent is
     less than `h_max − 1`, or the participant count is less than twice `B`'s Goldfish score, or
     `B`'s slot is `cur`. -/
-theorem specDraft_goldfish_eligible_iff :
-    ∀ (E : Env V) (σ : Block V → (Model.specDraft (V := V)).CS) (h_max : Height) (T : Finset (Block V)) (cur : Slot) (votes support_votes : Finset (GoldfishVote V)) (s : Slot) (B : Block V) (e : Bool) (he : (Model.specDraft (V := V)).goldfish_eligible E σ h_max T cur votes support_votes s B ⇢ e) (g : ℕ) (hg : (Model.specDraft (V := V)).goldfish_score E T votes support_votes s B ⇢ g), e = true ↔
+theorem spec_goldfish_eligible_iff :
+    ∀ (E : Env V) (σ : Block V → (Model.spec (V := V)).CS) (h_max : Height) (T : Finset (Block V)) (cur : Slot) (votes support_votes : Finset (GoldfishVote V)) (s : Slot) (B : Block V) (e : Bool) (he : (Model.spec (V := V)).goldfish_eligible E σ h_max T cur votes support_votes s B ⇢ e) (g : ℕ) (hg : (Model.spec (V := V)).goldfish_score E T votes support_votes s B ⇢ g), e = true ↔
     ((σ B.parent).h < h_max - 1 ∨
-    (Model.specDraft (V := V)).voters_count E votes s <
+    (Model.spec (V := V)).voters_count E votes s <
     2 * g ∨
     B.slot = cur)
     := by
   intro E σ h_max T cur votes support_votes s B e he g hg
-  rw [ForkChoiceImages.specDraft_goldfish_eligible_eq] at he
-  rw [ForkChoiceImages.specDraft_goldfish_score_eq] at hg
-  rw [ForkChoiceImages.specDraft_voters_count_eq]
+  rw [ForkChoiceImages.spec_goldfish_eligible_eq] at he
+  rw [ForkChoiceImages.spec_goldfish_score_eq] at hg
+  rw [ForkChoiceImages.spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_eligible_iff E (fun C => (σ C).toProof)
     h_max T cur votes support_votes s B e he g hg
 
-/-- The field `ghost_mem` of `ForkChoiceFacts` at `Model.specDraft`: every outcome of the walk from
+/-- The field `ghost_mem` of `ForkChoiceFacts` at `Model.spec`: every outcome of the walk from
     `anchor` over `tree` is `anchor` or a block of `tree`. -/
-theorem specDraft_ghost_mem :
-    ∀ (anchor : Block V) (tree : Finset (Block V)) (score : Block V → Nat) (eligible : Block V → Bool) (G : Block V), (Model.specDraft (V := V)).ghost anchor tree score eligible ⇢ G → G = anchor ∨
+theorem spec_ghost_mem :
+    ∀ (anchor : Block V) (tree : Finset (Block V)) (score : Block V → Nat) (eligible : Block V → Bool) (G : Block V), (Model.spec (V := V)).ghost anchor tree score eligible ⇢ G → G = anchor ∨
     G ∈ tree
     := by
-  rw [ForkChoiceImages.specDraft_ghost_eq]
+  rw [ForkChoiceImages.spec_ghost_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_mem
 
-/-- The field `ghost_eligible` of `ForkChoiceFacts` at `Model.specDraft`: every outcome of the walk
+/-- The field `ghost_eligible` of `ForkChoiceFacts` at `Model.spec`: every outcome of the walk
     from `anchor` is `anchor` or a block that passes `eligible`. -/
-theorem specDraft_ghost_eligible :
-    ∀ (anchor : Block V) (tree : Finset (Block V)) (score : Block V → Nat) (eligible : Block V → Bool) (G : Block V), (Model.specDraft (V := V)).ghost anchor tree score eligible ⇢ G → G = anchor ∨
+theorem spec_ghost_eligible :
+    ∀ (anchor : Block V) (tree : Finset (Block V)) (score : Block V → Nat) (eligible : Block V → Bool) (G : Block V), (Model.spec (V := V)).ghost anchor tree score eligible ⇢ G → G = anchor ∨
     eligible G = true
     := by
-  rw [ForkChoiceImages.specDraft_ghost_eq]
+  rw [ForkChoiceImages.spec_ghost_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_eligible
 
-/-- The field `ghost_preceq` of `ForkChoiceFacts` at `Model.specDraft`: `anchor` is an ancestor of
+/-- The field `ghost_preceq` of `ForkChoiceFacts` at `Model.spec`: `anchor` is an ancestor of
     every outcome of the walk from `anchor`, or that outcome itself. -/
-theorem specDraft_ghost_preceq :
-    ∀ (anchor : Block V) (tree : Finset (Block V)) (score : Block V → Nat) (eligible : Block V → Bool) (G : Block V), (Model.specDraft (V := V)).ghost anchor tree score eligible ⇢ G → Block.Preceq anchor G
+theorem spec_ghost_preceq :
+    ∀ (anchor : Block V) (tree : Finset (Block V)) (score : Block V → Nat) (eligible : Block V → Bool) (G : Block V), (Model.spec (V := V)).ghost anchor tree score eligible ⇢ G → Block.Preceq anchor G
     := by
-  rw [ForkChoiceImages.specDraft_ghost_eq]
+  rw [ForkChoiceImages.spec_ghost_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ghost_preceq
 
-/-- The field `targets_under_iff` of `ForkChoiceFacts` at `Model.specDraft`: an outcome of the
+/-- The field `targets_under_iff` of `ForkChoiceFacts` at `Model.spec`: an outcome of the
     supporter test `targets_under T B u` is `true` exactly when `u`'s head resolves in `T` to a
     descendant of `B`, or `B` itself, whose slot is at most `u`'s slot. -/
-theorem specDraft_targets_under_iff :
-    ∀ {T : Finset (Block V)} {B : Block V} {u : GoldfishVote V} (b : Bool), (Model.specDraft (V := V)).targets_under T B u ⇢ b → (b = true ↔
+theorem spec_targets_under_iff :
+    ∀ {T : Finset (Block V)} {B : Block V} {u : GoldfishVote V} (b : Bool), (Model.spec (V := V)).targets_under T B u ⇢ b → (b = true ↔
     ∃ B', Block.find? T u.head = some B' ∧ B'.slot ≤ u.slot ∧
     Block.preceq B B' = true)
     := by
-  rw [ForkChoiceImages.specDraft_targets_under_eq]
+  rw [ForkChoiceImages.spec_targets_under_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).targets_under_iff
 
 /-- The field `goldfish_eligible_eq_false_of_parent_fork_choice` of `ForkChoiceFacts` at
-    `Model.specDraft`: in a tree with injective roots, a block `C` of `tree` whose parent is an
+    `Model.spec`: in a tree with injective roots, a block `C` of `tree` whose parent is an
     outcome of the Goldfish fork choice from `A` through `tree` fails `goldfish_eligible`. -/
-theorem specDraft_goldfish_eligible_eq_false_of_parent_fork_choice :
-    ∀ {E : Env V} {σ : Block V → (Model.specDraft (V := V)).CS} {h_max : Height} {T : Finset (Block V)} {cur : Slot} {A : Block V} {tree : Finset (Block V)} {votes support : Finset (GoldfishVote V)} {s : Slot} {C : Block V} (hroot : Execution.RootInjectiveBelow tree) (hC : C ∈ tree) (X : Block V) (hX : (Model.specDraft (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support s ⇢ X) (hparent : C.parent? =
-    some X) (e : Bool) (he : (Model.specDraft (V := V)).goldfish_eligible E σ h_max T cur votes support s C ⇢ e), e = false
+theorem spec_goldfish_eligible_eq_false_of_parent_fork_choice :
+    ∀ {E : Env V} {σ : Block V → (Model.spec (V := V)).CS} {h_max : Height} {T : Finset (Block V)} {cur : Slot} {A : Block V} {tree : Finset (Block V)} {votes support : Finset (GoldfishVote V)} {s : Slot} {C : Block V} (hroot : Execution.RootInjectiveBelow tree) (hC : C ∈ tree) (X : Block V) (hX : (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support s ⇢ X) (hparent : C.parent? =
+    some X) (e : Bool) (he : (Model.spec (V := V)).goldfish_eligible E σ h_max T cur votes support s C ⇢ e), e = false
     := by
   intro E σ h_max T cur A tree votes support s C hroot hC X hX hparent e he
-  rw [ForkChoiceImages.specDraft_goldfish_eligible_eq] at he
+  rw [ForkChoiceImages.spec_goldfish_eligible_eq] at he
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_eligible_eq_false_of_parent_fork_choice
-    hroot hC X (ForkChoiceImages.vocabulary_returns_of_specDraft_goldfish_fork_choice E σ h_max T cur A
+    hroot hC X (ForkChoiceImages.vocabulary_returns_of_spec_goldfish_fork_choice E σ h_max T cur A
       tree votes support s hX) hparent e he
 
-/-- The field `goldfish_fork_choice_eq_child_of_pivot` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `goldfish_fork_choice_eq_child_of_pivot` of `ForkChoiceFacts` at `Model.spec`:
     the voter's Goldfish fork choice from `Av` through `Tv` ends at `B` when the proposer's ends at
     `P`, both start from ancestors of a block `Y ⪯ P`, the voter's outcome descends from `Y`, the
     two stores agree between `Y` and `P` (the hypotheses `hhP`, `hhV`, `hscore`, `hcount`, `hpathV`,
     `hchildV`), and `B` is the only block of slot `cur` in `Tv`, a child of `P` with no child in
     `Tv`. -/
-theorem specDraft_goldfish_fork_choice_eq_child_of_pivot :
-    ∀ (E : Env V) {σp σv : Block V → (Model.specDraft (V := V)).CS} {hp hv : Height} {TPs TVs Tp Tv : Finset (Block V)} {cur : Slot} {votesP supportP votesV supportV : Finset (GoldfishVote V)} {s' : Slot} {Ap Av Y P B : Block V} (hrootP : RootInjectiveBelow Tp) (hrootV : RootInjectiveBelow Tv) (GP : Block V) (hGP : (Model.specDraft (V := V)).goldfish_fork_choice E σp hp TPs cur Ap Tp votesP supportP s' ⇢ GP) (hsource : GP = P) (hApY : Block.Preceq Ap Y) (hAvY : Block.Preceq Av Y) (hYP : Block.Preceq Y P) (GV : Block V) (hGV : (Model.specDraft (V := V)).goldfish_fork_choice E σv hv TVs cur Av Tv votesV supportV s' ⇢ GV) (hpasses : Block.Preceq Y
-    GV) (hhP : ∀ X, Block.Preceq Y X → Block.Preceq X P → hp - 1 ≤ (σp X).h) (hhV : ∀ X, Block.Preceq Y X → Block.Preceq X P → hv - 1 ≤ (σv X).h) (scV : Block V → ℕ) (hscV : ∀ C, (Model.specDraft (V := V)).goldfish_score E TVs votesV supportV s' C ⇢ scV C) (scP : Block V → ℕ) (hscP : ∀ C, (Model.specDraft (V := V)).goldfish_score E TPs votesP supportP s' C ⇢ scP C) (hscore : ∀ C, Block.Preceq Y C →
+theorem spec_goldfish_fork_choice_eq_child_of_pivot :
+    ∀ (E : Env V) {σp σv : Block V → (Model.spec (V := V)).CS} {hp hv : Height} {TPs TVs Tp Tv : Finset (Block V)} {cur : Slot} {votesP supportP votesV supportV : Finset (GoldfishVote V)} {s' : Slot} {Ap Av Y P B : Block V} (hrootP : RootInjectiveBelow Tp) (hrootV : RootInjectiveBelow Tv) (GP : Block V) (hGP : (Model.spec (V := V)).goldfish_fork_choice E σp hp TPs cur Ap Tp votesP supportP s' ⇢ GP) (hsource : GP = P) (hApY : Block.Preceq Ap Y) (hAvY : Block.Preceq Av Y) (hYP : Block.Preceq Y P) (GV : Block V) (hGV : (Model.spec (V := V)).goldfish_fork_choice E σv hv TVs cur Av Tv votesV supportV s' ⇢ GV) (hpasses : Block.Preceq Y
+    GV) (hhP : ∀ X, Block.Preceq Y X → Block.Preceq X P → hp - 1 ≤ (σp X).h) (hhV : ∀ X, Block.Preceq Y X → Block.Preceq X P → hv - 1 ≤ (σv X).h) (scV : Block V → ℕ) (hscV : ∀ C, (Model.spec (V := V)).goldfish_score E TVs votesV supportV s' C ⇢ scV C) (scP : Block V → ℕ) (hscP : ∀ C, (Model.spec (V := V)).goldfish_score E TPs votesP supportP s' C ⇢ scP C) (hscore : ∀ C, Block.Preceq Y C →
     scV C =
-    scP C) (hcount : (Model.specDraft (V := V)).voters_count E votesV s' = (Model.specDraft (V := V)).voters_count E votesP s') (hpathV : ∀ C, Block.Preceq Y C → C ≠ Y → Block.Preceq C P → C ∈ Tv) (hchildV : ∀ X C, Block.Preceq Y X → Block.Preceq X P → C ∈ Tv → C.parent? = some X →
+    scP C) (hcount : (Model.spec (V := V)).voters_count E votesV s' = (Model.spec (V := V)).voters_count E votesP s') (hpathV : ∀ C, Block.Preceq Y C → C ≠ Y → Block.Preceq C P → C ∈ Tv) (hchildV : ∀ X C, Block.Preceq Y X → Block.Preceq X P → C ∈ Tv → C.parent? = some X →
     C.slot ≠ cur → C ∈ Tp) (hBonly : ∀ C ∈ Tv, C.slot = cur → C = B) (hB : B ∈ Tv) (hBpar : B.parent? = some P) (hBslot : B.slot = cur) (hfresh : ∀ C ∈ Tv, C.parent? ≠ some B), GV = B
     := by
   intro E σp σv hp hv TPs TVs Tp Tv cur votesP supportP votesV supportV s' Ap Av Y P B hrootP hrootV
     GP hGP hsource hApY hAvY hYP GV hGV hpasses hhP hhV scV hscV scP hscP hscore hcount hpathV
     hchildV hBonly hB hBpar hBslot hfresh
-  rw [ForkChoiceImages.specDraft_goldfish_score_eq] at hscV hscP
-  rw [ForkChoiceImages.specDraft_voters_count_eq] at hcount
+  rw [ForkChoiceImages.spec_goldfish_score_eq] at hscV hscP
+  rw [ForkChoiceImages.spec_voters_count_eq] at hcount
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_fork_choice_eq_child_of_pivot E
     (σp := fun C => (σp C).toProof) (σv := fun C => (σv C).toProof) hrootP hrootV GP
-    (ForkChoiceImages.vocabulary_returns_of_specDraft_goldfish_fork_choice E σp hp TPs cur Ap Tp
+    (ForkChoiceImages.vocabulary_returns_of_spec_goldfish_fork_choice E σp hp TPs cur Ap Tp
       votesP supportP s' hGP) hsource hApY hAvY hYP GV
-    (ForkChoiceImages.vocabulary_returns_of_specDraft_goldfish_fork_choice E σv hv TVs cur Av Tv
+    (ForkChoiceImages.vocabulary_returns_of_spec_goldfish_fork_choice E σv hv TVs cur Av Tv
       votesV supportV s' hGV) hpasses hhP hhV scV hscV scP hscP hscore hcount hpathV hchildV
     hBonly hB hBpar hBslot hfresh
 
-/-- The field `goldfish_score_eq_of_iff` of `ForkChoiceFacts` at `Model.specDraft`: if the same
+/-- The field `goldfish_score_eq_of_iff` of `ForkChoiceFacts` at `Model.spec`: if the same
     validators equivocate in `votes` and `votes'`, and each non-equivocating validator supports `C`
     in `support` exactly when it does in `support'`, then the Goldfish scores of `C` in the two
     settings are equal. -/
-theorem specDraft_goldfish_score_eq_of_iff :
-    ∀ (E : Env V) {T T' : Finset (Block V)} {votes support votes' support' : Finset (GoldfishVote V)} (s : Slot) (C : Block V) (heq : ∀ w : V, (Model.specDraft (V := V)).equivocates votes w = (Model.specDraft (V := V)).equivocates votes' w) (t : GoldfishVote V → Bool) (ht : ∀ u, (Model.specDraft (V := V)).targets_under T C u ⇢ t u) (t' : GoldfishVote V → Bool) (ht' : ∀ u, (Model.specDraft (V := V)).targets_under T' C u ⇢ t' u) (hsup : ∀ w : V, (Model.specDraft (V := V)).equivocates votes w = false →
+theorem spec_goldfish_score_eq_of_iff :
+    ∀ (E : Env V) {T T' : Finset (Block V)} {votes support votes' support' : Finset (GoldfishVote V)} (s : Slot) (C : Block V) (heq : ∀ w : V, (Model.spec (V := V)).equivocates votes w = (Model.spec (V := V)).equivocates votes' w) (t : GoldfishVote V → Bool) (ht : ∀ u, (Model.spec (V := V)).targets_under T C u ⇢ t u) (t' : GoldfishVote V → Bool) (ht' : ∀ u, (Model.spec (V := V)).targets_under T' C u ⇢ t' u) (hsup : ∀ w : V, (Model.spec (V := V)).equivocates votes w = false →
     ((∃ u ∈ support, u.val_index = w ∧ u.slot = s ∧ t u = true) ↔
     (∃ u ∈ support', u.val_index = w ∧ u.slot = s ∧
-    t' u = true))) (g : ℕ) (hg : (Model.specDraft (V := V)).goldfish_score E T votes support s C ⇢ g) (g' : ℕ) (hg' : (Model.specDraft (V := V)).goldfish_score E T' votes' support' s C ⇢ g'), g =
+    t' u = true))) (g : ℕ) (hg : (Model.spec (V := V)).goldfish_score E T votes support s C ⇢ g) (g' : ℕ) (hg' : (Model.spec (V := V)).goldfish_score E T' votes' support' s C ⇢ g'), g =
     g'
     := by
-  rw [ForkChoiceImages.specDraft_equivocates_eq, ForkChoiceImages.specDraft_targets_under_eq,
-    ForkChoiceImages.specDraft_goldfish_score_eq]
+  rw [ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_targets_under_eq,
+    ForkChoiceImages.spec_goldfish_score_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_score_eq_of_iff
 
-/-- The field `targets_under_eq_true_iff` of `ForkChoiceFacts` at `Model.specDraft`: an outcome of
+/-- The field `targets_under_eq_true_iff` of `ForkChoiceFacts` at `Model.spec`: an outcome of
     the supporter test `targets_under T B u` is `true` exactly when `u`'s head resolves in `T` to a
     block `X` with `B ⪯ X` whose slot is at most `u`'s slot. -/
-theorem specDraft_targets_under_eq_true_iff :
-    ∀ (T : Finset (Block V)) (B : Block V) (u : GoldfishVote V) (b : Bool) (hb : (Model.specDraft (V := V)).targets_under T B u ⇢ b), b = true ↔
+theorem spec_targets_under_eq_true_iff :
+    ∀ (T : Finset (Block V)) (B : Block V) (u : GoldfishVote V) (b : Bool) (hb : (Model.spec (V := V)).targets_under T B u ⇢ b), b = true ↔
     ∃ X, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X
     := by
-  rw [ForkChoiceImages.specDraft_targets_under_eq]
+  rw [ForkChoiceImages.spec_targets_under_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).targets_under_eq_true_iff
 
-/-- The field `ConeSupport_eligible` of `ForkChoiceFacts` at `Model.specDraft`: if
+/-- The field `ConeSupport_eligible` of `ForkChoiceFacts` at `Model.spec`: if
     `support ⊆ votes ⊆ late`, the late votes are valid for slot `s`, an honest, non-equivocating
     majority of slot `s`'s committee has votes in `support` whose heads resolve to blocks `tgt`
     admits, and `C` is an ancestor of every such block, then the late voters of slot `s` are fewer
     than twice every Goldfish score of `C`. -/
-theorem specDraft_ConeSupport_eligible :
-    ∀ (E : Env V) (T : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) (tgt : Block V → Prop) {C : Block V} (hmaj : (E.committee s).card < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → (Model.specDraft (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X) (hvalid : Protocol.VoteSetValid E s late) (hC : ∀ X : Block V, tgt X → Block.preceq C X = true) (g : ℕ) (hg : (Model.specDraft (V := V)).goldfish_score E T votes support s C ⇢ g), (Model.specDraft (V := V)).voters_count E late s < 2 * g
+theorem spec_ConeSupport_eligible :
+    ∀ (E : Env V) (T : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) (tgt : Block V → Prop) {C : Block V} (hmaj : (E.committee s).card < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → (Model.spec (V := V)).equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X) (hvalid : Protocol.VoteSetValid E s late) (hC : ∀ X : Block V, tgt X → Block.preceq C X = true) (g : ℕ) (hg : (Model.spec (V := V)).goldfish_score E T votes support s C ⇢ g), (Model.spec (V := V)).voters_count E late s < 2 * g
     := by
-  rw [ForkChoiceImages.specDraft_equivocates_eq, ForkChoiceImages.specDraft_goldfish_score_eq,
-    ForkChoiceImages.specDraft_voters_count_eq]
+  rw [ForkChoiceImages.spec_equivocates_eq, ForkChoiceImages.spec_goldfish_score_eq,
+    ForkChoiceImages.spec_voters_count_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).ConeSupport_eligible
 
-/-- The field `goldfish_score_le_of_Preceq` of `ForkChoiceFacts` at `Model.specDraft`: if `D ⪯ C`,
+/-- The field `goldfish_score_le_of_Preceq` of `ForkChoiceFacts` at `Model.spec`: if `D ⪯ C`,
     the Goldfish score of `C` is at most that of `D`, over the same tree, votes and slot. -/
-theorem specDraft_goldfish_score_le_of_Preceq :
+theorem spec_goldfish_score_le_of_Preceq :
     ∀ (E : Env V) (T : Finset (Block V))
     (votes support : Finset (GoldfishVote V)) (s : Slot) {C D : Block V},
     Block.Preceq D C →
-    ∀ gC : ℕ, (Model.specDraft (V := V)).goldfish_score E T votes support s C ⇢ gC →
-    ∀ gD : ℕ, (Model.specDraft (V := V)).goldfish_score E T votes support s D ⇢ gD →
+    ∀ gC : ℕ, (Model.spec (V := V)).goldfish_score E T votes support s C ⇢ gC →
+    ∀ gD : ℕ, (Model.spec (V := V)).goldfish_score E T votes support s D ⇢ gD →
     gC ≤ gD
     := by
-  rw [ForkChoiceImages.specDraft_goldfish_score_eq]
+  rw [ForkChoiceImages.spec_goldfish_score_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_score_le_of_Preceq
 
-/-- The field `Numerator_score_eq_supporters` of `ForkChoiceFacts` at `Model.specDraft`: when
+/-- The field `Numerator_score_eq_supporters` of `ForkChoiceFacts` at `Model.spec`: when
     `votes` is the votes of `early ⊆ late` with no second vote in `late`, the Goldfish score of `B`
     over `votes` is the number of supporters of `B` over `votes`. -/
-theorem specDraft_Numerator_score_eq_supporters :
+theorem spec_Numerator_score_eq_supporters :
     ∀ (early late votes : Finset (GoldfishVote V)), early ⊆ late →
-    votes = early.filter (fun u => (Model.specDraft (V := V)).no_second_vote_in late u = true) →
+    votes = early.filter (fun u => (Model.spec (V := V)).no_second_vote_in late u = true) →
     ∀ (E : Env V) (T : Finset (Block V)) (s : Slot) (B : Block V) (sc : Nat),
-    (Model.specDraft (V := V)).goldfish_score E T votes votes s B ⇢ sc →
-    ∀ R : Finset V, (Model.specDraft (V := V)).raw_supporters T votes votes s B ⇢ R → sc = R.card
+    (Model.spec (V := V)).goldfish_score E T votes votes s B ⇢ sc →
+    ∀ R : Finset V, (Model.spec (V := V)).raw_supporters T votes votes s B ⇢ R → sc = R.card
     := by
-  rw [ForkChoiceImages.specDraft_no_second_vote_in_eq, ForkChoiceImages.specDraft_goldfish_score_eq,
-    ForkChoiceImages.specDraft_raw_supporters_eq]
+  rw [ForkChoiceImages.spec_no_second_vote_in_eq, ForkChoiceImages.spec_goldfish_score_eq,
+    ForkChoiceImages.spec_raw_supporters_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).Numerator_score_eq_supporters
 
 /-! ## The filtered tree of a store -/
 
-/-- The field `get_filtered_block_tree_from_subset` of `ForkChoiceFacts` at `Model.specDraft`: the
+/-- The field `get_filtered_block_tree_from_subset` of `ForkChoiceFacts` at `Model.spec`: the
     filtered tree of `st` over `blocks` is a subset of `blocks`. -/
-theorem specDraft_get_filtered_block_tree_from_subset :
-    ∀ (st : (Model.specDraft (V := V)).FGS) (blocks : Finset (Block V)),
-    (Model.specDraft (V := V)).get_filtered_block_tree_from st blocks ⊆ blocks
+theorem spec_get_filtered_block_tree_from_subset :
+    ∀ (st : (Model.spec (V := V)).FGS) (blocks : Finset (Block V)),
+    (Model.spec (V := V)).get_filtered_block_tree_from st blocks ⊆ blocks
     := by
   intro st blocks B hB
   exact (Model.vocabulary_facts_forkChoice (V := V)).get_filtered_block_tree_from_subset
     st.val.toProof.toHealing.toFG blocks (ForkChoiceImages.filtered_from_subset_vocabulary st.val blocks hB)
 
-/-- The field `mem_get_filtered_block_tree_from_parts` of `ForkChoiceFacts` at `Model.specDraft`: a
+/-- The field `mem_get_filtered_block_tree_from_parts` of `ForkChoiceFacts` at `Model.spec`: a
     block `B` of the filtered tree of `st` over `blocks` is in `blocks`, descends from `st`'s
     finalized block and FG root, and has a descendant in `blocks` of chain-state height at least
     `st.h_max − 1`. -/
-theorem specDraft_mem_get_filtered_block_tree_from_parts :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {blocks : Finset (Block V)}
-    {B : Block V}, B ∈ (Model.specDraft (V := V)).get_filtered_block_tree_from st blocks →
+theorem spec_mem_get_filtered_block_tree_from_parts :
+    ∀ {st : (Model.spec (V := V)).FGS} {blocks : Finset (Block V)}
+    {B : Block V}, B ∈ (Model.spec (V := V)).get_filtered_block_tree_from st blocks →
     B ∈ blocks ∧ Block.Preceq st.F B ∧ (∃ W ∈ blocks, Block.Preceq B W ∧ st.h_max - 1 ≤ (st.σ W).h) ∧
-      Block.Preceq ((Model.specDraft (V := V)).get_fg_root st) B
+      Block.Preceq ((Model.spec (V := V)).get_fg_root st) B
     := by
   intro st blocks B hB
   have h := (Model.vocabulary_facts_forkChoice (V := V)).mem_get_filtered_block_tree_from_parts
@@ -869,15 +918,15 @@ theorem specDraft_mem_get_filtered_block_tree_from_parts :
   sd_normalize
   exact h
 
-/-- The field `parts_of_mem_get_filtered_block_tree_from` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `parts_of_mem_get_filtered_block_tree_from` of `ForkChoiceFacts` at `Model.spec`:
     a block `C` of the filtered tree of `st` over `blocks` is in `blocks`, descends from `st`'s
     finalized block and FG root, and has a descendant in `blocks` of chain-state height at least
     `st.h_max − 1`. -/
-theorem specDraft_parts_of_mem_get_filtered_block_tree_from :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {blocks : Finset (Block V)}
-    {C : Block V}, C ∈ (Model.specDraft (V := V)).get_filtered_block_tree_from st blocks →
+theorem spec_parts_of_mem_get_filtered_block_tree_from :
+    ∀ {st : (Model.spec (V := V)).FGS} {blocks : Finset (Block V)}
+    {C : Block V}, C ∈ (Model.spec (V := V)).get_filtered_block_tree_from st blocks →
     ((C ∈ blocks ∧ Block.Preceq st.F C) ∧ ∃ W ∈ blocks, Block.Preceq C W ∧ st.h_max - 1 ≤ (st.σ W).h) ∧
-      Block.Preceq ((Model.specDraft (V := V)).get_fg_root st) C
+      Block.Preceq ((Model.spec (V := V)).get_fg_root st) C
     := by
   intro st blocks C hC
   have h := (Model.vocabulary_facts_forkChoice (V := V)).parts_of_mem_get_filtered_block_tree_from
@@ -886,10 +935,10 @@ theorem specDraft_parts_of_mem_get_filtered_block_tree_from :
   exact h
 
 /-- The field `finalized_preceq_of_mem_get_filtered_block_tree` of `ForkChoiceFacts` at
-    `Model.specDraft`: `st`'s finalized block is an ancestor of every block of its filtered tree, or
+    `Model.spec`: `st`'s finalized block is an ancestor of every block of its filtered tree, or
     that block itself. -/
-theorem specDraft_finalized_preceq_of_mem_get_filtered_block_tree :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {B : Block V} (hB : B ∈ (Model.specDraft (V := V)).get_filtered_block_tree st), Block.Preceq st.F B
+theorem spec_finalized_preceq_of_mem_get_filtered_block_tree :
+    ∀ {st : (Model.spec (V := V)).FGS} {B : Block V} (hB : B ∈ (Model.spec (V := V)).get_filtered_block_tree st), Block.Preceq st.F B
     := by
   intro st B hB
   have h := (Model.vocabulary_facts_forkChoice (V := V)).finalized_preceq_of_mem_get_filtered_block_tree
@@ -897,10 +946,10 @@ theorem specDraft_finalized_preceq_of_mem_get_filtered_block_tree :
   sd_normalize
   exact h
 
-/-- The field `q10_filtered_F` of `ForkChoiceFacts` at `Model.specDraft`: `st`'s finalized block is
+/-- The field `q10_filtered_F` of `ForkChoiceFacts` at `Model.spec`: `st`'s finalized block is
     an ancestor of every block of its filtered tree, or that block itself. -/
-theorem specDraft_q10_filtered_F :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {B : Block V} (h : B ∈ (Model.specDraft (V := V)).get_filtered_block_tree st), Block.Preceq st.F B
+theorem spec_q10_filtered_F :
+    ∀ {st : (Model.spec (V := V)).FGS} {B : Block V} (h : B ∈ (Model.spec (V := V)).get_filtered_block_tree st), Block.Preceq st.F B
     := by
   intro st B hB
   have h := (Model.vocabulary_facts_forkChoice (V := V)).q10_filtered_F
@@ -908,10 +957,10 @@ theorem specDraft_q10_filtered_F :
   sd_normalize
   exact h
 
-/-- The field `get_filtered_block_tree_subset` of `ForkChoiceFacts` at `Model.specDraft`: the
+/-- The field `get_filtered_block_tree_subset` of `ForkChoiceFacts` at `Model.spec`: the
     filtered tree of `st` is a subset of `st`'s block tree. -/
-theorem specDraft_get_filtered_block_tree_subset :
-    ∀ (st : (Model.specDraft (V := V)).FGS), (Model.specDraft (V := V)).get_filtered_block_tree st ⊆ st.toSG.toGoldfishStore.T
+theorem spec_get_filtered_block_tree_subset :
+    ∀ (st : (Model.spec (V := V)).FGS), (Model.spec (V := V)).get_filtered_block_tree st ⊆ st.toSG.toGoldfishStore.T
     := by
   intro st B hB
   have h := (Model.vocabulary_facts_forkChoice (V := V)).get_filtered_block_tree_subset
@@ -919,10 +968,10 @@ theorem specDraft_get_filtered_block_tree_subset :
   sd_normalize
   exact h
 
-/-- The field `preceq_get_fg_root_of_mem_filtered` of `ForkChoiceFacts` at `Model.specDraft`: `st`'s
+/-- The field `preceq_get_fg_root_of_mem_filtered` of `ForkChoiceFacts` at `Model.spec`: `st`'s
     FG root is an ancestor of every block of its filtered tree, or that block itself. -/
-theorem specDraft_preceq_get_fg_root_of_mem_filtered :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {B : Block V} (hB : B ∈ (Model.specDraft (V := V)).get_filtered_block_tree st), Block.preceq ((Model.specDraft (V := V)).get_fg_root st) B = true
+theorem spec_preceq_get_fg_root_of_mem_filtered :
+    ∀ {st : (Model.spec (V := V)).FGS} {B : Block V} (hB : B ∈ (Model.spec (V := V)).get_filtered_block_tree st), Block.preceq ((Model.spec (V := V)).get_fg_root st) B = true
     := by
   intro st B hB
   have h := (Model.vocabulary_facts_forkChoice (V := V)).preceq_get_fg_root_of_mem_filtered
@@ -930,13 +979,13 @@ theorem specDraft_preceq_get_fg_root_of_mem_filtered :
   sd_normalize
   exact h
 
-/-- The field `parts_of_mem_get_filtered_block_tree` of `ForkChoiceFacts` at `Model.specDraft`: a
+/-- The field `parts_of_mem_get_filtered_block_tree` of `ForkChoiceFacts` at `Model.spec`: a
     block `C` of `st`'s filtered tree is in `st`'s tree, descends from `st`'s finalized block and FG
     root, and has a descendant in the tree of chain-state height at least `st.h_max − 1`. -/
-theorem specDraft_parts_of_mem_get_filtered_block_tree :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {C : Block V} (h : C ∈ (Model.specDraft (V := V)).get_filtered_block_tree st), ((C ∈ st.toSG.toGoldfishStore.T ∧ Block.Preceq st.F C) ∧
+theorem spec_parts_of_mem_get_filtered_block_tree :
+    ∀ {st : (Model.spec (V := V)).FGS} {C : Block V} (h : C ∈ (Model.spec (V := V)).get_filtered_block_tree st), ((C ∈ st.toSG.toGoldfishStore.T ∧ Block.Preceq st.F C) ∧
     ∃ W, W ∈ st.toSG.toGoldfishStore.T ∧ Block.Preceq C W ∧ st.h_max - 1 ≤ (st.σ W).h) ∧
-    Block.Preceq ((Model.specDraft (V := V)).get_fg_root st) C
+    Block.Preceq ((Model.spec (V := V)).get_fg_root st) C
     := by
   intro st C hC
   have h := (Model.vocabulary_facts_forkChoice (V := V)).parts_of_mem_get_filtered_block_tree
@@ -945,10 +994,10 @@ theorem specDraft_parts_of_mem_get_filtered_block_tree :
   exact h
 
 /-- The field `viable_witness_of_mem_get_filtered_block_tree` of `ForkChoiceFacts` at
-    `Model.specDraft`: a block `B` of `st`'s filtered tree has a descendant `W` in `st`'s tree, or
+    `Model.spec`: a block `B` of `st`'s filtered tree has a descendant `W` in `st`'s tree, or
     is one, with chain-state height at least `st.h_max − 1`. -/
-theorem specDraft_viable_witness_of_mem_get_filtered_block_tree :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {B : Block V} (hB : B ∈ (Model.specDraft (V := V)).get_filtered_block_tree st), ∃ W ∈ st.toSG.toGoldfishStore.T, Block.Preceq B W ∧ st.h_max - 1 ≤ (st.σ W).h
+theorem spec_viable_witness_of_mem_get_filtered_block_tree :
+    ∀ {st : (Model.spec (V := V)).FGS} {B : Block V} (hB : B ∈ (Model.spec (V := V)).get_filtered_block_tree st), ∃ W ∈ st.toSG.toGoldfishStore.T, Block.Preceq B W ∧ st.h_max - 1 ≤ (st.σ W).h
     := by
   intro st B hB
   have h := (Model.vocabulary_facts_forkChoice (V := V)).viable_witness_of_mem_get_filtered_block_tree
@@ -956,11 +1005,11 @@ theorem specDraft_viable_witness_of_mem_get_filtered_block_tree :
   sd_normalize
   exact h
 
-/-- The field `mem_filtered_of_preceq` of `ForkChoiceFacts` at `Model.specDraft`: if `st.F ⪯ st.J`,
+/-- The field `mem_filtered_of_preceq` of `ForkChoiceFacts` at `Model.spec`: if `st.F ⪯ st.J`,
     `P` is in `st`'s filtered tree, and `R` is a block of `st`'s tree with `R ⪯ P` and FG root
     `⪯ R`, then `R` is in the filtered tree. -/
-theorem specDraft_mem_filtered_of_preceq :
-    ∀ {st : (Model.specDraft (V := V)).FGS} {P R : Block V} (hFJ : Block.preceq st.F st.J = true) (hP : P ∈ (Model.specDraft (V := V)).get_filtered_block_tree st) (hRT : R ∈ st.toSG.toGoldfishStore.T) (hRP : Block.preceq R P = true) (hroot : Block.preceq ((Model.specDraft (V := V)).get_fg_root st) R = true), R ∈ (Model.specDraft (V := V)).get_filtered_block_tree st
+theorem spec_mem_filtered_of_preceq :
+    ∀ {st : (Model.spec (V := V)).FGS} {P R : Block V} (hFJ : Block.preceq st.F st.J = true) (hP : P ∈ (Model.spec (V := V)).get_filtered_block_tree st) (hRT : R ∈ st.toSG.toGoldfishStore.T) (hRP : Block.preceq R P = true) (hroot : Block.preceq ((Model.spec (V := V)).get_fg_root st) R = true), R ∈ (Model.spec (V := V)).get_filtered_block_tree st
     := by
   intro st P R hFJ hP hRT hRP hroot
   have hP' := ForkChoiceImages.filtered_subset_vocabulary st hP
@@ -974,203 +1023,203 @@ theorem specDraft_mem_filtered_of_preceq :
 
 /-! ### The views -/
 
-/-- The field `mem_voter_view_of_carried` of `ForkChoiceFacts` at `Model.specDraft`: a
+/-- The field `mem_voter_view_of_carried` of `ForkChoiceFacts` at `Model.spec`: a
     slot-`(s − 1)` Goldfish vote included in a slot-`s` block of `gs`'s tree is in every outcome of
     the slot-`s` voter view of `gs`. -/
-theorem specDraft_mem_voter_view_of_carried :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {u : GoldfishVote V} {X : Block V} (hX : X ∈ gs.T) (hXs : X.slot = s) (hu : u ∈ X.gf_votes) (hus : u.slot = s - 1) (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_view E gs s ⇢ Y), u ∈ Y
+theorem spec_mem_voter_view_of_carried :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {u : GoldfishVote V} {X : Block V} (hX : X ∈ gs.T) (hXs : X.slot = s) (hu : u ∈ X.gf_votes) (hus : u.slot = s - 1) (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_view E gs s ⇢ Y), u ∈ Y
     := by
   intro E gs s u X hX hXs hu hus Y hY
-  rw [ForkChoiceImages.specDraft_voter_view_eq] at hY
+  rw [ForkChoiceImages.spec_voter_view_eq] at hY
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_voter_view_of_carried E _ s hX hXs hu hus Y hY
 
-/-- The field `carried_raw_subset_voter_view` of `ForkChoiceFacts` at `Model.specDraft`: if `B` is a
+/-- The field `carried_raw_subset_voter_view` of `ForkChoiceFacts` at `Model.spec`: if `B` is a
     slot-`s` block of `st`'s tree whose Goldfish votes are all of slot `B.slot − 1`, then those
     votes are in every outcome of the slot-`s` voter view of `st`. -/
-theorem specDraft_carried_raw_subset_voter_view :
-    ∀ (E : Env V) (st : (Model.specDraft (V := V)).GS) {s : Slot} {B : Block V} (hB : B ∈ st.T) (hBslot : B.slot = s) (hslots : ∀ u ∈ B.gf_votes, u.slot + 1 = B.slot) (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_view E st s ⇢ Y), B.gf_votes.toFinset ⊆ Y
+theorem spec_carried_raw_subset_voter_view :
+    ∀ (E : Env V) (st : (Model.spec (V := V)).GS) {s : Slot} {B : Block V} (hB : B ∈ st.T) (hBslot : B.slot = s) (hslots : ∀ u ∈ B.gf_votes, u.slot + 1 = B.slot) (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_view E st s ⇢ Y), B.gf_votes.toFinset ⊆ Y
     := by
   intro E st s B hB hBslot hslots Y hY
-  rw [ForkChoiceImages.specDraft_voter_view_eq] at hY
+  rw [ForkChoiceImages.spec_voter_view_eq] at hY
   exact (Model.vocabulary_facts_forkChoice (V := V)).carried_raw_subset_voter_view E _ hB hBslot hslots Y hY
 
-/-- The field `mem_voter_view_of_pool` of `ForkChoiceFacts` at `Model.specDraft`: a slot-`s`
+/-- The field `mem_voter_view_of_pool` of `ForkChoiceFacts` at `Model.spec`: a slot-`s`
     Goldfish vote of `gs`'s pool stamped before slot `s`'s view freeze is in every outcome of the
     slot-`(s + 1)` voter view of `gs`. -/
-theorem specDraft_mem_voter_view_of_pool :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {u : GoldfishVote V},
+theorem spec_mem_voter_view_of_pool :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {u : GoldfishVote V},
     u ∈ gs.pool s → ∀ {τ : Stamp}, gs.timestamp_vote u = some τ →
-    τ < (((Model.specDraft (V := V)).view_freeze E s : Int) : Stamp) →
-    ∀ Y : Finset (GoldfishVote V), (Model.specDraft (V := V)).voter_view E gs (s + 1) ⇢ Y → u ∈ Y
+    τ < (((Model.spec (V := V)).view_freeze E s : Int) : Stamp) →
+    ∀ Y : Finset (GoldfishVote V), (Model.spec (V := V)).voter_view E gs (s + 1) ⇢ Y → u ∈ Y
     := by
   intro E gs s u hu τ hτ hlt Y hY
-  rw [ForkChoiceImages.specDraft_voter_view_eq] at hY
-  rw [ForkChoiceImages.specDraft_view_freeze_eq] at hlt
-  change u ∈ (Model.specDraft (V := V)).gs_pool gs s at hu
-  rw [ForkChoiceImages.specDraft_gs_pool_eq] at hu
+  rw [ForkChoiceImages.spec_voter_view_eq] at hY
+  rw [ForkChoiceImages.spec_view_freeze_eq] at hlt
+  change u ∈ (Model.spec (V := V)).gs_pool gs s at hu
+  rw [ForkChoiceImages.spec_gs_pool_eq] at hu
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_voter_view_of_pool E _ s hu hτ hlt Y hY
 
-/-- The field `voter_view_cases` of `ForkChoiceFacts` at `Model.specDraft`: a vote in an outcome of
+/-- The field `voter_view_cases` of `ForkChoiceFacts` at `Model.spec`: a vote in an outcome of
     the slot-`s` voter view of `gs` is in `gs_pool gs (s − 1)` with a stamp strictly before slot
     `s − 1`'s view freeze, or is a slot-`(s − 1)` Goldfish vote included in a slot-`s` block of
     `gs`'s tree. -/
-theorem specDraft_voter_view_cases :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {u : GoldfishVote V} (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_view E gs s ⇢ Y) (h : u ∈ Y), (u ∈ ((Model.specDraft (V := V)).gs_pool gs (s - 1)) ∧ ∃ τ : Stamp, gs.timestamp_vote u = some τ ∧
-    τ < (((Model.specDraft (V := V)).view_freeze E (s - 1) : Int) : Stamp)) ∨
+theorem spec_voter_view_cases :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {u : GoldfishVote V} (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_view E gs s ⇢ Y) (h : u ∈ Y), (u ∈ ((Model.spec (V := V)).gs_pool gs (s - 1)) ∧ ∃ τ : Stamp, gs.timestamp_vote u = some τ ∧
+    τ < (((Model.spec (V := V)).view_freeze E (s - 1) : Int) : Stamp)) ∨
     ∃ X ∈ gs.T, X.slot = s ∧ u ∈ X.gf_votes ∧ u.slot = s - 1
     := by
   intro E gs s u Y hY h
-  rw [ForkChoiceImages.specDraft_voter_view_eq] at hY
-  rw [ForkChoiceImages.specDraft_view_freeze_eq, ForkChoiceImages.specDraft_gs_pool_eq]
+  rw [ForkChoiceImages.spec_voter_view_eq] at hY
+  rw [ForkChoiceImages.spec_view_freeze_eq, ForkChoiceImages.spec_gs_pool_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).voter_view_cases E _ s Y hY h
 
-/-- The field `voter_view_cases_beforeCutoff` of `ForkChoiceFacts` at `Model.specDraft`: a vote in
+/-- The field `voter_view_cases_beforeCutoff` of `ForkChoiceFacts` at `Model.spec`: a vote in
     an outcome of the slot-`s` voter view of `gs` is among the votes of `gs_pool gs (s − 1)` stamped
     before slot `s − 1`'s view freeze, or is a slot-`(s − 1)` Goldfish vote included in a slot-`s`
     block of `gs`'s tree. -/
-theorem specDraft_voter_view_cases_beforeCutoff :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {u : GoldfishVote V} (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_view E gs s ⇢ Y) (h : u ∈ Y), u ∈ beforeCutoff gs.timestamp_vote ((Model.specDraft (V := V)).view_freeze E (s - 1)) (((Model.specDraft (V := V)).gs_pool gs (s - 1))) ∨
+theorem spec_voter_view_cases_beforeCutoff :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {u : GoldfishVote V} (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_view E gs s ⇢ Y) (h : u ∈ Y), u ∈ beforeCutoff gs.timestamp_vote ((Model.spec (V := V)).view_freeze E (s - 1)) (((Model.spec (V := V)).gs_pool gs (s - 1))) ∨
     ∃ X ∈ gs.T, X.slot = s ∧ u ∈ X.gf_votes ∧ u.slot = s - 1
     := by
   intro E gs s u Y hY h
-  rw [ForkChoiceImages.specDraft_voter_view_eq] at hY
-  rw [ForkChoiceImages.specDraft_view_freeze_eq, ForkChoiceImages.specDraft_gs_pool_eq]
+  rw [ForkChoiceImages.spec_voter_view_eq] at hY
+  rw [ForkChoiceImages.spec_view_freeze_eq, ForkChoiceImages.spec_gs_pool_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).voter_view_cases_beforeCutoff E _ s Y hY h
 
-/-- The field `voter_view_set_clock_slot` of `ForkChoiceFacts` at `Model.specDraft`: setting the
+/-- The field `voter_view_set_clock_slot` of `ForkChoiceFacts` at `Model.spec`: setting the
     store's time and slot does not change the outcomes of its slot-`k` voter view. -/
-theorem specDraft_voter_view_set_clock_slot :
-    ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (t : Int) (s k : Slot) (Y : Finset (GoldfishVote V)),
-    (Model.specDraft (V := V)).voter_view E ((Model.specDraft (V := V)).store_with_t_s st t s).toHealing.toFG.toSG.toGoldfishStore k ⇢ Y ↔
-      (Model.specDraft (V := V)).voter_view E st.toHealing.toFG.toSG.toGoldfishStore k ⇢ Y
+theorem spec_voter_view_set_clock_slot :
+    ∀ (E : Env V) (st : (Model.spec (V := V)).S) (t : Int) (s k : Slot) (Y : Finset (GoldfishVote V)),
+    (Model.spec (V := V)).voter_view E ((Model.spec (V := V)).store_with_t_s st t s).toHealing.toFG.toSG.toGoldfishStore k ⇢ Y ↔
+      (Model.spec (V := V)).voter_view E st.toHealing.toFG.toSG.toGoldfishStore k ⇢ Y
     := by
   intro E st t s k Y
   rfl
 
 
-/-- The field `mem_T_of_mem_voter_processed_block_tree` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `mem_T_of_mem_voter_processed_block_tree` of `ForkChoiceFacts` at `Model.spec`:
     every block of an outcome of the voter's processed tree of `gs` is in `gs`'s tree. -/
-theorem specDraft_mem_T_of_mem_voter_processed_block_tree :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {B : Block V} (P : Finset (Block V)) (hP : (Model.specDraft (V := V)).voter_processed_block_tree E gs s ⇢ P) (h : B ∈ P), B ∈ gs.T
+theorem spec_mem_T_of_mem_voter_processed_block_tree :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {B : Block V} (P : Finset (Block V)) (hP : (Model.spec (V := V)).voter_processed_block_tree E gs s ⇢ P) (h : B ∈ P), B ∈ gs.T
     := by
   intro E gs s B P hP h
-  rw [ForkChoiceImages.specDraft_voter_processed_block_tree_eq] at hP
+  rw [ForkChoiceImages.spec_voter_processed_block_tree_eq] at hP
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_T_of_mem_voter_processed_block_tree E _ s P hP h
 
 /-- The field `mem_voter_processed_block_tree_of_proposal` of `ForkChoiceFacts` at
-    `Model.specDraft`: an ancestor `B` in `gs`'s tree of a slot-`s` block `P` of `gs`'s tree is in
+    `Model.spec`: an ancestor `B` in `gs`'s tree of a slot-`s` block `P` of `gs`'s tree is in
     every outcome of the voter's processed tree of `gs` at slot `s`. -/
-theorem specDraft_mem_voter_processed_block_tree_of_proposal :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {B P : Block V} (hT : B ∈ gs.T) (hP : P ∈ gs.T) (hPs : P.slot = s) (hBP : Block.Preceq B P) (Q : Finset (Block V)) (hQ : (Model.specDraft (V := V)).voter_processed_block_tree E gs s ⇢ Q), B ∈ Q
+theorem spec_mem_voter_processed_block_tree_of_proposal :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {B P : Block V} (hT : B ∈ gs.T) (hP : P ∈ gs.T) (hPs : P.slot = s) (hBP : Block.Preceq B P) (Q : Finset (Block V)) (hQ : (Model.spec (V := V)).voter_processed_block_tree E gs s ⇢ Q), B ∈ Q
     := by
   intro E gs s B P hT hP hPs hBP Q hQ
-  rw [ForkChoiceImages.specDraft_voter_processed_block_tree_eq] at hQ
+  rw [ForkChoiceImages.spec_voter_processed_block_tree_eq] at hQ
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_voter_processed_block_tree_of_proposal E _ s hT hP hPs hBP Q hQ
 
-/-- The field `mem_voter_processed_block_tree_of_slot` of `ForkChoiceFacts` at `Model.specDraft`: a
+/-- The field `mem_voter_processed_block_tree_of_slot` of `ForkChoiceFacts` at `Model.spec`: a
     slot-`s` block of `gs`'s tree is in every outcome of the voter's processed tree of `gs` at slot
     `s`. -/
-theorem specDraft_mem_voter_processed_block_tree_of_slot :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {B : Block V} (hB : B ∈ gs.T) (hs : B.slot = s) (Q : Finset (Block V)) (hQ : (Model.specDraft (V := V)).voter_processed_block_tree E gs s ⇢ Q), B ∈ Q
+theorem spec_mem_voter_processed_block_tree_of_slot :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {B : Block V} (hB : B ∈ gs.T) (hs : B.slot = s) (Q : Finset (Block V)) (hQ : (Model.spec (V := V)).voter_processed_block_tree E gs s ⇢ Q), B ∈ Q
     := by
   intro E gs s B hB hs Q hQ
-  rw [ForkChoiceImages.specDraft_voter_processed_block_tree_eq] at hQ
+  rw [ForkChoiceImages.spec_voter_processed_block_tree_eq] at hQ
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_voter_processed_block_tree_of_slot E _ s hB hs Q hQ
 
-/-- The field `mem_voter_processed_block_tree_of_stamped` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `mem_voter_processed_block_tree_of_stamped` of `ForkChoiceFacts` at `Model.spec`:
     a block of `gs`'s tree stamped before slot `s − 1`'s view freeze is in every outcome of the
     voter's processed tree of `gs` at slot `s`. -/
-theorem specDraft_mem_voter_processed_block_tree_of_stamped :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {B : Block V} (hT : B ∈ gs.T) (hst : stampedBefore gs.timestamp_block ((Model.specDraft (V := V)).view_freeze E (s - 1)) B = true) (Q : Finset (Block V)) (hQ : (Model.specDraft (V := V)).voter_processed_block_tree E gs s ⇢ Q), B ∈ Q
+theorem spec_mem_voter_processed_block_tree_of_stamped :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {B : Block V} (hT : B ∈ gs.T) (hst : stampedBefore gs.timestamp_block ((Model.spec (V := V)).view_freeze E (s - 1)) B = true) (Q : Finset (Block V)) (hQ : (Model.spec (V := V)).voter_processed_block_tree E gs s ⇢ Q), B ∈ Q
     := by
   intro E gs s B hT hst Q hQ
-  rw [ForkChoiceImages.specDraft_voter_processed_block_tree_eq] at hQ
-  rw [ForkChoiceImages.specDraft_view_freeze_eq] at hst
+  rw [ForkChoiceImages.spec_voter_processed_block_tree_eq] at hQ
+  rw [ForkChoiceImages.spec_view_freeze_eq] at hst
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_voter_processed_block_tree_of_stamped E _ s hT hst Q hQ
 
-/-- The field `voter_processed_block_tree_cases` of `ForkChoiceFacts` at `Model.specDraft`: a block
+/-- The field `voter_processed_block_tree_cases` of `ForkChoiceFacts` at `Model.spec`: a block
     `B` of an outcome of the voter's processed tree of `gs` at slot `s` is in `gs`'s tree, and was
     stamped before slot `s − 1`'s view freeze or is an ancestor of a slot-`s` block of the tree, or
     that block itself. -/
-theorem specDraft_voter_processed_block_tree_cases :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {B : Block V} (Q : Finset (Block V)) (hQ : (Model.specDraft (V := V)).voter_processed_block_tree E gs s ⇢ Q) (h : B ∈ Q), B ∈ gs.T ∧
-    (stampedBefore gs.timestamp_block ((Model.specDraft (V := V)).view_freeze E (s - 1)) B = true ∨
+theorem spec_voter_processed_block_tree_cases :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {B : Block V} (Q : Finset (Block V)) (hQ : (Model.spec (V := V)).voter_processed_block_tree E gs s ⇢ Q) (h : B ∈ Q), B ∈ gs.T ∧
+    (stampedBefore gs.timestamp_block ((Model.spec (V := V)).view_freeze E (s - 1)) B = true ∨
     ∃ P ∈ gs.T, P.slot = s ∧ Block.Preceq B P)
     := by
   intro E gs s B Q hQ h
-  rw [ForkChoiceImages.specDraft_voter_processed_block_tree_eq] at hQ
-  rw [ForkChoiceImages.specDraft_view_freeze_eq]
+  rw [ForkChoiceImages.spec_voter_processed_block_tree_eq] at hQ
+  rw [ForkChoiceImages.spec_view_freeze_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).voter_processed_block_tree_cases E _ s Q hQ h
 
-/-- The field `mem_proposer_support_view_iff` of `ForkChoiceFacts` at `Model.specDraft`: a vote `u`
+/-- The field `mem_proposer_support_view_iff` of `ForkChoiceFacts` at `Model.spec`: a vote `u`
     is in an outcome of the slot-`s` proposer support view of `gs` exactly when it is among `gs`'s
     slot-`(s − 1)` Goldfish votes and its resolution test `resolved gs.T u` returns `true`. -/
-theorem specDraft_mem_proposer_support_view_iff :
-    ∀ (gs : (Model.specDraft (V := V)).GS) (s : Slot) (u : GoldfishVote V) (L : List (GoldfishVote V)) (hL : (Model.specDraft (V := V)).proposer_support_view gs s ⇢ L) (b : Bool) (hb : (Model.specDraft (V := V)).resolved gs.T u ⇢ b), u ∈ L ↔
+theorem spec_mem_proposer_support_view_iff :
+    ∀ (gs : (Model.spec (V := V)).GS) (s : Slot) (u : GoldfishVote V) (L : List (GoldfishVote V)) (hL : (Model.spec (V := V)).proposer_support_view gs s ⇢ L) (b : Bool) (hb : (Model.spec (V := V)).resolved gs.T u ⇢ b), u ∈ L ↔
     u ∈ gs.gf_votes (s - 1) ∧ b = true
     := by
   intro gs s u L hL b hb
-  rw [ForkChoiceImages.specDraft_proposer_support_view_eq] at hL
-  rw [ForkChoiceImages.specDraft_resolved_eq] at hb
+  rw [ForkChoiceImages.spec_proposer_support_view_eq] at hL
+  rw [ForkChoiceImages.spec_resolved_eq] at hb
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_proposer_support_view_iff _ s u L hL b hb
 
-/-- The field `voter_support_view_subset` of `ForkChoiceFacts` at `Model.specDraft`: if every
+/-- The field `voter_support_view_subset` of `ForkChoiceFacts` at `Model.spec`: if every
     block's support votes are among its Goldfish votes, every outcome of the slot-`s` support voter
     view of `st` is a subset of every outcome of its slot-`s` voter view. -/
-theorem specDraft_voter_support_view_subset :
-    ∀ (E : Env V) (st : (Model.specDraft (V := V)).GS) (s : Slot) (hsub : ∀ B ∈ st.T, ∀ u ∈ B.gf_support_votes, u ∈ B.gf_votes) (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_support_view E st s ⇢ Y) (Z : Finset (GoldfishVote V)) (hZ : (Model.specDraft (V := V)).voter_view E st s ⇢ Z), Y ⊆ Z
+theorem spec_voter_support_view_subset :
+    ∀ (E : Env V) (st : (Model.spec (V := V)).GS) (s : Slot) (hsub : ∀ B ∈ st.T, ∀ u ∈ B.gf_support_votes, u ∈ B.gf_votes) (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_support_view E st s ⇢ Y) (Z : Finset (GoldfishVote V)) (hZ : (Model.spec (V := V)).voter_view E st s ⇢ Z), Y ⊆ Z
     := by
   intro E st s hsub Y hY Z hZ
-  rw [ForkChoiceImages.specDraft_voter_support_view_eq] at hY
-  rw [ForkChoiceImages.specDraft_voter_view_eq] at hZ
+  rw [ForkChoiceImages.spec_voter_support_view_eq] at hY
+  rw [ForkChoiceImages.spec_voter_view_eq] at hZ
   exact (Model.vocabulary_facts_forkChoice (V := V)).voter_support_view_subset E _ s hsub Y hY Z hZ
 
-/-- The field `mem_voter_support_view_of_carried` of `ForkChoiceFacts` at `Model.specDraft`: a
+/-- The field `mem_voter_support_view_of_carried` of `ForkChoiceFacts` at `Model.spec`: a
     slot-`(s − 1)` support vote of a slot-`s` block of `gs`'s tree whose resolution test returns
     `true` is in every outcome of the slot-`s` support voter view of `gs`. -/
-theorem specDraft_mem_voter_support_view_of_carried :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {u : GoldfishVote V} {X : Block V} (hX : X ∈ gs.T) (hXs : X.slot = s) (hu : u ∈ X.gf_support_votes) (b : Bool) (hb : (Model.specDraft (V := V)).resolved gs.T u ⇢ b) (hres : b = true) (hus : u.slot = s - 1) (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_support_view E gs s ⇢ Y), u ∈ Y
+theorem spec_mem_voter_support_view_of_carried :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {u : GoldfishVote V} {X : Block V} (hX : X ∈ gs.T) (hXs : X.slot = s) (hu : u ∈ X.gf_support_votes) (b : Bool) (hb : (Model.spec (V := V)).resolved gs.T u ⇢ b) (hres : b = true) (hus : u.slot = s - 1) (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_support_view E gs s ⇢ Y), u ∈ Y
     := by
   intro E gs s u X hX hXs hu b hb hres hus Y hY
-  rw [ForkChoiceImages.specDraft_voter_support_view_eq] at hY
-  rw [ForkChoiceImages.specDraft_resolved_eq] at hb
+  rw [ForkChoiceImages.spec_voter_support_view_eq] at hY
+  rw [ForkChoiceImages.spec_resolved_eq] at hb
   exact (Model.vocabulary_facts_forkChoice (V := V)).mem_voter_support_view_of_carried E _ s hX hXs hu b hb hres hus Y hY
 
-/-- The field `voter_support_view_cases` of `ForkChoiceFacts` at `Model.specDraft`: a vote in an
+/-- The field `voter_support_view_cases` of `ForkChoiceFacts` at `Model.spec`: a vote in an
     outcome of the slot-`s` support voter view of `gs` is either in `gs_pool gs (s − 1)`, with its
     head resolving in `gs`'s tree to a block of slot at most the vote's and both stamps strictly
     before slot `s − 1`'s view freeze, or a slot-`(s − 1)` support vote of a slot-`s` block of the
     tree whose resolution test returns `true`. -/
-theorem specDraft_voter_support_view_cases :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot) {u : GoldfishVote V} (Y : Finset (GoldfishVote V)) (hY : (Model.specDraft (V := V)).voter_support_view E gs s ⇢ Y) (h : u ∈ Y) (b : Bool) (hb : (Model.specDraft (V := V)).resolved gs.T u ⇢ b), (u ∈ ((Model.specDraft (V := V)).gs_pool gs (s - 1)) ∧ ∃ X : Block V, Block.find? gs.T u.head = some X ∧
+theorem spec_voter_support_view_cases :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot) {u : GoldfishVote V} (Y : Finset (GoldfishVote V)) (hY : (Model.spec (V := V)).voter_support_view E gs s ⇢ Y) (h : u ∈ Y) (b : Bool) (hb : (Model.spec (V := V)).resolved gs.T u ⇢ b), (u ∈ ((Model.spec (V := V)).gs_pool gs (s - 1)) ∧ ∃ X : Block V, Block.find? gs.T u.head = some X ∧
     X.slot ≤ u.slot ∧ ∃ τ σ : Stamp, gs.timestamp_vote u = some τ ∧
     gs.timestamp_block X = some σ ∧
-    τ < (((Model.specDraft (V := V)).view_freeze E (s - 1) : Int) : Stamp) ∧
-    σ < (((Model.specDraft (V := V)).view_freeze E (s - 1) : Int) : Stamp)) ∨
+    τ < (((Model.spec (V := V)).view_freeze E (s - 1) : Int) : Stamp) ∧
+    σ < (((Model.spec (V := V)).view_freeze E (s - 1) : Int) : Stamp)) ∨
     ∃ X ∈ gs.T, X.slot = s ∧ u ∈ X.gf_support_votes ∧
     b = true ∧ u.slot = s - 1
     := by
   intro E gs s u Y hY h b hb
-  rw [ForkChoiceImages.specDraft_voter_support_view_eq] at hY
-  rw [ForkChoiceImages.specDraft_resolved_eq] at hb
-  rw [ForkChoiceImages.specDraft_view_freeze_eq, ForkChoiceImages.specDraft_gs_pool_eq]
+  rw [ForkChoiceImages.spec_voter_support_view_eq] at hY
+  rw [ForkChoiceImages.spec_resolved_eq] at hb
+  rw [ForkChoiceImages.spec_view_freeze_eq, ForkChoiceImages.spec_gs_pool_eq]
   exact (Model.vocabulary_facts_forkChoice (V := V)).voter_support_view_cases E _ s Y hY h b hb
 
-/-- The field `Optimistic_mem_voter_support_view_of_pool` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `Optimistic_mem_voter_support_view_of_pool` of `ForkChoiceFacts` at `Model.spec`:
     for every outcome `τ` of `gs_tau gst`, a vote of `gst`'s slot-`(s − 1)` pool stamped by `τ`
     before slot `s − 1`'s view freeze is in every outcome of the slot-`s` support voter view of
     `gst`. -/
-theorem specDraft_Optimistic_mem_voter_support_view_of_pool :
-    ∀ (E : Env V) (gst : (Model.specDraft (V := V)).GS) (s : Slot)
-    {u : GoldfishVote V} (τ : TimestampMap (GoldfishVote V)), (Model.specDraft (V := V)).gs_tau gst ⇢ τ →
-    u ∈ beforeCutoff τ ((Model.specDraft (V := V)).view_freeze E (s - 1)) ((Model.specDraft (V := V)).gs_pool gst (s - 1)) →
-    ∀ Y : Finset (GoldfishVote V), (Model.specDraft (V := V)).voter_support_view E gst s ⇢ Y → u ∈ Y
+theorem spec_Optimistic_mem_voter_support_view_of_pool :
+    ∀ (E : Env V) (gst : (Model.spec (V := V)).GS) (s : Slot)
+    {u : GoldfishVote V} (τ : TimestampMap (GoldfishVote V)), (Model.spec (V := V)).gs_tau gst ⇢ τ →
+    u ∈ beforeCutoff τ ((Model.spec (V := V)).view_freeze E (s - 1)) ((Model.spec (V := V)).gs_pool gst (s - 1)) →
+    ∀ Y : Finset (GoldfishVote V), (Model.spec (V := V)).voter_support_view E gst s ⇢ Y → u ∈ Y
     := by
   intro E gst s u τ hτ hu Y hY
-  rw [ForkChoiceImages.specDraft_voter_support_view_eq] at hY
+  rw [ForkChoiceImages.spec_voter_support_view_eq] at hY
   obtain ⟨f, hf, -, hfx⟩ := hτ
   cases Except.ok.inj hfx
-  rw [ForkChoiceImages.specDraft_view_freeze_eq, ForkChoiceImages.specDraft_gs_pool_eq] at hu
+  rw [ForkChoiceImages.spec_view_freeze_eq, ForkChoiceImages.spec_gs_pool_eq] at hu
   refine (Model.vocabulary_facts_forkChoice (V := V)).Optimistic_mem_voter_support_view_of_pool E _ s
     (DecoupledConsensusModel.Protocol.GoldfishStore.tau
       gst.val.toProof.toHealing.toFG.toSG.toGoldfishStore) rfl ?_ Y hY
@@ -1178,7 +1227,7 @@ theorem specDraft_Optimistic_mem_voter_support_view_of_pool :
   rw [Finset.mem_filter] at hu ⊢
   refine ⟨hu.1, ?_⟩
   have hpool := hu.1
-  rw [← ForkChoiceImages.specDraft_gs_pool_eq] at hpool
+  rw [← ForkChoiceImages.spec_gs_pool_eq] at hpool
   change u ∈ (gst.val.pool (s - 1)).map Spec.GoldfishVote.toProofEmb at hpool
   obtain ⟨w, hw, rfl⟩ := Finset.mem_map.mp hpool
   obtain ⟨hst, hT, -, -⟩ := gst.property
@@ -1195,21 +1244,21 @@ theorem specDraft_Optimistic_mem_voter_support_view_of_pool :
   exact h2
 
 /-- The field `voter_candidate_tree_eq_protocol_voter_filtered_block_tree` of `ForkChoiceFacts` at
-    `Model.specDraft`: for every outcome `P` of the voter's processed tree at `st`'s slot, the
+    `Model.spec`: for every outcome `P` of the voter's processed tree at `st`'s slot, the
     filtered tree of `st`'s FG view over `P` is every outcome of
     `voter_filtered_block_tree E st st.s`. -/
-theorem specDraft_voter_candidate_tree_eq_protocol_voter_filtered_block_tree :
-    ∀ (E : Env V) (st : (Model.specDraft (V := V)).S)
+theorem spec_voter_candidate_tree_eq_protocol_voter_filtered_block_tree :
+    ∀ (E : Env V) (st : (Model.spec (V := V)).S)
     (P : Finset (Block V)),
-    (Model.specDraft (V := V)).voter_processed_block_tree E ((Model.specDraft (V := V)).toHealing st).toFG.toSG.toGoldfishStore ((Model.specDraft (V := V)).toHealing st).s ⇢ P →
-    ∀ X : Finset (Block V), (Model.specDraft (V := V)).voter_filtered_block_tree E st st.s ⇢ X →
-    (Model.specDraft (V := V)).get_filtered_block_tree_from ((Model.specDraft (V := V)).toHealing st).toFG P = X
+    (Model.spec (V := V)).voter_processed_block_tree E ((Model.spec (V := V)).toHealing st).toFG.toSG.toGoldfishStore ((Model.spec (V := V)).toHealing st).s ⇢ P →
+    ∀ X : Finset (Block V), (Model.spec (V := V)).voter_filtered_block_tree E st st.s ⇢ X →
+    (Model.spec (V := V)).get_filtered_block_tree_from ((Model.spec (V := V)).toHealing st).toFG P = X
     := by
   intro E st P hP X hX
   have hP' := (returns_successOutcomes _ _).mp hP
   have hX' := (returns_successOutcomes _ _).mp hX
-  have hs : ((Model.specDraft (V := V)).toHealing st).s = st.s := by
-    simp only [Model.HS.s, Model.S.s, Model.GS.s, Model.specDraft,
+  have hs : ((Model.spec (V := V)).toHealing st).s = st.s := by
+    simp only [Model.HS.s, Model.S.s, Model.GS.s, Model.spec,
       Member.gs_s, Member.store_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s]
@@ -1232,12 +1281,12 @@ theorem specDraft_voter_candidate_tree_eq_protocol_voter_filtered_block_tree :
     rw [ForkChoiceImages.image_map_blockOfImage_of_subset st
       (ForkChoiceImages.processed_subset_of_ok _ _ _ hq)]
 
-/-- The field `voter_filtered_block_tree_subset_filtered` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `voter_filtered_block_tree_subset_filtered` of `ForkChoiceFacts` at `Model.spec`:
     every outcome of `voter_filtered_block_tree E st st.s` is a subset of the filtered tree of
     `st`'s healing view. -/
-theorem specDraft_voter_filtered_block_tree_subset_filtered :
-    ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (X : Finset (Block V)),
-    (Model.specDraft (V := V)).voter_filtered_block_tree E st st.s ⇢ X → X ⊆ (Model.specDraft (V := V)).get_filtered_block_tree ((Model.specDraft (V := V)).toHealing st).toFG
+theorem spec_voter_filtered_block_tree_subset_filtered :
+    ∀ (E : Env V) (st : (Model.spec (V := V)).S) (X : Finset (Block V)),
+    (Model.spec (V := V)).voter_filtered_block_tree E st st.s ⇢ X → X ⊆ (Model.spec (V := V)).get_filtered_block_tree ((Model.spec (V := V)).toHealing st).toFG
     := by
   intro E st X hX
   have hX' := (returns_successOutcomes _ _).mp hX
@@ -1259,11 +1308,11 @@ theorem specDraft_voter_filtered_block_tree_subset_filtered :
 /-! ## Membership in the filtered tree, and the fork choice as a walk -/
 
 
-/-- The field `mem_get_filtered_block_tree_of_parts` of `ForkChoiceFacts` at `Model.specDraft`: a
+/-- The field `mem_get_filtered_block_tree_of_parts` of `ForkChoiceFacts` at `Model.spec`: a
     block of the store's tree that descends from the finalized block and from the FG root, and has a
     descendant in the tree of chain-state height at least `h_max − 1`, is in the store's filtered
     tree. -/
-theorem specDraft_mem_get_filtered_block_tree_of_parts : ∀ (st : (Model.specDraft (V := V)).HS) {C W : Block V} (hC : C ∈ st.toFG.toSG.toGoldfishStore.T) (hF : Block.Preceq st.toFG.F C) (hW : W ∈ st.toFG.toSG.toGoldfishStore.T) (hCW : Block.Preceq C W) (hh : st.toFG.h_max - 1 ≤ (st.toFG.σ W).h) (hroot : Block.Preceq ((Model.specDraft (V := V)).get_fg_root st.toFG) C), C ∈ (Model.specDraft (V := V)).get_filtered_block_tree st.toFG := by
+theorem spec_mem_get_filtered_block_tree_of_parts : ∀ (st : (Model.spec (V := V)).HS) {C W : Block V} (hC : C ∈ st.toFG.toSG.toGoldfishStore.T) (hF : Block.Preceq st.toFG.F C) (hW : W ∈ st.toFG.toSG.toGoldfishStore.T) (hCW : Block.Preceq C W) (hh : st.toFG.h_max - 1 ≤ (st.toFG.σ W).h) (hroot : Block.Preceq ((Model.spec (V := V)).get_fg_root st.toFG) C), C ∈ (Model.spec (V := V)).get_filtered_block_tree st.toFG := by
   intro st C W hC hF hW hCW hh hroot
   have h := (Model.vocabulary_facts_forkChoice (V := V)).mem_get_filtered_block_tree_of_parts
     (st := st.val.toProof.toHealing) (by sd_normalize; exact hC) (by sd_normalize; exact hF)
@@ -1273,9 +1322,9 @@ theorem specDraft_mem_get_filtered_block_tree_of_parts : ∀ (st : (Model.specDr
   exact h
 
 /-- The field `canonicalConeSegment_mem_filtered_of_root_preceq` of `ForkChoiceFacts` at
-    `Model.specDraft`: a block between a descendant of the FG root and a tree block of chain-state
+    `Model.spec`: a block between a descendant of the FG root and a tree block of chain-state
     height at least `h_max − 1` is in the store's filtered tree. -/
-theorem specDraft_canonicalConeSegment_mem_filtered_of_root_preceq : ∀ {st : (Model.specDraft (V := V)).S} (hpc : Block.genesis ∈ ((Model.specDraft (V := V)).toHealing st).toFG.toSG.toGoldfishStore.T ∧ ∀ B ∈ ((Model.specDraft (V := V)).toHealing st).toFG.toSG.toGoldfishStore.T, B.parent? = none ∨ B.parent ∈ ((Model.specDraft (V := V)).toHealing st).toFG.toSG.toGoldfishStore.T) (hFJ : Block.Preceq st.F st.J) {P W D : Block V} (hrootP : Block.Preceq ((Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG) P) (hWT : W ∈ st.T) (hheight : st.h_max - 1 ≤ (st.σ W).h) (hPD : Block.Preceq P D) (hDW : Block.Preceq D W), D ∈ (Model.specDraft (V := V)).get_filtered_block_tree ((Model.specDraft (V := V)).toHealing st).toFG := by
+theorem spec_canonicalConeSegment_mem_filtered_of_root_preceq : ∀ {st : (Model.spec (V := V)).S} (hpc : Block.genesis ∈ ((Model.spec (V := V)).toHealing st).toFG.toSG.toGoldfishStore.T ∧ ∀ B ∈ ((Model.spec (V := V)).toHealing st).toFG.toSG.toGoldfishStore.T, B.parent? = none ∨ B.parent ∈ ((Model.spec (V := V)).toHealing st).toFG.toSG.toGoldfishStore.T) (hFJ : Block.Preceq st.F st.J) {P W D : Block V} (hrootP : Block.Preceq ((Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG) P) (hWT : W ∈ st.T) (hheight : st.h_max - 1 ≤ (st.σ W).h) (hPD : Block.Preceq P D) (hDW : Block.Preceq D W), D ∈ (Model.spec (V := V)).get_filtered_block_tree ((Model.spec (V := V)).toHealing st).toFG := by
   intro st hpc hFJ P W D hrootP hWT hheight hPD hDW
   have h := (Model.vocabulary_facts_forkChoice (V := V)).canonicalConeSegment_mem_filtered_of_root_preceq
     (st := st.val.toProof) (by sd_normalize; exact hpc) (by sd_normalize; exact hFJ)
@@ -1286,13 +1335,13 @@ theorem specDraft_canonicalConeSegment_mem_filtered_of_root_preceq : ∀ {st : (
   exact h
 
 /-- The field `mem_get_filtered_block_tree_from_of_parts_explicit` of `ForkChoiceFacts` at
-    `Model.specDraft`: a block of `blocks` that descends from the finalized block and from the FG
+    `Model.spec`: a block of `blocks` that descends from the finalized block and from the FG
     root, and has a descendant in `blocks` of chain-state height at least `h_max − 1`, is in the
     filtered tree over `blocks`. -/
-theorem specDraft_mem_get_filtered_block_tree_from_of_parts_explicit : ∀ (st : (Model.specDraft (V := V)).FGS) {blocks : Finset (Block V)}
+theorem spec_mem_get_filtered_block_tree_from_of_parts_explicit : ∀ (st : (Model.spec (V := V)).FGS) {blocks : Finset (Block V)}
     {C W : Block V}, C ∈ blocks → Block.Preceq st.F C → W ∈ blocks → Block.Preceq C W →
-    st.h_max - 1 ≤ (st.σ W).h → Block.Preceq ((Model.specDraft (V := V)).get_fg_root st) C →
-    C ∈ (Model.specDraft (V := V)).get_filtered_block_tree_from st blocks := by
+    st.h_max - 1 ≤ (st.σ W).h → Block.Preceq ((Model.spec (V := V)).get_fg_root st) C →
+    C ∈ (Model.spec (V := V)).get_filtered_block_tree_from st blocks := by
   intro st blocks C W hC hF hW hCW hh hroot
   have h := (Model.vocabulary_facts_forkChoice (V := V)).mem_get_filtered_block_tree_from_of_parts_explicit
     st.val.toProof.toHealing.toFG hC (by sd_normalize; exact hF) hW hCW
@@ -1301,51 +1350,51 @@ theorem specDraft_mem_get_filtered_block_tree_from_of_parts_explicit : ∀ (st :
   rw [ForkChoiceImages.filtered_from_eq_vocabulary st]
   exact h
 
-/-- The field `goldfish_fork_choice_eq_ghost` of `ForkChoiceFacts` at `Model.specDraft`: for
+/-- The field `goldfish_fork_choice_eq_ghost` of `ForkChoiceFacts` at `Model.spec`: for
     outcomes `score` and `elig` of the Goldfish score and test at every block, the Goldfish fork
     choice from `A` through `tree` returns `X` exactly when the walk scored by `score` and admitting
     by `elig` returns `X`. -/
-theorem specDraft_goldfish_fork_choice_eq_ghost : ∀ (E : Env V) (σ : Block V → (Model.specDraft (V := V)).CS) (h_max : Height) (T : Finset (Block V)) (cur : Slot) (A : Block V) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (s : Slot)
-    (score : Block V → ℕ) (hscore : ∀ B, (Model.specDraft (V := V)).goldfish_score E T votes support s B ⇢ score B)
-    (elig : Block V → Bool) (helig : ∀ B, (Model.specDraft (V := V)).goldfish_eligible E σ h_max T cur votes support s B ⇢ elig B)
-    (X : Block V), (Model.specDraft (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support s ⇢ X ↔
-    (Model.specDraft (V := V)).ghost A tree score elig ⇢ X := by
+theorem spec_goldfish_fork_choice_eq_ghost : ∀ (E : Env V) (σ : Block V → (Model.spec (V := V)).CS) (h_max : Height) (T : Finset (Block V)) (cur : Slot) (A : Block V) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (s : Slot)
+    (score : Block V → ℕ) (hscore : ∀ B, (Model.spec (V := V)).goldfish_score E T votes support s B ⇢ score B)
+    (elig : Block V → Bool) (helig : ∀ B, (Model.spec (V := V)).goldfish_eligible E σ h_max T cur votes support s B ⇢ elig B)
+    (X : Block V), (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur A tree votes support s ⇢ X ↔
+    (Model.spec (V := V)).ghost A tree score elig ⇢ X := by
   intro E σ h_max T cur A tree votes support s score hscore elig helig X
-  rw [ForkChoiceImages.specDraft_goldfish_fork_choice_eq, ForkChoiceImages.specDraft_ghost_eq]
-  rw [ForkChoiceImages.specDraft_goldfish_score_eq] at hscore
-  rw [ForkChoiceImages.specDraft_goldfish_eligible_eq] at helig
+  rw [ForkChoiceImages.spec_goldfish_fork_choice_eq, ForkChoiceImages.spec_ghost_eq]
+  rw [ForkChoiceImages.spec_goldfish_score_eq] at hscore
+  rw [ForkChoiceImages.spec_goldfish_eligible_eq] at helig
   exact (Model.vocabulary_facts_forkChoice (V := V)).goldfish_fork_choice_eq_ghost E
     (fun C => (σ C).toProof) h_max T cur A tree votes support s score hscore elig helig X
 
-end SpecDraftRecord.ForkChoiceFacts
+end SpecRecord.ForkChoiceFacts
 
-namespace SpecDraftRecord.ForkChoiceFacts
+namespace SpecRecord.ForkChoiceFacts
 
 /-! ## The SG root and the heads under a contract -/
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.ContractImages
+open SpecRecord.ContractImages
 open DecoupledConsensusModel.Protocol (HealConfig HeightConfig Node GradeRead)
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `get_sg_root_with_eq_read_anchor` of `ForkChoiceFacts` at `Model.specDraft`: every
+/-- The field `get_sg_root_with_eq_read_anchor` of `ForkChoiceFacts` at `Model.spec`: every
     outcome of the SG root `get_sg_root_with contract E hc st r` is the anchor of every outcome of
     the grade read `contract.read E hc st r`. -/
-theorem specDraft_get_sg_root_with_eq_read_anchor :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round) (G : GradeRead V), contract.read E hc st r ⇢ G → ∀ R : Block V, (Model.specDraft (V := V)).get_sg_root_with contract E hc st r ⇢ R → R = G.anchor := by
+theorem spec_get_sg_root_with_eq_read_anchor :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round) (G : GradeRead V), contract.read E hc st r ⇢ G → ∀ R : Block V, (Model.spec (V := V)).get_sg_root_with contract E hc st r ⇢ R → R = G.anchor := by
   intro contract E hc st r G hG R hR
   obtain ⟨A, hA, rfl⟩ := get_sg_root_with_shape (E := E) (hc := hc) hR
   obtain ⟨A', hA', e⟩ := read_anchor_shape (E := E) (hc := hc) hG
   rw [e, Except.ok.inj (hA.symm.trans hA')]
 
-/-- The field `fg_root_preceq_get_sg_root_with_frame` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `fg_root_preceq_get_sg_root_with_frame` of `ForkChoiceFacts` at `Model.spec`:
     under the frame contract of a cache, the FG root of `st` is an ancestor of every outcome of the
     SG root at round `r`, or that outcome itself. -/
-theorem specDraft_fg_root_preceq_get_sg_root_with_frame :
-    ∀ (c : (Model.specDraft (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round) (R : Block V), (Model.specDraft (V := V)).get_sg_root_with ((Model.specDraft (V := V)).frameContract c) E hc st r ⇢ R → Block.Preceq ((Model.specDraft (V := V)).get_fg_root st.toFG) R := by
+theorem spec_fg_root_preceq_get_sg_root_with_frame :
+    ∀ (c : (Model.spec (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round) (R : Block V), (Model.spec (V := V)).get_sg_root_with ((Model.spec (V := V)).frameContract c) E hc st r ⇢ R → Block.Preceq ((Model.spec (V := V)).get_fg_root st.toFG) R := by
   intro c E hc st r R hR
   obtain ⟨A, hA, rfl⟩ := get_sg_root_with_shape (E := E) (hc := hc) hR
   show DecoupledConsensusModel.Block.Preceq
@@ -1357,10 +1406,10 @@ theorem specDraft_fg_root_preceq_get_sg_root_with_frame :
   · exact fg_root_ancestorEq_of_mem_filtered hm
 
 /-- The field `fg_root_Preceq_get_sg_root_with_gradeContract` of `ForkChoiceFacts` at
-    `Model.specDraft`: under the grade contract of a cache, the FG root of `st` is an ancestor of
+    `Model.spec`: under the grade contract of a cache, the FG root of `st` is an ancestor of
     every outcome of the SG root at round `r`, or that outcome itself. -/
-theorem specDraft_fg_root_Preceq_get_sg_root_with_gradeContract :
-    ∀ (c : (Model.specDraft (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round) (R : Block V), (Model.specDraft (V := V)).get_sg_root_with ((Model.specDraft (V := V)).gradeContract c) E hc st r ⇢ R → Block.Preceq ((Model.specDraft (V := V)).get_fg_root st.toFG) R := by
+theorem spec_fg_root_Preceq_get_sg_root_with_gradeContract :
+    ∀ (c : (Model.spec (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round) (R : Block V), (Model.spec (V := V)).get_sg_root_with ((Model.spec (V := V)).gradeContract c) E hc st r ⇢ R → Block.Preceq ((Model.spec (V := V)).get_fg_root st.toFG) R := by
   intro c E hc st r R hR
   obtain ⟨A, hA, rfl⟩ := get_sg_root_with_shape (E := E) (hc := hc) hR
   show DecoupledConsensusModel.Block.Preceq
@@ -1372,31 +1421,31 @@ theorem specDraft_fg_root_Preceq_get_sg_root_with_gradeContract :
   · exact fg_root_ancestorEq_of_mem_filtered hm
 
 /-- The field `get_sg_root_with_gradeContract_mem_filtered` of `ForkChoiceFacts` at
-    `Model.specDraft`: if the FG root of `st` is in `st`'s filtered tree, so is every outcome of the
+    `Model.spec`: if the FG root of `st` is in `st`'s filtered tree, so is every outcome of the
     SG root under the grade contract of a cache. -/
-theorem specDraft_get_sg_root_with_gradeContract_mem_filtered :
-    ∀ (c : (Model.specDraft (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round) (hroot : (Model.specDraft (V := V)).get_fg_root st.toFG ∈ (Model.specDraft (V := V)).get_filtered_block_tree st.toFG) (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with ((Model.specDraft (V := V)).gradeContract c) E hc st r ⇢ R), R ∈
-    (Model.specDraft (V := V)).get_filtered_block_tree st.toFG := by
+theorem spec_get_sg_root_with_gradeContract_mem_filtered :
+    ∀ (c : (Model.spec (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round) (hroot : (Model.spec (V := V)).get_fg_root st.toFG ∈ (Model.spec (V := V)).get_filtered_block_tree st.toFG) (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with ((Model.spec (V := V)).gradeContract c) E hc st r ⇢ R), R ∈
+    (Model.spec (V := V)).get_filtered_block_tree st.toFG := by
   intro c E hc st r hroot R hR
   obtain ⟨A, hA, rfl⟩ := get_sg_root_with_shape (E := E) (hc := hc) hR
   rcases anchor_cases hA with e | hm
   · rw [e]; exact hroot
   · exact Finset.mem_image_of_mem _ hm
 
-/-- The field `get_head_in_tree_with_layer_anchor_or_mem` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `get_head_in_tree_with_layer_anchor_or_mem` of `ForkChoiceFacts` at `Model.spec`:
     every outcome of the head over `tree` under `contract` is the anchor of the grade read at the
     store's round, or a block of `tree`. -/
-theorem specDraft_get_head_in_tree_with_layer_anchor_or_mem :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) (G : GradeRead V) (hG : contract.read E hc ((Model.specDraft (V := V)).toHealing st) ((Model.specDraft (V := V)).round_of hc st.s) ⇢ G) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc ((Model.specDraft (V := V)).toHealing st) tree votes support k ⇢ X), X =
+theorem spec_get_head_in_tree_with_layer_anchor_or_mem :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) (G : GradeRead V) (hG : contract.read E hc ((Model.spec (V := V)).toHealing st) ((Model.spec (V := V)).round_of hc st.s) ⇢ G) (X : Block V) (hX : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc ((Model.spec (V := V)).toHealing st) tree votes support k ⇢ X), X =
     G.anchor ∨
     X ∈
     tree := by
   intro contract E hc st tree votes support k G hG X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_in_tree_with_layer_shape hX
   obtain ⟨A', hA', e⟩ := read_anchor_shape (E := E) (hc := hc) hG
-  have hr : (Model.specDraft (V := V)).round_of hc st.s =
+  have hr : (Model.spec (V := V)).round_of hc st.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s, Member.round_of]
     rfl
@@ -1412,16 +1461,16 @@ theorem specDraft_get_head_in_tree_with_layer_anchor_or_mem :
     exact hB
 
 /-- The field `ModelProperties_get_head_in_tree_with_layer_mem` of `ForkChoiceFacts` at
-    `Model.specDraft`: if a set `T` holds the anchor of the grade read at the store's round and
+    `Model.spec`: if a set `T` holds the anchor of the grade read at the store's round and
     every block of `tree`, it holds every outcome of the head over `tree`. -/
-theorem specDraft_ModelProperties_get_head_in_tree_with_layer_mem :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) {T : Finset (Block V)} (G : GradeRead V) (hG : contract.read E hc st (((Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ G) (hanchor : G.anchor ∈ T) (htree : tree ⊆ T) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support k ⇢ X), X ∈ T := by
+theorem spec_ModelProperties_get_head_in_tree_with_layer_mem :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) {T : Finset (Block V)} (G : GradeRead V) (hG : contract.read E hc st (((Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ G) (hanchor : G.anchor ∈ T) (htree : tree ⊆ T) (X : Block V) (hX : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support k ⇢ X), X ∈ T := by
   intro contract E hc st tree votes support k T G hG hanchor htree X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_in_tree_with_layer_shape hX
   obtain ⟨A', hA', e⟩ := read_anchor_shape (E := E) (hc := hc) hG
-  have hr : (Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
+  have hr : (Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s, Member.round_of]
     rfl
@@ -1435,17 +1484,17 @@ theorem specDraft_ModelProperties_get_head_in_tree_with_layer_mem :
     rw [Spec.Store.toProof_blockOfImage]
     exact htree hB
 
-/-- The field `Sts_get_head_in_tree_with_layer_mem` of `ForkChoiceFacts` at `Model.specDraft`: if a
+/-- The field `Sts_get_head_in_tree_with_layer_mem` of `ForkChoiceFacts` at `Model.spec`: if a
     set `T` holds an outcome of the SG root at the store's round and every block of `tree`, it holds
     every outcome of the head over `tree`. -/
-theorem specDraft_Sts_get_head_in_tree_with_layer_mem :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) {T : Finset (Block V)} (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st (((Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ R) (hA : R ∈ T) (htree : tree ⊆ T) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support k ⇢ X), X ∈ T := by
+theorem spec_Sts_get_head_in_tree_with_layer_mem :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) {T : Finset (Block V)} (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st (((Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ R) (hA : R ∈ T) (htree : tree ⊆ T) (X : Block V) (hX : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support k ⇢ X), X ∈ T := by
   intro contract E hc st tree votes support k T R hR hanchor htree X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_in_tree_with_layer_shape hX
   obtain ⟨A', hA', e⟩ := get_sg_root_with_shape (E := E) (hc := hc) hR
-  have hr : (Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
+  have hr : (Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s, Member.round_of]
     rfl
@@ -1460,16 +1509,16 @@ theorem specDraft_Sts_get_head_in_tree_with_layer_mem :
     exact htree hB
 
 /-- The field `read_anchor_preceq_get_head_in_tree_with_layer` of `ForkChoiceFacts` at
-    `Model.specDraft`: the anchor of the grade read at the store's round is an ancestor of every
+    `Model.spec`: the anchor of the grade read at the store's round is an ancestor of every
     outcome of the head over any tree, or that outcome itself. -/
-theorem specDraft_read_anchor_preceq_get_head_in_tree_with_layer :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) (G : GradeRead V) (hG : contract.read E hc st (((Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ G) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support k ⇢ X), Block.Preceq G.anchor X := by
+theorem spec_read_anchor_preceq_get_head_in_tree_with_layer :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) (G : GradeRead V) (hG : contract.read E hc st (((Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ G) (X : Block V) (hX : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support k ⇢ X), Block.Preceq G.anchor X := by
   intro contract E hc st tree votes support k G hG X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_in_tree_with_layer_shape hX
   obtain ⟨A', hA', e⟩ := read_anchor_shape (E := E) (hc := hc) hG
-  have hr : (Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
+  have hr : (Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s, Member.round_of]
     rfl
@@ -1481,11 +1530,11 @@ theorem specDraft_read_anchor_preceq_get_head_in_tree_with_layer :
   exact Spec.Block.toProof_preceq_of_ancestorEq _ _ (ha A (ancestorEq_self A))
 
 /-- The field `fgRoot_Preceq_get_head_in_tree_with_layer_gradeContract` of `ForkChoiceFacts` at
-    `Model.specDraft`: under the grade contract of a cache, the FG root of `st` is an ancestor of
+    `Model.spec`: under the grade contract of a cache, the FG root of `st` is an ancestor of
     every outcome of the head over any tree, or that outcome itself. -/
-theorem specDraft_fgRoot_Preceq_get_head_in_tree_with_layer_gradeContract :
-    ∀ (c : (Model.specDraft (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) (X : Block V), (Model.specDraft (V := V)).get_head_in_tree_with_layer ((Model.specDraft (V := V)).gradeContract c) E hc st tree votes
-    support k ⇢ X → Block.Preceq ((Model.specDraft (V := V)).get_fg_root st.toFG) X := by
+theorem spec_fgRoot_Preceq_get_head_in_tree_with_layer_gradeContract :
+    ∀ (c : (Model.spec (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) (X : Block V), (Model.spec (V := V)).get_head_in_tree_with_layer ((Model.spec (V := V)).gradeContract c) E hc st tree votes
+    support k ⇢ X → Block.Preceq ((Model.spec (V := V)).get_fg_root st.toFG) X := by
   intro c E hc st tree votes support k X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_in_tree_with_layer_shape hX
   show DecoupledConsensusModel.Block.Preceq
@@ -1496,19 +1545,19 @@ theorem specDraft_fgRoot_Preceq_get_head_in_tree_with_layer_gradeContract :
   · rw [e]; exact ancestorEq_self _
   · exact fg_root_ancestorEq_of_mem_filtered hm'
 
-/-- The field `get_head_with_mem_filtered` of `ForkChoiceFacts` at `Model.specDraft`: if an outcome
+/-- The field `get_head_with_mem_filtered` of `ForkChoiceFacts` at `Model.spec`: if an outcome
     of the SG root at `st`'s round is in `st`'s filtered tree, so is every outcome of the head
     `get_head_with`. -/
-theorem specDraft_get_head_with_mem_filtered :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot) (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st (((Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ R) (hanchor : R ∈
-    (Model.specDraft (V := V)).get_filtered_block_tree st.toFG) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_with contract E hc st votes support k ⇢ X), X ∈
-    (Model.specDraft (V := V)).get_filtered_block_tree st.toFG := by
+theorem spec_get_head_with_mem_filtered :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot) (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st (((Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s)) ⇢ R) (hanchor : R ∈
+    (Model.spec (V := V)).get_filtered_block_tree st.toFG) (X : Block V) (hX : (Model.spec (V := V)).get_head_with contract E hc st votes support k ⇢ X), X ∈
+    (Model.spec (V := V)).get_filtered_block_tree st.toFG := by
   intro contract E hc st votes support k R hR hanchor X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_with_shape hX
   obtain ⟨A', hA', e⟩ := get_sg_root_with_shape (E := E) (hc := hc) hR
-  have hr : (Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
+  have hr : (Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s, Member.round_of]
     rfl
@@ -1519,11 +1568,11 @@ theorem specDraft_get_head_with_mem_filtered :
   · rw [← e]; exact hanchor
   · exact Finset.mem_image_of_mem _ hm
 
-/-- The field `get_head_with_gradeContract_mem` of `ForkChoiceFacts` at `Model.specDraft`: if the FG
+/-- The field `get_head_with_gradeContract_mem` of `ForkChoiceFacts` at `Model.spec`: if the FG
     root of `st` is in `st`'s tree, so is every outcome of the head `get_head_with` under the grade
     contract of a cache. -/
-theorem specDraft_get_head_with_gradeContract_mem :
-    ∀ (c : (Model.specDraft (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot) (hroot : (Model.specDraft (V := V)).get_fg_root st.toFG ∈ st.toFG.toSG.toGoldfishStore.T) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_with ((Model.specDraft (V := V)).gradeContract c) E hc st votes support k ⇢ X), X
+theorem spec_get_head_with_gradeContract_mem :
+    ∀ (c : (Model.spec (V := V)).Cache) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot) (hroot : (Model.spec (V := V)).get_fg_root st.toFG ∈ st.toFG.toSG.toGoldfishStore.T) (X : Block V) (hX : (Model.spec (V := V)).get_head_with ((Model.spec (V := V)).gradeContract c) E hc st votes support k ⇢ X), X
     ∈ st.toFG.toSG.toGoldfishStore.T := by
   intro c E hc st votes support k hroot X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_with_shape hX
@@ -1539,19 +1588,19 @@ theorem specDraft_get_head_with_gradeContract_mem :
     have hsub := GradesImages.filtered_subset _ hm
     exact Finset.mem_image_of_mem _ hsub
 
-/-- The field `NamedProposalParent_get_head_with_mem` of `ForkChoiceFacts` at `Model.specDraft`: if
+/-- The field `NamedProposalParent_get_head_with_mem` of `ForkChoiceFacts` at `Model.spec`: if
     the anchor of an outcome of the grade read at the round of `st`'s slot is in `st`'s tree, so is
     every outcome of the head `get_head_with`. -/
-theorem specDraft_NamedProposalParent_get_head_with_mem :
-    ∀ (gc : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot) (G : GradeRead V),
-    gc.read E hc st ((Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s) ⇢ G → G.anchor ∈ st.toFG.toSG.toGoldfishStore.T →
-    ∀ X : Block V, (Model.specDraft (V := V)).get_head_with gc E hc st votes support k ⇢ X → X ∈ st.toFG.toSG.toGoldfishStore.T := by
+theorem spec_NamedProposalParent_get_head_with_mem :
+    ∀ (gc : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot) (G : GradeRead V),
+    gc.read E hc st ((Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s) ⇢ G → G.anchor ∈ st.toFG.toSG.toGoldfishStore.T →
+    ∀ X : Block V, (Model.spec (V := V)).get_head_with gc E hc st votes support k ⇢ X → X ∈ st.toFG.toSG.toGoldfishStore.T := by
   intro gc E hc st votes support k G hG hanchor X hX
   obtain ⟨A, X', hA, hm, ha, rfl⟩ := get_head_with_shape hX
   obtain ⟨A', hA', e⟩ := read_anchor_shape (E := E) (hc := hc) hG
-  have hr : (Model.specDraft (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
+  have hr : (Model.spec (V := V)).round_of hc st.toFG.toSG.toGoldfishStore.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Spec.Store.toProof_s, Member.round_of]
     rfl
@@ -1567,17 +1616,17 @@ theorem specDraft_NamedProposalParent_get_head_with_mem :
 
 /-! ## The head as the Goldfish fork choice from the SG root -/
 
-/-- The field `get_head_in_tree_split_with` of `ForkChoiceFacts` at `Model.specDraft`: for every
+/-- The field `get_head_in_tree_split_with` of `ForkChoiceFacts` at `Model.spec`: for every
     outcome `R` of the SG root at the store's round, `X` is an outcome of the head in `tree` exactly
     when it is an outcome of the Goldfish fork choice from `R` through `tree`. -/
-theorem specDraft_get_head_in_tree_split_with : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (tree : Finset (Block V)) (votes support_votes : Finset (GoldfishVote V)) (k : Slot)
-    (R : Block V), (Model.specDraft (V := V)).get_sg_root_with contract E hc st (((Model.specDraft (V := V)).round_of hc st.s)) ⇢ R →
-    ∀ X : Block V, (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support_votes k ⇢ X ↔
-      (Model.specDraft (V := V)).goldfish_fork_choice E st.σ st.h_max st.T st.s R tree votes support_votes k ⇢ X := by
+theorem spec_get_head_in_tree_split_with : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (tree : Finset (Block V)) (votes support_votes : Finset (GoldfishVote V)) (k : Slot)
+    (R : Block V), (Model.spec (V := V)).get_sg_root_with contract E hc st (((Model.spec (V := V)).round_of hc st.s)) ⇢ R →
+    ∀ X : Block V, (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc st tree votes support_votes k ⇢ X ↔
+      (Model.spec (V := V)).goldfish_fork_choice E st.σ st.h_max st.T st.s R tree votes support_votes k ⇢ X := by
   intro c E hc st tree votes support k R hR X
-  have hr : (Model.specDraft (V := V)).round_of hc st.s =
+  have hr : (Model.spec (V := V)).round_of hc st.s =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-    simp only [Model.HS.s, Model.GS.s, Model.specDraft, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
+    simp only [Model.HS.s, Model.GS.s, Model.spec, Member.gs_s, Member.toHealing, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s, Member.round_of]
     rfl
@@ -1585,42 +1634,42 @@ theorem specDraft_get_head_in_tree_split_with : ∀ (contract : (Model.specDraft
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) R := by
     rw [← hr]; exact hR
   have e := member_get_head_in_tree_with_layer_eq st c E hc tree votes support k hR'
-  rw [ForkChoiceImages.specDraft_goldfish_fork_choice_eq]
+  rw [ForkChoiceImages.spec_goldfish_fork_choice_eq]
   show Returns (Member.get_head_in_tree_with_layer c E hc st.val tree votes support k) X ↔ _
   rw [e]
   simp only [Model.vocabulary, returns_pure]
   have hT : st.T = st.val.T.image Spec.Block.toProof := by
-    simp only [Model.HS.T, Model.GS.T, Model.specDraft, Member.gs_T, Member.toFG, Member.toSG,
+    simp only [Model.HS.T, Model.GS.T, Model.spec, Member.gs_T, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_T]
   have hσ : (fun C => Spec.Protocol.ChainState.toProof (st.σ C)) =
       (fun C => (st.val.σ (st.val.blockOfImage C)).toProof) := rfl
   have hm : st.h_max = st.val.h_max := rfl
   have hs : st.s = st.val.s := by
-    simp only [Model.HS.s, Model.GS.s, Model.specDraft, Member.gs_s, Member.toFG, Member.toSG,
+    simp only [Model.HS.s, Model.GS.s, Model.spec, Member.gs_s, Member.toFG, Member.toSG,
       Member.toGoldfishStore, Model.HS.toFG, Model.FGS.toSG, Model.SGS.toGoldfishStore, id_eq,
       toProof_gs_s]
   rw [hT, hσ, hm, hs]
 
-/-- The field `goldfish_eligible_false_of_parent_head` of `ForkChoiceFacts` at `Model.specDraft`: in
+/-- The field `goldfish_eligible_false_of_parent_head` of `ForkChoiceFacts` at `Model.spec`: in
     a tree with injective roots, a block of `tree` whose parent is the head fails
     `goldfish_eligible`. -/
-theorem specDraft_goldfish_eligible_false_of_parent_head : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) {C : Block V} (hroot : Execution.RootInjectiveBelow tree) (hC : C ∈ tree) (X : Block V) (hX : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc ((Model.specDraft (V := V)).toHealing st) tree votes support k ⇢ X) (hparent : C.parent? = some
-    X) (e : Bool) (he : (Model.specDraft (V := V)).goldfish_eligible E st.σ st.h_max st.T st.s votes support k C ⇢ e), e = false := by
+theorem spec_goldfish_eligible_false_of_parent_head : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot) {C : Block V} (hroot : Execution.RootInjectiveBelow tree) (hC : C ∈ tree) (X : Block V) (hX : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc ((Model.spec (V := V)).toHealing st) tree votes support k ⇢ X) (hparent : C.parent? = some
+    X) (e : Bool) (he : (Model.spec (V := V)).goldfish_eligible E st.σ st.h_max st.T st.s votes support k C ⇢ e), e = false := by
   intro c E hc st tree votes support k C hroot hC X hX hparent e he
   obtain ⟨A, -, hA, -, -, -⟩ := get_head_in_tree_with_layer_shape hX
   have eX := member_get_head_in_tree_with_layer_eq_of_anchor st c E hc tree votes support k hA
   have hX' : Returns (Member.get_head_in_tree_with_layer c E hc st.val tree votes support k) X := hX
   rw [eX, returns_pure] at hX'
   subst hX'
-  rw [ForkChoiceImages.specDraft_goldfish_eligible_eq] at he
+  rw [ForkChoiceImages.spec_goldfish_eligible_eq] at he
   simp only [Model.vocabulary, returns_pure] at he
   have hT : st.T = st.val.T.image Spec.Block.toProof := by
-    simp only [Model.S.T, Model.specDraft, Member.store_T, Spec.Store.toProof_T]
+    simp only [Model.S.T, Model.spec, Member.store_T, Spec.Store.toProof_T]
   have hs : st.s = st.val.s := by
-    simp only [Model.S.s, Model.specDraft, Member.store_s, Spec.Store.toProof_s]
+    simp only [Model.S.s, Model.spec, Member.store_s, Spec.Store.toProof_s]
   have hm : st.h_max = st.val.h_max := by
-    simp only [Model.S.h_max, Model.specDraft, Member.store_h_max, Spec.Store.toProof_h_max]
+    simp only [Model.S.h_max, Model.spec, Member.store_h_max, Spec.Store.toProof_h_max]
   have hσ : (fun C => Spec.Protocol.ChainState.toProof (st.σ C)) =
       (fun C => (st.val.σ (st.val.blockOfImage C)).toProof) := rfl
   rw [hT, hs, hm, hσ] at he
@@ -1629,31 +1678,31 @@ theorem specDraft_goldfish_eligible_false_of_parent_head : ∀ (contract : (Mode
   exact DecoupledConsensusModel.Proofs.HealingSurface.eligible_child_false_at_ghost_result hroot hC
     hparent
 
-end SpecDraftRecord.ForkChoiceFacts
+end SpecRecord.ForkChoiceFacts
 
-namespace SpecDraftRecord.ForkChoiceFacts
+namespace SpecRecord.ForkChoiceFacts
 
 /-! ## The Goldfish vote duty's vote -/
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.ContractImages
+open SpecRecord.ContractImages
 open DecoupledConsensusModel.Protocol (HealConfig HeightConfig Node GradeRead)
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `goldfish_vote_with_snd_of_mem_committee` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `goldfish_vote_with_snd_of_mem_committee` of `ForkChoiceFacts` at `Model.spec`:
     if `nd`'s validator is in the committee of `st`'s slot `s`, the Goldfish vote duty at `st`
     returns the vote of `nd`'s validator at slot `s` for the root of the head computed over the
     voter's filtered tree and views for slot `s − 1`. -/
-theorem specDraft_goldfish_vote_with_snd_of_mem_committee :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) (hcom : nd.val_index ∈ E.committee st.core.s)
-    (D : (Model.specDraft (V := V)).NS × Option (GoldfishVote V)) (hD : (Model.specDraft (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D)
-    (tree : Finset (Block V)) (htree : (Model.specDraft (V := V)).voter_filtered_block_tree E st.core st.core.s ⇢ tree)
-    (votes : Finset (GoldfishVote V)) (hvotes : (Model.specDraft (V := V)).voter_view E ((Model.specDraft (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ votes)
-    (support : Finset (GoldfishVote V)) (hsupport : (Model.specDraft (V := V)).voter_support_view E ((Model.specDraft (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ support)
-    (H : Block V) (hH : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc ((Model.specDraft (V := V)).toHealing st.core) tree votes support (st.core.s - 1) ⇢ H),
+theorem spec_goldfish_vote_with_snd_of_mem_committee :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) (hcom : nd.val_index ∈ E.committee st.core.s)
+    (D : (Model.spec (V := V)).NS × Option (GoldfishVote V)) (hD : (Model.spec (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D)
+    (tree : Finset (Block V)) (htree : (Model.spec (V := V)).voter_filtered_block_tree E st.core st.core.s ⇢ tree)
+    (votes : Finset (GoldfishVote V)) (hvotes : (Model.spec (V := V)).voter_view E ((Model.spec (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ votes)
+    (support : Finset (GoldfishVote V)) (hsupport : (Model.spec (V := V)).voter_support_view E ((Model.spec (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ support)
+    (H : Block V) (hH : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc ((Model.spec (V := V)).toHealing st.core) tree votes support (st.core.s - 1) ⇢ H),
     D.2 = some ⟨nd.val_index, st.core.s, H.root⟩ := by
   intro contract E hc nd st hcom D hD tree htree votes hvotes support hsupport H hH
   have h := duties_goldfish_vote_with_snd_spec ((returns_preimageOutcomes _ _ _).1 hD) htree hvotes
@@ -1662,16 +1711,16 @@ theorem specDraft_goldfish_vote_with_snd_of_mem_committee :
   exact h
 
 /-- The field `namedDuties_goldfish_vote_with_snd_eq_some` of `ForkChoiceFacts` at
-    `Model.specDraft`: if the Goldfish vote duty of `nd` at `st` returns the vote `u`, then `nd`'s
+    `Model.spec`: if the Goldfish vote duty of `nd` at `st` returns the vote `u`, then `nd`'s
     validator is in the committee of `st`'s slot `s`, and `u` is its slot-`s` vote for the root of
     the head computed over the voter's filtered tree and views for slot `s − 1`. -/
-theorem specDraft_namedDuties_goldfish_vote_with_snd_eq_some :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) {u : GoldfishVote V}
-    (D : (Model.specDraft (V := V)).NS × Option (GoldfishVote V)) (hD : (Model.specDraft (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D) (h : D.2 = some u)
-    (tree : Finset (Block V)) (htree : (Model.specDraft (V := V)).voter_filtered_block_tree E st.core st.core.s ⇢ tree)
-    (votes : Finset (GoldfishVote V)) (hvotes : (Model.specDraft (V := V)).voter_view E ((Model.specDraft (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ votes)
-    (support : Finset (GoldfishVote V)) (hsupport : (Model.specDraft (V := V)).voter_support_view E ((Model.specDraft (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ support)
-    (H : Block V) (hH : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc ((Model.specDraft (V := V)).toHealing st.core) tree votes support (st.core.s - 1) ⇢ H),
+theorem spec_namedDuties_goldfish_vote_with_snd_eq_some :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) {u : GoldfishVote V}
+    (D : (Model.spec (V := V)).NS × Option (GoldfishVote V)) (hD : (Model.spec (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D) (h : D.2 = some u)
+    (tree : Finset (Block V)) (htree : (Model.spec (V := V)).voter_filtered_block_tree E st.core st.core.s ⇢ tree)
+    (votes : Finset (GoldfishVote V)) (hvotes : (Model.spec (V := V)).voter_view E ((Model.spec (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ votes)
+    (support : Finset (GoldfishVote V)) (hsupport : (Model.spec (V := V)).voter_support_view E ((Model.spec (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ support)
+    (H : Block V) (hH : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc ((Model.spec (V := V)).toHealing st.core) tree votes support (st.core.s - 1) ⇢ H),
     nd.val_index ∈ E.committee st.core.s ∧
     u = ⟨nd.val_index, st.core.s, H.root⟩ := by
   intro contract E hc nd st u D hD hu tree htree votes hvotes support hsupport H hH
@@ -1685,17 +1734,17 @@ theorem specDraft_namedDuties_goldfish_vote_with_snd_eq_some :
   · rw [if_neg hcom] at h
     cases h
 
-/-- The field `namedDuties_goldfish_vote_with_snd_head` of `ForkChoiceFacts` at `Model.specDraft`:
+/-- The field `namedDuties_goldfish_vote_with_snd_head` of `ForkChoiceFacts` at `Model.spec`:
     if the Goldfish vote duty at `st` signs the vote `u`, the head of `u` is the root of every
     outcome of the head computed over the voter's tree and views at `st`'s slot, from the slot
     before it. -/
-theorem specDraft_namedDuties_goldfish_vote_with_snd_head :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) {u : GoldfishVote V}
-    (D : (Model.specDraft (V := V)).NS × Option (GoldfishVote V)) (hD : (Model.specDraft (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D) (h : D.2 = some u)
-    (tree : Finset (Block V)) (htree : (Model.specDraft (V := V)).voter_filtered_block_tree E st.core st.core.s ⇢ tree)
-    (votes : Finset (GoldfishVote V)) (hvotes : (Model.specDraft (V := V)).voter_view E ((Model.specDraft (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ votes)
-    (support : Finset (GoldfishVote V)) (hsupport : (Model.specDraft (V := V)).voter_support_view E ((Model.specDraft (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ support)
-    (H : Block V) (hH : (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc ((Model.specDraft (V := V)).toHealing st.core) tree votes support (st.core.s - 1) ⇢ H),
+theorem spec_namedDuties_goldfish_vote_with_snd_head :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) {u : GoldfishVote V}
+    (D : (Model.spec (V := V)).NS × Option (GoldfishVote V)) (hD : (Model.spec (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D) (h : D.2 = some u)
+    (tree : Finset (Block V)) (htree : (Model.spec (V := V)).voter_filtered_block_tree E st.core st.core.s ⇢ tree)
+    (votes : Finset (GoldfishVote V)) (hvotes : (Model.spec (V := V)).voter_view E ((Model.spec (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ votes)
+    (support : Finset (GoldfishVote V)) (hsupport : (Model.spec (V := V)).voter_support_view E ((Model.spec (V := V)).toHealing st.core).toFG.toSG.toGoldfishStore st.core.s ⇢ support)
+    (H : Block V) (hH : (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc ((Model.spec (V := V)).toHealing st.core) tree votes support (st.core.s - 1) ⇢ H),
     u.head = H.root := by
   intro contract E hc nd st u D hD hu tree htree votes hvotes support hsupport H hH
   have h := duties_goldfish_vote_with_snd_spec ((returns_preimageOutcomes _ _ _).1 hD) htree hvotes
@@ -1708,13 +1757,13 @@ theorem specDraft_namedDuties_goldfish_vote_with_snd_head :
   · rw [if_neg hcom] at h
     cases h
 
-end SpecDraftRecord.ForkChoiceFacts
+end SpecRecord.ForkChoiceFacts
 
 namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- `Model.specDraft` satisfies `ForkChoiceRunFacts`, a structure with no field. -/
-theorem Model.specDraft_runFacts_forkChoice : ForkChoiceRunFacts (Model.specDraft (V := V)) where
+/-- `Model.spec` satisfies `ForkChoiceRunFacts`, a structure with no field. -/
+theorem Model.spec_runFacts_forkChoice : ForkChoiceRunFacts (Model.spec (V := V)) where
 
 end DecoupledConsensusModel.Sts.Record

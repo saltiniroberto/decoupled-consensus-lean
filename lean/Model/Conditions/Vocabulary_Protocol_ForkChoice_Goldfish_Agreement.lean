@@ -50,6 +50,26 @@ structure Vocabulary.Proofs.Optimistic.ConeSupport (M : Record.Model V) (E : Env
   vote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧
     ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X
 
+/-- Honest support in the tree `T`, from the slot-`s` votes, for the blocks satisfying `tgt`,
+    counted against the voters of the late votes: the late voters are fewer than twice the honest
+    committee members. -/
+structure Vocabulary.Proofs.Optimistic.ConeSupportCount (M : Record.Model V) (E : Env V)
+    (T : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot)
+    (Hon : Finset V) (tgt : Block V → Prop) : Prop where
+  /-- The voters of the late votes are fewer than twice the honest members of slot `s`'s
+      committee. -/
+  count : M.voters_count E late s < 2 * ((E.committee s) ∩ Hon).card
+  /-- The counted votes are among the late votes. -/
+  counted : votes ⊆ late
+  /-- The support votes are among the raw votes. -/
+  sub : support ⊆ votes
+  /-- An honest committee member does not equivocate in the raw votes. -/
+  no_equiv : ∀ x ∈ E.committee s, x ∈ Hon → M.equivocates votes x = false
+  /-- Every honest committee member has a slot-`s` support vote whose target resolves in `T` to a
+      block `X` no later than the vote's slot with `tgt X`. -/
+  vote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧
+    ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X
+
 end
 
 section

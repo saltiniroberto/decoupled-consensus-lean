@@ -17,10 +17,10 @@ set_option autoImplicit false
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 
-namespace SpecDraftRecord.SubtypeEqualities
+namespace SpecRecord.SubtypeEqualities
 
 open Spec
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V]
@@ -969,4 +969,4 @@ theorem state_transition_h_le_succ [Fintype V] (C : Config) (P : Provisional V)
   simp only [Id.run, hp]
   split_ifs <;> simp [Protocol.advance_height, Id.run, hp, hτh]
 
-end SpecDraftRecord.SubtypeEqualities
+end SpecRecord.SubtypeEqualities

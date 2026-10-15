@@ -70,7 +70,7 @@ open Framework.StsMultisetLog
     `i` steps, and of its stable output. -/
 theorem outputs_ancestorOfHonestHeadsFrom_after_settleTick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -110,7 +110,7 @@ theorem outputs_ancestorOfHonestHeadsFrom_after_settleTick (facts : Record.Facts
         (S.E.slotOf (x[i].time : Int) + 2) := by
   obtain ⟨hnb1, -⟩ := Restated.tickStepAt_time facts x hn_b
   have hrec' := Restated.records_ancestorOfHonestHeads_after_settleTick facts S Sched x tE hexec hmono htd
-    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear
+    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear
     hB' hnW hAW hJswitch hTW₀ hJ₀ hsettle hn_b v i hi hv
   have hts : (Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)) ≤ (x[i].time : Int) := by
     have h1 := Restated.action_mono facts S (Nat.le_succ (Restated.switchRound M S tE))
@@ -118,7 +118,7 @@ theorem outputs_ancestorOfHonestHeadsFrom_after_settleTick (facts : Record.Facts
     rw [hnb1] at h2
     exact le_trans h1 h2
   have hF := Restated.finalized_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch le_rfl hTW₀ hJ₀ hts hv
   have hS := Restated.ancestorOfHonestHeadsFrom_get_stable facts S Sched x _ hrec'.1 hF
   exact ⟨Restated.ancestorOfHonestHeadsFrom_get_confirmed facts S Sched x _ hS (fun _ => hrec'.2), hS⟩
@@ -137,7 +137,7 @@ open Framework.StsMultisetLog
     every honest active committee member of every slot from `s` on votes for a descendant of `B`. -/
 theorem honestProposal_ancestorOfHonestHeadsFrom_afterSettle (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -173,16 +173,19 @@ theorem honestProposal_ancestorOfHonestHeadsFrom_afterSettle (facts : Record.Fac
     {k : Nat} {B : Block V} (hB : Restated.proposedBlockAtStep M S x k s B)
     (hk : (x[k].time : Int) ≤ M.vote_time S.E s) :
     Restated.AncestorOfHonestHeadsFrom M S Sched x B s := by
+  have hrecvAll : ∀ r' : Round, Restated.switchRound M S tE ≤ r' → Restated.NextRoundReceipts M S Sched x r' :=
+    fun r' hr' => Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr')
   have hadopt := Restated.honestProposalHeadsAtOwnSlot_afterPhase facts S Sched x tE hexec hmono htd hcatch
-    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB'
+    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB'
     hnW hAW hJswitch hTW₀ hJ₀ (M.confirmation_time S.E s)
   have hs₀ : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s :=
     Nat.le_trans (Nat.le_add_right _ 2) hsl
   have hs0 : (M.opening_slot S.hc (Restated.switchRound M S tE)) + 2 ≤ s := by
     rw [facts.gr.opening_slot_succ S.hc (Restated.switchRound M S tE)] at hsl
     exact Nat.le_trans (Nat.add_le_add_right (Nat.le_add_right _ S.hc.R) 2) hsl
-  exact Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 facts S Sched x tE hexec hmono htd tGAT gap hgst
-    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+  exact Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 (hrecvAll := hrecvAll) facts S Sched x tE hexec hmono htd tGAT gap hgst
+    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
     le_rfl hTW₀ hJ₀ hadopt hs0 hs₀ le_rfl hhon hB hk
 
 end
@@ -201,7 +204,7 @@ open Framework.StsMultisetLog
     stable outputs after `i` steps are strict ancestors of `B`. -/
 theorem prec_get_confirmed_of_honestProposal (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -243,10 +246,10 @@ theorem prec_get_confirmed_of_honestProposal (facts : Record.Facts M) (S : Setup
     Block.Prec (M.get_confirmed (x[i][v].st).st.core) B ∧
       Block.Prec (M.get_stable (x[i][v].st).st.core) B := by
   obtain ⟨hC, hS⟩ := Restated.outputs_ancestorOfHonestHeadsFrom_after_settleTick facts S Sched x tE hexec hmono
-    htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev
+    htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev
     hclear hB' hnW hAW hJswitch hTW₀ hJ₀ hsettle hn_b v hi hv
   have hBh := Restated.honestProposal_ancestorOfHonestHeadsFrom_afterSettle facts S Sched x tE hexec hmono htd
-    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear
+    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear
     hB' hnW hAW hJswitch hTW₀ hJ₀ hsl hhon hB hk
   obtain ⟨hnC, hnS⟩ := Restated.not_preceq_output_before_proposal facts S Sched x hB v hlt
   exact ⟨prec_of_compatible_of_not_preceq

@@ -93,6 +93,13 @@ theorem nonAdv_mem_honRound (facts : Record.Facts M) (S : Setup V) (Sched : Sche
   refine mem_awakeThroughout_of_forall Sched ?_
   intro t ht1 ht2
   have hnadv : v ∉ Sched.adv t := fun hmem => hv (hmono t ((Restated.Vocabulary.Execution.Setup.a M S r)) ht2 hmem)
+  have he := facts.gr.early_g2_eq S r
+  have hw : 12 * S.E.Δ ≤ wAttest S := by
+    have hwa : wAttest S = 4 * (S.hc.R : Int) * S.E.Δ := rfl
+    have hR : (3 : Int) ≤ (S.hc.R : Int) := by exact_mod_cast S.hc.R_ge_three
+    have hd := S.E.Δ_pos
+    rw [hwa]; nlinarith
+  have hlo' : tGAT ≤ M.a S.hc S.E.Δ r - wAttest S := hlo
   exact hawake t (by linarith) (by linarith) v hnadv
 
 end

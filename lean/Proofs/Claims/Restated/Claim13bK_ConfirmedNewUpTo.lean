@@ -49,6 +49,7 @@ import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Conditions.Vocabulary_Protocol_ForkChoice_Goldfish_Confirmation
 import Model.Conditions.Vocabulary_Protocol_Grades_Main
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bW_ReceiptBefore
 
 /-!
 # Confirmed blocks at the next round's action read, with synchrony up to a cutoff
@@ -521,7 +522,7 @@ theorem confirmedNew_at_of_joint_upTo (facts : Record.Facts M) (S : Setup V) (Sc
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (tGAT : Int) (gap : Nat)
@@ -538,7 +539,6 @@ theorem confirmedNew_at_of_joint_upTo (facts : Record.Facts M) (S : Setup V) (Sc
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     {att : V → NamedAttestation V} (hatt : Restated.ActionAttestationsOf M S Sched x r n' att)
     (hQ : Restated.ConfirmedCompatibleFreshSGOverHonRound M S Sched x r n n')
@@ -560,6 +560,10 @@ theorem confirmedNew_at_of_joint_upTo (facts : Record.Facts M) (S : Setup V) (Sc
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
     ∀ hs ∈ Restated.actionHealingStore M S (x[n'][v].st) (r + 1),
       Block.compatible hs.live_confirmed (Restated.newAnchor M S Sched x r n' att T).erase = true := by
+  have hrecvR : Restated.NextRoundReceipts M S Sched x r :=
+    Restated.nextRoundReceipts_of_before facts S Sched x hsync hcatchB
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr)
+      (by have := Restated.early_g1_le_action_rb facts S (r + 1); have := S.E.Δ_pos; linarith)
   classical
   intro v hv hs hhs
   have hct : M.confirmation_time S.E ((M.opening_slot S.hc (r + 1)))
@@ -575,8 +579,8 @@ theorem confirmedNew_at_of_joint_upTo (facts : Record.Facts M) (S : Setup V) (Sc
   have hold : ∀ v' ∈ Restated.HonRound M S Sched (r + 1),
       ∀ hs' ∈ Restated.actionHealingStore M S (x[n'][v'].st) (r + 1),
       Block.compatible hs'.live_confirmed T.erase = true :=
-    fun v' hv' => Restated.confirmedOld_at_honRound_upTo facts (hcross := hcross) (hjust := hjust) S Sched x
-      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hn'
+    fun v' hv' => Restated.confirmedOld_at_honRound_upTo (hcatchB := hcatchB) facts (hcross := hcross) (hjust := hjust) S Sched x
+      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn'
       hv' hneTickVote hneTickSlot (hneTick v' hv') hneAtt
   have hroot : ∀ v' ∈ Restated.HonRound M S Sched (r + 1), Block.Preceq
       (Restated.Vocabulary.Protocol.confRoot M (Restated.confStoreAt M S (x[n'][v'].st) ((M.opening_slot S.hc (r + 1))))) T.erase :=
@@ -645,7 +649,7 @@ theorem confirmedNew_at_of_joint_upTo (facts : Record.Facts M) (S : Setup V) (Sc
       have hbt := hG b hb
       subst hbt
       obtain ⟨v_1, hv_1, a, har, hai, has, C, hC, hac, hGC⟩ :=
-        Restated.graded_preceq_freshSG_of_premises_upTo facts (hcross := hcross) S Sched x tE hexec hmono
+        Restated.graded_preceq_freshSG_of_premises_upTo (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono
           htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hqH
           (facts.gr.domain_le_action S (r + 1) .g2) hm₂ G hb hneTick hneAtt
       exact compatible_of_preceq_of_preceq (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _))
@@ -679,7 +683,7 @@ theorem gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound_upTo (fa
     (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (tGAT : Int) (gap : Nat)
     (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
@@ -721,7 +725,7 @@ theorem gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound_upTo (fa
       ∀ g, M.frameGradeRead m.cache S.E S.hc (M.toHealing m.st.core) (r + 1) ⇢ g →
       ∀ B : Block V, SGGraded g B →
       Restated.PreceqFreshSG M S Sched x r n B ∨ Block.Preceq B T.erase := fun v hv m hm g hg B hB =>
-    Restated.sgGraded_preceqFreshSG_or_preceq_anchor_upTo facts (hcross := hcross) S Sched x tE hexec
+    Restated.sgGraded_preceqFreshSG_or_preceq_anchor_upTo (hcatchB := hcatchB) facts (hcross := hcross) S Sched x tE hexec
       hmono htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hJ hv hm hg hB
       hneTick hneAtt
   have hany : ∀ v ∈ Restated.HonRound M S Sched (r + 1),
@@ -771,7 +775,7 @@ theorem gradePairwise_at_of_confirmedSafe_upTo (facts : Record.Facts M) (S : Set
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (tGAT : Int) (gap : Nat)
@@ -788,7 +792,6 @@ theorem gradePairwise_at_of_confirmedSafe_upTo (facts : Record.Facts M) (S : Set
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hJ : ∀ v ∈ honestThroughSet Sched ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))),
       ∀ hs ∈ Restated.actionHealingStore M S (x[n'][v].st) (r + 1), Block.Preceq hs.J T.erase)
@@ -816,10 +819,10 @@ theorem gradePairwise_at_of_confirmedSafe_upTo (facts : Record.Facts M) (S : Set
     ∀ g₁, M.frameGradeRead m₁.cache S.E S.hc (M.toHealing m₁.st.core) (r + 1) ⇢ g₁ →
     ∀ g₂, M.frameGradeRead m₂.cache S.E S.hc (M.toHealing m₂.st.core) (r + 1) ⇢ g₂ →
       Restated.GradePairwise M (M.toHealing m₁.st.core) (M.toHealing m₂.st.core) g₁ g₂ :=
-  Restated.gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound_upTo facts (hcross := hcross) S
+  Restated.gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound_upTo (hcatchB := hcatchB) facts (hcross := hcross) S
     Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hJ
-    (fun _ hv => Restated.confirmedOld_at_honRound_upTo facts (hcross := hcross) (hjust := hjust) S Sched x
-      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hn' hv
+    (fun _ hv => Restated.confirmedOld_at_honRound_upTo (hcatchB := hcatchB) facts (hcross := hcross) (hjust := hjust) S Sched x
+      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hv
       hneTickVote hneTickSlot (hneTick _ hv) hneAtt)
     hQ hneTick hneAtt
 
@@ -842,7 +845,7 @@ theorem gradeDescendant_at_of_confirmedSafe_upTo (facts : Record.Facts M) (S : S
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (tGAT : Int) (gap : Nat)
     (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
@@ -874,7 +877,7 @@ theorem gradeDescendant_at_of_confirmedSafe_upTo (facts : Record.Facts M) (S : S
           (M.late S.E S.hc (r + 1) p) B ⇢ true →
       Block.Preceq T.erase B → B ≠ T.erase →
       Block.compatible B (Restated.newAnchor M S Sched x r n' att T).erase = true :=
-  Restated.gradeDescendant_ofConfirmedFreshSG_upTo facts (hcross := hcross) S Sched x tE hexec hmono htd
+  Restated.gradeDescendant_ofConfirmedFreshSG_upTo (hcatchB := hcatchB) facts (hcross := hcross) S Sched x tE hexec hmono htd
     hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hatt
     (Restated.confirmedCompatibleFreshSG_of_overHonRound facts S Sched x hn' hQ) hneTick hneAtt
 

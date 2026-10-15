@@ -5,10 +5,10 @@ import Proofs.Instance.Equalities.ForkChoiceImages
 import Proofs.Vocabulary.ModelVocabularyFacts
 
 /-!
-# Store-reading fields of the facts structures at `Model.specDraft`
+# Store-reading fields of the facts structures at `Model.spec`
 
 Proofs of the fields of `StoreFacts` and `HandlersFacts` that read the store type, at the model
-`Model.specDraft`, one theorem `specDraft_<x>` per field `<x>`. The store type is the subtype
+`Model.spec`, one theorem `spec_<x>` per field `<x>`. The store type is the subtype
 `OkStore V`: stamped, of distinct roots, parent-closed and holding its finalized block.
 -/
 
@@ -17,7 +17,7 @@ set_option linter.unusedVariables false
 
 /-! ## `StoreFacts`: the resolution times -/
 
-namespace SpecDraftRecord.StoreFacts
+namespace SpecRecord.StoreFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Protocol
 open DecoupledConsensusModel.Sts.Record
@@ -36,10 +36,10 @@ theorem gs_tau_image (st : Spec.Store V) :
     DecoupledConsensusModel.Protocol.GoldfishStore.tau DecoupledConsensusModel.Protocol.Store.tau
   rfl
 
-/-- The member `store_tau` of `Model.specDraft` at a store `st` of the instance has one outcome,
+/-- The member `store_tau` of `Model.spec` at a store `st` of the instance has one outcome,
     `Protocol.Store.tau` of the store's image. -/
-theorem specDraft_store_tau_eq (st : OkStore V) :
-    (Model.specDraft (V := V)).store_tau st =
+theorem spec_store_tau_eq (st : OkStore V) :
+    (Model.spec (V := V)).store_tau st =
       (pure (DecoupledConsensusModel.Protocol.Store.tau st.val.toProof) :
         DC.NDRE (TimestampMap (GoldfishVote V))) := by
   obtain ⟨hst, hT, -, -⟩ := st.property
@@ -80,66 +80,66 @@ theorem specDraft_store_tau_eq (st : OkStore V) :
   · rintro rfl
     exact ⟨_, fun u hu => hval u hu, fun u hu => hnone u hu, rfl⟩
 
-/-- An outcome `tm` of the resolution times of `Model.specDraft` at `st` is `Protocol.Store.tau` of
+/-- An outcome `tm` of the resolution times of `Model.spec` at `st` is `Protocol.Store.tau` of
     the store's image. -/
 theorem tm_eq_of_returns (st : OkStore V) {tm : TimestampMap (GoldfishVote V)}
-    (htm : (Model.specDraft (V := V)).store_tau st ⇢ tm) :
+    (htm : (Model.spec (V := V)).store_tau st ⇢ tm) :
     tm = DecoupledConsensusModel.Protocol.Store.tau st.val.toProof := by
-  rw [specDraft_store_tau_eq] at htm
+  rw [spec_store_tau_eq] at htm
   exact (returns_pure _ _).1 htm
 
-/-- The field `tau_eq_of_fields` of `StoreFacts` at `Model.specDraft`: two stores with the same
+/-- The field `tau_eq_of_fields` of `StoreFacts` at `Model.spec`: two stores with the same
     block tree, the same block stamps and the same vote stamps have the same resolution times. -/
-theorem specDraft_tau_eq_of_fields : ∀ {st st' : (Model.specDraft (V := V)).S} (hT : st.T = st'.T)
+theorem spec_tau_eq_of_fields : ∀ {st st' : (Model.spec (V := V)).S} (hT : st.T = st'.T)
     (hb : st.timestamp_block = st'.timestamp_block)
     (hv : st.timestamp_vote = st'.timestamp_vote), st.tau = st'.tau := by
   intro st st' hT hb hv
-  show (Model.specDraft (V := V)).store_tau st = (Model.specDraft (V := V)).store_tau st'
-  rw [specDraft_store_tau_eq, specDraft_store_tau_eq]
+  show (Model.spec (V := V)).store_tau st = (Model.spec (V := V)).store_tau st'
+  rw [spec_store_tau_eq, spec_store_tau_eq]
   exact (Model.vocabulary_facts_store (V := V)).tau_eq_of_fields
     (st := st.val.toProof) (st' := st'.val.toProof) hT hb hv
 
-/-- The field `store_with_t_s_timestamp_vote` of `StoreFacts` at `Model.specDraft`: writing the
+/-- The field `store_with_t_s_timestamp_vote` of `StoreFacts` at `Model.spec`: writing the
     clock and the slot of a store keeps its vote stamps. -/
-theorem specDraft_store_with_t_s_timestamp_vote : ∀ (st : (Model.specDraft (V := V)).S) (t : Time) (s : Slot),
-    ((Model.specDraft (V := V)).store_with_t_s st t s).timestamp_vote = st.timestamp_vote :=
+theorem spec_store_with_t_s_timestamp_vote : ∀ (st : (Model.spec (V := V)).S) (t : Time) (s : Slot),
+    ((Model.spec (V := V)).store_with_t_s st t s).timestamp_vote = st.timestamp_vote :=
   fun _ _ _ => rfl
 
-/-- The field `store_with_σ_T_timestamp_block_h_max` of `StoreFacts` at `Model.specDraft`: writing
+/-- The field `store_with_σ_T_timestamp_block_h_max` of `StoreFacts` at `Model.spec`: writing
     the chain states, the tree and the block stamps of a store keeps its largest seen height. -/
-theorem specDraft_store_with_σ_T_timestamp_block_h_max : ∀ (st : (Model.specDraft (V := V)).S) (σ' : Block V → (Model.specDraft (V := V)).CS)
+theorem spec_store_with_σ_T_timestamp_block_h_max : ∀ (st : (Model.spec (V := V)).S) (σ' : Block V → (Model.spec (V := V)).CS)
     (T' : Finset (Block V)) (τ' : TimestampMap (Block V)),
-    ((Model.specDraft (V := V)).store_with_σ_T_timestamp_block st σ' T' τ').h_max = st.h_max := by
+    ((Model.spec (V := V)).store_with_σ_T_timestamp_block st σ' T' τ').h_max = st.h_max := by
   intro st σ' T' τ'
   show Member.store_h_max (OkMember.store_with_σ_T_timestamp_block st σ' T' τ').val =
     Member.store_h_max st.val
   unfold OkMember.store_with_σ_T_timestamp_block
   split <;> rfl
 
-/-- The field `store_with_σ_T_timestamp_block_J` of `StoreFacts` at `Model.specDraft`: writing the
+/-- The field `store_with_σ_T_timestamp_block_J` of `StoreFacts` at `Model.spec`: writing the
     chain states, the tree and the block stamps of a store keeps its justified block. -/
-theorem specDraft_store_with_σ_T_timestamp_block_J : ∀ (st : (Model.specDraft (V := V)).S) (σ' : Block V → (Model.specDraft (V := V)).CS) (T' : Finset (Block V))
-    (τ' : TimestampMap (Block V)), ((Model.specDraft (V := V)).store_with_σ_T_timestamp_block st σ' T' τ').J = st.J := by
+theorem spec_store_with_σ_T_timestamp_block_J : ∀ (st : (Model.spec (V := V)).S) (σ' : Block V → (Model.spec (V := V)).CS) (T' : Finset (Block V))
+    (τ' : TimestampMap (Block V)), ((Model.spec (V := V)).store_with_σ_T_timestamp_block st σ' T' τ').J = st.J := by
   intro st σ' T' τ'
   show Member.store_J (OkMember.store_with_σ_T_timestamp_block st σ' T' τ').val =
     Member.store_J st.val
   unfold OkMember.store_with_σ_T_timestamp_block
   split <;> rfl
 
-/-- The field `store_with_σ_T_timestamp_block_h_j` of `StoreFacts` at `Model.specDraft`: writing the
+/-- The field `store_with_σ_T_timestamp_block_h_j` of `StoreFacts` at `Model.spec`: writing the
     chain states, the tree and the block stamps of a store keeps its justified height. -/
-theorem specDraft_store_with_σ_T_timestamp_block_h_j : ∀ (st : (Model.specDraft (V := V)).S) (σ' : Block V → (Model.specDraft (V := V)).CS)
+theorem spec_store_with_σ_T_timestamp_block_h_j : ∀ (st : (Model.spec (V := V)).S) (σ' : Block V → (Model.spec (V := V)).CS)
     (T' : Finset (Block V)) (τ' : TimestampMap (Block V)),
-    ((Model.specDraft (V := V)).store_with_σ_T_timestamp_block st σ' T' τ').h_j = st.h_j := by
+    ((Model.spec (V := V)).store_with_σ_T_timestamp_block st σ' T' τ').h_j = st.h_j := by
   intro st σ' T' τ'
   show Member.store_h_j (OkMember.store_with_σ_T_timestamp_block st σ' T' τ').val =
     Member.store_h_j st.val
   unfold OkMember.store_with_σ_T_timestamp_block
   split <;> rfl
 
-/-- The field `head_slot_le_of_tau` of `StoreFacts` at `Model.specDraft`: if the tree holds the head
+/-- The field `head_slot_le_of_tau` of `StoreFacts` at `Model.spec`: if the tree holds the head
     block `H` of the vote `u`, and `u` resolves before `Γ`, then `H`'s slot is at most `u`'s. -/
-theorem specDraft_head_slot_le_of_tau : ∀ (st : (Model.specDraft (V := V)).S) {Γ : Time} {u : GoldfishVote V} {H : Block V}
+theorem spec_head_slot_le_of_tau : ∀ (st : (Model.spec (V := V)).S) {Γ : Time} {u : GoldfishVote V} {H : Block V}
     (hfind : Block.find? st.T u.head = some H)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
     (h : stampedBefore tm Γ u = true),
@@ -149,10 +149,10 @@ theorem specDraft_head_slot_le_of_tau : ∀ (st : (Model.specDraft (V := V)).S) 
   exact (Model.vocabulary_facts_store (V := V)).head_slot_le_of_tau st.val.toProof hfind _
     ((returns_pure _ _).2 rfl) h
 
-/-- The field `stampedBefore_block_of_tau` of `StoreFacts` at `Model.specDraft`: if the tree holds
+/-- The field `stampedBefore_block_of_tau` of `StoreFacts` at `Model.spec`: if the tree holds
     the head block `H` of the vote `u`, and `u` resolves before `Γ`, then `H` was received before
     `Γ`. -/
-theorem specDraft_stampedBefore_block_of_tau : ∀ (st : (Model.specDraft (V := V)).S) {Γ : Time} {u : GoldfishVote V} {H : Block V}
+theorem spec_stampedBefore_block_of_tau : ∀ (st : (Model.spec (V := V)).S) {Γ : Time} {u : GoldfishVote V} {H : Block V}
     (hfind : Block.find? st.T u.head = some H)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
     (h : stampedBefore tm Γ u = true),
@@ -162,10 +162,10 @@ theorem specDraft_stampedBefore_block_of_tau : ∀ (st : (Model.specDraft (V := 
   exact (Model.vocabulary_facts_store (V := V)).stampedBefore_block_of_tau st.val.toProof hfind _
     ((returns_pure _ _).2 rfl) h
 
-/-- The field `stampedBefore_store_tau_of` of `StoreFacts` at `Model.specDraft`: if the tree holds
+/-- The field `stampedBefore_store_tau_of` of `StoreFacts` at `Model.spec`: if the tree holds
     the head block `H` of the vote `u`, of a slot at most `u`'s, and both `u` and `H` were received
     before `Γ`, then `u` resolves before `Γ`. -/
-theorem specDraft_stampedBefore_store_tau_of : ∀ (st : (Model.specDraft (V := V)).S) {Γ : Time} {u : GoldfishVote V} {H : Block V}
+theorem spec_stampedBefore_store_tau_of : ∀ (st : (Model.spec (V := V)).S) {Γ : Time} {u : GoldfishVote V} {H : Block V}
     (hfind : Block.find? st.T u.head = some H) (hslot : H.slot ≤ u.slot)
     (hv : stampedBefore st.timestamp_vote Γ u = true)
     (hH : stampedBefore st.timestamp_block Γ H = true)
@@ -176,10 +176,10 @@ theorem specDraft_stampedBefore_store_tau_of : ∀ (st : (Model.specDraft (V := 
   exact (Model.vocabulary_facts_store (V := V)).stampedBefore_store_tau_of st.val.toProof hfind
     hslot hv hH _ ((returns_pure _ _).2 rfl)
 
-/-- The field `stampedBefore_tau_of` of `StoreFacts` at `Model.specDraft`: if the tree of the
+/-- The field `stampedBefore_tau_of` of `StoreFacts` at `Model.spec`: if the tree of the
     Goldfish store `gs` holds the head block `H` of the vote `u`, of a slot at most `u`'s, and both
     `u` and `H` were received before `Γ`, then `u` resolves before `Γ`. -/
-theorem specDraft_stampedBefore_tau_of : ∀ (gs : (Model.specDraft (V := V)).GS) {Γ : Time} {u : GoldfishVote V} {H : Block V}
+theorem spec_stampedBefore_tau_of : ∀ (gs : (Model.spec (V := V)).GS) {Γ : Time} {u : GoldfishVote V} {H : Block V}
     (hfind : Block.find? gs.T u.head = some H) (hslot : H.slot ≤ u.slot)
     (hv : stampedBefore gs.timestamp_vote Γ u = true)
     (hH : stampedBefore gs.timestamp_block Γ H = true)
@@ -191,9 +191,9 @@ theorem specDraft_stampedBefore_tau_of : ∀ (gs : (Model.specDraft (V := V)).GS
     gs.val.toProof.toHealing.toFG.toSG.toGoldfishStore hfind hslot hv hH _
     ((returns_pure _ _).2 (htm'.trans (gs_tau_image _).symm))
 
-/-- The field `stampedBefore_vote_of_tau` of `StoreFacts` at `Model.specDraft`: a vote that resolves
+/-- The field `stampedBefore_vote_of_tau` of `StoreFacts` at `Model.spec`: a vote that resolves
     before `Γ` was received before `Γ`. -/
-theorem specDraft_stampedBefore_vote_of_tau : ∀ (st : (Model.specDraft (V := V)).S) {Γ : Time} {u : GoldfishVote V}
+theorem spec_stampedBefore_vote_of_tau : ∀ (st : (Model.spec (V := V)).S) {Γ : Time} {u : GoldfishVote V}
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
     (h : stampedBefore tm Γ u = true),
     stampedBefore st.timestamp_vote Γ u = true := by
@@ -202,10 +202,10 @@ theorem specDraft_stampedBefore_vote_of_tau : ∀ (st : (Model.specDraft (V := V
   exact (Model.vocabulary_facts_store (V := V)).stampedBefore_vote_of_tau st.val.toProof _
     ((returns_pure _ _).2 rfl) h
 
-/-- The field `tau_eq_max` of `StoreFacts` at `Model.specDraft`: if the tree holds the head block
+/-- The field `tau_eq_max` of `StoreFacts` at `Model.spec`: if the tree holds the head block
     `X` of the vote `u`, of a slot at most `u`'s, the vote was received at `τ` and the block at `σ`,
     then `u` resolves at the later of the two. -/
-theorem specDraft_tau_eq_max : ∀ (st : (Model.specDraft (V := V)).S) {u : GoldfishVote V} {X : Block V}
+theorem spec_tau_eq_max : ∀ (st : (Model.spec (V := V)).S) {u : GoldfishVote V} {X : Block V}
     (hX : Block.find? st.T u.head = some X) (hXs : X.slot ≤ u.slot) {τ σ : Stamp}
     (hτ : st.timestamp_vote u = some τ) (hσ : st.timestamp_block X = some σ)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm),
@@ -215,10 +215,10 @@ theorem specDraft_tau_eq_max : ∀ (st : (Model.specDraft (V := V)).S) {u : Gold
   exact (Model.vocabulary_facts_store (V := V)).tau_eq_max st.val.toProof hX hXs hτ hσ _
     ((returns_pure _ _).2 rfl)
 
-/-- The field `tau_eq_max_gf` of `StoreFacts` at `Model.specDraft`: if the tree of the Goldfish
+/-- The field `tau_eq_max_gf` of `StoreFacts` at `Model.spec`: if the tree of the Goldfish
     store `gs` holds the head block `X` of the vote `u`, of a slot at most `u`'s, the vote was
     received at `τ` and the block at `σ`, then `u` resolves at the later of the two. -/
-theorem specDraft_tau_eq_max_gf : ∀ (gs : (Model.specDraft (V := V)).GS) {u : GoldfishVote V} {X : Block V}
+theorem spec_tau_eq_max_gf : ∀ (gs : (Model.spec (V := V)).GS) {u : GoldfishVote V} {X : Block V}
     (hX : Block.find? gs.T u.head = some X) (hXs : X.slot ≤ u.slot) {τ σ : Stamp}
     (hτ : gs.timestamp_vote u = some τ) (hσ : gs.timestamp_block X = some σ)
     (tm : TimestampMap (GoldfishVote V)) (htm : gs.tau ⇢ tm),
@@ -229,11 +229,11 @@ theorem specDraft_tau_eq_max_gf : ∀ (gs : (Model.specDraft (V := V)).GS) {u : 
     gs.val.toProof.toHealing.toFG.toSG.toGoldfishStore hX hXs hτ hσ _
     ((returns_pure _ _).2 (htm'.trans (gs_tau_image _).symm))
 
-end SpecDraftRecord.StoreFacts
+end SpecRecord.StoreFacts
 
 /-! ## `HandlersFacts`: the fields read off the store's members -/
 
-namespace SpecDraftRecord.HandlersFacts
+namespace SpecRecord.HandlersFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
@@ -244,9 +244,9 @@ open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- Unfolds the readers and members of `Model.specDraft` into reads of the images and rewrites each
+/-- Unfolds the readers and members of `Model.spec` into reads of the images and rewrites each
     member with its `image_` lemma, in the goal and in every hypothesis. -/
-local macro "unfold_specDraft" : tactic => `(tactic| simp only [Model.specDraft, Model.specDraftBase, Model.S.t,
+local macro "unfold_spec" : tactic => `(tactic| simp only [Model.spec, Model.specBase, Model.S.t,
   Model.S.s, Model.S.T, Model.S.timestamp_block, Model.S.timestamp_vote, Model.S.timestamp_sg_vote,
   Model.S.σ, Model.S.gf_votes, Model.S.sg_votes, Model.S.F, Model.S.J, Model.S.h_j, Model.S.h_max,
   Model.S.live_confirmed, Model.S.latest_confirmed, Model.S.latest_stable, Model.NS.core,
@@ -266,32 +266,32 @@ local macro "unfold_specDraft" : tactic => `(tactic| simp only [Model.specDraft,
   image_carried_attestations_admissible, image_round_of,
   image_admit_carried, image_equivocates] at *)
 
-/-- The field `ns_with_core_core` of `HandlersFacts` at `Model.specDraft`: the store part of the
+/-- The field `ns_with_core_core` of `HandlersFacts` at `Model.spec`: the store part of the
     named store `st` with its store part set to `c` is `c`. -/
-theorem specDraft_ns_with_core_core : ∀ (st : (Model.specDraft (V := V)).NS) (c : (Model.specDraft (V := V)).S),
-    ((Model.specDraft (V := V)).ns_with_core st c).core = c :=
+theorem spec_ns_with_core_core : ∀ (st : (Model.spec (V := V)).NS) (c : (Model.spec (V := V)).S),
+    ((Model.spec (V := V)).ns_with_core st c).core = c :=
   fun _ _ => rfl
 
-/-- The field `on_block_checked_using_store_part` of `HandlersFacts` at `Model.specDraft`: setting a
+/-- The field `on_block_checked_using_store_part` of `HandlersFacts` at `Model.spec`: setting a
     named store's store part to the result of the checked block handler, then reading the store part
     back, gives that result. -/
-theorem specDraft_on_block_checked_using_store_part : ∀ (E : Env V) (hc : Protocol.HealConfig)
-    (cfg : Protocol.HeightConfig) (before : (Model.specDraft (V := V)).NS) (B : NamedBlock V),
-    ((Model.specDraft (V := V)).ns_with_core before
-        ((Model.specDraft (V := V)).on_block_checked_using
-          (fun current => (Model.specDraft (V := V)).on_block_using E current B.erase
-            (fun ps => (Model.specDraft (V := V)).named_transition E cfg ps B)) hc before.core B.erase)).core =
-      (Model.specDraft (V := V)).on_block_checked_using
-        (fun current => (Model.specDraft (V := V)).on_block_using E current B.erase
-          (fun ps => (Model.specDraft (V := V)).named_transition E cfg ps B)) hc before.core B.erase :=
+theorem spec_on_block_checked_using_store_part : ∀ (E : Env V) (hc : Protocol.HealConfig)
+    (cfg : Protocol.HeightConfig) (before : (Model.spec (V := V)).NS) (B : NamedBlock V),
+    ((Model.spec (V := V)).ns_with_core before
+        ((Model.spec (V := V)).on_block_checked_using
+          (fun current => (Model.spec (V := V)).on_block_using E current B.erase
+            (fun ps => (Model.spec (V := V)).named_transition E cfg ps B)) hc before.core B.erase)).core =
+      (Model.spec (V := V)).on_block_checked_using
+        (fun current => (Model.spec (V := V)).on_block_using E current B.erase
+          (fun ps => (Model.spec (V := V)).named_transition E cfg ps B)) hc before.core B.erase :=
   fun _ _ _ _ _ => rfl
 
-/-- The field `setClock_core_eq_store_with_t_s` of `HandlersFacts` at `Model.specDraft`: setting the
+/-- The field `setClock_core_eq_store_with_t_s` of `HandlersFacts` at `Model.spec`: setting the
     clock of the named store `st` to `t` writes the clock `t` and the slot `E.slotOf t` into its
     store part. -/
-theorem specDraft_setClock_core_eq_store_with_t_s : ∀ (E : Env V) (st : (Model.specDraft (V := V)).NS) (t : Time),
-    ((Model.specDraft (V := V)).ns_setClock E st t).core =
-      (Model.specDraft (V := V)).store_with_t_s st.core t (E.slotOf t) := by
+theorem spec_setClock_core_eq_store_with_t_s : ∀ (E : Env V) (st : (Model.spec (V := V)).NS) (t : Time),
+    ((Model.spec (V := V)).ns_setClock E st t).core =
+      (Model.spec (V := V)).store_with_t_s st.core t (E.slotOf t) := by
   intro E st t
   apply Subtype.ext
   show Member.ns_setClock E st.val t = Member.store_with_t_s st.val t (E.slotOf t)
@@ -299,23 +299,23 @@ theorem specDraft_setClock_core_eq_store_with_t_s : ∀ (E : Env V) (st : (Model
     DecoupledConsensusModel.slotOfTime
   rfl
 
-/-- The field `coherent_clock` of `HandlersFacts` at `Model.specDraft`: setting the clock of a
+/-- The field `coherent_clock` of `HandlersFacts` at `Model.spec`: setting the clock of a
     coherent named store keeps it coherent. -/
-theorem specDraft_coherent_clock : ∀ (E : Env V) (cfg : Protocol.HeightConfig) (st : (Model.specDraft (V := V)).NS) (t : Time),
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) E cfg st →
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) E cfg ((Model.specDraft (V := V)).ns_setClock E st t) :=
+theorem spec_coherent_clock : ∀ (E : Env V) (cfg : Protocol.HeightConfig) (st : (Model.spec (V := V)).NS) (t : Time),
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) E cfg st →
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) E cfg ((Model.spec (V := V)).ns_setClock E st t) :=
   fun _ _ _ _ h => h
 
-/-- The field `treeSlotBounded_init` of `HandlersFacts` at `Model.specDraft`: every block of the
+/-- The field `treeSlotBounded_init` of `HandlersFacts` at `Model.spec`: every block of the
     initial store's tree has a slot at most the initial store's slot. -/
-theorem specDraft_treeSlotBounded_init : ∀ B : Block V, B ∈ ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.T → B.slot ≤ ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.s := by
+theorem spec_treeSlotBounded_init : ∀ B : Block V, B ∈ ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.T → B.slot ≤ ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.s := by
   intro B hB
-  unfold_specDraft
+  unfold_spec
   exact (Model.vocabulary_facts_handlers (V := V)).treeSlotBounded_init B hB
 
-/-- The field `goldfish_vote_with_T` of `HandlersFacts` at `Model.specDraft`: the Goldfish vote duty
+/-- The field `goldfish_vote_with_T` of `HandlersFacts` at `Model.spec`: the Goldfish vote duty
     keeps the store's tree. -/
-theorem specDraft_goldfish_vote_with_T : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).S) (out : (Model.specDraft (V := V)).S × Option (GoldfishVote V)), (Model.specDraft (V := V)).goldfish_vote_with contract E hc nd st ⇢ out → out.1.T = st.T := by
+theorem spec_goldfish_vote_with_T : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).S) (out : (Model.spec (V := V)).S × Option (GoldfishVote V)), (Model.spec (V := V)).goldfish_vote_with contract E hc nd st ⇢ out → out.1.T = st.T := by
   intro contract E hc nd st out hout
   replace hout : Returns (Member.goldfish_vote_with contract E hc nd st.val) (out.1.val, out.2) := hout
   unfold Member.goldfish_vote_with at hout
@@ -328,9 +328,9 @@ theorem specDraft_goldfish_vote_with_T : ∀ (contract : (Model.specDraft (V := 
   rw [← e1, hx]
   rfl
 
-/-- The field `goldfish_vote_with_snd` of `HandlersFacts` at `Model.specDraft`: a vote the Goldfish
+/-- The field `goldfish_vote_with_snd` of `HandlersFacts` at `Model.spec`: a vote the Goldfish
     vote duty sends is signed by the node's validator, at the store's slot. -/
-theorem specDraft_goldfish_vote_with_snd : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).S) {u : GoldfishVote V} (out : (Model.specDraft (V := V)).S × Option (GoldfishVote V)) (hout : (Model.specDraft (V := V)).goldfish_vote_with contract E hc nd st ⇢ out) (h : out.2 = some u), u.val_index = nd.val_index ∧ u.slot = st.s := by
+theorem spec_goldfish_vote_with_snd : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).S) {u : GoldfishVote V} (out : (Model.spec (V := V)).S × Option (GoldfishVote V)) (hout : (Model.spec (V := V)).goldfish_vote_with contract E hc nd st ⇢ out) (h : out.2 = some u), u.val_index = nd.val_index ∧ u.slot = st.s := by
   intro contract E hc nd st u out hout h
   replace hout : Returns (Member.goldfish_vote_with contract E hc nd st.val) (out.1.val, out.2) := hout
   unfold Member.goldfish_vote_with at hout
@@ -348,62 +348,62 @@ theorem specDraft_goldfish_vote_with_snd : ∀ (contract : (Model.specDraft (V :
   · rw [hl] at h
     simp [ChainStateToHandlers.sentGoldfishVote] at h
 
-/-- The field `blockStamps_init` of `HandlersFacts` at `Model.specDraft`: in the initial store every
+/-- The field `blockStamps_init` of `HandlersFacts` at `Model.spec`: in the initial store every
     block of the tree is stamped, every stamped block is in the tree, and every stamp is at most the
     clock. -/
-theorem specDraft_blockStamps_init : ((∀ B : Block V, B ∈ ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.T → (((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.timestamp_block B).isSome = true) ∧
-      (∀ B : Block V, (((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.timestamp_block B).isSome = true → B ∈ ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.T) ∧
-      (∀ (B : Block V) (c : Stamp), ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.timestamp_block B = some c →
-        c ≤ (((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core.t : Stamp))) := by
-  unfold_specDraft
+theorem spec_blockStamps_init : ((∀ B : Block V, B ∈ ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.T → (((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.timestamp_block B).isSome = true) ∧
+      (∀ B : Block V, (((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.timestamp_block B).isSome = true → B ∈ ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.T) ∧
+      (∀ (B : Block V) (c : Stamp), ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.timestamp_block B = some c →
+        c ≤ (((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core.t : Stamp))) := by
+  unfold_spec
   exact (Model.vocabulary_facts_handlers (V := V)).blockStamps_init
 
-/-- The field `poolStamps_initial` of `HandlersFacts` at `Model.specDraft`: the initial store meets
+/-- The field `poolStamps_initial` of `HandlersFacts` at `Model.spec`: the initial store meets
     `PoolStamps`. -/
-theorem specDraft_poolStamps_initial : Restated.Vocabulary.Protocol.PoolStamps (Model.specDraft (V := V)) ((Model.specDraft (V := V)).ns_initial : (Model.specDraft (V := V)).NS).core := by
+theorem spec_poolStamps_initial : Restated.Vocabulary.Protocol.PoolStamps (Model.spec (V := V)) ((Model.spec (V := V)).ns_initial : (Model.spec (V := V)).NS).core := by
   have h := (Model.vocabulary_facts_handlers (V := V)).poolStamps_initial
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro k u hu
-    unfold_specDraft
+    unfold_spec
     exact h.slot k u hu
   · intro k u hu
-    unfold_specDraft
+    unfold_spec
     exact h.stamped k u hu
   · intro u hu
-    unfold_specDraft
+    unfold_spec
     exact h.pooled u hu
   · intro u c hu
-    unfold_specDraft
+    unfold_spec
     exact h.bounded u c hu
 
-/-- If the store `st` of the instance meets `PoolStamps` at `Model.specDraft`, its image
+/-- If the store `st` of the instance meets `PoolStamps` at `Model.spec`, its image
     `st.val.toProof` meets `PoolStamps` at `Model.vocabulary`. -/
-theorem poolStamps_image (st : (Model.specDraft (V := V)).S)
-    (h : Restated.Vocabulary.Protocol.PoolStamps (Model.specDraft (V := V)) st) :
+theorem poolStamps_image (st : (Model.spec (V := V)).S)
+    (h : Restated.Vocabulary.Protocol.PoolStamps (Model.spec (V := V)) st) :
     Restated.Vocabulary.Protocol.PoolStamps (Model.vocabulary (V := V)) st.val.toProof :=
   ⟨h.slot, h.stamped, h.pooled, h.bounded⟩
 
 /-- The field `on_goldfish_vote_beforeCutoff_or_equivocates` of `HandlersFacts` at
-    `Model.specDraft`: a vote of the current or the previous slot, stored before the cutoff `Γ`
+    `Model.spec`: a vote of the current or the previous slot, stored before the cutoff `Γ`
     passes, is in the pool before the cutoff, unless its validator equivocates there. -/
-theorem specDraft_on_goldfish_vote_beforeCutoff_or_equivocates : ∀ (st : (Model.specDraft (V := V)).S) (u : GoldfishVote V) (Γ : Time),
-    Restated.Vocabulary.Protocol.PoolStamps (Model.specDraft (V := V)) st →
+theorem spec_on_goldfish_vote_beforeCutoff_or_equivocates : ∀ (st : (Model.spec (V := V)).S) (u : GoldfishVote V) (Γ : Time),
+    Restated.Vocabulary.Protocol.PoolStamps (Model.spec (V := V)) st →
     ¬ u.slot < st.s - 1 → ¬ st.s < u.slot → st.t < Γ →
-    u ∈ _root_.DecoupledConsensusModel.beforeCutoff ((Model.specDraft (V := V)).on_goldfish_vote st u).timestamp_vote Γ
-        ((Model.specDraft (V := V)).store_pool ((Model.specDraft (V := V)).on_goldfish_vote st u) u.slot) ∨
-      (Model.specDraft (V := V)).equivocates
-        (_root_.DecoupledConsensusModel.beforeCutoff ((Model.specDraft (V := V)).on_goldfish_vote st u).timestamp_vote Γ
-          ((Model.specDraft (V := V)).store_pool ((Model.specDraft (V := V)).on_goldfish_vote st u) u.slot)) u.val_index = true := by
+    u ∈ _root_.DecoupledConsensusModel.beforeCutoff ((Model.spec (V := V)).on_goldfish_vote st u).timestamp_vote Γ
+        ((Model.spec (V := V)).store_pool ((Model.spec (V := V)).on_goldfish_vote st u) u.slot) ∨
+      (Model.spec (V := V)).equivocates
+        (_root_.DecoupledConsensusModel.beforeCutoff ((Model.spec (V := V)).on_goldfish_vote st u).timestamp_vote Γ
+          ((Model.spec (V := V)).store_pool ((Model.spec (V := V)).on_goldfish_vote st u) u.slot)) u.val_index = true := by
   intro st u Γ h h1 h2 h3
   have := (Model.vocabulary_facts_handlers (V := V)).on_goldfish_vote_beforeCutoff_or_equivocates
     st.val.toProof u Γ (poolStamps_image st h) h1 h2 h3
-  unfold_specDraft
+  unfold_spec
   exact this
 
-/-- A named store of the instance that is `Coherent` at `Model.specDraft` has a named image that is
+/-- A named store of the instance that is `Coherent` at `Model.spec` has a named image that is
     `Coherent` at `Model.vocabulary`. -/
-theorem coherent_image (E : Env V) (cfg : HeightConfig) (st : (Model.specDraft (V := V)).NS)
-    (h : Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) E cfg st) :
+theorem coherent_image (E : Env V) (cfg : HeightConfig) (st : (Model.spec (V := V)).NS)
+    (h : Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) E cfg st) :
     Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.vocabulary (V := V)) E cfg
       st.val.toProofNamed := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
@@ -412,33 +412,33 @@ theorem coherent_image (E : Env V) (cfg : HeightConfig) (st : (Model.specDraft (
   rw [← HandlersRunFacts.image_derive_named]
   exact congrArg Spec.Protocol.ChainState.toProof (h5 B hB)
 
-/-- The field `sgArrival_rows_data` of `HandlersFacts` at `Model.specDraft`: if the clock and every
+/-- The field `sgArrival_rows_data` of `HandlersFacts` at `Model.spec`: if the clock and every
     row's stamp of a coherent named store are within `bound`, they still are after the list `rows`
     is admitted, and every row stays of its round. -/
-theorem specDraft_sgArrival_rows_data : ∀ (S : Setup V) (bound : Time) (st : (Model.specDraft (V := V)).NS) (rows : List (NamedAttestation V)),
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) S.E S.cfg st →
+theorem spec_sgArrival_rows_data : ∀ (S : Setup V) (bound : Time) (st : (Model.spec (V := V)).NS) (rows : List (NamedAttestation V)),
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) S.E S.cfg st →
     (st.core.t ≤ bound ∧ ∀ k (a : NamedAttestation V), a ∈ st.sg_rows k →
       a.round = k ∧ ∃ stamp : Time, stamp ≤ bound ∧
-        st.core.timestamp_sg_vote ((Model.specDraft (V := V)).sgVote a.erase) = some (stamp : Stamp)) →
-    (((Model.specDraft (V := V)).admit_rows S.hc st rows).core.t ≤ bound ∧
-      ∀ k (a : NamedAttestation V), a ∈ ((Model.specDraft (V := V)).admit_rows S.hc st rows).sg_rows k →
+        st.core.timestamp_sg_vote ((Model.spec (V := V)).sgVote a.erase) = some (stamp : Stamp)) →
+    (((Model.spec (V := V)).admit_rows S.hc st rows).core.t ≤ bound ∧
+      ∀ k (a : NamedAttestation V), a ∈ ((Model.spec (V := V)).admit_rows S.hc st rows).sg_rows k →
         a.round = k ∧ ∃ stamp : Time, stamp ≤ bound ∧
-          ((Model.specDraft (V := V)).admit_rows S.hc st rows).core.timestamp_sg_vote ((Model.specDraft (V := V)).sgVote a.erase) = some (stamp : Stamp)) := by
+          ((Model.spec (V := V)).admit_rows S.hc st rows).core.timestamp_sg_vote ((Model.spec (V := V)).sgVote a.erase) = some (stamp : Stamp)) := by
   intro S bound st rows hcoh hdata
   have hcoh' := coherent_image S.E S.cfg st hcoh
   have := (Model.vocabulary_facts_handlers (V := V)).sgArrival_rows_data S bound st.val.toProofNamed
     rows hcoh'
-  unfold_specDraft
+  unfold_spec
   exact this hdata
 
-/-- The field `NamedAdmission_coherent_admit_rows` of `HandlersFacts` at `Model.specDraft`:
+/-- The field `NamedAdmission_coherent_admit_rows` of `HandlersFacts` at `Model.spec`:
     admitting a list of rows into a coherent named store keeps it coherent. -/
-theorem specDraft_NamedAdmission_coherent_admit_rows : ∀ (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (st : (Model.specDraft (V := V)).NS)
+theorem spec_NamedAdmission_coherent_admit_rows : ∀ (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (st : (Model.spec (V := V)).NS)
     (rows : List (NamedAttestation V)),
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) E cfg st →
-    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.specDraft (V := V)) E cfg ((Model.specDraft (V := V)).admit_rows hc st rows) := by
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) E cfg st →
+    Restated.Vocabulary.Proofs.NamedStore.Coherent (Model.spec (V := V)) E cfg ((Model.spec (V := V)).admit_rows hc st rows) := by
   intro E hc cfg st rows h
-  obtain ⟨at', ts, he⟩ := SpecDraftRecord.NodeFacts.admit_attestations_frame
+  obtain ⟨at', ts, he⟩ := SpecRecord.NodeFacts.admit_attestations_frame
     (Spec.Config.toSpec (ChainStateToHandlers.unreadEnv (V := V)) hc unreadHeightConfig) st.val
     (rows.map Spec.Attestation.toSpecNamed)
   obtain ⟨h1, h2, h3, -, h5⟩ := h
@@ -461,9 +461,9 @@ theorem specDraft_NamedAdmission_coherent_admit_rows : ∀ (E : Env V) (hc : Pro
   · show ∀ B ∈ Member.bodies X, Member.store_σ X B.erase = Member.derive_named E cfg B
     rw [hb, hσ]; exact h5
 
-/-- The field `Sts_voter_filtered_block_tree_subset` of `HandlersFacts` at `Model.specDraft`: the
+/-- The field `Sts_voter_filtered_block_tree_subset` of `HandlersFacts` at `Model.spec`: the
     voter's filtered tree is a subset of the store's tree. -/
-theorem specDraft_Sts_voter_filtered_block_tree_subset : ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (s : Slot) (X : Finset (Block V)), (Model.specDraft (V := V)).voter_filtered_block_tree E st s ⇢ X → X ⊆ st.T := by
+theorem spec_Sts_voter_filtered_block_tree_subset : ∀ (E : Env V) (st : (Model.spec (V := V)).S) (s : Slot) (X : Finset (Block V)), (Model.spec (V := V)).voter_filtered_block_tree E st s ⇢ X → X ⊆ st.T := by
   intro E st s X hX
   replace hX : Returns (Member.voter_filtered_block_tree E st.val s) X := hX
   unfold Member.voter_filtered_block_tree at hX
@@ -473,13 +473,13 @@ theorem specDraft_Sts_voter_filtered_block_tree_subset : ∀ (E : Env V) (st : (
     (ContractImages.voter_filtered_block_tree_subset (st := Spec.Store.ofImage st.val) hT')
 
 /-- The field `ModelProperties_voter_filtered_block_tree_subset` of `HandlersFacts` at
-    `Model.specDraft`: the voter's filtered tree is a subset of the store's tree. -/
-theorem specDraft_ModelProperties_voter_filtered_block_tree_subset : ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (s : Slot) (X : Finset (Block V)), (Model.specDraft (V := V)).voter_filtered_block_tree E st s ⇢ X → X ⊆ st.T :=
-  specDraft_Sts_voter_filtered_block_tree_subset
+    `Model.spec`: the voter's filtered tree is a subset of the store's tree. -/
+theorem spec_ModelProperties_voter_filtered_block_tree_subset : ∀ (E : Env V) (st : (Model.spec (V := V)).S) (s : Slot) (X : Finset (Block V)), (Model.spec (V := V)).voter_filtered_block_tree E st s ⇢ X → X ⊆ st.T :=
+  spec_Sts_voter_filtered_block_tree_subset
 
-/-- The field `update_confirmation_with_toHealing_F` of `HandlersFacts` at `Model.specDraft`: the
+/-- The field `update_confirmation_with_toHealing_F` of `HandlersFacts` at `Model.spec`: the
     confirmation update keeps the finalized block. -/
-theorem specDraft_update_confirmation_with_toHealing_F : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot) (st' : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' → ((Model.specDraft (V := V)).toHealing st').toFG.F = ((Model.specDraft (V := V)).toHealing st).toFG.F := by
+theorem spec_update_confirmation_with_toHealing_F : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot) (st' : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' → ((Model.spec (V := V)).toHealing st').toFG.F = ((Model.spec (V := V)).toHealing st).toFG.F := by
   intro contract E hc st s st' h
   obtain ⟨x1, x2, x3, he⟩ := ContractImages.update_confirmation_with_shape
     (c := contract) (E := E) (hc := hc) (st := st.val) (st' := st'.val) (s := s) h
@@ -488,12 +488,12 @@ theorem specDraft_update_confirmation_with_toHealing_F : ∀ (contract : (Model.
   show (Spec.Store.ofImage st.val).F.toProof = _
   rw [Spec.Store.ofImage_F, Spec.Store.toProof_blockOfImage]
 
-/-- The field `update_confirmation_with_filtered` of `HandlersFacts` at `Model.specDraft`: the
+/-- The field `update_confirmation_with_filtered` of `HandlersFacts` at `Model.spec`: the
     confirmation update keeps the filtered block tree. -/
-theorem specDraft_update_confirmation_with_filtered : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot)
-    (st' : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' → (Model.specDraft (V := V)).get_filtered_block_tree
-    ((Model.specDraft (V := V)).toHealing st').toFG
-    = (Model.specDraft (V := V)).get_filtered_block_tree ((Model.specDraft (V := V)).toHealing st).toFG := by
+theorem spec_update_confirmation_with_filtered : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot)
+    (st' : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' → (Model.spec (V := V)).get_filtered_block_tree
+    ((Model.spec (V := V)).toHealing st').toFG
+    = (Model.spec (V := V)).get_filtered_block_tree ((Model.spec (V := V)).toHealing st).toFG := by
   intro contract E hc st s st' h
   obtain ⟨x1, x2, x3, he⟩ := ContractImages.update_confirmation_with_shape
     (c := contract) (E := E) (hc := hc) (st := st.val) (st' := st'.val) (s := s) h
@@ -545,20 +545,20 @@ theorem get_confirmed_image (st : OkStore V) :
       st.val.latest_confirmed.toProof else Protocol.get_stable st.val.toProof)
   split <;> rw [Spec.Store.toProof_blockOfImage]
 
-/-- The field `get_stable_upper` of `HandlersFacts` at `Model.specDraft`: when `F` and the stable
+/-- The field `get_stable_upper` of `HandlersFacts` at `Model.spec`: when `F` and the stable
     record are compatible, both are ancestors of the stable block, or the block itself. -/
-theorem specDraft_get_stable_upper : ∀ (st : (Model.specDraft (V := V)).S) (h : Block.compatible st.F st.latest_stable = true), Block.Preceq st.F ((Model.specDraft (V := V)).get_stable st) ∧
-    Block.Preceq st.latest_stable ((Model.specDraft (V := V)).get_stable st) := by
+theorem spec_get_stable_upper : ∀ (st : (Model.spec (V := V)).S) (h : Block.compatible st.F st.latest_stable = true), Block.Preceq st.F ((Model.spec (V := V)).get_stable st) ∧
+    Block.Preceq st.latest_stable ((Model.spec (V := V)).get_stable st) := by
   intro st h
   show Block.Preceq _ (Member.get_stable st.val) ∧ Block.Preceq _ (Member.get_stable st.val)
   rw [get_stable_image]
   exact (Model.vocabulary_facts_handlers (V := V)).get_stable_upper st.val.toProof h
 
-/-- The field `get_confirmed_upper` of `HandlersFacts` at `Model.specDraft`: when the stable block
+/-- The field `get_confirmed_upper` of `HandlersFacts` at `Model.spec`: when the stable block
     and the confirmation record are compatible, both are ancestors of the confirmed block, or the
     block itself. -/
-theorem specDraft_get_confirmed_upper : ∀ (st : (Model.specDraft (V := V)).S) (h : Block.compatible ((Model.specDraft (V := V)).get_stable st) st.latest_confirmed = true), Block.Preceq ((Model.specDraft (V := V)).get_stable st) ((Model.specDraft (V := V)).get_confirmed st) ∧
-    Block.Preceq st.latest_confirmed ((Model.specDraft (V := V)).get_confirmed st) := by
+theorem spec_get_confirmed_upper : ∀ (st : (Model.spec (V := V)).S) (h : Block.compatible ((Model.spec (V := V)).get_stable st) st.latest_confirmed = true), Block.Preceq ((Model.spec (V := V)).get_stable st) ((Model.spec (V := V)).get_confirmed st) ∧
+    Block.Preceq st.latest_confirmed ((Model.spec (V := V)).get_confirmed st) := by
   intro st h
   show Block.Preceq (Member.get_stable st.val) (Member.get_confirmed st.val) ∧
     Block.Preceq _ (Member.get_confirmed st.val)
@@ -567,21 +567,21 @@ theorem specDraft_get_confirmed_upper : ∀ (st : (Model.specDraft (V := V)).S) 
   rw [get_confirmed_image]
   exact (Model.vocabulary_facts_handlers (V := V)).get_confirmed_upper st.val.toProof h
 
-/-- The field `get_stable_preceq_of_fields` of `HandlersFacts` at `Model.specDraft`: if `F` and the
+/-- The field `get_stable_preceq_of_fields` of `HandlersFacts` at `Model.spec`: if `F` and the
     stable record of `old` are ancestors of those of `new` (or the same), and `new`'s two are
     compatible, then `old`'s stable block is an ancestor of `new`'s, or the same. -/
-theorem specDraft_get_stable_preceq_of_fields : ∀ (old new : (Model.specDraft (V := V)).S) (hF : Block.Preceq old.F new.F) (hL : Block.Preceq old.latest_stable new.latest_stable) (hFL : Block.compatible new.F new.latest_stable = true), Block.Preceq ((Model.specDraft (V := V)).get_stable old) ((Model.specDraft (V := V)).get_stable new) := by
+theorem spec_get_stable_preceq_of_fields : ∀ (old new : (Model.spec (V := V)).S) (hF : Block.Preceq old.F new.F) (hL : Block.Preceq old.latest_stable new.latest_stable) (hFL : Block.compatible new.F new.latest_stable = true), Block.Preceq ((Model.spec (V := V)).get_stable old) ((Model.spec (V := V)).get_stable new) := by
   intro old new hF hL hFL
   show Block.Preceq (Member.get_stable old.val) (Member.get_stable new.val)
   rw [get_stable_image, get_stable_image]
   exact (Model.vocabulary_facts_handlers (V := V)).get_stable_preceq_of_fields old.val.toProof
     new.val.toProof hF hL hFL
 
-/-- The field `get_confirmed_preceq_of_fields` of `HandlersFacts` at `Model.specDraft`: if `F`, the
+/-- The field `get_confirmed_preceq_of_fields` of `HandlersFacts` at `Model.spec`: if `F`, the
     stable record and the confirmation record of `old` are ancestors of those of `new` (or the
     same), and `new`'s are compatible as required, then `old`'s confirmed block is an ancestor of
     `new`'s, or the same. -/
-theorem specDraft_get_confirmed_preceq_of_fields : ∀ (old new : (Model.specDraft (V := V)).S) (hF : Block.Preceq old.F new.F) (hL : Block.Preceq old.latest_stable new.latest_stable) (hC : Block.Preceq old.latest_confirmed new.latest_confirmed) (hFL : Block.compatible new.F new.latest_stable = true) (hSC : Block.compatible ((Model.specDraft (V := V)).get_stable new) new.latest_confirmed = true), Block.Preceq ((Model.specDraft (V := V)).get_confirmed old) ((Model.specDraft (V := V)).get_confirmed new) := by
+theorem spec_get_confirmed_preceq_of_fields : ∀ (old new : (Model.spec (V := V)).S) (hF : Block.Preceq old.F new.F) (hL : Block.Preceq old.latest_stable new.latest_stable) (hC : Block.Preceq old.latest_confirmed new.latest_confirmed) (hFL : Block.compatible new.F new.latest_stable = true) (hSC : Block.compatible ((Model.spec (V := V)).get_stable new) new.latest_confirmed = true), Block.Preceq ((Model.spec (V := V)).get_confirmed old) ((Model.spec (V := V)).get_confirmed new) := by
   intro old new hF hL hC hFL hSC
   show Block.Preceq (Member.get_confirmed old.val) (Member.get_confirmed new.val)
   replace hSC : Block.compatible (Member.get_stable new.val) _ = true := hSC
@@ -590,10 +590,10 @@ theorem specDraft_get_confirmed_preceq_of_fields : ∀ (old new : (Model.specDra
   exact (Model.vocabulary_facts_handlers (V := V)).get_confirmed_preceq_of_fields old.val.toProof
     new.val.toProof hF hL hC hFL hSC
 
-/-- The field `preceq_get_stable_of_record` of `HandlersFacts` at `Model.specDraft`: a block that is
+/-- The field `preceq_get_stable_of_record` of `HandlersFacts` at `Model.spec`: a block that is
     an ancestor of the stable record and compatible with `F` is an ancestor of the stable block, or
     the block itself. -/
-theorem specDraft_preceq_get_stable_of_record : ∀ (st : (Model.specDraft (V := V)).S) {P : Block V} (hL : Block.Preceq P st.latest_stable) (hF : Block.Compatible P st.F), Block.Preceq P ((Model.specDraft (V := V)).get_stable st) := by
+theorem spec_preceq_get_stable_of_record : ∀ (st : (Model.spec (V := V)).S) {P : Block V} (hL : Block.Preceq P st.latest_stable) (hF : Block.Compatible P st.F), Block.Preceq P ((Model.spec (V := V)).get_stable st) := by
   intro st P hL hF
   show Block.Preceq P (Member.get_stable st.val)
   rw [get_stable_image]
@@ -630,10 +630,10 @@ theorem onBlockUsing_of_reject (P : Spec.Provisional V) (st : Spec.Store V)
   rcases h with (h | h | h) | h | h | h <;> simp [h] <;> rfl
 
 
-/-- The field `on_block_using_of_rejected` of `HandlersFacts` at `Model.specDraft`: a block `B` that
+/-- The field `on_block_using_of_rejected` of `HandlersFacts` at `Model.spec`: a block `B` that
     one of the block handler's tests refuses leaves the store as it was. -/
-theorem specDraft_on_block_using_of_rejected : ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (B : Block V) (build : (Model.specDraft (V := V)).CS → (Model.specDraft (V := V)).CS) (h : (st.s < B.slot ∨ B ∈ st.T ∨ B.parent ∉ st.T) ∨ (!Block.preceq st.F B) = true ∨
-    B.proposer? ≠ some (E.proposer B.slot) ∨ ¬ (B.parent.slot < B.slot)), (Model.specDraft (V := V)).on_block_using E st B build = st := by
+theorem spec_on_block_using_of_rejected : ∀ (E : Env V) (st : (Model.spec (V := V)).S) (B : Block V) (build : (Model.spec (V := V)).CS → (Model.spec (V := V)).CS) (h : (st.s < B.slot ∨ B ∈ st.T ∨ B.parent ∉ st.T) ∨ (!Block.preceq st.F B) = true ∨
+    B.proposer? ≠ some (E.proposer B.slot) ∨ ¬ (B.parent.slot < B.slot)), (Model.spec (V := V)).on_block_using E st B build = st := by
   intro E st B build h
   obtain ⟨-, hd, hpc, hF⟩ := st.property
   show OkMember.on_block_using E st B build = st
@@ -678,15 +678,15 @@ theorem specDraft_on_block_using_of_rejected : ∀ (E : Env V) (st : (Model.spec
     rw [hpslotX, hslotX]
     exact h
 
-/-- The field `checked_existing` of `HandlersFacts` at `Model.specDraft`: a block the store already
+/-- The field `checked_existing` of `HandlersFacts` at `Model.spec`: a block the store already
     holds leaves the store as it was. -/
-theorem specDraft_checked_existing : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (B : Block V) (buildState : (Model.specDraft (V := V)).CS → (Model.specDraft (V := V)).CS) (hB : B ∈ st.T), (Model.specDraft (V := V)).on_block_checked_using
-    (fun current => (Model.specDraft (V := V)).on_block_using E current B buildState) hc st B = st := by
+theorem spec_checked_existing : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (B : Block V) (buildState : (Model.spec (V := V)).CS → (Model.spec (V := V)).CS) (hB : B ∈ st.T), (Model.spec (V := V)).on_block_checked_using
+    (fun current => (Model.spec (V := V)).on_block_using E current B buildState) hc st B = st := by
   intro E hc st B buildState hB
   show OkMember.on_block_checked_using (fun current => OkMember.on_block_using E current B buildState) hc st B = st
   unfold OkMember.on_block_checked_using
   split
-  · exact specDraft_on_block_using_of_rejected E st B buildState (Or.inl (Or.inr (Or.inl hB)))
+  · exact spec_on_block_using_of_rejected E st B buildState (Or.inl (Or.inr (Or.inl hB)))
   · rfl
 
 
@@ -697,12 +697,12 @@ omit [Fintype V] [Inhabited V] in
 theorem get_fg_root_image (st : Spec.Store V) :
     Member.get_fg_root st = Protocol.get_fg_root st.toProof.toHealing.toFG := by
   unfold Member.get_fg_root
-  rw [Spec.Store.toProof_get_fg_root_ofImage, SpecDraftRecord.toProof_get_fg_root]
+  rw [Spec.Store.toProof_get_fg_root_ofImage, SpecRecord.toProof_get_fg_root]
 
-/-- At a store `st` of the instance, the member `voter_filtered_block_tree` of `Model.specDraft`
+/-- At a store `st` of the instance, the member `voter_filtered_block_tree` of `Model.spec`
     equals that of `Model.vocabulary` at the store's image `st.val.toProof`. -/
-theorem specDraft_voter_filtered_block_tree_eq (E : Env V) (st : OkStore V) (s : Slot) :
-    (Model.specDraft (V := V)).voter_filtered_block_tree E st s =
+theorem spec_voter_filtered_block_tree_eq (E : Env V) (st : OkStore V) (s : Slot) :
+    (Model.spec (V := V)).voter_filtered_block_tree E st s =
       (Model.vocabulary (V := V)).voter_filtered_block_tree E st.val.toProof s := by
   obtain ⟨hst, -, -, -⟩ := st.property
   set C := Spec.Config.toSpec E unreadHealConfig unreadHeightConfig with hC
@@ -710,8 +710,8 @@ theorem specDraft_voter_filtered_block_tree_eq (E : Env V) (st : OkStore V) (s :
   have hsub : Q ⊆ st.val.T := ForkChoiceImages.processed_subset_of_ok C st.val s hQ
   have hP : Q.image Spec.Block.toProof =
       Protocol.voter_processed_block_tree E st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s := by
-    have e := ForkChoiceImages.specDraft_voter_processed_block_tree_eq E st s
-    have h1 : (Model.specDraft (V := V)).voter_processed_block_tree E st s ⇢
+    have e := ForkChoiceImages.spec_voter_processed_block_tree_eq E st s
+    have h1 : (Model.spec (V := V)).voter_processed_block_tree E st s ⇢
         Q.image Spec.Block.toProof := by
       show Returns (successOutcomes (Except.map (fun T => T.image Spec.Block.toProof)
         (Spec.Protocol.voter_processed_block_tree C st.val s))) _
@@ -736,20 +736,20 @@ theorem specDraft_voter_filtered_block_tree_eq (E : Env V) (st : OkStore V) (s :
   unfold Protocol.voter_filtered_block_tree
   rfl
 
-/-- The field `voter_filtered_block_tree_cases` of `HandlersFacts` at `Model.specDraft`: a block `C`
+/-- The field `voter_filtered_block_tree_cases` of `HandlersFacts` at `Model.spec`: a block `C`
     of the voter's filtered tree is a block of the voter's processed tree `P`, `F` or a descendant
     of `F`, a block of `P` whose chain state has height at least `h_max − 1` or an ancestor of one,
     and the root `get_fg_root` or a descendant of it. -/
-theorem specDraft_voter_filtered_block_tree_cases : ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (s : Slot) {C : Block V} (X : Finset (Block V)) (hX : (Model.specDraft (V := V)).voter_filtered_block_tree E st s ⇢ X) (hC : C ∈ X) (P : Finset (Block V)) (hP : (Model.specDraft (V := V)).voter_processed_block_tree E ((Model.specDraft (V := V)).toHealing st).toFG.toSG.toGoldfishStore s ⇢ P), C ∈ P ∧
+theorem spec_voter_filtered_block_tree_cases : ∀ (E : Env V) (st : (Model.spec (V := V)).S) (s : Slot) {C : Block V} (X : Finset (Block V)) (hX : (Model.spec (V := V)).voter_filtered_block_tree E st s ⇢ X) (hC : C ∈ X) (P : Finset (Block V)) (hP : (Model.spec (V := V)).voter_processed_block_tree E ((Model.spec (V := V)).toHealing st).toFG.toSG.toGoldfishStore s ⇢ P), C ∈ P ∧
     Block.Preceq st.F C ∧
     (∃ Y ∈ P,
     Block.Preceq C Y ∧ st.h_max - 1 ≤ (st.σ Y).h) ∧
-    Block.Preceq ((Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG) C := by
+    Block.Preceq ((Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG) C := by
   intro E st s C X hX hC P hP
-  rw [specDraft_voter_filtered_block_tree_eq] at hX
+  rw [spec_voter_filtered_block_tree_eq] at hX
   have hP' : (Model.vocabulary (V := V)).voter_processed_block_tree E
       st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s ⇢ P := by
-    rw [← ForkChoiceImages.specDraft_voter_processed_block_tree_eq]; exact hP
+    rw [← ForkChoiceImages.spec_voter_processed_block_tree_eq]; exact hP
   have h := (Model.vocabulary_facts_handlers (V := V)).voter_filtered_block_tree_cases E
     st.val.toProof s X hX hC P hP'
   obtain ⟨h1, h2, ⟨Y, hY, h3, h4⟩, h5⟩ := h
@@ -760,16 +760,16 @@ theorem specDraft_voter_filtered_block_tree_cases : ∀ (E : Env V) (st : (Model
     rw [get_fg_root_image]
     exact h5
 
-/-- The field `mem_voter_filtered_block_tree_of_parts` of `HandlersFacts` at `Model.specDraft`: a
+/-- The field `mem_voter_filtered_block_tree_of_parts` of `HandlersFacts` at `Model.spec`: a
     block `C` of the voter's processed tree `P` that is `F` or a descendant of `F`, the root
     `get_fg_root` or a descendant of it, and an ancestor (or itself) of a block of `P` whose chain
     state has height at least `h_max − 1`, is in the voter's filtered tree. -/
-theorem specDraft_mem_voter_filtered_block_tree_of_parts : ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (s : Slot) {C Y : Block V} (P : Finset (Block V)) (hP : (Model.specDraft (V := V)).voter_processed_block_tree E ((Model.specDraft (V := V)).toHealing st).toFG.toSG.toGoldfishStore s ⇢ P) (hC : C ∈ P) (hF : Block.Preceq st.F C) (hY : Y ∈ P) (hCY : Block.Preceq C Y) (hh : st.h_max - 1 ≤ (st.σ Y).h) (hroot : Block.Preceq ((Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG) C) (X : Finset (Block V)) (hX : (Model.specDraft (V := V)).voter_filtered_block_tree E st s ⇢ X), C ∈ X := by
+theorem spec_mem_voter_filtered_block_tree_of_parts : ∀ (E : Env V) (st : (Model.spec (V := V)).S) (s : Slot) {C Y : Block V} (P : Finset (Block V)) (hP : (Model.spec (V := V)).voter_processed_block_tree E ((Model.spec (V := V)).toHealing st).toFG.toSG.toGoldfishStore s ⇢ P) (hC : C ∈ P) (hF : Block.Preceq st.F C) (hY : Y ∈ P) (hCY : Block.Preceq C Y) (hh : st.h_max - 1 ≤ (st.σ Y).h) (hroot : Block.Preceq ((Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG) C) (X : Finset (Block V)) (hX : (Model.spec (V := V)).voter_filtered_block_tree E st s ⇢ X), C ∈ X := by
   intro E st s C Y P hP hC hF hY hCY hh hroot X hX
-  rw [specDraft_voter_filtered_block_tree_eq] at hX
+  rw [spec_voter_filtered_block_tree_eq] at hX
   have hP' : (Model.vocabulary (V := V)).voter_processed_block_tree E
       st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s ⇢ P := by
-    rw [← ForkChoiceImages.specDraft_voter_processed_block_tree_eq]; exact hP
+    rw [← ForkChoiceImages.spec_voter_processed_block_tree_eq]; exact hP
   exact (Model.vocabulary_facts_handlers (V := V)).mem_voter_filtered_block_tree_of_parts E
     st.val.toProof s P hP' hC hF hY hCY hh
     (by
@@ -779,27 +779,27 @@ theorem specDraft_mem_voter_filtered_block_tree_of_parts : ∀ (E : Env V) (st :
 
 /-! ## The head in a tree, at the image -/
 
-/-- The member `round_of` of `Model.specDraft` at the store's slot is the spec's round of that slot. -/
+/-- The member `round_of` of `Model.spec` at the store's slot is the spec's round of that slot. -/
 theorem round_of_store (E : Env V) (hc : Protocol.HealConfig) (st : OkStore V) :
-    (Model.specDraft (V := V)).round_of hc (Member.store_s st.val) =
+    (Model.spec (V := V)).round_of hc (Member.store_s st.val) =
       (Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s := by
-  simp only [Model.specDraft, Member.round_of]
+  simp only [Model.spec, Member.round_of]
   rfl
 
-/-- The field `get_head_in_tree_with_eq_layer` of `HandlersFacts` at `Model.specDraft`: the head in
+/-- The field `get_head_in_tree_with_eq_layer` of `HandlersFacts` at `Model.spec`: the head in
     a tree read on the store is the head read on the store as a healing store. -/
-theorem specDraft_get_head_in_tree_with_eq_layer : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot)
-    (X : Block V), (Model.specDraft (V := V)).get_head_in_tree_with contract E hc st tree votes support k ⇢ X ↔
-    (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc ((Model.specDraft (V := V)).toHealing st) tree votes support k ⇢ X :=
+theorem spec_get_head_in_tree_with_eq_layer : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (k : Slot)
+    (X : Block V), (Model.spec (V := V)).get_head_in_tree_with contract E hc st tree votes support k ⇢ X ↔
+    (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc ((Model.spec (V := V)).toHealing st) tree votes support k ⇢ X :=
   fun _ _ _ _ _ _ _ _ _ => Iff.rfl
 
-/-- The field `get_head_in_tree_with_eq_fork_choice` of `HandlersFacts` at `Model.specDraft`: for
+/-- The field `get_head_in_tree_with_eq_fork_choice` of `HandlersFacts` at `Model.spec`: for
     every outcome `R` of the SG root at the store's round, `X` is an outcome of the head in `tree`
     exactly when `X` is an outcome of the Goldfish fork choice from `R` through `tree`. -/
-theorem specDraft_get_head_in_tree_with_eq_fork_choice : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (s : Slot)
-    (R : Block V), (Model.specDraft (V := V)).get_sg_root_with contract E hc ((Model.specDraft (V := V)).toHealing st) ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R →
-    ∀ X : Block V, (Model.specDraft (V := V)).get_head_in_tree_with contract E hc st tree votes support s ⇢ X ↔
-    (Model.specDraft (V := V)).goldfish_fork_choice E ((Model.specDraft (V := V)).toHealing st).toFG.σ ((Model.specDraft (V := V)).toHealing st).toFG.h_max st.T st.s
+theorem spec_get_head_in_tree_with_eq_fork_choice : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (s : Slot)
+    (R : Block V), (Model.spec (V := V)).get_sg_root_with contract E hc ((Model.spec (V := V)).toHealing st) ((Model.spec (V := V)).round_of hc st.s) ⇢ R →
+    ∀ X : Block V, (Model.spec (V := V)).get_head_in_tree_with contract E hc st tree votes support s ⇢ X ↔
+    (Model.spec (V := V)).goldfish_fork_choice E ((Model.spec (V := V)).toHealing st).toFG.σ ((Model.spec (V := V)).toHealing st).toFG.h_max st.T st.s
     R tree
     votes support s ⇢ X := by
   intro c E hc st tree votes support s R hR X
@@ -807,17 +807,17 @@ theorem specDraft_get_head_in_tree_with_eq_fork_choice : ∀ (contract : (Model.
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) R := by
     rw [← round_of_store E hc st]; exact hR
   have e := ContractImages.member_get_head_in_tree_with_layer_eq st c E hc tree votes support s hR'
-  rw [ForkChoiceImages.specDraft_goldfish_fork_choice_eq]
+  rw [ForkChoiceImages.spec_goldfish_fork_choice_eq]
   show Returns (Member.get_head_in_tree_with_layer c E hc st.val tree votes support s) X ↔ _
   rw [e]
   rfl
 
 /-- The field `get_sg_root_with_preceq_get_head_in_tree_with_store` of `HandlersFacts` at
-    `Model.specDraft`: the SG root at the store's round is an ancestor of the head in any tree, or
+    `Model.spec`: the SG root at the store's round is an ancestor of the head in any tree, or
     the head itself. -/
-theorem specDraft_get_sg_root_with_preceq_get_head_in_tree_with_store : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (s : Slot)
-    (R : Block V), (Model.specDraft (V := V)).get_sg_root_with contract E hc ((Model.specDraft (V := V)).toHealing st) ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R →
-    ∀ H : Block V, (Model.specDraft (V := V)).get_head_in_tree_with contract E hc st tree votes support s ⇢ H →
+theorem spec_get_sg_root_with_preceq_get_head_in_tree_with_store : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (tree : Finset (Block V)) (votes support : Finset (GoldfishVote V)) (s : Slot)
+    (R : Block V), (Model.spec (V := V)).get_sg_root_with contract E hc ((Model.spec (V := V)).toHealing st) ((Model.spec (V := V)).round_of hc st.s) ⇢ R →
+    ∀ H : Block V, (Model.spec (V := V)).get_head_in_tree_with contract E hc st tree votes support s ⇢ H →
     Block.Preceq R H := by
   intro c E hc st tree votes support s R hR H hH
   have hR' : Returns (Member.get_sg_root_with c E hc st.val
@@ -864,17 +864,17 @@ theorem on_block_T_eq_admitBlockCore_T (C : Spec.Config) (P : Spec.Provisional V
     unfold Handlers.admitBlockCore
     rw [if_neg h]
 
-/-- The field `on_block_with_new_body` of `HandlersFacts` at `Model.specDraft`: a body the block
+/-- The field `on_block_with_new_body` of `HandlersFacts` at `Model.spec`: a body the block
     receipt adds is the received block `B'`, and its erasure is then in the tree. -/
-theorem specDraft_on_block_with_new_body : ∀ (adm : Protocol.CarriedAdmission) (S : Setup V) (before : (Model.specDraft (V := V)).NS) (B' C : NamedBlock V) (hpre : C ∉ before.bodies) (hpost : C ∈ ((Model.specDraft (V := V)).on_block_with adm S.E S.hc S.cfg before B').bodies), C = B' ∧
-    C.erase ∈ ((Model.specDraft (V := V)).on_block_with adm S.E S.hc S.cfg before B').core.T := by
+theorem spec_on_block_with_new_body : ∀ (adm : Protocol.CarriedAdmission) (S : Setup V) (before : (Model.spec (V := V)).NS) (B' C : NamedBlock V) (hpre : C ∉ before.bodies) (hpost : C ∈ ((Model.spec (V := V)).on_block_with adm S.E S.hc S.cfg before B').bodies), C = B' ∧
+    C.erase ∈ ((Model.spec (V := V)).on_block_with adm S.E S.hc S.cfg before B').core.T := by
   intro adm S before B' C hpre hpost
   rcases ok_block_cases adm S.E S.hc S.cfg before B' with ⟨-, he, -⟩ | ⟨-, he, -⟩
   · rw [he] at hpost; exact absurd hpost hpre
-  change C ∈ Member.bodies ((Model.specDraft (V := V)).on_block_with adm S.E S.hc S.cfg before B').val
+  change C ∈ Member.bodies ((Model.spec (V := V)).on_block_with adm S.E S.hc S.cfg before B').val
     at hpost
   show C = B' ∧ C.erase ∈ Member.store_T
-    ((Model.specDraft (V := V)).on_block_with adm S.E S.hc S.cfg before B').val
+    ((Model.spec (V := V)).on_block_with adm S.E S.hc S.cfg before B').val
   rw [he] at hpost ⊢
   change C ∈ Member.bodies (Spec.Protocol.on_block
     (Spec.Config.toSpec S.E S.hc S.cfg) (Spec.Provisional.toSpec S.E) before.val
@@ -898,18 +898,18 @@ theorem specDraft_on_block_with_new_body : ∀ (adm : Protocol.CarriedAdmission)
   · rw [hst] at hpost
     exact absurd hpost hpre'
 
-/-- The field `new_body_guards` of `HandlersFacts` at `Model.specDraft`: a body `B` the block
+/-- The field `new_body_guards` of `HandlersFacts` at `Model.spec`: a body `B` the block
     receipt adds has a slot not after the store's, its slot's proposer, a parent of an earlier slot,
     and included attestations that pass the round test. -/
-theorem specDraft_new_body_guards : ∀ (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig)
-    (st : (Model.specDraft (V := V)).NS) (B : NamedBlock V), B ∉ st.bodies →
-    B ∈ ((Model.specDraft (V := V)).on_block_with .alsoCarried E hc cfg st B).bodies →
+theorem spec_new_body_guards : ∀ (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig)
+    (st : (Model.spec (V := V)).NS) (B : NamedBlock V), B ∉ st.bodies →
+    B ∈ ((Model.spec (V := V)).on_block_with .alsoCarried E hc cfg st B).bodies →
     B.erase.slot ≤ st.core.s ∧ B.erase.proposer? = some (E.proposer B.erase.slot) ∧
-      B.erase.parent.slot < B.erase.slot ∧ (Model.specDraft (V := V)).carried_attestations_admissible hc B.erase = true := by
+      B.erase.parent.slot < B.erase.slot ∧ (Model.spec (V := V)).carried_attestations_admissible hc B.erase = true := by
   intro E hc cfg st B hpre hpost
   rcases ok_block_cases .alsoCarried E hc cfg st B with ⟨-, he, -⟩ | ⟨-, he, -⟩
   · rw [he] at hpost; exact absurd hpost hpre
-  change B ∈ Member.bodies ((Model.specDraft (V := V)).on_block_with .alsoCarried E hc cfg st B).val
+  change B ∈ Member.bodies ((Model.spec (V := V)).on_block_with .alsoCarried E hc cfg st B).val
     at hpost
   rw [he] at hpost
   change B ∈ Member.bodies (Spec.Protocol.on_block
@@ -937,14 +937,14 @@ theorem specDraft_new_body_guards : ∀ (E : Env V) (hc : Protocol.HealConfig) (
   · rw [hst] at hpost
     exact absurd hpost hpre'
 
-/-- The field `mem_on_block_with_bodies_of_mem_core` of `HandlersFacts` at `Model.specDraft`: every
+/-- The field `mem_on_block_with_bodies_of_mem_core` of `HandlersFacts` at `Model.spec`: every
     body after `ns_process_block_core` is a body after the whole block receipt `on_block_with`. -/
-theorem specDraft_mem_on_block_with_bodies_of_mem_core : ∀ (admission : Protocol.CarriedAdmission) (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (st : (Model.specDraft (V := V)).NS) (B : NamedBlock V) {D : NamedBlock V} (hD : D ∈ ((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).bodies), D ∈ ((Model.specDraft (V := V)).on_block_with admission E hc cfg st B).bodies := by
+theorem spec_mem_on_block_with_bodies_of_mem_core : ∀ (admission : Protocol.CarriedAdmission) (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (st : (Model.spec (V := V)).NS) (B : NamedBlock V) {D : NamedBlock V} (hD : D ∈ ((Model.spec (V := V)).ns_process_block_core E hc cfg st B).bodies), D ∈ ((Model.spec (V := V)).on_block_with admission E hc cfg st B).bodies := by
   intro admission E hc cfg st B D hD
   rcases ok_block_cases admission E hc cfg st B with ⟨-, he1, he2⟩ | ⟨-, he1, he2⟩
   · rw [he2] at hD; rw [he1]; exact hD
-  change D ∈ Member.bodies ((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).val at hD
-  show D ∈ Member.bodies ((Model.specDraft (V := V)).on_block_with admission E hc cfg st B).val
+  change D ∈ Member.bodies ((Model.spec (V := V)).ns_process_block_core E hc cfg st B).val at hD
+  show D ∈ Member.bodies ((Model.spec (V := V)).on_block_with admission E hc cfg st B).val
   rw [he2] at hD
   rw [he1]
   change D ∈ Member.bodies (Handlers.admitBlockCore (Spec.Config.toSpec E hc cfg)
@@ -993,22 +993,22 @@ theorem foldl_checked_gf_votes_mem (P : Spec.Provisional V)
       · exact Or.inr (h2 ▸ List.mem_cons_self ..)
     · exact Or.inr (List.mem_cons_of_mem _ h1)
 
-/-- The field `process_block_core_gf_votes_upper` of `HandlersFacts` at `Model.specDraft`: a
+/-- The field `process_block_core_gf_votes_upper` of `HandlersFacts` at `Model.spec`: a
     Goldfish vote that `ns_process_block_core` adds is a vote the block `B` includes, and `B`'s
     erasure was not in the tree before and is in it after. -/
-theorem specDraft_process_block_core_gf_votes_upper : ∀ (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig)
-    (st : (Model.specDraft (V := V)).NS) (B : NamedBlock V) (k : Slot) (y : GoldfishVote V),
-    y ∈ ((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).core.gf_votes k →
+theorem spec_process_block_core_gf_votes_upper : ∀ (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig)
+    (st : (Model.spec (V := V)).NS) (B : NamedBlock V) (k : Slot) (y : GoldfishVote V),
+    y ∈ ((Model.spec (V := V)).ns_process_block_core E hc cfg st B).core.gf_votes k →
       y ∈ st.core.gf_votes k ∨
         (y ∈ B.gf_votes ∧ B.erase ∉ st.core.T ∧
-          B.erase ∈ ((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).core.T) := by
+          B.erase ∈ ((Model.spec (V := V)).ns_process_block_core E hc cfg st B).core.T) := by
   intro E hc cfg st B k y hy
   rcases ok_block_cases .alsoCarried E hc cfg st B with ⟨-, -, he⟩ | ⟨hnh, -, he⟩
   · rw [he] at hy; exact Or.inl hy
-  change y ∈ ((((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).val).gf_votes k).map
+  change y ∈ ((((Model.spec (V := V)).ns_process_block_core E hc cfg st B).val).gf_votes k).map
     Spec.GoldfishVote.toProof at hy
   show _ ∨ (_ ∧ _ ∧ B.erase ∈
-    ((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).val.T.image
+    ((Model.spec (V := V)).ns_process_block_core E hc cfg st B).val.T.image
       Spec.Block.toProof)
   rw [he] at hy ⊢
   set X := Spec.Block.toSpecNamed B with hXdef
@@ -1134,15 +1134,15 @@ theorem finalizedViable_updateFinalityWith (st : OkStore V)
     · rw [Spec.Store.blockOfImage_toProof_of_mem st.val hd hW]
       exact hh
 
-/-- The field `finalizedViable_update_finality` of `HandlersFacts` at `Model.specDraft`: if `F` is
+/-- The field `finalizedViable_update_finality` of `HandlersFacts` at `Model.spec`: if `F` is
     in the tree with a descendant of chain-state height at least `h_max − 1`, the finality update
     from the chain state of a tree block `B` of which `F` is an ancestor keeps that true. -/
-theorem specDraft_finalizedViable_update_finality : ∀ (st : (Model.specDraft (V := V)).S) (σ : (Model.specDraft (V := V)).CS) {B : Block V}, B ∈ st.T → st.σ B = σ →
+theorem spec_finalizedViable_update_finality : ∀ (st : (Model.spec (V := V)).S) (σ : (Model.spec (V := V)).CS) {B : Block V}, B ∈ st.T → st.σ B = σ →
     Block.preceq st.F B = true →
     (st.F ∈ st.T ∧ ∃ W ∈ st.T, Block.Preceq st.F W ∧ st.h_max - 1 ≤ (st.σ W).h) →
-    (((Model.specDraft (V := V)).update_finality st σ).F ∈ ((Model.specDraft (V := V)).update_finality st σ).T ∧
-      ∃ W ∈ ((Model.specDraft (V := V)).update_finality st σ).T, Block.Preceq ((Model.specDraft (V := V)).update_finality st σ).F W ∧
-        ((Model.specDraft (V := V)).update_finality st σ).h_max - 1 ≤ (((Model.specDraft (V := V)).update_finality st σ).σ W).h) := by
+    (((Model.spec (V := V)).update_finality st σ).F ∈ ((Model.spec (V := V)).update_finality st σ).T ∧
+      ∃ W ∈ ((Model.spec (V := V)).update_finality st σ).T, Block.Preceq ((Model.spec (V := V)).update_finality st σ).F W ∧
+        ((Model.spec (V := V)).update_finality st σ).h_max - 1 ≤ (((Model.spec (V := V)).update_finality st σ).σ W).h) := by
   intro st σ B hB hσB hFB h
   obtain ⟨Y, hY, rfl⟩ := Finset.mem_image.1 (show B ∈ st.val.T.image _ from hB)
   have hσY : st.val.σ Y = σ := by
@@ -1636,20 +1636,20 @@ theorem stableRoot_unique {c : Spec.SavedGrades V} {E : Env V} {hc : Protocol.He
   exact Except.ok.inj (hx.symm.trans hy)
 
 /-- The field `update_confirmation_with_live_confirmed_walk_or_fgRoot` of `HandlersFacts` at
-    `Model.specDraft`: the confirmation update records as live confirmed either the walk's head or
+    `Model.spec`: the confirmation update records as live confirmed either the walk's head or
     the root `get_fg_root`. -/
-theorem specDraft_update_confirmation_with_live_confirmed_walk_or_fgRoot : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot)
+theorem spec_update_confirmation_with_live_confirmed_walk_or_fgRoot : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
-    (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R)
+    (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ R)
     (score : Block V → ℕ)
-    (hscore : ∀ B, (Model.specDraft (V := V)).goldfish_score E st.T
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
+    (hscore : ∀ B, (Model.spec (V := V)).goldfish_score E st.T
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
       s B ⇢ score B)
-    (W : Block V) (hW : (Model.specDraft (V := V)).ghost R ((Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG) score
-      (fun B => decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W)
-    (st' : (Model.specDraft (V := V)).S) (hst' : (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st'),
-    st'.live_confirmed = W ∨ st'.live_confirmed = (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG := by
+    (W : Block V) (hW : (Model.spec (V := V)).ghost R ((Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG) score
+      (fun B => decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W)
+    (st' : (Model.spec (V := V)).S) (hst' : (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st'),
+    st'.live_confirmed = W ∨ st'.live_confirmed = (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG := by
   intro contract E hc st s tm htm R hR score hscore W hW st' hst'
   obtain rfl := StoreFacts.tm_eq_of_returns st htm
   have hR' : Returns (Member.get_sg_root_with contract E hc st.val
@@ -1657,9 +1657,9 @@ theorem specDraft_update_confirmation_with_live_confirmed_walk_or_fgRoot : ∀ (
     rw [← round_of_store E hc st]; exact hR
   obtain rfl : score = ucScore E st.val s := funext fun B => by
     have h := hscore B
-    rw [ForkChoiceImages.specDraft_goldfish_score_eq] at h
+    rw [ForkChoiceImages.spec_goldfish_score_eq] at h
     exact (returns_pure _ _).1 h
-  rw [ForkChoiceImages.specDraft_ghost_eq] at hW
+  rw [ForkChoiceImages.spec_ghost_eq] at hW
   obtain rfl := (returns_pure _ _).1 hW
   obtain ⟨G, S?, -, -, hlive, -, -⟩ := update_confirmation_with_image st contract E hc s hst' hR'
   show st'.val.live_confirmed.toProof = _ ∨ st'.val.live_confirmed.toProof = Member.get_fg_root st.val
@@ -1670,23 +1670,23 @@ theorem specDraft_update_confirmation_with_live_confirmed_walk_or_fgRoot : ∀ (
 
 
 /-- The field `update_confirmation_with_live_confirmed_genuine_or_fgRoot` of `HandlersFacts` at
-    `Model.specDraft`: the confirmation update records as live confirmed the walk's head when it
+    `Model.spec`: the confirmation update records as live confirmed the walk's head when it
     passes the eligibility test, and the root `get_fg_root` otherwise. -/
-theorem specDraft_update_confirmation_with_live_confirmed_genuine_or_fgRoot : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V)
-    (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot)
+theorem spec_update_confirmation_with_live_confirmed_genuine_or_fgRoot : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V)
+    (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
-    (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R)
+    (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ R)
     (score : Block V → ℕ)
-    (hscore : ∀ B, (Model.specDraft (V := V)).goldfish_score E st.T
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
+    (hscore : ∀ B, (Model.spec (V := V)).goldfish_score E st.T
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
       s B ⇢ score B)
-    (W : Block V) (hW : (Model.specDraft (V := V)).ghost R ((Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG) score
-      (fun B => decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W)
-    (st' : (Model.specDraft (V := V)).S) (hst' : (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st'),
+    (W : Block V) (hW : (Model.spec (V := V)).ghost R ((Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG) score
+      (fun B => decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W)
+    (st' : (Model.spec (V := V)).S) (hst' : (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st'),
     (∃ C : Block V, st'.live_confirmed = C ∧
-        decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true) ∨
-      st'.live_confirmed = (Model.specDraft (V := V)).get_fg_root ((Model.specDraft (V := V)).toHealing st).toFG := by
+        decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true) ∨
+      st'.live_confirmed = (Model.spec (V := V)).get_fg_root ((Model.spec (V := V)).toHealing st).toFG := by
   intro contract E hc st s tm htm R hR score hscore W hW st' hst'
   obtain rfl := StoreFacts.tm_eq_of_returns st htm
   have hR' : Returns (Member.get_sg_root_with contract E hc st.val
@@ -1694,9 +1694,9 @@ theorem specDraft_update_confirmation_with_live_confirmed_genuine_or_fgRoot : �
     rw [← round_of_store E hc st]; exact hR
   obtain rfl : score = ucScore E st.val s := funext fun B => by
     have h := hscore B
-    rw [ForkChoiceImages.specDraft_goldfish_score_eq] at h
+    rw [ForkChoiceImages.spec_goldfish_score_eq] at h
     exact (returns_pure _ _).1 h
-  rw [ForkChoiceImages.specDraft_ghost_eq] at hW
+  rw [ForkChoiceImages.spec_ghost_eq] at hW
   obtain rfl := (returns_pure _ _).1 hW
   obtain ⟨G, S?, -, -, hlive, -, -⟩ := update_confirmation_with_image st contract E hc s hst' hR'
   by_cases hE : ucEligible E st.val s (Protocol.ghost R (Member.get_filtered_block_tree st.val)
@@ -1708,20 +1708,20 @@ theorem specDraft_update_confirmation_with_live_confirmed_genuine_or_fgRoot : �
 
 
 /-- The field `update_confirmation_with_live_confirmed_of_eligible` of `HandlersFacts` at
-    `Model.specDraft`: when the walk's head passes the eligibility test, the confirmation update
+    `Model.spec`: when the walk's head passes the eligibility test, the confirmation update
     records it as live confirmed. -/
-theorem specDraft_update_confirmation_with_live_confirmed_of_eligible : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot)
+theorem spec_update_confirmation_with_live_confirmed_of_eligible : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
-    (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R)
+    (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ R)
     (score : Block V → ℕ)
-    (hscore : ∀ B, (Model.specDraft (V := V)).goldfish_score E st.T
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
+    (hscore : ∀ B, (Model.spec (V := V)).goldfish_score E st.T
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
       s B ⇢ score B)
-    (W : Block V) (hW : (Model.specDraft (V := V)).ghost R ((Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG) score
-      (fun B => decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W),
-    decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true →
-    ∀ (st' : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
+    (W : Block V) (hW : (Model.spec (V := V)).ghost R ((Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG) score
+      (fun B => decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W),
+    decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true →
+    ∀ (st' : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
     st'.live_confirmed = W := by
   intro contract E hc st s tm htm R hR score hscore W hW hE st' hst'
   obtain rfl := StoreFacts.tm_eq_of_returns st htm
@@ -1730,9 +1730,9 @@ theorem specDraft_update_confirmation_with_live_confirmed_of_eligible : ∀ (con
     rw [← round_of_store E hc st]; exact hR
   obtain rfl : score = ucScore E st.val s := funext fun B => by
     have h := hscore B
-    rw [ForkChoiceImages.specDraft_goldfish_score_eq] at h
+    rw [ForkChoiceImages.spec_goldfish_score_eq] at h
     exact (returns_pure _ _).1 h
-  rw [ForkChoiceImages.specDraft_ghost_eq] at hW
+  rw [ForkChoiceImages.spec_ghost_eq] at hW
   obtain rfl := (returns_pure _ _).1 hW
   replace hE : ucEligible E st.val s (Protocol.ghost R (Member.get_filtered_block_tree st.val) (ucScore E st.val s) (ucEligible E st.val s)) = true := hE
   obtain ⟨G, S?, -, -, hlive, -, -⟩ := update_confirmation_with_image st contract E hc s hst' hR'
@@ -1742,27 +1742,27 @@ theorem specDraft_update_confirmation_with_live_confirmed_of_eligible : ∀ (con
 
 
 /-- The field `update_confirmation_with_latest_confirmed_cases` of `HandlersFacts` at
-    `Model.specDraft`: the new confirmation record is the floor, on the new stable record, of the
+    `Model.spec`: the new confirmation record is the floor, on the new stable record, of the
     old record, of the old record moved to the eligible walk's head, or of the old record moved to
     the SG candidate. -/
-theorem specDraft_update_confirmation_with_latest_confirmed_cases : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot)
+theorem spec_update_confirmation_with_latest_confirmed_cases : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
-    (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R)
+    (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ R)
     (score : Block V → ℕ)
-    (hscore : ∀ B, (Model.specDraft (V := V)).goldfish_score E st.T
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
+    (hscore : ∀ B, (Model.spec (V := V)).goldfish_score E st.T
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
       s B ⇢ score B)
-    (W : Block V) (hW : (Model.specDraft (V := V)).ghost R ((Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG) score
-      (fun B => decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W)
-    (st' : (Model.specDraft (V := V)).S) (hst' : (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st'),
+    (W : Block V) (hW : (Model.spec (V := V)).ghost R ((Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG) score
+      (fun B => decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W)
+    (st' : (Model.spec (V := V)).S) (hst' : (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st'),
     ∃ cand : Block V,
-      st'.latest_confirmed = (Model.specDraft (V := V)).floor_on_stable st'.latest_stable cand st.latest_confirmed ∧
+      st'.latest_confirmed = (Model.spec (V := V)).floor_on_stable st'.latest_stable cand st.latest_confirmed ∧
       (cand = st.latest_confirmed ∨
-        (decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true ∧
-          cand = (Model.specDraft (V := V)).advance_confirmed st.latest_confirmed W) ∨
+        (decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true ∧
+          cand = (Model.spec (V := V)).advance_confirmed st.latest_confirmed W) ∨
         ∃ G : Block V, contract.confirmationSG E hc st.toHealing s ⇢ some G ∧
-          cand = (Model.specDraft (V := V)).advance_confirmed st.latest_confirmed G) := by
+          cand = (Model.spec (V := V)).advance_confirmed st.latest_confirmed G) := by
   intro contract E hc st s tm htm R hR score hscore W hW st' hst'
   obtain rfl := StoreFacts.tm_eq_of_returns st htm
   have hR' : Returns (Member.get_sg_root_with contract E hc st.val
@@ -1770,9 +1770,9 @@ theorem specDraft_update_confirmation_with_latest_confirmed_cases : ∀ (contrac
     rw [← round_of_store E hc st]; exact hR
   obtain rfl : score = ucScore E st.val s := funext fun B => by
     have h := hscore B
-    rw [ForkChoiceImages.specDraft_goldfish_score_eq] at h
+    rw [ForkChoiceImages.spec_goldfish_score_eq] at h
     exact (returns_pure _ _).1 h
-  rw [ForkChoiceImages.specDraft_ghost_eq] at hW
+  rw [ForkChoiceImages.spec_ghost_eq] at hW
   obtain rfl := (returns_pure _ _).1 hW
   obtain ⟨G, S?, -, hS, -, hls, hlc⟩ := update_confirmation_with_image st contract E hc s hst' hR'
   by_cases hE : ucEligible E st.val s (Protocol.ghost R (Member.get_filtered_block_tree st.val)
@@ -1799,22 +1799,22 @@ theorem specDraft_update_confirmation_with_latest_confirmed_cases : ∀ (contrac
 
 
 /-- The field `update_confirmation_with_latest_confirmed_of_eligible` of `HandlersFacts` at
-    `Model.specDraft`: when the walk's head is eligible, the new confirmation record is the floor,
+    `Model.spec`: when the walk's head is eligible, the new confirmation record is the floor,
     on the new stable record, of the old record moved to that head. -/
-theorem specDraft_update_confirmation_with_latest_confirmed_of_eligible : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot)
+theorem spec_update_confirmation_with_latest_confirmed_of_eligible : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot)
     (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm)
-    (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R)
+    (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ R)
     (score : Block V → ℕ)
-    (hscore : ∀ B, (Model.specDraft (V := V)).goldfish_score E st.T
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
-      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true))
+    (hscore : ∀ B, (Model.spec (V := V)).goldfish_score E st.T
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
+      ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true))
       s B ⇢ score B)
-    (W : Block V) (hW : (Model.specDraft (V := V)).ghost R ((Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG) score
-      (fun B => decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W),
-    decide ((Model.specDraft (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true →
-    ∀ (st' : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
-    st'.latest_confirmed = (Model.specDraft (V := V)).floor_on_stable st'.latest_stable
-      ((Model.specDraft (V := V)).advance_confirmed st.latest_confirmed W) st.latest_confirmed := by
+    (W : Block V) (hW : (Model.spec (V := V)).ghost R ((Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG) score
+      (fun B => decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score B)) ⇢ W),
+    decide ((Model.spec (V := V)).voters_count E (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) s < 2 * score W) = true →
+    ∀ (st' : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
+    st'.latest_confirmed = (Model.spec (V := V)).floor_on_stable st'.latest_stable
+      ((Model.spec (V := V)).advance_confirmed st.latest_confirmed W) st.latest_confirmed := by
   intro contract E hc st s tm htm R hR score hscore W hW hE st' hst'
   obtain rfl := StoreFacts.tm_eq_of_returns st htm
   have hR' : Returns (Member.get_sg_root_with contract E hc st.val
@@ -1822,9 +1822,9 @@ theorem specDraft_update_confirmation_with_latest_confirmed_of_eligible : ∀ (c
     rw [← round_of_store E hc st]; exact hR
   obtain rfl : score = ucScore E st.val s := funext fun B => by
     have h := hscore B
-    rw [ForkChoiceImages.specDraft_goldfish_score_eq] at h
+    rw [ForkChoiceImages.spec_goldfish_score_eq] at h
     exact (returns_pure _ _).1 h
-  rw [ForkChoiceImages.specDraft_ghost_eq] at hW
+  rw [ForkChoiceImages.spec_ghost_eq] at hW
   obtain rfl := (returns_pure _ _).1 hW
   replace hE : ucEligible E st.val s (Protocol.ghost R (Member.get_filtered_block_tree st.val) (ucScore E st.val s) (ucEligible E st.val s)) = true := hE
   obtain ⟨G, S?, -, -, -, hls, hlc⟩ := update_confirmation_with_image st contract E hc s hst' hR'
@@ -1834,14 +1834,14 @@ theorem specDraft_update_confirmation_with_latest_confirmed_of_eligible : ∀ (c
 
 
 /-- The field `update_confirmation_with_latest_stable_of_root` of `HandlersFacts` at
-    `Model.specDraft`: the new stable record is the old one moved to the round's stable root. -/
-theorem specDraft_update_confirmation_with_latest_stable_of_root : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V)
-    (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot) {G : Block V},
-    ∀ x : Option (Block V), contract.stableRoot E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ x →
+    `Model.spec`: the new stable record is the old one moved to the round's stable root. -/
+theorem spec_update_confirmation_with_latest_stable_of_root : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V)
+    (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot) {G : Block V},
+    ∀ x : Option (Block V), contract.stableRoot E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ x →
     x = some G →
-    ∀ st' : (Model.specDraft (V := V)).S, (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
+    ∀ st' : (Model.spec (V := V)).S, (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
     st'.latest_stable =
-      (Model.specDraft (V := V)).advance_confirmed st.latest_stable G := by
+      (Model.spec (V := V)).advance_confirmed st.latest_stable G := by
   intro contract E hc st s G x hx hxG st' hst'
   obtain ⟨R, hR'⟩ := exists_sg_root_of_update st contract E hc s hst'
   obtain ⟨G', S?, hG', -, -, hls, hlc⟩ := update_confirmation_with_image st contract E hc s hst' hR'
@@ -1856,14 +1856,14 @@ theorem specDraft_update_confirmation_with_latest_stable_of_root : ∀ (contract
 
 
 /-- The field `update_confirmation_with_keeps_stable_of_root_preceq` of `HandlersFacts` at
-    `Model.specDraft`: when the round's stable root is an ancestor of the stable record, the update
+    `Model.spec`: when the round's stable root is an ancestor of the stable record, the update
     keeps the stable record, and the new confirmation record is a descendant of it. -/
-theorem specDraft_update_confirmation_with_keeps_stable_of_root_preceq : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V)
-    (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot) {G : Block V},
-    ∀ x : Option (Block V), contract.stableRoot E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ x →
+theorem spec_update_confirmation_with_keeps_stable_of_root_preceq : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V)
+    (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot) {G : Block V},
+    ∀ x : Option (Block V), contract.stableRoot E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ x →
     x = some G →
     Block.Preceq G st.latest_stable →
-    ∀ st' : (Model.specDraft (V := V)).S, (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
+    ∀ st' : (Model.spec (V := V)).S, (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' →
     st'.latest_stable = st.latest_stable ∧
       Block.Preceq st.latest_stable st'.latest_confirmed := by
   intro contract E hc st s G x hx hxG hGo st' hst'
@@ -1903,13 +1903,13 @@ theorem uc_conf (st : OkStore V) (E : Env V) (s : Slot) :
   have hp : Member.store_pool st.val s = Protocol.Store.pool st.val.toProof s :=
     image_store_pool st.val s
   have hn : (Member.no_second_vote_in : Finset (GoldfishVote V) → GoldfishVote V → Bool) =
-      Protocol.no_second_vote_in := ForkChoiceImages.specDraft_no_second_vote_in_eq
+      Protocol.no_second_vote_in := ForkChoiceImages.spec_no_second_vote_in_eq
   have hl : ucLate E st.val s = Protocol.confLate E st.val.toProof s := by
     unfold ucLate Protocol.confLate Member.store_timestamp_vote Member.confirmation_time
-    rw [hp, ← SpecDraftRecord.toProof_confirmation_time]
+    rw [hp, ← SpecRecord.toProof_confirmation_time]
   refine ⟨?_, hl⟩
   unfold ucSupport Protocol.confVotes Protocol.confEarly Member.support_cutoff
-  rw [hl, hp, hn, ← SpecDraftRecord.toProof_support_cutoff]
+  rw [hl, hp, hn, ← SpecRecord.toProof_support_cutoff]
 
 /-- At a store of the instance, `ucScore` is `Protocol.confScore` of the store's image. -/
 theorem ucScore_eq_conf (st : OkStore V) (E : Env V) (s : Slot) :
@@ -1924,16 +1924,16 @@ theorem ucEligible_eq_conf (st : OkStore V) (E : Env V) (s : Slot) :
     ucEligible E st.val s = Protocol.confEligible E st.val.toProof s := by
   funext B
   have hv : (Member.voters_count : Env V → Finset (GoldfishVote V) → Slot → ℕ) =
-      Protocol.voters_count := ForkChoiceImages.specDraft_voters_count_eq
+      Protocol.voters_count := ForkChoiceImages.spec_voters_count_eq
   unfold ucEligible Protocol.confEligible Protocol.confCount
   rw [ucScore_eq_conf, (uc_conf st E s).2, hv]
 
 
-/-- The field `live_confirmed_eq_with` of `HandlersFacts` at `Model.specDraft`: when the honest
+/-- The field `live_confirmed_eq_with` of `HandlersFacts` at `Model.spec`: when the honest
     support of `B` is enough, the votes are valid, `B` is a descendant of the SG root and the path
     from the root to `B` is in the filtered tree, the confirmation update records `B` as live
     confirmed. -/
-theorem specDraft_live_confirmed_eq_with : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot) (Hon : Finset V) (B : Block V) (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm) (hsup : _root_.DecoupledConsensusModel.Protocol.HonestSupport E st.T ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.specDraft (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.specDraft (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s)) u = true)) s Hon B) (hvalid : _root_.DecoupledConsensusModel.Protocol.VoteSetValid E s (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.specDraft (V := V)).confirmation_time E s) (st.pool s))) (R : Block V) (hR : (Model.specDraft (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.specDraft (V := V)).round_of hc st.s) ⇢ R) (hpre : Block.Preceq R B) (hpath : ∀ C : Block V, Block.Preceq R C → C ≠ R → Block.Preceq C B → C ∈ (Model.specDraft (V := V)).get_filtered_block_tree st.toHealing.toFG) (st' : (Model.specDraft (V := V)).S) (hst' : (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st'), st'.live_confirmed = B := by
+theorem spec_live_confirmed_eq_with : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : HealConfig) (st : (Model.spec (V := V)).S) (s : Slot) (Hon : Finset V) (B : Block V) (tm : TimestampMap (GoldfishVote V)) (htm : st.tau ⇢ tm) (hsup : _root_.DecoupledConsensusModel.Protocol.HonestSupport E st.T ((_root_.DecoupledConsensusModel.beforeCutoff tm ((Model.spec (V := V)).support_cutoff E s) (st.pool s)).filter (fun u => (Model.spec (V := V)).no_second_vote_in (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s)) u = true)) s Hon B) (hvalid : _root_.DecoupledConsensusModel.Protocol.VoteSetValid E s (_root_.DecoupledConsensusModel.beforeCutoff st.timestamp_vote ((Model.spec (V := V)).confirmation_time E s) (st.pool s))) (R : Block V) (hR : (Model.spec (V := V)).get_sg_root_with contract E hc st.toHealing ((Model.spec (V := V)).round_of hc st.s) ⇢ R) (hpre : Block.Preceq R B) (hpath : ∀ C : Block V, Block.Preceq R C → C ≠ R → Block.Preceq C B → C ∈ (Model.spec (V := V)).get_filtered_block_tree st.toHealing.toFG) (st' : (Model.spec (V := V)).S) (hst' : (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st'), st'.live_confirmed = B := by
   intro contract E hc st s Hon B tm htm hsup hvalid R hR hpre hpath st' hst'
   obtain rfl := StoreFacts.tm_eq_of_returns st htm
   have hR' : Returns (Member.get_sg_root_with contract E hc st.val
@@ -2093,22 +2093,22 @@ theorem fold_checked_self (P : Spec.Provisional V)
 
 
 /-- The field `block_carried_before_deadline_or_equivocates` of `HandlersFacts` at
-    `Model.specDraft`: an in-window committee vote `u` that a newly received block `B` includes is,
+    `Model.spec`: an in-window committee vote `u` that a newly received block `B` includes is,
     once `B` is received, in the pool before any later cutoff `Γ`, unless its validator equivocates
     there. -/
-theorem specDraft_block_carried_before_deadline_or_equivocates : ∀ (S : Setup V) (st : (Model.specDraft (V := V)).NS)
+theorem spec_block_carried_before_deadline_or_equivocates : ∀ (S : Setup V) (st : (Model.spec (V := V)).NS)
     (B : NamedBlock V) (u : GoldfishVote V) (Γ : Time),
-    Restated.Vocabulary.Protocol.PoolStamps (Model.specDraft (V := V)) st.core → B ∉ st.bodies →
-    B ∈ ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).bodies →
+    Restated.Vocabulary.Protocol.PoolStamps (Model.spec (V := V)) st.core → B ∉ st.bodies →
+    B ∈ ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).bodies →
     u ∈ B.erase.gf_votes → u.val_index ∈ S.E.committee u.slot →
     ¬ u.slot < st.core.s - 1 → ¬ st.core.s < u.slot → st.core.t < Γ →
     u ∈ _root_.DecoupledConsensusModel.beforeCutoff
-        ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core.timestamp_vote Γ
-        ((Model.specDraft (V := V)).store_pool ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core u.slot) ∨
-      (Model.specDraft (V := V)).equivocates
+        ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core.timestamp_vote Γ
+        ((Model.spec (V := V)).store_pool ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core u.slot) ∨
+      (Model.spec (V := V)).equivocates
         (_root_.DecoupledConsensusModel.beforeCutoff
-          ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core.timestamp_vote Γ
-          ((Model.specDraft (V := V)).store_pool ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core u.slot))
+          ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core.timestamp_vote Γ
+          ((Model.spec (V := V)).store_pool ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core u.slot))
         u.val_index = true := by
   intro S st B u Γ hstamps hpre hpost hu hcommittee hfresh hfuture hclock
   rcases ok_block_cases .alsoCarried S.E S.hc S.cfg st B with ⟨-, he, -⟩ | ⟨-, he, -⟩
@@ -2118,7 +2118,7 @@ theorem specDraft_block_carried_before_deadline_or_equivocates : ∀ (S : Setup 
   set X := Spec.Block.toSpecNamed B with hXdef
   have hXB : X.toProofNamed = B := Spec.Block.toProofNamed_toSpecNamed B
   have hE : B.erase = X.toProof := by rw [← hXB, Spec.Block.toProofNamed_erase]
-  set A := ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).val with hAdef
+  set A := ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).val with hAdef
   have hA : A = Spec.Protocol.on_block C P st.val X := he
   have hpost' : B ∈ Member.bodies A := hpost
   have hpre' : B ∉ st.val.T.map Spec.Block.toProofNamedEmb := hpre
@@ -2138,7 +2138,7 @@ theorem specDraft_block_carried_before_deadline_or_equivocates : ∀ (S : Setup 
     rw [if_pos had, SubtypeEqualities.blockCore_eq]
     obtain ⟨a, b, c, d, hW⟩ := OkStore.updateFinalityWith_shape Fo (Fo.σ X)
     rw [hW]
-    obtain ⟨at', ts, hat⟩ := SpecDraftRecord.NodeFacts.admit_attestations_frame C
+    obtain ⟨at', ts, hat⟩ := SpecRecord.NodeFacts.admit_attestations_frame C
       { Fo with h_max := a, J := b, h_j := c, F := d } X.attestations
     rw [hat]
     exact ⟨rfl, rfl⟩
@@ -2159,9 +2159,9 @@ theorem specDraft_block_carried_before_deadline_or_equivocates : ∀ (S : Setup 
   have hpoolA : ∀ k, A.pool k = Fo.pool k := fun k => by
     unfold Spec.Store.pool; rw [hAF.1]
   have hcut : _root_.DecoupledConsensusModel.beforeCutoff
-      ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core.timestamp_vote Γ
-      ((Model.specDraft (V := V)).store_pool
-        ((Model.specDraft (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core v.slot) =
+      ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core.timestamp_vote Γ
+      ((Model.spec (V := V)).store_pool
+        ((Model.spec (V := V)).on_block_with .alsoCarried S.E S.hc S.cfg st B).core v.slot) =
       (Fo.pool v.slot).map Spec.GoldfishVote.toProofEmb := by
     show _root_.DecoupledConsensusModel.beforeCutoff
       (fun w => A.timestamp_vote (Spec.GoldfishVote.toSpec w)) Γ
@@ -2244,22 +2244,22 @@ theorem blockOfImageIn_insert_eq {T : Finset (Spec.Block V)} (hd : NoRaise.Disti
         simp only [Spec.Store.blockOfImageIn, hn T h1, hn _ h2, Option.getD]
         rw [ih]
 
-/-- The field `raw_eq_or_accepted` of `HandlersFacts` at `Model.specDraft`: the block handler either
+/-- The field `raw_eq_or_accepted` of `HandlersFacts` at `Model.spec`: the block handler either
     leaves the store as it was, or adds the new block `B`, a descendant of `F`, with its chain state
     built from its parent's, and then updates finality from that chain state. -/
-theorem specDraft_raw_eq_or_accepted : ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (B : Block V) (build : (Model.specDraft (V := V)).CS → (Model.specDraft (V := V)).CS), (Model.specDraft (V := V)).on_block_using E st B build = st ∨
-    ∃ u : (Model.specDraft (V := V)).S,
+theorem spec_raw_eq_or_accepted : ∀ (E : Env V) (st : (Model.spec (V := V)).S) (B : Block V) (build : (Model.spec (V := V)).CS → (Model.spec (V := V)).CS), (Model.spec (V := V)).on_block_using E st B build = st ∨
+    ∃ u : (Model.spec (V := V)).S,
     u.T = insert B st.T ∧ u.F = st.F ∧ u.J = st.J ∧ u.h_j = st.h_j ∧
     u.h_max = st.h_max ∧
     u.σ = (fun C => if C = B then build (st.σ B.parent) else st.σ C) ∧
-    (∀ σ, (Model.specDraft (V := V)).chainStateInTree st σ → (Model.specDraft (V := V)).chainStateInTree u σ) ∧
+    (∀ σ, (Model.spec (V := V)).chainStateInTree st σ → (Model.spec (V := V)).chainStateInTree u σ) ∧
     B ∉ st.T ∧ Block.preceq st.F B = true ∧
-    (Model.specDraft (V := V)).on_block_using E st B build = (Model.specDraft (V := V)).update_finality u (u.σ B) := by
+    (Model.spec (V := V)).on_block_using E st B build = (Model.spec (V := V)).update_finality u (u.σ B) := by
   intro E st B build
   obtain ⟨hst, hd, hpc, hF⟩ := st.property
   by_cases hrej : (st.s < B.slot ∨ B ∈ st.T ∨ B.parent ∉ st.T) ∨ (!Block.preceq st.F B) = true ∨
       B.proposer? ≠ some (E.proposer B.slot) ∨ ¬ (B.parent.slot < B.slot)
-  · exact Or.inl (specDraft_on_block_using_of_rejected E st B build hrej)
+  · exact Or.inl (spec_on_block_using_of_rejected E st B build hrej)
   set X := st.val.blockOfImage B with hXdef
   by_cases hheld : RootHeldByOther st.val.T X
   · left
@@ -2355,4 +2355,4 @@ theorem specDraft_raw_eq_or_accepted : ∀ (E : Env V) (st : (Model.specDraft (V
     rw [hval, hFoX]
     rfl
 
-end SpecDraftRecord.HandlersFacts
+end SpecRecord.HandlersFacts

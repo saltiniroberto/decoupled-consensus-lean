@@ -39,6 +39,7 @@ import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13bK_ConfirmedStrongRoundSettle
 import Proofs.Claims.Spec2Claims.Claim13bModel_Preceq
 import Proofs.Claims.Spec2Claims.Claim13bK_ConfirmedRecordUpTo
+import Proofs.Claims.Restated.Claim13bW_ReceiptBefore
 
 /-!
 # The settle fact at a strong round, up to a slot
@@ -82,9 +83,8 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     {sEnd : Slot}
-    (hsync : Restated.SynchronyFromWakeBefore M S x (max tE ((Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (sEnd - 2)) + 1)))))
+    (hsync : Restated.SynchronyFromWakeBefore M S x (max tE ((Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (sEnd - 2)) + 1))))) (hcatchB : Restated.CatchUpOnWakeBefore M S x (max tE ((Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (sEnd - 2)) + 1)))))
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -105,7 +105,8 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
       notHeldAt Sched (M.confirmation_time S.E ((M.opening_slot S.hc (c - 1))))) :
     ∀ (r : Round) (n : Nat) (v : V),
       Restated.switchRound M S (M.confirmation_time S.E ((M.opening_slot S.hc (c - 1)) + 2)) + 1 ≤ r →
-      Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S r)) → v ∈ Restated.HonRound M S Sched r →
+      Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S r)) →
+      v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) →
       r = Restated.switchRound M S (M.confirmation_time S.E ((M.opening_slot S.hc (c - 1)) + 2)) + 1 →
       Restated.RecordsAncestorOfHonestHeadsTo M S Sched x v (n + 1) sEnd := by
   have hd : (1 : Int) ≤ S.E.Δ := S.E.Δ_pos
@@ -118,6 +119,7 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
   have hc12 : c - 1 + 1 = c := Nat.sub_add_cancel (le_trans (by decide) hc2)
   have htE₁ : tE₁ ≤ tE := le_trans (le_of_lt h12) (le_trans h2a hcE)
   have hs₁ : Restated.SynchronyFromWakeBefore M S x tE₁ := Restated.SynchronyFromWakeBefore.mono (le_trans htE₁ (le_max_left _ _)) hsync
+  have hs₁_c : Restated.CatchUpOnWakeBefore M S x tE₁ := Restated.CatchUpOnWakeBefore.mono (le_trans htE₁ (le_max_left _ _)) hcatchB
   -- the premises at `tE₁`
   have hthird₁ := third_of_later S Sched tE tE₁ htE₁ hthird
   have hawake₁ := awake_of_later Sched tGAT tE tE₁ htE₁ hawake
@@ -126,7 +128,7 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
   have hrs₁ := Restated.roundSleepinessW_of_later facts S Sched tGAT tE tE₁ hmono hawake hwin8 hrs
   have hcs₁ := Restated.committeeSleepinessW_of_later facts S Sched tGAT tE tE₁ hmono hawake hcom hwin8 hcs
   have hlow₁ := Restated.hlow_of_premises_l85f_upTo facts S Sched x tGAT tE₁ gap hgap hlen₁ hgst hmono hexec hs₁
-    hmult hwakes hsleeps hcv htd hcom hthird₁ hawake₁ hrec₁ hsl₁ hrs₁ hcs₁
+    hmult hcv htd hcom hthird₁ hawake₁ hrec₁ hsl₁ hrs₁ hcs₁
   have hlen₁' : tGAT + Restated.healingLengthη M S gap ≤ tE₁ := Restated.healingLength_le_of_kit_l76 facts S hlen₁
   have hprev₁ := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound_upTo facts S Sched x tGAT tE₁ gap hlen₁
     hgst hmono hexec hs₁ hmult hcv hcom hthird₁ hawake₁ hrec₁
@@ -150,7 +152,7 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
   have hB'₁ := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE₁ gap hlow₁
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ :=
     Restated.afterPhaseJointSwitchRound_of_premises_upTo facts S Sched x tGAT tE₁ gap hgap hlen₁ hgst hmono hexec
-      hs₁ hmult hwakes hsleeps hcv htd hcom
+      hs₁ hmult hcv htd hcom
       hthird₁ hawake₁ hrec₁ hsl₁ hrs₁ hcs₁ hlow₁
   -- the deadline round is well before `c`
   have hc3 : Restated.deadlineRoundW M S tGAT gap + 3 ≤ c := by
@@ -163,7 +165,7 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
   intro r n v _ hn hv hreq
   rw [hsw₂, hc12] at hreq
   subst hreq
-  have hvS : v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) := (Finset.mem_sdiff.1 hv).2
+  have hvS : v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) := hv
   -- the tick step at the opening of round `r − 1`
   have hop0 : 0 < M.opening S.E S.hc (r - 1) := by
     rw [(pS% opening_closed_srs) facts, (pS% opening_slot_closed_srs) facts]
@@ -290,8 +292,8 @@ theorem recordsSettledAtSettleTick_atStrongRound_upTo (facts : Record.Facts M) (
     · rw [hτ]
       exact fun t ht hadv => hvS (hmono t ((Restated.Vocabulary.Execution.Setup.a M S r))
         (le_trans ht hs1) hadv)
-  obtain ⟨hS, hC⟩ := Restated.records_good_of_new_root_window_upTo facts S Sched x tE₁ hexec hmono htd tGAT gap
-    hgst hlen₁' hsync hthird₁ hawake₁ hrs₁ hmult hcv hcs₁ hcom hwakes hsleeps hrec₁ hprev₁ hclear₁
+  obtain ⟨hS, hC⟩ := Restated.records_good_of_new_root_window_upTo (hcatchB := hcatchB) facts S Sched x tE₁ hexec hmono htd tGAT gap
+    hgst hlen₁' hsync hthird₁ hawake₁ hrs₁ hmult hcv hcs₁ hcom hrec₁ hprev₁ hclear₁
     hB'₁ hnW hAW hJswitch (r₀ := Restated.switchRound M S tE₁) le_rfl
     (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hk₀n hk₀' hn'
     hreader hrun hnew (max_le_max htE₁ le_rfl)

@@ -5,20 +5,20 @@ import Proofs.Instance.Facts.Grades
 import Proofs.Instance.Facts.ConfirmationTree
 
 /-!
-# Reached reads and the cache-writing core equations, at `Model.specDraft`
+# Reached reads and the cache-writing core equations, at `Model.spec`
 
-Proofs at `Model.specDraft` of six fields of `NodeFacts`: writing saved grades changes none of four
+Proofs at `Model.spec` of six fields of `NodeFacts`: writing saved grades changes none of four
 core readers, the node states of a confirmation read and of the confirmation duty are reached, and a
 wake keeps the validator a node state runs as.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.ReachedReads
+namespace SpecRecord.ReachedReads
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise SpecDraftRecord.GradesRunFacts
+open SpecRecord.NoRaise SpecRecord.GradesRunFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -42,9 +42,9 @@ theorem claim_of_contractInTree {T : Finset (Spec.Block V)}
 /-- An outcome of the cache update `onPhaseTick` at `t` from a node state whose saved grades hold
     blocks of its tree holds blocks of that tree. -/
 theorem contractInTree_onPhaseTick (E : Env V) (hc : Protocol.HealConfig)
-    (n : (Model.specDraft (V := V)).N) (t : Time) (c : (Model.specDraft (V := V)).Cache)
+    (n : (Model.spec (V := V)).N) (t : Time) (c : (Model.spec (V := V)).Cache)
     (hcon : Spec.Store.ContractInTree n.val.st.T n.val.st.saved_grades)
-    (h : (Model.specDraft (V := V)).onPhaseTick E hc n.st.core.toHealing t n.cache ⇢ c) :
+    (h : (Model.spec (V := V)).onPhaseTick E hc n.st.core.toHealing t n.cache ⇢ c) :
     Spec.Store.ContractInTree n.val.st.T c := by
   obtain ⟨S', hS', rfl, -⟩ := GradesFacts.sd_onPhaseTick_ok h
   have hok : StoreOk n.val.st := n.property
@@ -53,76 +53,76 @@ theorem contractInTree_onPhaseTick (E : Env V) (hc : Protocol.HealConfig)
       n.val.st t = .ok S' := hS'
   exact contractInTree_of_claim (memClaim_update_grades hok hS'' (claim_of_contractInTree hcon))
 
-end SpecDraftRecord.ReachedReads
+end SpecRecord.ReachedReads
 
 namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-open SpecDraftRecord
+open SpecRecord
 open DecoupledConsensusModel.Execution
 open scoped DC
 
-/-- The field `store_with_cache_core_sg_votes` of `NodeFacts` at `Model.specDraft`: writing saved
+/-- The field `store_with_cache_core_sg_votes` of `NodeFacts` at `Model.spec`: writing saved
     grades keeps the core store's `sg_votes`. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_store_with_cache_core_sg_votes :
-    ∀ (st : (Model.specDraft (V := V)).NS) (c : (Model.specDraft (V := V)).Cache),
-      ((Model.specDraft (V := V)).store_with_cache st c).core.sg_votes = st.core.sg_votes := by
+theorem _root_.SpecRecord.NodeFacts.spec_store_with_cache_core_sg_votes :
+    ∀ (st : (Model.spec (V := V)).NS) (c : (Model.spec (V := V)).Cache),
+      ((Model.spec (V := V)).store_with_cache st c).core.sg_votes = st.core.sg_votes := by
   intro st c
   rfl
 
-/-- The field `store_with_cache_core_sg_pool` of `NodeFacts` at `Model.specDraft`: writing saved
+/-- The field `store_with_cache_core_sg_pool` of `NodeFacts` at `Model.spec`: writing saved
     grades keeps the core store's attestation sets. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_store_with_cache_core_sg_pool :
-    ∀ (st : (Model.specDraft (V := V)).NS) (c : (Model.specDraft (V := V)).Cache),
-      (Model.specDraft (V := V)).store_sg_pool ((Model.specDraft (V := V)).store_with_cache st c).core = (Model.specDraft (V := V)).store_sg_pool st.core := by
+theorem _root_.SpecRecord.NodeFacts.spec_store_with_cache_core_sg_pool :
+    ∀ (st : (Model.spec (V := V)).NS) (c : (Model.spec (V := V)).Cache),
+      (Model.spec (V := V)).store_sg_pool ((Model.spec (V := V)).store_with_cache st c).core = (Model.spec (V := V)).store_sg_pool st.core := by
   intro st c
   rfl
 
-/-- The field `store_with_cache_core_tau` of `NodeFacts` at `Model.specDraft`: writing saved grades
+/-- The field `store_with_cache_core_tau` of `NodeFacts` at `Model.spec`: writing saved grades
     keeps the core store's `tau`. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_store_with_cache_core_tau :
-    ∀ (st : (Model.specDraft (V := V)).NS) (c : (Model.specDraft (V := V)).Cache),
-      ((Model.specDraft (V := V)).store_with_cache st c).core.tau = st.core.tau := by
+theorem _root_.SpecRecord.NodeFacts.spec_store_with_cache_core_tau :
+    ∀ (st : (Model.spec (V := V)).NS) (c : (Model.spec (V := V)).Cache),
+      ((Model.spec (V := V)).store_with_cache st c).core.tau = st.core.tau := by
   intro st c
   rfl
 
-/-- The field `store_with_cache_core_attestations` of `NodeFacts` at `Model.specDraft`: writing
+/-- The field `store_with_cache_core_attestations` of `NodeFacts` at `Model.spec`: writing
     saved grades keeps the core store's attestations. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_store_with_cache_core_attestations :
-    ∀ (st : (Model.specDraft (V := V)).NS) (c : (Model.specDraft (V := V)).Cache),
-      (Model.specDraft (V := V)).store_attestations ((Model.specDraft (V := V)).store_with_cache st c).core = (Model.specDraft (V := V)).store_attestations st.core := by
+theorem _root_.SpecRecord.NodeFacts.spec_store_with_cache_core_attestations :
+    ∀ (st : (Model.spec (V := V)).NS) (c : (Model.spec (V := V)).Cache),
+      (Model.spec (V := V)).store_attestations ((Model.spec (V := V)).store_with_cache st c).core = (Model.spec (V := V)).store_attestations st.core := by
   intro st c
   rfl
 
-/-- The field `reachedNode_confirmationRead` of `NodeFacts` at `Model.specDraft`: if a run reaches
+/-- The field `reachedNode_confirmationRead` of `NodeFacts` at `Model.spec`: if a run reaches
     `n` and `c` is an outcome of the cache update at `t` from `n`, a run reaches the node state with
     `n`'s store with its clock set to `t`, `n`'s signing record and the cache `c`. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_reachedNode_confirmationRead :
+theorem _root_.SpecRecord.NodeFacts.spec_reachedNode_confirmationRead :
     ∀ (E : DecoupledConsensusModel.Env V)
-      (hc : DecoupledConsensusModel.Protocol.HealConfig) (n : (Model.specDraft (V := V)).N) (t : DecoupledConsensusModel.Time)
-      (c : (Model.specDraft (V := V)).Cache),
-      (Model.specDraft (V := V)).onPhaseTick E hc n.st.core.toHealing t n.cache ⇢ c → (Model.specDraft (V := V)).reachedNode n →
-      (Model.specDraft (V := V)).reachedNode ((Model.specDraft (V := V)).mkNode ((Model.specDraft (V := V)).ns_setClock E n.st t) n.record c) := by
+      (hc : DecoupledConsensusModel.Protocol.HealConfig) (n : (Model.spec (V := V)).N) (t : DecoupledConsensusModel.Time)
+      (c : (Model.spec (V := V)).Cache),
+      (Model.spec (V := V)).onPhaseTick E hc n.st.core.toHealing t n.cache ⇢ c → (Model.spec (V := V)).reachedNode n →
+      (Model.spec (V := V)).reachedNode ((Model.spec (V := V)).mkNode ((Model.spec (V := V)).ns_setClock E n.st t) n.record c) := by
   intro E hc n t c h₁ h₂
   obtain ⟨hinv, hconf, hcontract⟩ := reached_elim h₂
   exact ⟨hinv, hconf, ReachedReads.contractInTree_onPhaseTick E hc n t c hcontract h₁⟩
 
-/-- The field `reachedNode_confirmationDuty` of `NodeFacts` at `Model.specDraft`: if a run reaches
+/-- The field `reachedNode_confirmationDuty` of `NodeFacts` at `Model.spec`: if a run reaches
     `n`, `c` is an outcome of the cache update at `t` from `n`, and `st` an outcome of the
     confirmation duty with `c`'s grade contract on `n`'s store with its clock set to `t`, a run
     reaches the node state with the store `st`, `n`'s signing record and the cache `c`. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_reachedNode_confirmationDuty :
+theorem _root_.SpecRecord.NodeFacts.spec_reachedNode_confirmationDuty :
     ∀ (E : DecoupledConsensusModel.Env V)
-      (hc : DecoupledConsensusModel.Protocol.HealConfig) (n : (Model.specDraft (V := V)).N) (t : DecoupledConsensusModel.Time)
-      (c : (Model.specDraft (V := V)).Cache) (st : (Model.specDraft (V := V)).NS),
-      (Model.specDraft (V := V)).onPhaseTick E hc n.st.core.toHealing t n.cache ⇢ c →
-      (Model.specDraft (V := V)).duties_update_confirmation_with ((Model.specDraft (V := V)).gradeContract c) E hc ((Model.specDraft (V := V)).ns_setClock E n.st t)
+      (hc : DecoupledConsensusModel.Protocol.HealConfig) (n : (Model.spec (V := V)).N) (t : DecoupledConsensusModel.Time)
+      (c : (Model.spec (V := V)).Cache) (st : (Model.spec (V := V)).NS),
+      (Model.spec (V := V)).onPhaseTick E hc n.st.core.toHealing t n.cache ⇢ c →
+      (Model.spec (V := V)).duties_update_confirmation_with ((Model.spec (V := V)).gradeContract c) E hc ((Model.spec (V := V)).ns_setClock E n.st t)
         (E.slotOf t - 1) ⇢ st →
-      (Model.specDraft (V := V)).reachedNode n → (Model.specDraft (V := V)).reachedNode ((Model.specDraft (V := V)).mkNode st n.record c) := by
+      (Model.spec (V := V)).reachedNode n → (Model.spec (V := V)).reachedNode ((Model.spec (V := V)).mkNode st n.record c) := by
   intro E hc n t c st h₁ h₂ h₃
   obtain ⟨hinv, hconf, hcontract⟩ := reached_elim h₃
-  have hok : SpecDraftRecord.NoRaise.StoreOk n.val.st := n.property
+  have hok : SpecRecord.NoRaise.StoreOk n.val.st := n.property
   have hofI : Spec.Store.ofImage (Member.ns_setClock E n.val.st t) =
       Member.ns_setClock E n.val.st t :=
     Spec.Store.ofImage_eq_self _ hok.2.1 hok.2.2.2 hinv.1 hconf.1 hconf.2.1 hconf.2.2
@@ -142,8 +142,8 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_reachedNode_confirmationDuty 
     have hYJ : Y.J ∈ Y.T := by rw [← hY]; exact hinv.1
     have hYc : Y.latest_confirmed ∈ Y.T := by rw [← hY]; exact hconf.2.1
     have hYs : Y.latest_stable ∈ Y.T := by rw [← hY]; exact hconf.2.2
-    obtain ⟨m1, m2, m3⟩ := SpecDraftRecord.NodeFacts.update_confirmation_mem hYF hYJ hYc hYs hu
-    have hwo := SpecDraftRecord.NoRaise.update_confirmation_writes_only_confirmation hu
+    obtain ⟨m1, m2, m3⟩ := SpecRecord.NodeFacts.update_confirmation_mem hYF hYJ hYc hYs hu
+    have hwo := SpecRecord.NoRaise.update_confirmation_writes_only_confirmation hu
     generalize out.live_confirmed = a at hwo m1
     generalize out.latest_stable = b at hwo m3
     generalize out.latest_confirmed = d at hwo m2
@@ -161,14 +161,14 @@ namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-open SpecDraftRecord
+open SpecRecord
 open DecoupledConsensusModel.Execution
 open scoped DC
 
-/-- The field `runs_as_wake` of `NodeFacts` at `Model.specDraft`: if `n` runs as `v`, so does
+/-- The field `runs_as_wake` of `NodeFacts` at `Model.spec`: if `n` runs as `v`, so does
     `M.wake n`. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_runs_as_wake :
-    ∀ (n : (Model.specDraft (V := V)).N) (v : V), (Model.specDraft (V := V)).runs_as n v → (Model.specDraft (V := V)).runs_as ((Model.specDraft (V := V)).wake n) v := by
+theorem _root_.SpecRecord.NodeFacts.spec_runs_as_wake :
+    ∀ (n : (Model.spec (V := V)).N) (v : V), (Model.spec (V := V)).runs_as n v → (Model.spec (V := V)).runs_as ((Model.spec (V := V)).wake n) v := by
   intro n v h₁
   exact h₁
 

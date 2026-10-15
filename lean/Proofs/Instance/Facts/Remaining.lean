@@ -5,17 +5,17 @@ import Proofs.Instance.Facts.Grades
 /-!
 # Remaining fields of the duties and grades families
 
-Proofs at `Model.specDraft` of fields of `DutiesFacts` and `GradesFacts` not proved elsewhere: the
+Proofs at `Model.spec` of fields of `DutiesFacts` and `GradesFacts` not proved elsewhere: the
 two vote-insertion fields of the duties, the chain-state map after the confirmation update, and the
 results of the phase tick.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.DutiesFacts
+namespace SpecRecord.DutiesFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.ContractImages SpecDraftRecord.NodeFacts
+open SpecRecord.ContractImages SpecRecord.NodeFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -88,9 +88,9 @@ theorem duties_propose_block_with_vIns {c : Spec.SavedGrades V} {E : Env V}
 
 /-- `VIns` from a store of the subtype to another gives the record's `InsertsAt` at any clock
     reading `c`. -/
-theorem insertsAt_of_vIns (E : Env V) (c : Int) {a b : (Model.specDraft (V := V)).S}
+theorem insertsAt_of_vIns (E : Env V) (c : Int) {a b : (Model.spec (V := V)).S}
     (hv : VIns (Spec.Provisional.toSpec E) a.val b.val) :
-    Restated.InsertsAt (Model.specDraft (V := V)) E c a b := by
+    Restated.InsertsAt (Model.spec (V := V)) E c a b := by
   have hp := poolStep_of_vIns (a := a) (b := b) hv
   intro hps hc
   obtain ⟨hcar, hsta⟩ := hp.1 hps
@@ -102,33 +102,33 @@ theorem insertsAt_of_vIns (E : Env V) (c : Int) {a b : (Model.specDraft (V := V)
     · rw [e, ← hc]
     · simpa [Spec.Provisional.toSpec_committee] using hcm
 
-/-- The field `insertsAt_named_propose` of `DutiesFacts` at `Model.specDraft`: for every outcome `D`
+/-- The field `insertsAt_named_propose` of `DutiesFacts` at `Model.spec`: for every outcome `D`
     of the proposal duty on `st`, the arrow `InsertsAt` at `c` runs from the core store of `st` to
     the core store of `D`'s named store. -/
-theorem specDraft_insertsAt_named_propose :
-    ∀ (E : Env V) (c : Int) (contract : (Model.specDraft (V := V)).Contract) (hc : Protocol.HealConfig)
-    (cfg : Protocol.HeightConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS)
-    (D : (Model.specDraft (V := V)).NS × Option (NamedBlock V)), (Model.specDraft (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D →
-    Restated.InsertsAt (Model.specDraft (V := V)) E c st.core D.1.core := by
+theorem spec_insertsAt_named_propose :
+    ∀ (E : Env V) (c : Int) (contract : (Model.spec (V := V)).Contract) (hc : Protocol.HealConfig)
+    (cfg : Protocol.HeightConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS)
+    (D : (Model.spec (V := V)).NS × Option (NamedBlock V)), (Model.spec (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D →
+    Restated.InsertsAt (Model.spec (V := V)) E c st.core D.1.core := by
   intro E c contract hc cfg nd st D hD
   exact insertsAt_of_vIns E c
     (duties_propose_block_with_vIns ((returns_preimageOutcomes _ _ _).1 hD))
 
-/-- The field `insertsAt_named_vote` of `DutiesFacts` at `Model.specDraft`: for every outcome `D` of
+/-- The field `insertsAt_named_vote` of `DutiesFacts` at `Model.spec`: for every outcome `D` of
     the Goldfish vote duty on `st`, the arrow `InsertsAt` at `c` runs from the core store of `st` to
     the core store of `D`'s named store. -/
-theorem specDraft_insertsAt_named_vote :
-    ∀ (E : Env V) (c : Int) (contract : (Model.specDraft (V := V)).Contract) (hc : Protocol.HealConfig)
-    (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS)
-    (D : (Model.specDraft (V := V)).NS × Option (GoldfishVote V)), (Model.specDraft (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D →
-    Restated.InsertsAt (Model.specDraft (V := V)) E c st.core D.1.core := by
+theorem spec_insertsAt_named_vote :
+    ∀ (E : Env V) (c : Int) (contract : (Model.spec (V := V)).Contract) (hc : Protocol.HealConfig)
+    (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS)
+    (D : (Model.spec (V := V)).NS × Option (GoldfishVote V)), (Model.spec (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D →
+    Restated.InsertsAt (Model.spec (V := V)) E c st.core D.1.core := by
   intro E c contract hc nd st D hD
   exact insertsAt_of_vIns E c
     (duties_goldfish_vote_with_vIns ((returns_preimageOutcomes _ _ _).1 hD))
 
-/-- The field `update_confirmation_with_σ` of `DutiesFacts` at `Model.specDraft`: every outcome of
+/-- The field `update_confirmation_with_σ` of `DutiesFacts` at `Model.spec`: every outcome of
     the confirmation update has the chain-state map `σ` of the store it was given. -/
-theorem specDraft_update_confirmation_with_σ : ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot) (st' : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' → st'.σ = st.σ := by
+theorem spec_update_confirmation_with_σ : ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot) (st' : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' → st'.σ = st.σ := by
   intro contract E hc st s st' h
   obtain ⟨x1, x2, x3, he⟩ :=
     update_confirmation_with_shape ((returns_preimageOutcomes _ _ _).1 h)
@@ -137,11 +137,11 @@ theorem specDraft_update_confirmation_with_σ : ∀ (contract : (Model.specDraft
   subst he
   rfl
 
-end SpecDraftRecord.DutiesFacts
+end SpecRecord.DutiesFacts
 
 /-! ## The phase tick's results -/
 
-namespace SpecDraftRecord.RemainingKit
+namespace SpecRecord.RemainingKit
 
 open Spec
 open DecoupledConsensusModel.Sts.Record
@@ -292,12 +292,12 @@ theorem preceq_dca (x F : Block V) :
     mapped, an outcome of the member `freezeRoot` at the store's grade view, finalized block and
     `η_SG`. -/
 theorem freezeRoot_of_graded_block [Inhabited V] {E : DecoupledConsensusModel.Env V}
-    {hc : DecoupledConsensusModel.Protocol.HealConfig} {st : (Model.specDraft (V := V)).HS}
+    {hc : DecoupledConsensusModel.Protocol.HealConfig} {st : (Model.spec (V := V)).HS}
     {sg : SavedGrades V}
     {r : Round} {t0 t1 : Time} {G : Option (Block V)}
     (h : Protocol.graded_block (Config.toSpec E hc unreadHeightConfig) (Provisional.toSpec E)
       { st.val with saved_grades := sg } r t0 t1 = .ok G) :
-    (Model.specDraft (V := V)).freezeRoot E ((Model.specDraft (V := V)).gradeView st)
+    (Model.spec (V := V)).freezeRoot E ((Model.spec (V := V)).gradeView st)
       st.toFG.F hc.η_SG r t0 t1 ⇢ G.map Block.toProof := by
   have hF : st.val.blockOfImage st.val.F.toProof = st.val.F :=
     Store.blockOfImage_toProof_of_injOn _ st.property.2.1.injOn_toProof st.property.2.2.2
@@ -345,7 +345,7 @@ theorem mem_T_of_freezeRoot {P : Provisional V} {st : Store V} {F : Block V} {η
 theorem toProof_dca_of_mem [Inhabited V] {st : Store V} (hok : NoRaise.StoreOk st) {x : Block V}
     (hx : x ∈ st.T) :
     (Protocol.deepest_compatible_ancestor x st.F).toProof =
-      (Model.specDraft (V := V)).clipGrade x.toProof st.F.toProof := by
+      (Model.spec (V := V)).clipGrade x.toProof st.F.toProof := by
   have hinj := hok.2.1.injOn_toProof
   have e := GradesImages.dca_blockOfImage st hinj hok.2.2.1 x.toProof st.F.toProof
   rw [Store.blockOfImage_toProof_of_injOn st hinj hx,
@@ -355,35 +355,35 @@ theorem toProof_dca_of_mem [Inhabited V] {st : Store V} (hok : NoRaise.StoreOk s
 
 /-- The member `freezeRoot` has at most one outcome. -/
 theorem freezeRoot_unique [Inhabited V] {E : DecoupledConsensusModel.Env V}
-    {gv : (Model.specDraft (V := V)).GV} {F : DecoupledConsensusModel.Block V} {η r : Round}
+    {gv : (Model.spec (V := V)).GV} {F : DecoupledConsensusModel.Block V} {η r : Round}
     {t0 t1 : Time} {a b : Option (DecoupledConsensusModel.Block V)}
-    (ha : (Model.specDraft (V := V)).freezeRoot E gv F η r t0 t1 ⇢ a)
-    (hb : (Model.specDraft (V := V)).freezeRoot E gv F η r t0 t1 ⇢ b) : a = b := by
+    (ha : (Model.spec (V := V)).freezeRoot E gv F η r t0 t1 ⇢ a)
+    (hb : (Model.spec (V := V)).freezeRoot E gv F η r t0 t1 ⇢ b) : a = b := by
   have ea := (returns_successOutcomes _ _).1 ha
   have eb := (returns_successOutcomes _ _).1 hb
   exact Except.ok.inj (ea.symm.trans eb)
 
-end SpecDraftRecord.RemainingKit
+end SpecRecord.RemainingKit
 
-namespace SpecDraftRecord.GradesFacts
+namespace SpecRecord.GradesFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.RemainingKit
+open SpecRecord.RemainingKit
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `phaseResult_onPhaseTick` of `GradesFacts` at `Model.specDraft`: if a cache the phase
+/-- The field `phaseResult_onPhaseTick` of `GradesFacts` at `Model.spec`: if a cache the phase
     tick at `t` leaves holds `root` for round `r₁` and phase `p`, then the cache before held a root
     there of which `root` is an ancestor, or `t` is that phase's domain time and `root` is an
     ancestor of a block passing the chosen grade test `g`. -/
-theorem specDraft_phaseResult_onPhaseTick : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache) {r₁ : Round} {p : Protocol.Phase} {root : Block V}
-    (c' : (Model.specDraft (V := V)).Cache) (hc' : (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c') (h : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r₁) p
-    = some (some root)) (g : Block V → Bool) (hg : ∀ B, (Model.specDraft (V := V)).gradeBool E ((Model.specDraft (V := V)).gradeView st) st.toFG.F hc.η_SG r₁ ((Model.specDraft (V := V)).early E hc r₁ p)
-    ((Model.specDraft (V := V)).late E hc r₁ p) B ⇢ g B), (∃ root₀ : Block V,
-    (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c r₁) p = some (some root₀) ∧
+theorem spec_phaseResult_onPhaseTick : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache) {r₁ : Round} {p : Protocol.Phase} {root : Block V}
+    (c' : (Model.spec (V := V)).Cache) (hc' : (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c') (h : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r₁) p
+    = some (some root)) (g : Block V → Bool) (hg : ∀ B, (Model.spec (V := V)).gradeBool E ((Model.spec (V := V)).gradeView st) st.toFG.F hc.η_SG r₁ ((Model.spec (V := V)).early E hc r₁ p)
+    ((Model.spec (V := V)).late E hc r₁ p) B ⇢ g B), (∃ root₀ : Block V,
+    (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c r₁) p = some (some root₀) ∧
     Block.Preceq root root₀) ∨
-    (t = (Model.specDraft (V := V)).domain E hc r₁ p ∧ ∃ B : Block V,
+    (t = (Model.spec (V := V)).domain E hc r₁ p ∧ ∃ B : Block V,
     g B = true ∧ Block.Preceq root B) := by
   intro E hc st t c r₁ p root c' hc' h g hg
   obtain ⟨S, hS, rfl, -⟩ := sd_onPhaseTick_ok hc'
@@ -416,18 +416,18 @@ theorem specDraft_phaseResult_onPhaseTick : ∀ (E : Env V) (hc : Protocol.HealC
     · rw [toProof_mrcw_some] at h
       obtain rfl := Option.some.inj (Option.some.inj h)
       have hfr := freezeRoot_of_graded_block hG
-      exact Or.inr ⟨ht, x.toProof, specDraft_gradeBool_of_freezeRoot_eq_some _ hfr rfl _ (hg _),
+      exact Or.inr ⟨ht, x.toProof, spec_gradeBool_of_freezeRoot_eq_some _ hfr rfl _ (hg _),
         preceq_dca x _⟩
 
-/-- The field `phaseResult_onPhaseTick_domain` of `GradesFacts` at `Model.specDraft`: if `r` is the
+/-- The field `phaseResult_onPhaseTick_domain` of `GradesFacts` at `Model.spec`: if `r` is the
     round after the round of `t`, `t` is round `r`'s domain time for the phase `p`, and the cache
     `c` holds no result there, then every cache the phase tick at `t` leaves from `st` holds there
     every outcome of `Protocol.freezeRoot` of `st` with that phase's cutoffs, clipped to `st.F`. -/
-theorem specDraft_phaseResult_onPhaseTick_domain : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache) {r : Round} {p : Protocol.Phase} (hρ : ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) + 1 = r) (ht : t = (Model.specDraft (V := V)).domain E hc r p) (h : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c r) p = none)
-    (c' : (Model.specDraft (V := V)).Cache) (hc' : (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c')
-    (fr : Option (Block V)) (hfr : (Model.specDraft (V := V)).freezeRoot E ((Model.specDraft (V := V)).gradeView st) st.toFG.F hc.η_SG r ((Model.specDraft (V := V)).early E hc r p)
-    ((Model.specDraft (V := V)).late E hc r p) ⇢ fr), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p
-    = some (fr.map (fun B => (Model.specDraft (V := V)).clipGrade B st.toFG.F)) := by
+theorem spec_phaseResult_onPhaseTick_domain : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache) {r : Round} {p : Protocol.Phase} (hρ : ((Model.spec (V := V)).round_of hc (E.slotOf t)) + 1 = r) (ht : t = (Model.spec (V := V)).domain E hc r p) (h : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c r) p = none)
+    (c' : (Model.spec (V := V)).Cache) (hc' : (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c')
+    (fr : Option (Block V)) (hfr : (Model.spec (V := V)).freezeRoot E ((Model.spec (V := V)).gradeView st) st.toFG.F hc.η_SG r ((Model.spec (V := V)).early E hc r p)
+    ((Model.spec (V := V)).late E hc r p) ⇢ fr), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p
+    = some (fr.map (fun B => (Model.spec (V := V)).clipGrade B st.toFG.F)) := by
   intro E hc st t c r p hρ ht h c' hc' fr hfr
   obtain ⟨S, hS, rfl, hρ'⟩ := sd_onPhaseTick_ok hc'
   have hr : (Spec.Config.toSpec E hc unreadHeightConfig).round_of
@@ -446,7 +446,7 @@ theorem specDraft_phaseResult_onPhaseTick_domain : ∀ (E : Env V) (hc : Protoco
   · exact ((hd 1 (by norm_num) (by norm_num)) (ht.trans (d0.trans (by ring)))).elim
   · exact ((hd 0 le_rfl (by norm_num)) (ht.trans (d1.trans (by ring)))).elim
   have ht2 := ht.trans d2
-  have hfr2 : (Model.specDraft (V := V)).freezeRoot E ((Model.specDraft (V := V)).gradeView st)
+  have hfr2 : (Model.spec (V := V)).freezeRoot E ((Model.spec (V := V)).gradeView st)
       st.toFG.F hc.η_SG r ((Spec.Config.toSpec E hc unreadHeightConfig).opening r -
         5 * (Spec.Config.toSpec E hc unreadHeightConfig).Δ)
       ((Spec.Config.toSpec E hc unreadHeightConfig).opening r -
@@ -484,4 +484,4 @@ theorem specDraft_phaseResult_onPhaseTick_domain : ∀ (E : Env V) (hc : Protoco
     exact congrArg (fun y => some (some y)) (toProof_dca_of_mem st.property
       (mem_T_of_freezeRoot hG))
 
-end SpecDraftRecord.GradesFacts
+end SpecRecord.GradesFacts

@@ -175,31 +175,39 @@ theorem committeeSleepinessW_of_later (facts : Record.Facts M) (S : Setup V) (Sc
   push Not at hsE
   obtain ⟨hlo, hhi, -, hT⟩ := facts.sch.voteWindow_prev_inPhase S tGAT tE tE' hwin hs1 hs' hsE
   set T : Int := M.confirmation_time S.E (s - 1) with hTdef
-  set M : Finset V := S.E.committee (s - 1) with hMdef
+  set K : Finset V := S.E.committee (s - 1) with hKdef
   have hact : ∀ v : V, v ∉ Sched.adv T → v ∈ activeAtW S Sched (s - 1) := fun v hv =>
     mem_activeAtW_of_notAdv_inPhase S Sched tGAT tE hmono hawake hlo hhi hT hv
-  have hmaj : M.card < 2 * (M ∩ honestThroughSet Sched T).card := hcom (s - 1)
-  have hHT : (M ∩ honestThroughSet Sched T).card ≤ (M \ Sched.adv T).card := by
+  have hmaj : K.card < 2 * (K ∩ honestThroughSet Sched T).card := hcom (s - 1)
+  have hHT : (K ∩ honestThroughSet Sched T).card ≤ (K \ Sched.adv T).card := by
     refine Finset.card_le_card ?_
     intro v hv
     obtain ⟨hvM, hvH⟩ := Finset.mem_inter.1 hv
     exact Finset.mem_sdiff.2 ⟨hvM, (mem_honestThroughSet.1 hvH) T le_rfl⟩
-  have hsplit := Finset.card_sdiff_add_card_inter M (Sched.adv T)
-  have hL : (M \ (activeAtW S Sched (s - 1) \ Sched.adv T)).card ≤ (M ∩ Sched.adv T).card := by
+  have hsplit := Finset.card_sdiff_add_card_inter K (Sched.adv T)
+  have hL : (K \ (activeAtW S Sched (s - 1) \ Sched.adv T)).card ≤ (K ∩ Sched.adv T).card := by
     refine Finset.card_le_card ?_
     intro v hv
     obtain ⟨hvM, hn⟩ := Finset.mem_sdiff.1 hv
     refine Finset.mem_inter.2 ⟨hvM, ?_⟩
     by_contra hvT
     exact hn (Finset.mem_sdiff.2 ⟨hact v hvT, hvT⟩)
-  have hR : (M \ Sched.adv T).card ≤
-      ((activeAtW S Sched (s - 1) ∩ M) \ Sched.adv T).card := by
+  have hR : (K \ Sched.adv T).card ≤
+      ((activeAtW S Sched (s - 1) ∩ K) \ Sched.adv T).card := by
     refine Finset.card_le_card ?_
     intro v hv
     obtain ⟨hvM, hvT⟩ := Finset.mem_sdiff.1 hv
     exact Finset.mem_sdiff.2 ⟨Finset.mem_inter.2 ⟨hact v hvT, hvM⟩, hvT⟩
-  show (M \ (activeAtW S Sched (s - 1) \ Sched.adv T)).card <
-    ((activeAtW S Sched (s - 1) ∩ M) \ Sched.adv T).card
+  have hsubL : ((K ∩ (Restated.votersAt M S Sched (s - 1) ∪ Sched.adv T)) \
+      (activeAtW S Sched (s - 1) \ Sched.adv T)).card ≤
+      (K \ (activeAtW S Sched (s - 1) \ Sched.adv T)).card := by
+    refine Finset.card_le_card ?_
+    intro v hv
+    obtain ⟨hvM, hn⟩ := Finset.mem_sdiff.1 hv
+    exact Finset.mem_sdiff.2 ⟨(Finset.mem_inter.1 hvM).1, hn⟩
+  show ((K ∩ (Restated.votersAt M S Sched (s - 1) ∪ Sched.adv T)) \
+      (activeAtW S Sched (s - 1) \ Sched.adv T)).card <
+    ((activeAtW S Sched (s - 1) ∩ K) \ Sched.adv T).card
   omega
 
 end

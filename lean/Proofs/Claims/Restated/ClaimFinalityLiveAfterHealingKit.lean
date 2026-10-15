@@ -49,8 +49,6 @@ theorem claimFinalityLiveAfterHealing_holds_at (facts : Record.Facts M) (S : Set
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -65,9 +63,9 @@ theorem claimFinalityLiveAfterHealing_holds_at (facts : Record.Facts M) (S : Set
     Restated.FinalityIncludedAfterHealing M S Sched x tE tL gap ∧
       Restated.FinalityGrowsAfterHealing M S Sched x tE tL gap := by
   exact ⟨Restated.finalityIncluded_of_premises_f3 facts S Sched x tGAT tE tL gap hgap hlen hEL
-      hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs,
+      hgst hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hsl hrs hcs,
     Restated.finalityGrows_of_premises_f5 facts S Sched x tGAT tE tL gap hgap hlen hEL hgst
-      hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs⟩
+      hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hsl hrs hcs⟩
 
 /-- For every `gap` with `gap + 2 ≤ K` there is a phase length `tHeal ≥ 0` such that, in every
     execution satisfying the healing premises with a phase of at least `tHeal` ending at
@@ -84,10 +82,10 @@ theorem claimFinalityLiveAfterHealing_holds (facts : Record.Facts M) (S : Setup 
   · have h0 := Restated.healingLengthη_nonneg facts S gap
     have h1 : (0 : Int) < (Restated.constants M S).period := (Restated.constants_holds facts S).period_pos
     linarith
-  · exact fun x tGAT tE tL hlen hEL hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird
+  · exact fun x tGAT tE tL hlen hEL hgst hmono hexec hsync hmult hcv htd hcom hthird
       hawake hrec hsl hrs hcs =>
       Restated.claimFinalityLiveAfterHealing_holds_at facts S Sched gap hgap x tGAT tE tL hlen hEL
-        hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs
+        hgst hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hsl hrs hcs
 
 end
 

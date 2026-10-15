@@ -576,7 +576,6 @@ theorem admissibleFieldsOn_runAll_notHeld_upTo (facts : Record.Facts M) (S : Set
       horizon_nonneg := Restated.horizon_nonneg_runAll_withHonest facts S Sched x v _ n
       sorted := Restated.sorted_runAll_withHonest_events facts S Sched x v _ n
       in_horizon := Restated.in_horizon_runAll_withHonest facts S Sched x v _ n
-      tick_public := Restated.tick_public_runAll_withHonest facts S Sched x v _ n
       tickIndexUnique := Restated.tickIndexUnique_runAll_withHonest facts S Sched x v _ n
       wire := Restated.wire_runAll_withHonest facts S Sched x v _ n hvalid.toDeliveryWellFormed
       onePath := hP

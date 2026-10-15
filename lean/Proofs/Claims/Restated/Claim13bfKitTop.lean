@@ -71,8 +71,6 @@ theorem claim13bf_holds_at (facts : Record.Facts M) (S : Setup V) (Sched : Sched
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -92,11 +90,11 @@ theorem claim13bf_holds_at (facts : Record.Facts M) (S : Setup V) (Sched : Sched
     htd hgst (tE := tE) (by have := Restated.delta_le_healingLengthη_add_period facts S gap; linarith)
     hawake
   exact Restated.claim13bf_conclusion_of_joint facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync
-    hmult hwakes hsleeps hcatch
+    hmult hcatch
     hcv htd hcom hthird
     hawake hrec hsl hrs hcs
     (Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult
-      hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs)
+       hcv htd hcom hthird hawake hrec hsl hrs hcs)
 
 /-- `Restated.claim13bfStatement M S Sched` holds, with the phase length
     `healingLengthη S gap + (constants S).period`: no two blocks finalized in the stores of two
@@ -108,10 +106,10 @@ theorem claim13bf_holds (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
   · have h0 := Restated.healingLengthη_nonneg facts S gap
     have h1 : (0 : Int) < (Restated.constants M S).period := (Restated.constants_holds facts S).period_pos
     linarith
-  · exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird
+  · exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird
       hawake hrec hsl hrs hcs =>
       Restated.claim13bf_holds_at facts S Sched gap hgap x tGAT tE hlen hgst hmono hexec
-        hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake hrec hsl hrs hcs
+        hsync hmult hcatch htd hcom hthird hawake hrec hsl hrs hcs
 
 end
 

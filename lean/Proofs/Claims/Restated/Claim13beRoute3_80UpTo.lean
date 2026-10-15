@@ -759,7 +759,7 @@ theorem gradedBlock_cone_at_secondSlot_upTo (facts : Record.Facts M)
     (fun k wv sm hsend hle haw => hsync k wv sm hsend (le_trans hle (le_of_eq hN)) haw)
     hmono hawake hgst hcv hvalid hawm hthird hn
   obtain ⟨hrW1, hpost, hsg⟩ := (p74u% grade1_inputs₇₄u) facts S Sched x v hmono hgst hthird hcom hrWN hn hf
-    hreg harW (fun h => hprev h) (facts.ndRun.tick_outcome_sts S Sched x hvalid.idealization.root_injective hvalid.honestRootsNew)
+    hreg harW (fun h => hprev h) (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hvalid.idealization.root_injective hvalid.honestRootsNew k τ u hl)
     (Restated.awake_g2_action_runAllPath facts S Sched x v N hmono hawake hn)
   have hHs : ∀ t t' : Int, t ≤ t' → notHeldAt Sched t' ⊆ notHeldAt Sched t :=
     fun _ _ h => notHeldAt_anti hmono h

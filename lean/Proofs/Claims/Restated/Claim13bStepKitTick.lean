@@ -280,7 +280,7 @@ theorem attest_emitted_at_tick_from (facts : Record.Facts M) (S : Setup V) (Sche
       Record.wakeStage_record facts, Record.wakeStage_cache facts]
   obtain ⟨t', hlbl, ht'⟩ := hn
   refine Restated.mem_sent_of_tick facts S Sched x hlbl (by rw [ht']; exact hv)
-    (by rw [ht']; exact Restated.action_emod_delta facts S r) ?_ ?_
+    ?_ ?_
   · rw [ht']
     exact fun out hout => Restated.namedTick_emits_attest facts S v _ r hrun out hout a
       (by rw [hA]; exact ha)
@@ -309,11 +309,11 @@ theorem attest_round_of_sent (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched ((Restated.Vocabulary.Execution.Setup.a M S a.round)) x[k] v) ((Restated.Vocabulary.Execution.Setup.a M S a.round)) ⇢ out ∧
         NamedObject.attest a ∈ out.2 := by
-  obtain ⟨k, hk, t, hlbl, haw, hdvd, out, hout, hmem⟩ :=
+  obtain ⟨k, hk, t, hlbl, haw, out, hout, hmem⟩ :=
     Restated.tick_of_honest_signed_upTo facts S Sched x v (NamedObject.attest a) tB hv hunf
       (by rw [author_attest, hauth]) i hi ho
   obtain ⟨W, hW, hemits⟩ :=
-    Restated.emits_runAll_of_tick facts S Sched x v hk hlbl haw hdvd hout hmem
+    Restated.emits_runAll_of_tick facts S Sched x v hk hlbl haw hout hmem
   obtain ⟨hsender, ht⟩ :=
     Restated.Vocabulary.Proofs.Optimistic.emits_attest_shape facts (Setup.alwaysAwake S) W hW hemits
   have ht' : (t : Int) = (Restated.Vocabulary.Execution.Setup.a M S a.round) := ht

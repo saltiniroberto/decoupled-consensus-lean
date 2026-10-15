@@ -210,15 +210,23 @@ open Framework.StsMultisetLog
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
 /-- Under `hmono` and `hawake`, if `tGAT ≤ S.a r − wAttest S`, `S.a r ≤ tE` and `v` is not held by
-    the adversary at `S.a r`, then `v ∈ HonRound S Sched r`. -/
+    the adversary at `S.a r`, then `v ∈ HonRound S Sched r`: the window `wAttest S` before `S.a r`
+    contains the rule's grade-2 window of round `r`. -/
 theorem honRound_of_notAdv_inPhase (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (tGAT tE : Int)
     (hmono : Sched.MonotoneCorruption)
     (hawake : ∀ t : Int, tGAT ≤ t → t ≤ tE → ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     {r : Round} {v : V} (hlo : tGAT ≤ (Restated.Vocabulary.Execution.Setup.a M S r) - wAttest S) (hhi : (Restated.Vocabulary.Execution.Setup.a M S r) ≤ tE)
     (hv : v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r))) :
-    v ∈ Restated.HonRound M S Sched r :=
-  Finset.mem_sdiff.2
-    ⟨Restated.mem_activeRoundW_of_notAdv_inPhase facts S Sched tGAT tE hmono hawake hlo hhi le_rfl hv, hv⟩
+    v ∈ Restated.HonRound M S Sched r := by
+  have he := facts.gr.early_g2_eq S r
+  have hR : (3 : Int) ≤ (S.hc.R : Int) := by exact_mod_cast S.hc.R_ge_three
+  have hd := S.E.Δ_pos
+  have hW : wAttest S = 4 * (S.hc.R : Int) * S.E.Δ := rfl
+  have h : (Restated.Vocabulary.Execution.Setup.a M S r) - wAttest S ≤ M.early S.E S.hc r .g2 - S.E.Δ := by
+    show M.a S.hc S.E.Δ r - wAttest S ≤ _
+    rw [he, hW]; nlinarith
+  exact Finset.mem_sdiff.2
+    ⟨mem_awakeThroughout_of_notAdv_inPhase Sched tGAT tE hmono hawake (le_trans hlo h) hhi le_rfl hv, hv⟩
 
 end
 
@@ -241,7 +249,6 @@ theorem recordsSettledAtSettleTick_atStrongRound (facts : Record.Facts M) (S : S
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -263,7 +270,8 @@ theorem recordsSettledAtSettleTick_atStrongRound (facts : Record.Facts M) (S : S
       notHeldAt Sched (M.confirmation_time S.E ((M.opening_slot S.hc (c - 1))))) :
     ∀ (r : Round) (n : Nat) (v : V),
       Restated.switchRound M S (M.confirmation_time S.E ((M.opening_slot S.hc (c - 1)) + 2)) + 1 ≤ r →
-      Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S r)) → v ∈ Restated.HonRound M S Sched r →
+      Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S r)) →
+      v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) →
       r = Restated.switchRound M S (M.confirmation_time S.E ((M.opening_slot S.hc (c - 1)) + 2)) + 1 →
       Restated.RecordsAncestorOfHonestHeads M S Sched x v (n + 1) := by
   have hd : (1 : Int) ≤ S.E.Δ := S.E.Δ_pos
@@ -283,7 +291,7 @@ theorem recordsSettledAtSettleTick_atStrongRound (facts : Record.Facts M) (S : S
   have hrs₁ := Restated.roundSleepinessW_of_later facts S Sched tGAT tE tE₁ hmono hawake hwin8 hrs
   have hcs₁ := Restated.committeeSleepinessW_of_later facts S Sched tGAT tE tE₁ hmono hawake hcom hwin8 hcs
   have hlow₁ := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE₁ gap hgap hlen₁ hgst hmono hexec
-    hsync hmult hwakes hsleeps hcv htd hcom hthird₁ hawake₁ hrec₁ hsl₁ hrs₁ hcs₁
+    hsync hmult hcv htd hcom hthird₁ hawake₁ hrec₁ hsl₁ hrs₁ hcs₁
   have hlen₁' : tGAT + Restated.healingLengthη M S gap ≤ tE₁ := Restated.healingLength_le_of_kit_l76 facts S hlen₁
   have hprev₁ := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE₁ gap
     hlen₁ hgst hmono hexec hsync hmult hcv hcom hthird₁ hawake₁ hrec₁
@@ -306,7 +314,7 @@ theorem recordsSettledAtSettleTick_atStrongRound (facts : Record.Facts M) (S : S
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB'₁ := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE₁ gap hlow₁
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE₁ gap hgap hlen₁ hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom
+    x tGAT tE₁ gap hgap hlen₁ hgst hmono hexec hsync hmult hcatch hcv htd hcom
     hthird₁ hawake₁ hrec₁ hsl₁ hrs₁ hcs₁ hlow₁
   -- the deadline round is well before `c`
   have hc3 : Restated.deadlineRoundW M S tGAT gap + 3 ≤ c := by
@@ -319,7 +327,7 @@ theorem recordsSettledAtSettleTick_atStrongRound (facts : Record.Facts M) (S : S
   intro r n v _ hn hv hreq
   rw [hsw₂, hc12] at hreq
   subst hreq
-  have hvS : v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) := (Finset.mem_sdiff.1 hv).2
+  have hvS : v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) := hv
   -- the tick step at the opening of round `r − 1`
   have hop0 : 0 < M.opening S.E S.hc (r - 1) := by
     rw [opening_closed_srs facts, opening_slot_closed_srs facts]
@@ -446,7 +454,7 @@ theorem recordsSettledAtSettleTick_atStrongRound (facts : Record.Facts M) (S : S
       exact fun t ht hadv => hvS (hmono t ((Restated.Vocabulary.Execution.Setup.a M S r))
         (le_trans ht hs1) hadv)
   obtain ⟨hS, hC⟩ := Restated.records_good_of_new_root_window facts S Sched x tE₁ hexec hmono htd hcatch tGAT gap
-    hgst hlen₁' hsync hthird₁ hawake₁ hrs₁ hmult hcv hcs₁ hcom hwakes hsleeps hrec₁ hprev₁ hclear₁
+    hgst hlen₁' hsync hthird₁ hawake₁ hrs₁ hmult hcv hcs₁ hcom hrec₁ hprev₁ hclear₁
     hB'₁ hnW hAW hJswitch (r₀ := Restated.switchRound M S tE₁) le_rfl
     (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hk₀n hk₀' hn'
     hreader hrun hnew

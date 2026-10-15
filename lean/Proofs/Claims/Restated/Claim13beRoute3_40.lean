@@ -42,7 +42,7 @@ theorem receiver_slot_at_deliveries_runAll (facts : Record.Facts M) (S : Setup V
     (x : AtomicExec (Record.protocolOf M S) Sched) (v : V) (H : Finset V) (n : Nat)
     (hmono : Sched.MonotoneCorruption) (hawm : AwakeAtMultiples S Sched)
     (hnr : ∀ (k τ : Nat) (u : V), x.lbl k = AtomicAction.tickAllAwake τ →
-      (τ : Int) % S.E.Δ = 0 → u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
+      u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
       (∀ t' ≤ (τ : Int), u ∉ Sched.adv t') →
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) u (Record.wakeStage M Sched (τ : Int) x[k] u) (τ : Int) ⇢ out)

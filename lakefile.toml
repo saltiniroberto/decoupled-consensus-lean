@@ -72,7 +72,7 @@ leanOptions = { pp.unicode.fun = true, relaxedAutoImplicit = false, maxSynthPend
 
 # The end results (Roberto, 2026-10-15: "I would like the file with the endresults to be more
 # clearly identifiable"): the nine top-level theorems of the claims applied to the spec's instance
-# of the record, `Model.specDraft_facts`, with their per-execution and explicit forms, in the Lean
+# of the record, `Model.spec_facts`, with their per-execution and explicit forms, in the Lean
 # namespace `EndResults`. Two modules: `EndResults`, the file `lean/EndResults.lean`, holds
 # `constants_holds` and the explicit forms, and `EndResults.ExistentialForms`, the file
 # `lean/EndResults/ExistentialForms.lean`, the forms `…_holds` and `…_holds_perExecution`; both

@@ -1197,6 +1197,19 @@ theorem Model.vocabulary_facts_forkChoice : ForkChoiceFacts (Model.vocabulary (V
     subst h1
     obtain rfl := (returns_pure _ _).1 hX
     exact _root_.DecoupledConsensusModel.Proofs.Optimistic.ghost_passes_cone E T tree votes support late s Hon ⟨hmaj, hcounted, hsub, hno, hvote⟩ hvalid hAB hpath
+  goldfish_passes_cone_count := by
+    simp only [Model.vocabulary, returns_pure, forall_eq]
+    intro E σ h_max T tree cur votes support k Hon A B hcount hsub hno hvote hAB hpath
+    exact _root_.DecoupledConsensusModel.Proofs.Optimistic.goldfish_passes_cone_count E σ h_max T tree cur votes support k Hon ⟨hcount, Finset.Subset.refl _, hsub, hno, hvote⟩ hAB hpath
+  ghost_passes_cone_count := by
+    intro E T tree votes support late s Hon A B hcount hcounted hsub hno hvote hAB hpath score hscore X hX
+    have h1 : score = Protocol.goldfish_score E T votes support s :=
+      funext fun C => (returns_pure _ _).1 (hscore C)
+    subst h1
+    obtain rfl := (returns_pure _ _).1 hX
+    exact _root_.DecoupledConsensusModel.Proofs.Optimistic.ghost_passes_cone_count E T tree votes support late s Hon ⟨hcount, hcounted, hsub, hno, hvote⟩ hAB hpath
+  ConeSupport_eligible_count := fun E T votes support late s Hon tgt C hcount hcounted hsub hno hvote hC g hg => by obtain rfl := (returns_pure _ _).1 hg; exact _root_.DecoupledConsensusModel.Proofs.Optimistic.ConeSupportCount.eligible ⟨hcount, hcounted, hsub, hno, hvote⟩ hC
+  voters_count_le_card_of_valIndex := _root_.DecoupledConsensusModel.Proofs.Optimistic.voters_count_le_card_of_valIndex
   eligible_compatible := by
     simp only [Model.vocabulary, returns_pure, forall_eq]
     exact fun hNv1 hNv2 hNw1 hNw2 ht1 hr1 ht2 hr2 hC hD => _root_.DecoupledConsensusModel.Protocol.eligible_compatible ⟨hNv1, hNv2⟩ ⟨hNw1, hNw2⟩ ⟨ht1, hr1⟩ ⟨ht2, hr2⟩ hC hD
@@ -1506,6 +1519,7 @@ theorem Model.vocabulary_facts_grades : GradesFacts (Model.vocabulary (V := V)) 
   supports_transport_with_cap := fun covers _ _ _ _ _ _ _ h1 h2 h3 h4 h5 h6 h => (priv% Proofs.Vocabulary.Protocol.Grades.OppositionGradeTransport DecoupledConsensusModel.Protocol.supports_transport_with_cap) covers h1 h2 h3 h4 h5 h6 h
   opposition_back_with_cap := fun covers _ _ _ _ _ _ _ h1 h2 h3 h4 h => (priv% Proofs.Vocabulary.Protocol.Grades.OppositionGradeTransport DecoupledConsensusModel.Protocol.opposition_back_with_cap) covers h1 h2 h3 h4 h
   early_g2_eq := _root_.DecoupledConsensusModel.Proofs.NamedOutageClosure.early_g2_eq
+  early_g1_eq := _root_.DecoupledConsensusModel.Proofs.NamedOutageClosure.early_g1_eq
   action_add_delta_le_next_Γ_neg1 := _root_.DecoupledConsensusModel.Proofs.HealingSurface.action_add_delta_le_next_Γ_neg1
   gammaNeg1_eq_domain_g2_succ := _root_.DecoupledConsensusModel.Proofs.HealingSurface.gammaNeg1_eq_domain_g2_succ
   action_delta_le_early := _root_.DecoupledConsensusModel.Proofs.NamedOutageClosure.action_delta_le_early

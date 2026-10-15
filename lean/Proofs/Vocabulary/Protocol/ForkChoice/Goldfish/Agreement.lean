@@ -638,6 +638,284 @@ theorem ghost_insert_eq {tree : Finset (Block V)} {score : Block V → Nat}
   exact ghost_walk_insert hpar helig hstop hfresh tree.card A hwalk
 
 
+/-! ## Honest support counted against the participants -/
+
+/-- Honest support for a cone `tgt` of targets at slot `s`, counted against the participants of the
+    denominator's votes: the participants of `late` are fewer than twice the honest committee
+    members, the counted votes are within the denominator's votes, the support votes are within the
+    raw votes, no honest committee member equivocates, and each casts a support vote naming a block
+    `tgt` admits. -/
+structure ConeSupportCount (E : Env V) (T : Finset (Block V))
+    (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V)
+    (tgt : Block V → Prop) : Prop where
+  /-- `|participants(late)| < 2·|K_s ∩ Hon|`. -/
+  count : Protocol.voters_count E late s < 2 * ((E.committee s) ∩ Hon).card
+  /-- The counted votes are within the denominator's votes. -/
+  counted : votes ⊆ late
+  /-- The support votes are within the raw votes. -/
+  sub : support ⊆ votes
+  /-- No honest committee member equivocates in the raw votes. -/
+  no_equiv : ∀ x ∈ E.committee s, x ∈ Hon → Protocol.equivocates votes x = false
+  /-- Every honest committee member has a slot-`s` support vote whose head resolves in `T` to a
+      block of its slot or earlier that `tgt` admits. -/
+  vote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧
+    ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X
+
+/-- If every vote of `votes` names a member of `X`, the participants of `votes` number at most
+    `X.card`. -/
+theorem voters_count_le_card_of_valIndex (E : Env V) (votes : Finset (GoldfishVote V)) (s : Slot)
+    (X : Finset V) (h : ∀ u ∈ votes, u.val_index ∈ X) :
+    Protocol.voters_count E votes s ≤ X.card := by
+  simp only [Protocol.voters_count, Protocol.raw_voters_count]
+  refine Finset.card_le_card ?_
+  intro w hw
+  simp only [Protocol.raw_participants, Finset.mem_filter, Finset.mem_univ, true_and] at hw
+  rw [Protocol.participates, decide_eq_true_eq] at hw
+  obtain ⟨u, hu⟩ := Finset.card_pos.mp hw
+  rw [Protocol.votes_by, Finset.mem_filter] at hu
+  rw [← hu.2]
+  exact h u hu.1
+
+namespace ConeSupportCount
+
+variable {E : Env V} {T : Finset (Block V)}
+  {votes support late : Finset (GoldfishVote V)}
+  {s : Slot} {Hon : Finset V} {tgt : Block V → Prop}
+
+/-- Every honest committee member supports every block `C` the cone lies under. -/
+theorem subset_supporters (h : ConeSupportCount E T votes support late s Hon tgt)
+    {C : Block V} (hC : Under tgt C) :
+    (E.committee s) ∩ Hon ⊆ Protocol.goldfishSupporters E T votes support s C := by
+  intro x hx
+  rw [Finset.mem_inter] at hx
+  obtain ⟨u, hu, hval, hslot, X, hfind, hXslot, htgt⟩ := h.vote x hx.1 hx.2
+  rw [mem_supporters_iff]
+  refine ⟨h.no_equiv x hx.1 hx.2, u, ?_, hslot,
+    targets_under_iff.mpr ⟨X, hfind, hXslot, hC X htgt⟩⟩
+  rw [Protocol.votes_by, Finset.mem_filter]
+  exact ⟨hu, hval⟩
+
+/-- Every honest committee member is a participant of the denominator's votes. -/
+theorem subset_participants (h : ConeSupportCount E T votes support late s Hon tgt) :
+    (E.committee s) ∩ Hon ⊆ Protocol.participants E late s := by
+  intro x hx
+  rw [Finset.mem_inter] at hx
+  obtain ⟨u, hu, hval, -, -⟩ := h.vote x hx.1 hx.2
+  simp only [Protocol.participants, Protocol.raw_participants, Finset.mem_filter,
+    Finset.mem_univ, true_and]
+  rw [Protocol.participates, decide_eq_true_eq]
+  refine Finset.card_pos.mpr ⟨u, ?_⟩
+  rw [Protocol.votes_by, Finset.mem_filter]
+  exact ⟨h.counted (h.sub hu), hval⟩
+
+/-- No honest committee member supports a block `D` off the cone. -/
+theorem not_mem_supporters (h : ConeSupportCount E T votes support late s Hon tgt)
+    {D : Block V}
+    (hD : Off tgt D) {x : V} (hx : x ∈ E.committee s) (hxH : x ∈ Hon) :
+    x ∉ Protocol.goldfishSupporters E T votes support s D := by
+  intro hmem
+  rw [mem_supporters_iff] at hmem
+  obtain ⟨-, u', hu', -, htar⟩ := hmem
+  obtain ⟨u, hu, hval, -, X, hfind, hXslot, htgt⟩ := h.vote x hx hxH
+  have hcard : (Protocol.votes_by votes x).card ≤ 1 := by
+    have hne := h.no_equiv x hx hxH
+    rw [Protocol.equivocates, decide_eq_false_iff_not] at hne
+    omega
+  have huin : u ∈ Protocol.votes_by votes x := by
+    rw [Protocol.votes_by, Finset.mem_filter]
+    exact ⟨h.sub hu, hval⟩
+  have hu'raw : u' ∈ Protocol.votes_by votes x := by
+    rw [Protocol.votes_by, Finset.mem_filter] at hu' ⊢
+    exact ⟨h.sub hu'.1, hu'.2⟩
+  have hsame : u' = u := Finset.card_le_one.mp hcard u' hu'raw u huin
+  obtain ⟨Y, hfindY, hpre⟩ := targets_under_iff.mp htar
+  rw [hsame, hfind] at hfindY
+  have hYX : Y = X := by simpa using hfindY.symm
+  subst hYX
+  exact absurd hpre.2 (by rw [hD Y htgt]; simp)
+
+/-- The score of a block `D` off the cone plus the number of honest committee members is at most the
+    number of participants. -/
+theorem score_add_le (h : ConeSupportCount E T votes support late s Hon tgt) {D : Block V}
+    (hD : Off tgt D) :
+    Protocol.goldfish_score E T votes support s D + ((E.committee s) ∩ Hon).card ≤
+      Protocol.voters_count E late s := by
+  have hdisj1 : Disjoint (Protocol.equivocators E votes s)
+      (Protocol.goldfishSupporters E T votes support s D) := by
+    rw [Finset.disjoint_left]
+    intro x hx hx'
+    simp only [Protocol.equivocators, Protocol.raw_equivocators, Finset.mem_filter,
+      Finset.mem_univ, true_and] at hx
+    rw [mem_supporters_iff] at hx'
+    rw [hx'.1] at hx
+    simp at hx
+  have hdisj2 : Disjoint ((Protocol.equivocators E votes s) ∪
+      (Protocol.goldfishSupporters E T votes support s D)) ((E.committee s) ∩ Hon) := by
+    rw [Finset.disjoint_right]
+    intro x hx
+    rw [Finset.mem_inter] at hx
+    rw [Finset.mem_union]
+    rintro (hx' | hx')
+    · simp only [Protocol.equivocators, Protocol.raw_equivocators,
+        Finset.mem_filter, Finset.mem_univ, true_and] at hx'
+      rw [h.no_equiv x hx.1 hx.2] at hx'
+      simp at hx'
+    · exact h.not_mem_supporters hD hx.1 hx.2 hx'
+  have hsub : ((Protocol.equivocators E votes s) ∪
+      (Protocol.goldfishSupporters E T votes support s D)) ∪ ((E.committee s) ∩ Hon) ⊆
+      Protocol.participants E late s := by
+    refine Finset.union_subset (Finset.union_subset ?_ ?_) h.subset_participants
+    · exact equivocators_subset_participants E h.counted s
+    · exact supporters_subset_participants E T (subset_trans h.sub h.counted) s D
+  have hcard := Finset.card_le_card hsub
+  rw [Finset.card_union_of_disjoint hdisj2, Finset.card_union_of_disjoint hdisj1] at hcard
+  simp only [Protocol.goldfish_score, Protocol.raw_goldfish_score,
+    Protocol.equivocators, Protocol.goldfishSupporters, Protocol.voters_count,
+    Protocol.raw_voters_count, Protocol.participants] at hcard ⊢
+  omega
+
+
+/-- A block `C` the cone lies under scores at least the number of honest committee members. -/
+theorem le_score (h : ConeSupportCount E T votes support late s Hon tgt) {C : Block V}
+    (hC : Under tgt C) :
+    ((E.committee s) ∩ Hon).card ≤ Protocol.goldfish_score E T votes support s C := by
+  have hle := Finset.card_le_card (h.subset_supporters hC)
+  simp only [Protocol.goldfish_score, Protocol.raw_goldfish_score,
+    Protocol.goldfishSupporters] at hle ⊢
+  omega
+
+/-- A block `C` the cone lies under passes the majority test. -/
+theorem eligible (h : ConeSupportCount E T votes support late s Hon tgt) {C : Block V}
+    (hC : Under tgt C) :
+    Protocol.voters_count E late s <
+      2 * Protocol.goldfish_score E T votes support s C := by
+  have h1 := h.count
+  have h2 := h.le_score hC
+  omega
+
+/-- A block `D` off the cone fails the majority test. -/
+theorem not_eligible (h : ConeSupportCount E T votes support late s Hon tgt) {D : Block V}
+    (hD : Off tgt D) :
+    ¬ Protocol.voters_count E late s <
+      2 * Protocol.goldfish_score E T votes support s D := by
+  have h1 := h.count
+  have h2 := h.score_add_le hD
+  omega
+
+/-- A block `D` off the cone scores less than every block `C` the cone lies
+    under. -/
+theorem score_lt (h : ConeSupportCount E T votes support late s Hon tgt) {C D : Block V}
+    (hC : Under tgt C) (hD : Off tgt D) :
+    Protocol.goldfish_score E T votes support s D <
+      Protocol.goldfish_score E T votes support s C := by
+  have h1 := h.count
+  have h2 := h.score_add_le hD
+  have h3 := h.le_score hC
+  omega
+
+end ConeSupportCount
+
+
+/-- Under `ConeSupportCount` for the descendants of `B`, if `A ⪯ B` and the path from
+    `A` to `B` is in `tree`, the confirmation walk from `A` ends at `B` or a descendant of `B`. -/
+theorem ghost_passes_cone_count (E : Env V) (T tree : Finset (Block V))
+    (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V)
+    {A B : Block V}
+    (hsup : ConeSupportCount E T votes support late s Hon (fun X => Block.Preceq B X))
+    (hAB : Block.Preceq A B)
+    (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) :
+    Block.Preceq B (Protocol.ghost A tree (Protocol.goldfish_score E T votes support s)
+      (fun C => decide (Protocol.voters_count E late s <
+        2 * Protocol.goldfish_score E T votes support s C))) := by
+  refine ghost_passes hAB hpath ?_
+  intro Hd hAHd hHdB hne
+  obtain ⟨C, hCpar, hCB⟩ := exists_child_towards B hHdB hne
+  have hAC : Block.Preceq A C := Block.preceq_trans hAHd (preceq_of_parent? hCpar)
+  have hCne : C ≠ A := by
+    intro hEq
+    have h1 : C.depth = Hd.depth + 1 := depth_of_parent? hCpar
+    have h2 : A.depth ≤ Hd.depth := Block.preceq_depth_le hAHd
+    rw [hEq] at h1
+    omega
+  have hCmem : C ∈ tree := hpath C hAC hCne hCB
+  have hUnder : Under (fun X => Block.Preceq B X) C := by
+    intro X hX
+    exact Block.preceq_trans hCB hX
+  refine ⟨C, ?_, hCB⟩
+  rw [Protocol.ghost_step]
+  refine argmax?_eq_some_of_unique ?_ ?_
+  · rw [Protocol.ghost_children, Finset.mem_filter]
+    exact ⟨hCmem, hCpar, by
+      simp only [decide_eq_true_eq]
+      exact hsup.eligible hUnder⟩
+  · intro D hD
+    rw [Protocol.ghost_children, Finset.mem_filter] at hD
+    obtain ⟨-, hDpar, hDel⟩ := hD
+    simp only [decide_eq_true_eq] at hDel
+    have hDB : Block.preceq D B = true := by
+      by_contra hcon
+      have hfalse : Block.preceq D B = false := by simpa using hcon
+      have hdep : D.depth ≤ B.depth := by
+        have h1 : D.depth = Hd.depth + 1 := depth_of_parent? hDpar
+        have h2 : Hd.depth < B.depth := by
+          have h3 := Block.preceq_depth_le hHdB
+          rcases Nat.lt_or_ge Hd.depth B.depth with h | h
+          · exact h
+          · exact absurd (Block.preceq_eq_of_depth_le hHdB h) hne
+        omega
+      exact hsup.not_eligible (off_of_depth hfalse hdep) hDel
+    exact child_towards_unique hCpar hDpar hCB hDB
+
+
+/-- Under `ConeSupportCount` for the descendants of `B`, if `A ⪯ B` and the path from
+    `A` to `B` is in `tree`, the Goldfish fork choice from `A` is `B` or a descendant of `B`. -/
+theorem goldfish_passes_cone_count (E : Env V) (σ : Block V → ChainState V) (h_max : Height)
+    (T tree : Finset (Block V)) (cur : Slot)
+    (votes support : Finset (GoldfishVote V))
+    (k : Slot) (Hon : Finset V) {A B : Block V}
+    (hsup : ConeSupportCount E T votes support votes k Hon (fun X => Block.Preceq B X))
+    (hAB : Block.Preceq A B)
+    (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) :
+    Block.Preceq B
+      (Protocol.goldfish_fork_choice E σ h_max T cur A tree votes support k) := by
+  rw [Protocol.goldfish_fork_choice]
+  refine ghost_passes hAB hpath ?_
+  intro Hd hAHd hHdB hne
+  obtain ⟨C, hCpar, hCB⟩ := exists_child_towards B hHdB hne
+  have hAC : Block.Preceq A C := Block.preceq_trans hAHd (preceq_of_parent? hCpar)
+  have hCne : C ≠ A := by
+    intro hEq
+    have h1 : C.depth = Hd.depth + 1 := depth_of_parent? hCpar
+    have h2 : A.depth ≤ Hd.depth := Block.preceq_depth_le hAHd
+    rw [hEq] at h1
+    omega
+  have hCmem : C ∈ tree := hpath C hAC hCne hCB
+  have hUnder : Under (fun X => Block.Preceq B X) C :=
+    fun X hX => Block.preceq_trans hCB hX
+  have hHdlt : Hd.depth < B.depth := by
+    rcases Nat.lt_or_ge Hd.depth B.depth with h | h
+    · exact h
+    · exact absurd (Block.preceq_eq_of_depth_le hHdB h) hne
+  refine ⟨C, ?_, hCB⟩
+  rw [Protocol.ghost_step]
+  refine argmax?_eq_some_of_dominates ?_ ?_
+  · rw [Protocol.ghost_children, Finset.mem_filter]
+    refine ⟨hCmem, hCpar, ?_⟩
+    rw [goldfish_eligible_iff]
+    exact Or.inr (Or.inl (hsup.eligible hUnder))
+  · intro D hD hDC
+    rw [Protocol.ghost_children, Finset.mem_filter] at hD
+    have hDpar := hD.2.1
+    have hDB : Block.preceq D B = false := by
+      rw [← Bool.not_eq_true]
+      intro hcon
+      exact hDC (child_towards_unique hCpar hDpar hCB hcon)
+    have hdep : D.depth ≤ B.depth := by
+      have h1 : D.depth = Hd.depth + 1 := depth_of_parent? hDpar
+      omega
+    exact hsup.score_lt hUnder (off_of_depth hDB hdep)
+
+
 end Optimistic
 end Proofs
 end DecoupledConsensusModel

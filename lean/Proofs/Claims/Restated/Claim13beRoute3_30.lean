@@ -498,7 +498,7 @@ theorem emits_of_signed_runAll_withHonest (facts : Record.Facts M) (S : Setup V)
     · have h := hunf.unforgeable k sm u hsm (by rw [hsmmsg]; exact hauth) hhonest
       rwa [hsmmsg] at h
     · exact hunf.carried k sm o' u hsm (by rw [hsmmsg]; exact hc) hauth hhonest
-  obtain ⟨j, hjk, τ, hlbl, haw, hdvd, out, hout, hst, hemit⟩ :=
+  obtain ⟨j, hjk, τ, hlbl, haw, out, hout, hst, hemit⟩ :=
     Restated.tick_of_honest_signed_upTo_taken facts S Sched x u o' (x[n].time : Int) hv hunf hauth
       k hkt hcar
   refine ⟨(τ : Int), ?_, ?_⟩
@@ -507,7 +507,7 @@ theorem emits_of_signed_runAll_withHonest (facts : Record.Facts M) (S : Setup V)
     rw [← htk]
     exact_mod_cast hj2 ▸ hj1
   · exact Restated.emits_runAllPath_of_tick facts S Sched x v (Nat.lt_of_lt_of_le hjk hkn) hlbl
-      haw hdvd hout hst hemit
+      haw hout hst hemit
 
 end
 

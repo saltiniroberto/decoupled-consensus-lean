@@ -70,14 +70,13 @@ theorem stablePersists_forEver_ofHandover (facts : Record.Facts M) (S : Setup V)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hcvAgain : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tAgain)
     (hsl : sleepinessW S Sched tE) (hrs : Restated.roundSleepinessW M S Sched tE)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (htE : tE ≤ M.opening S.E S.hc (r + 1))
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ (r + 1)))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ (r + 1))) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S (r + 1) b₀) (hb : b₀ ≤ b₁)
     (hb₁ : Restated.periodBeforeExpiry M S (r + 1) b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched (r + 1))
@@ -102,7 +101,7 @@ theorem stablePersists_forEver_ofHandover (facts : Record.Facts M) (S : Setup V)
   have hgapI : (0 : Int) ≤ (gap : Int) := Int.natCast_nonneg gap
   have hgp : (0 : Int) ≤ ((gap : Int) + 2) * (Restated.constants M S).period :=
     mul_nonneg (by linarith) hper.le
-  have hη := Restated.healingLengthη_nonneg facts S gap
+  have hηL := Restated.healingLengthη_nonneg facts S gap
   have hlive := Restated.liveAgainAfterHealing_nonneg facts S gap
   have hb₀' : (M.a S.hc S.E.Δ (r + 2)) + S.E.Δ ≤ b₀ := hb₀
   have hr01 : (M.a S.hc S.E.Δ r) ≤ (M.a S.hc S.E.Δ (r + 1)) := Restated.healA_mono facts S (Nat.le_succ r)
@@ -121,13 +120,13 @@ theorem stablePersists_forEver_ofHandover (facts : Record.Facts M) (S : Setup V)
   have hsafe : (M.a S.hc S.E.Δ (r + S.hc.η_SG + 2)) ≤ tSafe :=
     Restated.action_le_tSafe_ofPage facts S hb₀ hb hAgain hSafe hhealη
   have htSafe0 : (0 : Int) ≤ tSafe := by linarith [S.E.t_GST_nonneg]
-  obtain ⟨B, t, ht, hseenB, hfin, hBlog⟩ := Restated.finalizedAboveSeen_afterPeriod_inLog facts S Sched x gap
-    hgap hheal hb hg hAgain hSafe htE' hmono hexec hsync hmult hwakes hsleeps htd hcom hcvAgain
+  obtain ⟨B, t, ht, hseenB, hfin, hBlog⟩ := Restated.finalizedAboveSeen_afterPeriod_inLog (hcatch := hcatch) facts S Sched x gap
+    hgap hheal hb hg hAgain hSafe htE' hmono hexec hsync hmult htd hcom hcvAgain
     hsl hrs hcs hthird hawake hrec
   obtain ⟨n₁, hn₁⟩ := Restated.exists_tickStepAt facts x htd (Restated.action_pos facts S (r + 2))
   have hn₁t := (Restated.tickStepAt_time facts x hn₁).2
-  have hroots := Restated.honestRoots_upToSafe_atPage facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
-    hwakes hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hout hthird hsafe hP hn₁
+  have hroots := Restated.honestRoots_upToSafe_atPage (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
+     hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hout hthird hsafe hP hn₁
   let t' : Int := max t ((M.a S.hc S.E.Δ (r + S.hc.η_SG + 2)))
   have ht't : t ≤ t' := le_max_left _ _
   have ht'a : (M.a S.hc S.E.Δ (r + S.hc.η_SG + 2)) ≤ t' := le_max_right _ _
@@ -141,11 +140,11 @@ theorem stablePersists_forEver_ofHandover (facts : Record.Facts M) (S : Setup V)
     ⟨v, T, C, hvT, hC, hPC, hseenB v T hTA⟩
   intro w j hw hjb hwr
   by_cases h1 : (x[j].time : Int) < (M.a S.hc S.E.Δ (r + S.hc.η_SG + 2))
-  · exact Restated.stablePersists_throughPeriod_atPage facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync
-      hmult hwakes hsleeps hcatch htd hrs htE hgst hb₀ hfix hout hthird hsafe hP w j hw hjb h1 hwr
+  · exact Restated.stablePersists_throughPeriod_atPage (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync
+      hmult hcatch htd hrs htE hgst hb₀ hfix hout hthird hsafe hP w j hw hjb h1 hwr
   by_cases h2 : (x[j].time : Int) < t'
-  · exact Restated.stablePersists_untilSafe_atPage facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
-      hwakes hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hout hthird hP w j hw
+  · exact Restated.stablePersists_untilSafe_atPage (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
+       hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hout hthird hP w j hw
       (not_lt.mp h1) (by linarith) hwr
   · exact hafter w j hw (not_lt.mp h2)
 

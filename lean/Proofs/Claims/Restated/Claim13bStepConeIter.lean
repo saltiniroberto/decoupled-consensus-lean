@@ -277,7 +277,7 @@ theorem actionHealingStore_live_confirmed (facts : Record.Facts M) (S : Setup V)
     rw [ht', hct]
     exact facts.sch.support_cutoff_emod_delta S (s + 1)
   have haw' : v ∈ Sched.awake (t' : Int) \ Sched.adv (t' : Int) := by rw [ht']; exact haw
-  rcases Restated.st_succ_of_tick_awake facts S Sched x v hlbl haw' hdvd with
+  rcases Restated.st_succ_of_tick_awake facts S Sched x v hlbl haw' with
     ⟨out₁, hout, hst⟩ | ⟨hno, -⟩
   · rw [hst]
     rw [ht', hct] at hout
@@ -382,6 +382,7 @@ theorem live_confirmed_compatible_at_action (facts : Record.Facts M) (S : Setup 
       obtain ⟨H, hH⟩ := gfHeadFrom_nonempty_iter facts S (x[m][q].st) (M.opening_slot S.hc (r + 1))
       exact ⟨H, hH, hcone q hq H hH⟩)
     hvalid c hc A hA hAB hpath (hneTickVote m hm) hneTick hneTickConf hrun
+    (by rw [facts.gr.round_of_opening_slot_eq S.hc (r + 1)]; exact Nat.succ_pos r)
   rw [hbridge]
   rcases hcases with hpre | heq
   · exact Block.compatible_of_preceq_common (Block.preceq_self _)

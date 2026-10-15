@@ -212,7 +212,7 @@ private theorem tick_step_st_cases_confirm (facts : Record.Facts M) (S : Setup V
   · have hx1 : x[k + 1][v].st = (tk v).state := by
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react haw]
-    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨-, out, hout, hres⟩ | ⟨-, hres⟩
+    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨out, hout, hres⟩ | ⟨-, hres⟩
     · have hwS : (w v).state = Record.wakeStage M Sched (t : Int) x[k] v :=
         Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake v)
       exact Or.inl ⟨(w v).state, out, hwst,
@@ -469,7 +469,7 @@ theorem clock_ge_delta_floor (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     have hmt : (x[m].time : Int) ≤ (x[n_0].time : Int) := Restated.time_mono_int facts S Sched x hmn
     linarith
   have hclk := Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x htick
-    (Finset.mem_sdiff.2 ⟨haw, hvh _ h0le⟩) hdvd
+    (Finset.mem_sdiff.2 ⟨haw, hvh _ h0le⟩)
     (hneTick n_0 _ htick hdvd (Finset.mem_sdiff.2 ⟨haw, hvh _ h0le⟩) hss h0le) hnm
   linarith
 

@@ -550,7 +550,7 @@ theorem carried_vote_in_log (facts : Record.Facts M) (S : Setup V) (Sched : Sche
   have hauthor : NamedObject.author (NamedObject.attest a) = some a.val_index :=
     Sts.author_attest a
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout₁, hst₁, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst₁, hem⟩
   · have hsm : sm ∈ x[i].sent := (Restated.sent_of_deliver facts S Sched x hlbl).1
     have hmsg : sm.msg = NamedObject.block carrier := by
       rcases hpay with h | ⟨Bl, -, hcc⟩
@@ -564,7 +564,7 @@ theorem carried_vote_in_log (facts : Record.Facts M) (S : Setup V) (Sched : Sche
   · rcases hem with hmem | ⟨Bl, -, hcc⟩
     · have hsend := facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) v
         (Record.wakeStage M Sched (τ : Int) x[i] v) (τ : Int)
-      have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd hsend hout₁
+      have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hsend hout₁
         hst₁ hmem
       have hhon : Restated.HonestThrough M Sched x (i + 1) a.val_index := fun t ht =>
         hq t (le_trans ht (Restated.time_mono_int facts S Sched x (Nat.succ_le_of_lt him)))

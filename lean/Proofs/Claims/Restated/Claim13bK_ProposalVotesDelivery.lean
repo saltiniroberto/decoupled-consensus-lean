@@ -60,6 +60,7 @@ import Model.Conditions.Vocabulary_Protocol_Handlers_StoreRoots
 import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13bK_ProposalVotesDelivery
+import Proofs.Claims.Restated.Claim13bK_ProposalVotesDeliveryRule
 
 /-!
 # Delivery of votes and blocks to a proposal
@@ -85,6 +86,38 @@ local macro "pCW% " n:ident : term =>
 local macro "pSC% " n:ident : term =>
   `(priv% $(Lean.mkIdent `Proofs.Claims.Restated.Claim13bStepCone)
     $(Lean.mkIdent (`DecoupledConsensusModel.Sts.Restated ++ n.getId)))
+
+section
+set_option autoImplicit false
+open Framework.StsMultisetLog
+open DecoupledConsensusModel.Execution
+local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
+
+/-- If slot `s` is at or after the opening slot of a round `r ≥ 1`, its proposer is not held by the
+    adversary up to `s`'s vote instant, is awake at `s`'s proposal instant and sends a block `B'` at
+    its tick there, then the proposer was awake at every time from two delays before the proposal
+    instant to it: the tick that sent the block passed the grade-1 awake test. -/
+theorem proposer_window_before_proposal (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
+    (x : AtomicExec (Record.protocolOf M S) Sched) {r : Round} (hr : 1 ≤ r) {s : Slot}
+    (hslot : M.opening_slot S.hc r ≤ s)
+    (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
+    (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
+    {k : Nat} (hk : Restated.tickStepAt M x k (M.proposal_time S.E s)) {B' : NamedBlock V}
+    (hemit : ∃ out : M.N × List (NamedObject V), M.tick (Setup.alwaysAwake S) (S.E.proposer s)
+        (Record.wakeStage M Sched (M.proposal_time S.E s) x[k] (S.E.proposer s))
+        (M.proposal_time S.E s) ⇢ out ∧ NamedObject.block B' ∈ out.2) :
+    S.E.proposer s ∈ Sched.awakeThroughout (M.proposal_time S.E s - 2 * S.E.Δ)
+      (M.proposal_time S.E s) := by
+  obtain ⟨τ, hl, hτ⟩ := hk
+  obtain ⟨out, hout, hB⟩ := hemit
+  have hpv := (facts.sch.proposal_time_lt_vote_time S.E s).le
+  exact Restated.awakeThroughout_before_proposal_rule facts S Sched x hl hτ
+    (fun t ht => hprop t (le_trans ht (by rw [hτ]; exact hpv))) (by rw [hτ]; exact hawp)
+    (Restated.early_g1_sub_delta_nonneg_cone facts S
+      (Restated.one_le_round_of_of_opening_slot_le facts S hr hslot))
+    (by rw [hτ]; exact hout) hB
+
+end
 
 section
 set_option autoImplicit false
@@ -117,54 +150,6 @@ private theorem action_closed_pvd (facts : Record.Facts M) (S : Setup V) (r : Ro
 private theorem opening_closed_pvd (facts : Record.Facts M) (S : Setup V) (r : Round) :
     M.opening S.E S.hc r = 4 * S.E.Δ * (((M.opening_slot S.hc r) : Nat) : Int) := by
   rw [facts.gr.opening_eq_proposal_time S.E S.hc r, Restated.proposal_time_closed_g1 facts S]
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
-
-/-- Under `WakesAtActionInstants`, a validator awake at slot `s`'s proposal instant is awake at
-    every instant from two delays before it to it. -/
-theorem awakeThroughout_before_proposal (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (hw : Restated.WakesAtActionInstants M S Sched) {s : Slot} {v : V}
-    (haw : v ∈ Sched.awake (M.proposal_time S.E s)) :
-    v ∈ Sched.awakeThroughout (M.proposal_time S.E s - 2 * S.E.Δ)
-      (M.proposal_time S.E s) := by
-  have hd := S.E.Δ_pos
-  have hts := Restated.proposal_time_closed_g1 facts S s
-  have hback : ∀ k : Nat, (k : Int) ≤ 2 * S.E.Δ →
-      v ∈ Sched.awake (M.proposal_time S.E s - k) := by
-    intro k
-    induction k with
-    | zero => intro _; simpa using haw
-    | succ k ih =>
-      intro hk
-      have hk1 : (k : Int) + 1 ≤ 2 * S.E.Δ := by push_cast at hk; linarith
-      have hprev := ih (by linarith)
-      by_contra hcon
-      have hcon' : v ∉ Sched.awake (M.proposal_time S.E s - (k : Int) - 1) := by
-        intro h
-        apply hcon
-        have e : M.proposal_time S.E s - ((k + 1 : Nat) : Int)
-            = M.proposal_time S.E s - (k : Int) - 1 := by push_cast; ring
-        rw [e]; exact h
-      obtain ⟨ρ, hρ⟩ := hw _ v hprev hcon'
-      have hρ' : M.proposal_time S.E s - (k : Int) = (Restated.Vocabulary.Execution.Setup.a M S ρ) := hρ
-      rw [hts, action_closed_pvd facts S] at hρ'
-      exact no_four_multiple_g2 (z := (s : Int) - (S.hc.R : Int) * (ρ : Int)) hd
-        (Int.natCast_nonneg k) (by linarith) (by linarith)
-  refine mem_awakeThroughout_of_forall Sched (fun t h0 h1 => ?_)
-  obtain ⟨P, hP⟩ : ∃ P : Int, P = M.proposal_time S.E s := ⟨_, rfl⟩
-  obtain ⟨D, hD⟩ : ∃ D : Int, D = S.E.Δ := ⟨_, rfl⟩
-  rw [← hP] at h1 hback
-  rw [← hP, ← hD] at h0
-  rw [← hD] at hback
-  have e : P - (((P - t).toNat : Nat) : Int) = t := by omega
-  rw [← e]
-  exact hback _ (by omega)
 
 end
 
@@ -327,7 +312,7 @@ theorem prevVote_in_pool_at_proposal (facts : Record.Facts M) (S : Setup V) (Sch
     obtain ⟨t', hlbl_m, ht'⟩ := id hm
     refine Restated.mem_sent_diff_of_tick facts S Sched x hlbl_m
       (by rw [ht']; exact Finset.mem_sdiff.2 ⟨hqaw, hqadv⟩)
-      (by rw [ht']; exact facts.sch.vote_time_emod_delta S (s - 1)) ?_ (by rw [ht']; exact hneTickm)
+      ?_ (by rw [ht']; exact hneTickm)
     rw [ht']
     have _hr_g := Record.reachedNode_wakeStage facts S Sched x m v' (M.vote_time S.E (s - 1))
     have _hv_g := Record.runs_as_wakeStage facts S Sched x m v' (M.vote_time S.E (s - 1))
@@ -581,7 +566,7 @@ theorem block_in_tree_of_holder_atTick (facts : Record.Facts M) (S : Setup V) (S
   have himt : (x[i].time : Int) ≤ (x[m].time : Int) := Restated.time_mono_int facts S Sched x (le_of_lt him)
   have hqi : Restated.HonestThrough M Sched x i v' := fun t' ht => hq t' (le_trans ht himt)
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout₁, hst₁, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst₁, hem⟩
   · -- `B` was delivered to the holder at step `i`
     rcases hpay with hmsg | ⟨Bl, -, hcc⟩
     · obtain ⟨u, o⟩ := sm
@@ -613,7 +598,7 @@ theorem block_in_tree_of_holder_atTick (facts : Record.Facts M) (S : Setup V) (S
       by_cases hearly : (x[i].time : Int) < tGAT
       · exact hviaCV (i + 1) hbodyi (by rw [hdt]; linarith) hqT
       · have hlate : tGAT ≤ (x[i].time : Int) := not_lt.mp hearly
-        have hsend := Restated.block_honestSend_at_tick facts S Sched x hqi hlbl haw hdvd
+        have hsend := Restated.block_honestSend_at_tick facts S Sched x hqi hlbl haw
           ⟨out₁, hout₁, hst₁, hemit⟩
         exact Restated.block_in_tree_of_honestSend_atTick facts S Sched x hexec hsync hmult htd hmono
           hunder hsend (le_trans hgst hlate) (fun t' ht' => hcov t' (le_trans hlate ht'))
@@ -765,7 +750,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 theorem prevVotes_at_proposalStore (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x)
     (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -800,6 +785,7 @@ theorem prevVotes_at_proposalStore (facts : Record.Facts M) (S : Setup V) (Sched
     {v : V} (haw : v ∈ Sched.awake (M.proposal_time S.E s))
     (hvh : HonestThroughTime Sched (M.proposal_time S.E s) v)
     {k : Nat} (hk : Restated.tickStepAt M x k (M.proposal_time S.E s))
+    (hwinv : v ∈ Sched.awakeThroughout (M.proposal_time S.E s - 2 * S.E.Δ) (M.proposal_time S.E s))
     {m : Nat} (hm : Restated.tickStepAt M x m (M.vote_time S.E (s - 1)))
     {v' : V} (hv' : v' ∈ Restated.HonSlot M S Sched (s - 1)) :
     ∀ u, Restated.gfVoteFrom M S (x[m][v'].st) v' (s - 1) ⇢ u →
@@ -829,12 +815,12 @@ theorem prevVotes_at_proposalStore (facts : Record.Facts M) (S : Setup V) (Sched
   rw [hs1] at hvt hct
   obtain ⟨hm1, hm0⟩ := Restated.tickStepAt_time facts x hm
   obtain ⟨hk1, hk0⟩ := Restated.tickStepAt_time facts x hk
-  have hvaw := Restated.awakeThroughout_before_proposal facts S Sched hw haw
+  have hvaw := hwinv
   have hpool := Restated.prevVote_in_pool_at_proposal facts S Sched x hexec hsync hcatch hmult htd hmono hs2
     (by linarith) hvaw hvh hk hm hv' u hu_out
   rw [← Restated.proposalStoreAt_pool facts S (x[k][v].st) s (s - 1)] at hpool
   obtain ⟨T, -, hH, -, hFJ⟩ := Restated.exists_anchor_atSlot facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hTW₀ hJ₀ hslot
   have hunder : Restated.DeliveredDescendantUnderFinalizedInPhase M S x
       (M.proposal_time S.E s - 2 * S.E.Δ) (M.proposal_time S.E s) T.erase :=
@@ -939,7 +925,7 @@ theorem gfVote_honestSend_of_entry (facts : Record.Facts M) (S : Setup V) (Sched
     decide_eq_true ((facts.sto.mem_store_pool_iff _ _ _).1 h1)
   have hii1 : (x[i].time : Int) ≤ (x[i + 1].time : Int) := Restated.time_mono_int facts S Sched x (Nat.le_succ i)
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout₁, hst₁, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst₁, hem⟩
   · -- a delivery to `w`: its re-send
     refine ⟨i, w, Restated.honestSendAt_of_deliver_relay facts S Sched x hlbl ?_
       (Restated.receipt_outcome_of_flip facts S Sched x hlbl hf0 hf1), le_refl _, lt_of_le_of_lt hii1 hlt⟩
@@ -955,14 +941,14 @@ theorem gfVote_honestSend_of_entry (facts : Record.Facts M) (S : Setup V) (Sched
       (Finset.mem_sdiff.1 haw).2 (hmono _ _ (by omega) hin)
     rcases hem with hemit | ⟨Bl, hmem, hcc⟩
     · -- `w`'s own tick emitted the vote
-      exact ⟨i, w, ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hlbl haw hdvd
+      exact ⟨i, w, ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hlbl haw
           (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) w _ (τ : Int))
           hout₁ hst₁ hemit, hwadv⟩, le_refl _,
         lt_of_le_of_lt hii1 hlt⟩
     · -- `w`'s own tick emitted a block that includes the vote, which the cover validator re-sends
       have hsendB : Restated.HonestSendAt M S x i
           (⟨w, NamedObject.block Bl⟩ : SignedMsg V (NamedObject V)) :=
-        ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hlbl haw hdvd
+        ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hlbl haw
           (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) w _ (τ : Int))
           hout₁ hst₁ hmem, hwadv⟩
       obtain ⟨w', hw'aw, -⟩ := hcover
@@ -972,6 +958,14 @@ theorem gfVote_honestSend_of_entry (facts : Record.Facts M) (S : Setup V) (Sched
       have hrel : NamedObject.gfVote u ∈ relayedObjects (NamedObject.block Bl) := by
         rw [mem_relayedObjects_iff]
         exact Or.inr (Restated.carries_of_carriedCall facts (Setup.alwaysAwake S) _ Bl hcc)
+      -- `w`'s tick sent the block `Bl`, so `τ` is a proposal instant, a multiple of `S.E.Δ`
+      have hdvd : (τ : Int) % S.E.Δ = 0 := by
+        have _hr : M.reachedNode (Record.wakeStage M Sched (τ : Int) x[i] w) :=
+          Record.reachedNode_wakeStage facts S Sched x i w τ
+        have _hv : M.runs_as (Record.wakeStage M Sched (τ : Int) x[i] w) w :=
+          Record.runs_as_wakeStage facts S Sched x i w τ
+        rw [(facts.nd.block_mem_on_tick_emit (Setup.alwaysAwake S) w _ _ out₁ hout₁ hmem).1.2.1]
+        exact facts.sch.proposal_time_emod_delta_inclX S.E _
       have hτc : (τ : Int) + S.E.Δ ≤ c := by
         have hτlt : (τ : Int) < c := by rw [← hτi']; exact hlt
         obtain ⟨q₁, hq₁⟩ : ∃ q₁, (τ : Int) = S.E.Δ * q₁ :=
@@ -1424,7 +1418,7 @@ theorem proposal_in_voterTree (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   have hsend : Restated.HonestSendAt M S x k
       (⟨p, NamedObject.block B'⟩ : SignedMsg V (NamedObject V)) :=
     And.intro
-      (Restated.mem_sent_diff_of_tick facts S Sched x hl hawp' hdvd
+      (Restated.mem_sent_diff_of_tick facts S Sched x hl hawp'
         (by rw [ht']; exact hall) (by rw [ht']; exact hemit.imp fun _ h => h.1))
       (hpk _ (le_refl _))
   have hmax : max (x[k].time : Int) S.E.t_GST = (x[k].time : Int) := max_eq_left (by linarith)
@@ -1501,7 +1495,7 @@ theorem signed_of_mem_bodies_g2 (facts : Record.Facts M) (S : Setup V) (Sched : 
   obtain ⟨i, him, hf0, hf1⟩ :=
     Restated.exists_flip_of_processed facts S Sched x w (NamedObject.block B) h0 hm1
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hem⟩
   · rcases hpay with hmsg | ⟨Bl, -, hcc⟩
     · have hsm : sm ∈ x[i].sent := (Restated.sent_of_deliver facts S Sched x hlbl).1
       have hhon : Restated.HonestThrough M Sched x i q := fun t ht =>
@@ -1514,7 +1508,7 @@ theorem signed_of_mem_bodies_g2 (facts : Record.Facts M) (S : Setup V) (Sched : 
     rcases hem with hmem | ⟨Bl, -, hcc⟩
     · have hhon : Restated.HonestThrough M Sched x (i + 1) q := fun t ht =>
         hq t (le_trans ht (Restated.time_mono_int facts S Sched x (Nat.succ_le_of_lt him)))
-      have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd
+      have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw
         (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) w _ (τ : Int))
         hout₁ hst₁ hmem
       exact ⟨i + 1, Nat.succ_le_of_lt him,
@@ -1906,11 +1900,11 @@ theorem sentProposal_awake (facts : Record.Facts M) (S : Setup V) (Sched : Sched
   obtain ⟨B', hmem, -, hBslot, hauth⟩ := hB
   have hauthor : NamedObject.author (NamedObject.block B') = some (S.E.proposer s) := by
     rw [author_block]; exact hauth
-  obtain ⟨k, hki, t, hl, haw, hdvd, out, hout, hemit⟩ :=
+  obtain ⟨k, hki, t, hl, haw, out, hout, hemit⟩ :=
     Restated.tick_of_honest_signed_upTo facts S Sched x (S.E.proposer s) (.block B')
       (x[i].time : Int) hprop hunf hauthor i le_rfl hmem
   obtain ⟨W, hW, hemi⟩ :=
-    Restated.emits_runAll_of_tick facts S Sched x (S.E.proposer s) hki hl haw hdvd hout hemit
+    Restated.emits_runAll_of_tick facts S Sched x (S.E.proposer s) hki hl haw hout hemit
   have ht : (t : Int) = M.proposal_time S.E s := by
     rw [(Restated.Vocabulary.Proofs.HealingSurface.emits_block_shape facts (Setup.alwaysAwake S) _
       W hW hemi).2.1, hBslot]
@@ -1997,7 +1991,7 @@ theorem proposedBlockAtStep_of_emit (facts : Record.Facts M) (S : Setup V) (Sche
       ((Setup.alwaysAwake S).node_val_index (S.E.proposer s)).symm c
       (by rw [Record.wakeStage_st facts, Record.wakeStage_cache facts]; exact hc) D
       (by rw [Record.wakeStage_st facts]; exact hD) hD'B out hout hrunP
-  refine ⟨B', Restated.mem_sent_of_tick facts S Sched x hl hawp' hdvd hall
+  refine ⟨B', Restated.mem_sent_of_tick facts S Sched x hl hawp' hall
     ⟨out₀, by rw [ht']; exact hout₀⟩, rfl, ?_, ?_⟩
   · rw [← Proofs.NamedWire.erase_slot]; exact hfs
   · rw [← Proofs.NamedWire.erase_proposer]; exact hfpr
@@ -2036,7 +2030,7 @@ set_option linter.unusedSectionVars false
 theorem proposalBlock_in_voterTree (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     {k : Nat} (hk : Restated.tickStepAt M x k (M.proposal_time S.E s))
@@ -2094,11 +2088,13 @@ set_option linter.unusedSectionVars false
 theorem voterBlock_in_proposalTree (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
     {k : Nat} (hk : Restated.tickStepAt M x k (M.proposal_time S.E s))
+    (hwinp : S.E.proposer s ∈ Sched.awakeThroughout (M.proposal_time S.E s - 2 * S.E.Δ)
+      (M.proposal_time S.E s))
     {v : V} (hv : v ∈ Restated.HonSlot M S Sched s) {mr : Nat}
     {Y : Block V} (hFY : Restated.FinalizedBelowUpTo M S Sched x n_W (M.vote_time S.E s) Y)
     {X : Block V} (hX : X ∈ (x[mr][v].st).st.core.T) {σ : Stamp}
@@ -2145,7 +2141,7 @@ theorem voterBlock_in_proposalTree (facts : Record.Facts M) (S : Setup V) (Sched
     hphase hthird hcs (Restated.delta_le_of_healingLengthη facts S hlen) (t := M.proposal_time S.E s)
     hunder hunderS hXnc hvnc (by rw [hXe]; exact hYX) (by linarith) (by linarith) (by linarith)
     le_rfl hk
-    hpadv (Restated.awakeThroughout_before_proposal facts S Sched hw hawp)
+    hpadv hwinp
   rw [hXe] at hT
   exact hT
 
@@ -2166,7 +2162,7 @@ set_option linter.unusedSectionVars false
 theorem proposal_in_voterTree_unique (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
@@ -2217,7 +2213,7 @@ set_option linter.unusedSectionVars false
 theorem proposerVotes_subset_voterView (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
@@ -2241,7 +2237,7 @@ theorem proposerVotes_subset_voterView (facts : Record.Facts M) (S : Setup V) (S
   have _hr_0 : M.reachedNode (x[k][S.E.proposer s].st) := Record.reachedNode_sts facts S Sched x k (S.E.proposer s)
   have _hr_1 : M.reachedNode (x[mr][v].st) := Record.reachedNode_sts facts S Sched x mr v
   obtain ⟨hBv, -⟩ := Restated.proposal_in_voterTree_unique facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB
+    hlen hsync hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB
   obtain ⟨hfs, hfgv, -, -, -, -, -⟩ := Restated.proposalDuty_fields facts S (x[k][S.E.proposer s].st) s _ hn hD hduty
   intro Wv hWv u hu
   have hpool : u ∈ (M.store_pool (x[k][S.E.proposer s].st).st.core (s - 1)) := by
@@ -2265,7 +2261,7 @@ set_option linter.unusedSectionVars false
 theorem voterView_raw_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
@@ -2288,6 +2284,8 @@ theorem voterView_raw_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched 
     ∀ u ∈ Wv,
       u ∈ Restated.proposerVotesOf M S (x[k][S.E.proposer s].st) s ∨
         M.equivocates (Restated.proposerVotesOf M S (x[k][S.E.proposer s].st) s) u.val_index = true := by
+  have hwinp := Restated.proposer_window_before_proposal facts S Sched x (r := Restated.switchRound M S tE + 1)
+      (Nat.le_add_left 1 _) hslot hprop hawp hk hemit
   have _hr_0 : M.reachedNode (x[k][S.E.proposer s].st) := Record.reachedNode_sts facts S Sched x k (S.E.proposer s)
   have _hr_1 : M.reachedNode (x[mr][v].st) := Record.reachedNode_sts facts S Sched x mr v
   have hd := S.E.Δ_pos
@@ -2300,7 +2298,7 @@ theorem voterView_raw_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched 
   have hpv := Restated.proposal_time_le_vote_time_g1 facts S s
   have hs1 : ((s - 1 : Nat) : Int) = (s : Int) - 1 := nat_sub_one_cast_g2 (le_trans (by decide) hs2)
   obtain ⟨-, hUnique⟩ := Restated.proposal_in_voterTree_unique facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY
+    hgst hlen hsync hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY
     hYB
   obtain ⟨-, hfgv, -, -, -, -, -⟩ := Restated.proposalDuty_fields facts S (x[k][S.E.proposer s].st) s _ hn hD hduty
   intro Wv hWv u hu
@@ -2330,8 +2328,8 @@ theorem voterView_raw_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched 
       (le_trans (by decide) hs2) (by rw [hss]; linarith)
       (fun t ht => Restated.honestAwakeCover_of_premises facts S Sched hmono hgst hthird hphase hcs
         (by rw [hss] at ht; linarith))
-      (Restated.awakeThroughout_before_proposal facts S Sched hw hawp) (fun t ht => hprop t (by linarith)) hk
-      hnc hvc hpool hτ hτc' (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew)
+      hwinp (fun t ht => hprop t (by linarith)) hk
+      hnc hvc hpool hτ hτc' (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl)
   · -- the included case: the block is the proposal
     have hXB := hUnique X hX hXs
     rw [hXB, hfgv] at hux
@@ -2353,7 +2351,7 @@ set_option linter.unusedSectionVars false
 theorem supportFind_agree_at_views (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     {k : Nat} (hk : Restated.tickStepAt M x k (M.proposal_time S.E s))
@@ -2380,7 +2378,7 @@ theorem supportFind_agree_at_views (facts : Record.Facts M) (S : Setup V) (Sched
     have hXT := Proofs.HealingLemmas.find?_mem hX
     have hXr := Proofs.HealingLemmas.find?_root hX
     have hXv := Restated.proposalBlock_in_voterTree facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-      hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hk hv hmr hFY hXT hYX
+      hsync hthird hphase hmult hcv hcs hnW hslot hprop hk hv hmr hFY hXT hYX
     rw [← hXr]
     exact Restated.find_of_mem_tree_honest facts S Sched x hexec hvmr hXv
   · intro hX
@@ -2406,7 +2404,7 @@ set_option linter.unusedSectionVars false
 theorem proposerSupport_in_voterSupport (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
@@ -2434,10 +2432,10 @@ theorem proposerSupport_in_voterSupport (facts : Record.Facts M) (S : Setup V) (
   have _hr_0 : M.reachedNode (x[k][S.E.proposer s].st) := Record.reachedNode_sts facts S Sched x k (S.E.proposer s)
   have _hr_1 : M.reachedNode (x[mr][v].st) := Record.reachedNode_sts facts S Sched x mr v
   obtain ⟨hBv, -⟩ := Restated.proposal_in_voterTree_unique facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB
+    hlen hsync hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB
   obtain ⟨hfs, -, hfgs, -, -, -, -⟩ := Restated.proposalDuty_fields facts S (x[k][S.E.proposer s].st) s _ hn hD hduty
   have hagree := Restated.supportFind_agree_at_views facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-    hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hk hv hmr hFY
+    hsync hthird hphase hmult hcv hcs hnW hslot hprop hk hv hmr hFY
   intro Up hUp Uv hUv u hu ⟨X, hX, hYX⟩
   obtain ⟨hpool, hres⟩ := Restated.mem_proposerSupportOf facts S _ s hUp hu
   have hus : u.slot = s - 1 := Restated.slot_of_mem_pool_sts facts S Sched x k _ hpool
@@ -2472,7 +2470,7 @@ set_option linter.unusedSectionVars false
 theorem voterSupport_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
@@ -2497,6 +2495,8 @@ theorem voterSupport_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched :
       (∃ X, Block.find? (Restated.voteStoreAt M S (x[mr][v].st) s).T u.head = some X ∧ Block.Preceq Y X) →
       u ∈ Up ∨
         M.equivocates (Restated.proposerVotesOf M S (x[k][S.E.proposer s].st) s) u.val_index = true := by
+  have hwinp := Restated.proposer_window_before_proposal facts S Sched x (r := Restated.switchRound M S tE + 1)
+      (Nat.le_add_left 1 _) hslot hprop hawp hk hemit
   have _hr_0 : M.reachedNode (x[k][S.E.proposer s].st) := Record.reachedNode_sts facts S Sched x k (S.E.proposer s)
   have _hr_1 : M.reachedNode (x[mr][v].st) := Record.reachedNode_sts facts S Sched x mr v
   have hd := S.E.Δ_pos
@@ -2510,7 +2510,7 @@ theorem voterSupport_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched :
   have hs1 : ((s - 1 : Nat) : Int) = (s : Int) - 1 := nat_sub_one_cast_g2 (le_trans (by decide) hs2)
   obtain ⟨hk1, hk0⟩ := Restated.tickStepAt_time facts x hk
   obtain ⟨-, hUnique⟩ := Restated.proposal_in_voterTree_unique facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY
+    hgst hlen hsync hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY
     hYB
   obtain ⟨-, -, hfgs, -, -, -, -⟩ := Restated.proposalDuty_fields facts S (x[k][S.E.proposer s].st) s _ hn hD hduty
   have hpk : Restated.HonestThrough M Sched x k (S.E.proposer s) := fun t ht => hprop t (by linarith)
@@ -2544,13 +2544,13 @@ theorem voterSupport_at_proposal (facts : Record.Facts M) (S : Setup V) (Sched :
         (le_trans (by decide) hs2) (by rw [hss]; linarith)
         (fun t ht => Restated.honestAwakeCover_of_premises facts S Sched hmono hgst hthird hphase hcs
           (by rw [hss] at ht; linarith))
-        (Restated.awakeThroughout_before_proposal facts S Sched hw hawp) (fun t ht => hprop t (by linarith)) hk
-        hnc hvc hpool hτ hτc (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew) with hin | heqv
+        hwinp (fun t ht => hprop t (by linarith)) hk
+        hnc hvc hpool hτ hτc (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl) with hin | heqv
     · left
       have hXT := Proofs.HealingLemmas.find?_mem hX
       have hXr := Proofs.HealingLemmas.find?_root hX
       have hXp := Restated.voterBlock_in_proposalTree facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-        hsync hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hv hFY hXT hσ hσc hYX
+        hsync hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hwinp hv hFY hXT hσ hσc hYX
       have hfp := Restated.find_of_mem_tree_honest facts S Sched x hexec hpk hXp
       rw [hXr] at hfp
       obtain ⟨b₁, hb₁⟩ := facts.sto.resolved_nonempty (x[k][S.E.proposer s].st).st.core.T u
@@ -2583,7 +2583,7 @@ set_option linter.unusedSectionVars false
 theorem score_eq_at_proposal_and_vote (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hw : Restated.WakesAtActionInstants M S Sched) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {s : Slot}
     (hslot : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) ≤ s)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     (hawp : S.E.proposer s ∈ Sched.awake (M.proposal_time S.E s))
@@ -2614,15 +2614,15 @@ theorem score_eq_at_proposal_and_vote (facts : Record.Facts M) (S : Setup V) (Sc
   fun Wv hWv Uv hUv Up hUp =>
   Restated.score_eq_of_proposalViews_eqv facts
     (Restated.voterView_raw_at_proposal facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird
-      hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Wv hWv)
+      hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Wv hWv)
     (Restated.proposerVotes_subset_voterView facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync
-      hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Wv hWv)
+      hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Wv hWv)
     (Restated.proposerSupport_in_voterSupport facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync
-      hthird hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Up hUp Uv hUv)
+      hthird hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Up hUp Uv hUv)
     (Restated.voterSupport_at_proposal facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird
-      hphase hmult hcv hcs hw hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Uv hUv Up hUp)
+      hphase hmult hcv hcs hnW hslot hprop hawp hk hemit hn hD hduty hv hmr hFY hYB Uv hUv Up hUp)
     (Restated.supportFind_agree_at_views facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync
-      hthird hphase hmult hcv hcs hw hnW hslot hprop hk hv hmr hFY Up hUp)
+      hthird hphase hmult hcv hcs hnW hslot hprop hk hv hmr hFY Up hUp)
     hYC
 
 end

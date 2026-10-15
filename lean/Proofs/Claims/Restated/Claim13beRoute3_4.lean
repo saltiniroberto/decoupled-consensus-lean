@@ -72,21 +72,13 @@ private theorem st_succ_of_tick₃₄ (facts : Record.Facts M) (S : Setup V) (Sc
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched τ x[k] w' tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react hv]
     have htk := htick v hv
-    by_cases hp : (τ : Int) % S.E.Δ = 0
-    · rcases htk with htk | ⟨-, htk⟩
-      · rw [Restated.reaction_tick_of_emod facts S v ((w' v).state) hp] at htk
-        obtain ⟨out₁, hout, hres⟩ := htk
-        exact Or.inr ⟨(w' v).state, out₁, hwst, hout, by rw [hx1, hres]⟩
-      · refine Or.inl ?_
-        rw [hx1, htk]
-        exact hwst
+    rcases htk with htk | ⟨-, htk⟩
+    · rw [Restated.reaction_tick facts S v ((w' v).state)] at htk
+      obtain ⟨out₁, hout, hres⟩ := htk
+      exact Or.inr ⟨(w' v).state, out₁, hwst, hout, by rw [hx1, hres]⟩
     · refine Or.inl ?_
-      rcases htk with htk | ⟨-, htk⟩
-      · rw [Restated.reaction_tick_of_not_emod facts S v ((w' v).state) hp] at htk
-        rw [hx1, Set.mem_singleton_iff.mp htk]
-        exact hwst
-      · rw [hx1, htk]
-        exact hwst
+      rw [hx1, htk]
+      exact hwst
   · refine Or.inl ?_
     have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched τ x[k] w' tk)[v] := by rw [hc]
     rw [h2, tickAllAwakeUpdate_getElem_st_of_not_react hv]

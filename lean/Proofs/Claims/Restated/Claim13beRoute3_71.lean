@@ -209,7 +209,7 @@ theorem awake_g2_action_runAllPath (facts : Record.Facts M) (S : Setup V) (Sched
   have hnode : Record.Event.node
       (Record.Event.tick u (Restated.Vocabulary.Execution.Setup.a M S k) : Record.Event V) = u := rfl
   simp only [hnode] at hmem hcases
-  obtain ⟨τ', hl, hτ', hv, -⟩ := tick_mem_actionEventsOf hmem
+  obtain ⟨τ', hl, hτ', hv⟩ := tick_mem_actionEventsOf hmem
   rcases hcases with ⟨t', he', -, -⟩ | ⟨t', he', hb, -⟩ | ⟨o, t', he', -, -⟩
   · cases he'
   · have htt : Restated.Vocabulary.Execution.Setup.a M S k = t' := (Record.Event.tick.inj he').2

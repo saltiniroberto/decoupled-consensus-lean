@@ -268,20 +268,6 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- `activeRoundWThroughNextCountedAt S Sched r r₀ ⊆ activeRoundWThroughNext S Sched r`. -/
-theorem activeRoundWThroughNextCountedAt_subset (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (r r₀ : Nat) :
-    Restated.activeRoundWThroughNextCountedAt M S Sched r r₀ ⊆ Restated.activeRoundWThroughNext M S Sched r := by
-  unfold Restated.activeRoundWThroughNextCountedAt
-  exact Finset.sdiff_subset
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
 /-- If `w` is awake at every time from `S.a r − wAttest S` to `t`, and `S.a (r + 1) + Δ ≤ t`, then
     `w ∈ activeRoundWThroughNext S Sched r`. -/
 theorem mem_activeRoundWThroughNext_of_reader (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) {r : Nat}

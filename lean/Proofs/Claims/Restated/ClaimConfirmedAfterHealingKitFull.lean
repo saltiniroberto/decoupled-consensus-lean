@@ -69,7 +69,6 @@ theorem recordsSettledAtActionTicks_of_joint (facts : Record.Facts M) (S : Setup
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -85,7 +84,7 @@ theorem recordsSettledAtActionTicks_of_joint (facts : Record.Facts M) (S : Setup
     Restated.RecordsSettledAtActionTicks M S Sched x tE := by
   have hlen' : tGAT + Restated.healingLengthη M S gap ≤ tE := Restated.healingLength_le_of_kit_l76 facts S hlen
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult
-    hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs
+     hcv htd hcom hthird hawake hrec hsl hrs hcs
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE gap hlen hgst
     hmono hexec hsync hmult hcv hcom hthird hawake hrec
   have hclear : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
@@ -106,10 +105,10 @@ theorem recordsSettledAtActionTicks_of_joint (facts : Record.Facts M) (S : Setup
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird
+    x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcatch hcv htd hcom hthird
     hawake hrec hsl hrs hcs hlow
   exact Restated.recordsSettledAtActionTicks_of_settleTick facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen' hsync hthird hawake hrs hmult hcv hcs hcom hwakes hsleeps hrec hprev hclear hB' hnW
+    hgst hlen' hsync hthird hawake hrs hmult hcv hcs hcom hrec hprev hclear hB' hnW
     hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle
 
 end
@@ -131,7 +130,6 @@ theorem confirmedMonotoneAfterHealing_of_joint (facts : Record.Facts M) (S : Set
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -147,7 +145,7 @@ theorem confirmedMonotoneAfterHealing_of_joint (facts : Record.Facts M) (S : Set
     Restated.ConfirmedMonotoneAfterHealing M S Sched x tE := by
   have hlen' : tGAT + Restated.healingLengthη M S gap ≤ tE := Restated.healingLength_le_of_kit_l76 facts S hlen
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult
-    hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs
+     hcv htd hcom hthird hawake hrec hsl hrs hcs
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE gap hlen hgst
     hmono hexec hsync hmult hcv hcom hthird hawake hrec
   have hclear : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
@@ -168,10 +166,10 @@ theorem confirmedMonotoneAfterHealing_of_joint (facts : Record.Facts M) (S : Set
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird
+    x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcatch hcv htd hcom hthird
     hawake hrec hsl hrs hcs hlow
   exact Restated.confirmedMonotoneAfterHealing_of_settle facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen' hsync hthird hawake hrs hmult hcv hcs hcom hwakes hsleeps hrec hprev hclear hB' hnW hAW
+    hlen' hsync hthird hawake hrs hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle
 
 end
@@ -194,7 +192,6 @@ theorem claimConfirmedAfterHealing_conclusion_of_settleTick (facts : Record.Fact
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -209,13 +206,11 @@ theorem claimConfirmedAfterHealing_conclusion_of_settleTick (facts : Record.Fact
     (hsettle : Restated.RecordsSettledAtSettleTick M S Sched x tE) :
     Restated.ConfirmedAgreeAfterHealing M S Sched x tE ∧ Restated.ConfirmedMonotoneAfterHealing M S Sched x tE := by
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult
-    hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs
-  have hA := Restated.recordsSettledAtActionTicks_of_joint facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec
-    hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hsettle
+     hcv htd hcom hthird hawake hrec hsl hrs hcs
   exact ⟨Restated.confirmedAgreeAfterHealing_of_joint facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec
-      hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hlow hA,
+      hsync hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hlow hsettle,
     Restated.confirmedMonotoneAfterHealing_of_joint facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec
-      hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hsettle⟩
+      hsync hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hsettle⟩
 
 end
 

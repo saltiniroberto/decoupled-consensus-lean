@@ -453,7 +453,7 @@ theorem actionFrame_phase_preceq_of_graded (facts : Record.Facts M) (S : Setup V
       M.tick (Setup.alwaysAwake S) u (Record.wakeStage M Sched (τ : Int) x[m] u) (τ : Int) ⇢ out₁ ∧
         x[m + 1][u].st = out₁.1 := by
     rcases Restated.st_succ_of_tick_awake facts S Sched x u hl (by rw [hτ]; exact hu)
-      (by rw [hτ]; exact hdvd) with h | ⟨hno, -⟩
+      with h | ⟨hno, -⟩
     · exact h
     · obtain ⟨out, hout⟩ : ∃ out : M.N × List (NamedObject V),
           M.tick (Setup.alwaysAwake S) u (Record.wakeStage M Sched (τ : Int) x[m] u) (τ : Int) ⇢ out := by
@@ -719,7 +719,7 @@ theorem attest_covers_of_graded (facts : Record.Facts M) (S : Setup V) (Sched : 
     (M.toHealing nr.st.core) ρ
   have hg := (facts.nd.gradeContract_read nr.cache S.E S.hc _ ρ g).1 hg'
   obtain ⟨hA, hQ, hR⟩ := Restated.actionGradeRead_preceq_of_graded facts S Sched x htd hρ hn hawake hvh hgr
-    hF hroot (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew) nr hnr g hg
+    hF hroot (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl) nr hnr g hg
   have hsgP : Block.Preceq P (M.currentSGVote (M.toHealing nr.st.core) g) :=
     facts.gr.preceq_currentSGVote_of_cases hA hQ hR
   have hvhn : Restated.HonestThrough M Sched x n u := fun t ht =>
@@ -773,7 +773,7 @@ theorem attest_heightPair_compatible_of_graded (facts : Record.Facts M) (S : Set
     (M.toHealing nr.st.core) ρ
   have hg := (facts.nd.gradeContract_read nr.cache S.E S.hc _ ρ g).1 hg'
   obtain ⟨-, hQ, -⟩ := Restated.actionGradeRead_preceq_of_graded facts S Sched x htd hρ hn hawake hvh hgr
-    hF hroot (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew) nr hnr g hg
+    hF hroot (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl) nr hnr g hg
   have hvhn : Restated.HonestThrough M Sched x n u := fun t ht =>
     hvh t (le_trans ht (Restated.time_mono_int facts S Sched x (Nat.le_succ n)))
   have hRd := actionReadFrom_round_att facts S (x[n][u].st) ρ nr hnr

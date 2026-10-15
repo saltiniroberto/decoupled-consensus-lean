@@ -69,8 +69,6 @@ theorem claimStableThroughOneAsyncPeriodCommonViewAgain_holds_at (facts : Record
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (hcv : Restated.CommonViewAtGAT M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -138,11 +136,22 @@ theorem claimStableThroughOneAsyncPeriodCommonViewAgain_holds_at (facts : Record
     nlinarith
   intro v T P hvT hT hTr hva hPv
   have hH := Restated.stableHandover_of_healed_upTo facts S Sched gap hgap x tGAT tAwakeEnd b₀ b₁ hlen hgst
-    hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs
+    hmono hexec hsync hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs
     r hb₀ v T P hvT hT hTr hva hPv
-  exact Restated.stablePersists_forEver_ofHandover facts S Sched x gap hgap tE' b₀ b₁ tAgain tSafe
+  have hη : S.hc.η_SG ≤ r := by
+    have hset' : Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tAwakeEnd + 1)
+        ≤ Restated.Vocabulary.Execution.Setup.a M S r := hset
+    have hstep := Restated.action_add_delta_le_succ facts S r
+    have hd := S.E.Δ_pos
+    have hlt := Restated.round_lt_of_action_lt facts S (ρ := r + 1)
+      (lt_of_le_of_lt hset' (lt_of_lt_of_le (lt_add_of_pos_right _ hd) hstep))
+    have hp := (Restated.constants_holds facts S).period_pos
+    have hg : (0 : Int) ≤ (gap : Int) := Int.natCast_nonneg _
+    exact Restated.eta_le_of_switchRound_le facts S tGAT tAwakeEnd gap hgst (by nlinarith)
+      (Nat.le_of_succ_le (Nat.lt_succ_iff.mp hlt))
+  exact Restated.stablePersists_forEver_ofHandover (hη := hη) facts S Sched x gap hgap tE' b₀ b₁ tAgain tSafe
     (Restated.healingLengthη M S gap + ((gap : Int) + 2) * (Restated.constants M S).period) r P le_rfl hmono hexec
-    hsync hmult hwakes hsleeps hcatch htd hcom hcvAgain hsl' hrs' hcs' htE'op hgst' hb₀ hb hb₁
+    hsync hmult hcatch htd hcom hcvAgain hsl' hrs' hcs' htE'op hgst' hb₀ hb hb₁
     hfix hout hAgain hSafe hthird' hawake' hrec' v T hvT hTr hPv hH
 
 /-- `Restated.claimStableThroughOneAsyncPeriodCommonViewAgainStatement M S Sched` holds: with the
@@ -163,11 +172,11 @@ theorem claimStableThroughOneAsyncPeriodCommonViewAgain_holds (facts : Record.Fa
   have hη := Restated.healingLengthη_nonneg facts S gap
   refine ⟨Restated.healingLengthη M S gap + ((gap : Int) + 2) * (Restated.constants M S).period,
     by nlinarith, ?_⟩
-  exact fun x tGAT tAwakeEnd b₀ b₁ tAgain tSafe r hlen hgst hmono hexec hsync hmult hwakes hsleeps
+  exact fun x tGAT tAwakeEnd b₀ b₁ tAgain tSafe r hlen hgst hmono hexec hsync hmult
     hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hset hb₀ hb hb₁ hfix hout hAgain hSafe
     hthird' hawake' hrec' hcvAgain =>
     Restated.claimStableThroughOneAsyncPeriodCommonViewAgain_holds_at facts S Sched gap hgap x tGAT
-      tAwakeEnd b₀ b₁ tAgain tSafe r hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd
+      tAwakeEnd b₀ b₁ tAgain tSafe r hlen hgst hmono hexec hsync hmult hcatch hcv htd
       hcom hthird hawake hrec hsl hrs hcs hset hb₀ hb hb₁ hfix hout hAgain hSafe hthird' hawake'
       hrec' hcvAgain
 

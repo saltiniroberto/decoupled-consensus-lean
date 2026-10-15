@@ -8,6 +8,7 @@ import Model.Record.GradesFacts
 import Model.Record.HandlersFacts
 import Model.Record.DutiesFacts
 import Model.Record.NodeFacts
+import Model.Record.NodeFactsWake
 import Model.Record.EvidenceFacts
 
 /-!
@@ -67,6 +68,9 @@ structure Facts (M : Model V) : Prop where
   nd : NodeFacts M
   /-- The node's facts about runs. -/
   ndRun : NodeRunFacts M
+  /-- The node's converse awake facts: a node state that passes an awake test at a tick was awake
+      throughout the window the test names. -/
+  ndWake : NodeWakeFacts M
   /-- The evidence's facts on every input. -/
   ev : EvidenceFacts M
   /-- The evidence's facts about runs. -/

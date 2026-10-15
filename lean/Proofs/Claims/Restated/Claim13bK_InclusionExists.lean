@@ -35,13 +35,13 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- If `v` reacts at the tick step `k`, whose instant is a whole multiple of `S.E.Δ`, and `v`'s tick
+/-- If `v` reacts at the tick step `k` and `v`'s tick
     there has an outcome, then some outcome of that tick has every object of its list in the sent
     log after the step, signed by `v`. -/
 private theorem sent_of_tick_outcome_ie (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched)
     {k t : Nat} {v : V} (hl : x.lbl k = AtomicAction.tickAllAwake t)
-    (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int)) (hdvd : (t : Int) % S.E.Δ = 0)
+    (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
     (hne : ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out) :
     ∃ out : M.N × List (NamedObject V),
@@ -51,7 +51,7 @@ private theorem sent_of_tick_outcome_ie (facts : Record.Facts M) (S : Setup V) (
   rw [hl] at hs
   obtain ⟨-, w, tk, hwake, htick, hc⟩ := hs
   obtain ⟨out, hout, htkv⟩ := (priv% Proofs.Claims.Restated.RunAll
-    DecoupledConsensusModel.Sts.Restated.tick_outcome_of_step) S Sched hwake htick haw hdvd hne
+    DecoupledConsensusModel.Sts.Restated.tick_outcome_of_step) S Sched hwake htick haw hne
   refine ⟨out, hout, fun o ho => ?_⟩
   have hsent : x[k + 1].sent = x[k].sent
       + (Sched.awake (t : Int) \ Sched.adv (t : Int)).sum
@@ -97,11 +97,11 @@ theorem proposalExists_of_awake (facts : Record.Facts M) (S : Setup V) (Sched : 
       M.tick (Setup.alwaysAwake S) (S.E.proposer s)
         (Record.wakeStage M Sched (t' : Int) x[k] (S.E.proposer s)) (t' : Int) ⇢ out := by
     rw [ht']; exact hne k (by rw [ht'n]; exact hl)
-  obtain ⟨out, hout, hall⟩ := sent_of_tick_outcome_ie facts S Sched x hl haw hdvd hneK
+  obtain ⟨out, hout, hall⟩ := sent_of_tick_outcome_ie facts S Sched x hl haw hneK
   obtain ⟨B', hB'⟩ := hprop k (by rw [ht'n]; exact hl) out (by rw [← ht']; exact hout)
   have hsent := hall _ hB'
   obtain ⟨W, hW, hemits⟩ := Restated.emits_runAll_of_tick facts S Sched x (S.E.proposer s) (n := k + 1)
-    (Nat.lt_succ_self k) hl haw hdvd hout hB'
+    (Nat.lt_succ_self k) hl haw hout hB'
   have hshape := Restated.Vocabulary.Proofs.HealingSurface.emits_block_shape facts (Setup.alwaysAwake S) _
     W hW hemits
   have hslot : B'.slot = s := by
@@ -153,7 +153,6 @@ theorem proposalExistsUnique_of_awake (facts : Record.Facts M) (S : Setup V) (Sc
           Int.toNat_of_nonneg hpos
         have h := facts.ndRun.tick_outcome_sts S Sched x hvalid.idealization.root_injective hvalid.honestRootsNew k _
           (S.E.proposer s) hk
-          (by rw [hc]; exact facts.sch.proposal_time_emod_delta_inclX S.E s)
           (by rw [hc]; exact Finset.mem_sdiff.2 ⟨haw, hhon _ hpv⟩)
           (by rw [hc]; exact fun t' ht' => hhon t' (ht'.trans hpv))
         rw [hc] at h

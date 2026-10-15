@@ -291,7 +291,7 @@ theorem exists_anchor_holder_of_committee (facts : Record.Facts M) (S : Setup V)
     (slotStart_mono S (Nat.le_succ _))
   obtain ⟨v₀, hv₀⟩ : ((S.E.committee ((M.opening_slot S.hc r) + 2)) ∩
       Restated.HonSlot M S Sched ((M.opening_slot S.hc r) + 2)).Nonempty := by
-    rw [← Finset.card_pos]; omega
+    rw [Finset.inter_eq_right.2 (Restated.HonSlot_subset_committee facts S Sched _), ← Finset.card_pos]; omega
   have hv₀H := (Finset.mem_inter.mp hv₀).2
   obtain ⟨m₀, hm₀⟩ :=
     Restated.exists_tickStepAt facts x htd (facts.sch.vote_time_pos S (Nat.succ_pos ((M.opening_slot S.hc r) + 1)))
@@ -440,8 +440,7 @@ theorem confAnchorChainInTree_at_honRound_of_committee (facts : Record.Facts M) 
   have hvn : Restated.HonestThrough M Sched x n' v := fun t ht hin =>
     hvadv (hmono t _ (le_trans ht htn) hin)
   have hwaw : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1 - 2 * S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1) :=
-    awakeThroughout_mono Sched (Restated.hawT_of_honRound_succ facts S Sched hv (by linarith)) (by linarith)
-      le_rfl
+    Restated.awakeThroughout_sub_of_mem_honRound facts hv (by linarith) (by linarith)
   have hchain := fun (X : Block V) (hX : Block.Preceq X T.erase) =>
     Restated.chain_in_reader_tree_of_holder facts S Sched x hexec hsync hmult htd hmono (tR := (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1)
       hgst hcv hphase hthird hcs (Restated.delta_le_of_healingLengthη facts S hlen) hTbody hv₀h hm₀
@@ -479,8 +478,7 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
 /-- Under its premises on the execution and the phase ending at `tE`, with the invariant `hinv` at a
-    round `r` at or after the switch round with anchor `T`, the conditions `hcross` and `hjust`,
-    `WakesAtActionInstants`, and the ticks named by `hneTickVote`, `hneTick` and `hneAtt` having an
+    round `r` at or after the switch round with anchor `T`, the conditions `hcross` and `hjust`, and the ticks named by `hneTickVote`, `hneTick` and `hneAtt` having an
     outcome: every honest active member of the committee of round `r + 1`'s opening slot votes for a
     descendant of `T`'s erasure. -/
 theorem headsBelow_succ_opening_slot_at_anchor (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
@@ -503,7 +501,6 @@ theorem headsBelow_succ_opening_slot_at_anchor (facts : Record.Facts M) (S : Set
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hneTickVote : ∀ s : Slot, (M.opening_slot S.hc r) + 2 ≤ s → s ≤ (M.opening_slot S.hc (r + 1)) →
       ∀ m : Nat, Restated.tickStepAt M x m (M.vote_time S.E s) →
@@ -550,7 +547,8 @@ theorem headsBelow_succ_opening_slot_at_anchor (facts : Record.Facts M) (S : Set
     rw [Restated.confirmation_time_opening_slot facts S (r + 1)] at e3
     rw [e1]
     linarith
-  have hrange := Restated.headsBelow_range_afterPhase facts S Sched x hexec hsync hmult htd hmono hgst hcv
+  have hrange := Restated.headsBelow_range_afterPhase (hr1 := Restated.one_le_round_of_of_opening_slot_le facts S (r := r)
+      (le_trans (Restated.one_le_switchRound facts S tGAT tE gap hgst hlen) hr) (Nat.le_add_right _ 2)) facts S Sched x hexec hsync hmult htd hmono hgst hcv
     (fun t h1 h2 => hphase t h1 (le_trans h2 ht'E))
     (fun t h => hthird t (le_trans h ht'E)) hcs' ht'len
     (Restated.deliveredDescendantUnderFinalized_anchor facts S Sched x hn' hfin tGAT)
@@ -558,7 +556,7 @@ theorem headsBelow_succ_opening_slot_at_anchor (facts : Record.Facts M) (S : Set
     (s₀ := (M.opening_slot S.hc r) + 2) (s₁ := (M.opening_slot S.hc (r + 1)) - 1)
     (Nat.succ_pos _) ht's hsR
     (fun s h0 h1 => Restated.coneAnchorCompatible_range_at_anchor facts (hcross := hcross) (hjust := hjust) S Sched x tE hexec hmono htd hsync hmult
-      tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hneTick hneAtt s h0 (le_of_le_pred_nat _ _ h1))
+      tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hneTick hneAtt s h0 (le_of_le_pred_nat _ _ h1))
     (fun s h0 h1 => Restated.coneAnchorChainInTree_at_anchor_of_committee facts (hcross := hcross) S Sched x tE hexec hmono htd
       hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcs2
       (fun s' h0' h1' w hw' n'' t' hn'' hΔ hq ht' =>
@@ -579,8 +577,7 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
 /-- Under its premises on the execution and the phase ending at `tE`, with the invariant `hinv` at a
-    round `r` at or after the switch round with anchor `T`, the conditions `hcross` and `hjust`, and
-    `WakesAtActionInstants`: if `n'` is the tick step at `S.a (r + 1)`, `v` is in
+    round `r` at or after the switch round with anchor `T`, and the conditions `hcross` and `hjust`: if `n'` is the tick step at `S.a (r + 1)`, `v` is in
     `HonRound S Sched (r + 1)`, and the ticks named by `hneTickVote`, `hneTick`, `hneTickv` and
     `hneAtt` have an outcome, then the confirmed block of every store `v`'s round-`(r + 1)` action
     read can give lies on one chain with `T`'s erasure. -/
@@ -604,7 +601,6 @@ theorem confirmedOld_at_honRound (facts : Record.Facts M) (S : Setup V) (Sched :
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     {v : V} (hv : v ∈ Restated.HonRound M S Sched (r + 1))
     (hneTickVote : ∀ s : Slot, (M.opening_slot S.hc r) + 2 ≤ s → s ≤ (M.opening_slot S.hc (r + 1)) →
@@ -621,7 +617,8 @@ theorem confirmedOld_at_honRound (facts : Record.Facts M) (S : Setup V) (Sched :
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ hs ∈ Restated.actionHealingStore M S (x[n'][v].st) (r + 1),
       Block.compatible hs.live_confirmed T.erase = true := by
   intro hs hhs
@@ -676,9 +673,9 @@ theorem confirmedOld_at_honRound (facts : Record.Facts M) (S : Setup V) (Sched :
     (Restated.deliveredDescendantUnderFinalized_anchor facts S Sched x hn' hfin tGAT)
     (Restated.finalizedPreceqAtSteps_anchor facts S Sched x hn' hfin tGAT) hsE hsR hn' hv
     (Restated.headsBelow_succ_opening_slot_at_anchor facts (hcross := hcross) (hjust := hjust) S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap
-      hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hn' hneTickVote hneTick hneAtt)
+      hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hneTickVote hneTick hneAtt)
     c hc A hA
-    (Restated.confAnchor_compatible_at_honRound facts (hcross := hcross) (hjust := hjust) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen
+    (Restated.confAnchor_compatible_at_honRound (hrecvR := hrecvR) facts (hcross := hcross) (hjust := hjust) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen
       hcv hthird hphase hrsW hcs hr hinv hn' hv hneTickv hneAtt c hc A hA)
     (Restated.confAnchorChainInTree_at_honRound_of_committee facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT
       gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcs2 hn' hv hneTickv c hc A hA)

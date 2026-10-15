@@ -26,10 +26,11 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- The honest active attesters of round `r`: the members of `activeRoundW` for round `r` that the
-    adversary does not hold at round `r`'s action time. -/
+/-- The honest active attesters of round `r`: the validators the awake rule lets attest at round `r`
+    (awake at every time from one delay before round `r`'s grade-2 first cutoff to round `r`'s action
+    instant) that the adversary does not hold at that instant. -/
 def HonRound (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (r : Round) : Finset V :=
-  Restated.activeRoundW M S Sched r \ Sched.adv ((M.a S.hc S.E.Δ r))
+  Restated.attestersAt M S Sched r \ Sched.adv ((M.a S.hc S.E.Δ r))
 
 end
 

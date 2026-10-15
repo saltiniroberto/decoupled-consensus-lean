@@ -141,14 +141,14 @@ theorem honestVotes_onAnchorChain_since_roundW_upTo (facts : Record.Facts M)
   have hthr : HonestThroughTime Sched (x[n'].time : Int) b.val_index := hv'
   -- the vote is its signer's round action attestation, sent at the round's tick step `k`; its
   -- list is in the sent log after the step
-  obtain ⟨k, hkn', τ, hlbl, haw, hdvd, out, hout, hst, hmemout⟩ :=
+  obtain ⟨k, hkn', τ, hlbl, haw, out, hout, hst, hmemout⟩ :=
     Restated.tick_of_honest_signed_upTo_taken facts S Sched x b.val_index (NamedObject.attest b)
       (x[n'].time : Int) hthr hunf (by rw [author_attest]) n' le_rfl hsent
   have hsentk : (⟨b.val_index, NamedObject.attest b⟩ : SignedMsg V (NamedObject V)) ∈ x[k + 1].sent :=
-    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd
+    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw
       (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) b.val_index _ (τ : Int)) hout hst hmemout
   obtain ⟨Wr, hWr, hemits⟩ :=
-    Restated.emits_runAll_of_tick facts S Sched x b.val_index hkn' hlbl haw hdvd hout hmemout
+    Restated.emits_runAll_of_tick facts S Sched x b.val_index hkn' hlbl haw hout hmemout
   obtain ⟨-, hτ0⟩ :=
     Restated.Vocabulary.Proofs.Optimistic.emits_attest_shape facts (Setup.alwaysAwake S) Wr hWr hemits
   have hτ : (τ : Int) = (Restated.Vocabulary.Execution.Setup.a M S b.round) := hτ0
@@ -192,7 +192,7 @@ theorem honestVotes_onAnchorChain_since_roundW_upTo (facts : Record.Facts M)
       exact Restated.honestRow_le_topHonestRow facts S Sched x hunf (n₀ := k)
         ⟨b.val_index, k + 1, b, entry, tmo, le_rfl, hkhon, rfl, hsentk, hpair⟩
     have hCρ := Restated.targetsSince_of_anchorAtRound_upTo facts S Sched x hsync hmono hawake hgst hcv hvalid hawm
-      hthird hcom hlen hρD hρW (hprev _ hρ0 hρW) (hclear _ hρ0 hρW) hAρ k hk b.val_index (k + 1) b h'
+      hthird hcom htd hlen hρD hρW (hprev _ hρ0 hρW) (hclear _ hρ0 hρW) hAρ k hk b.val_index (k + 1) b h'
       entry tmo le_rfl hkhon rfl hsentk hnot hpair hh'ρ C hC hCroot
     exact preceq_trans_Preceq hCρ
       (Restated.anchorAtRound_preceq_of_le_upTo facts S Sched x hsync hmono hawake hgst hcv hvalid hawm hthird hcom

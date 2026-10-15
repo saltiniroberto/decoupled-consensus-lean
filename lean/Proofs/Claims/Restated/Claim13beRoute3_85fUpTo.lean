@@ -1104,7 +1104,6 @@ theorem hlow_of_premises_l85f_upTo (facts : Record.Facts M) (S : Setup V) (Sched
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeBefore M S x tE) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))

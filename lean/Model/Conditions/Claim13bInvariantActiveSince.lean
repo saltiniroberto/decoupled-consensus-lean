@@ -3,6 +3,7 @@ import Proofs.Vocabulary.ModelVocabulary
 import Proofs.Vocabulary.ModelVocabularyFacts
 import Model.Conditions.Claim13bInvariant
 import Model.Conditions.Claim13bInvariantActive
+import Model.Conditions.Claim13bInvariantGrade1Rule
 import Model.Conditions.Claim13bStepConeIter
 import Model.Conditions.Sts_Interface
 import Model.Conditions.Vocabulary_Model_Execution_Setup
@@ -70,16 +71,21 @@ structure AfterPhaseInvariantOverActiveSetsSince (M : Record.Model V) (S : Setup
   fin : ∀ (v : V) (n' : Nat), n' ≤ n + 1 → Restated.HonestThrough M Sched x n' v →
     Block.Preceq (x[n'][v].st).st.core.F T.erase
   /-- Every block an honest active attester of round `r` grades at least 1 for round `r`, in some
-      outcome of the grade test, at any phase whose domain time is no later than round `r`'s action
-      time, lies on one chain with the anchor. -/
+      outcome of the grade test, at any phase other than the grade-1 phase whose domain time is no
+      later than round `r`'s action time, lies on one chain with the anchor. -/
   grade1 : ∀ v ∈ Restated.HonRound M S Sched r,
-    ∀ p : Protocol.Phase, M.domain S.E S.hc r p ≤ (Restated.Vocabulary.Execution.Setup.a M S r) →
+    ∀ p : Protocol.Phase, p ≠ Protocol.Phase.g1 →
+    M.domain S.E S.hc r p ≤ (Restated.Vocabulary.Execution.Setup.a M S r) →
     ∀ m : Nat, Restated.stepBeforeInstant M x m (M.domain S.E S.hc r p) →
     ∀ B : Block V, ∀ b : Bool,
     M.gradeBool S.E (M.gradeView (M.toHealing (x[m][v].st).st.core))
         (x[m][v].st).st.core.F S.hc.η_SG r (M.early S.E S.hc r p)
         (M.late S.E S.hc r p) B ⇢ b → b = true →
     Block.compatible B T.erase = true
+  /-- Every block a grade-1 performer of round `r` (awake throughout the awake rule's grade-1
+      window of round `r`, not held at its domain instant) grades at least 1 for round `r` at the
+      grade-1 phase lies on one chain with the anchor. -/
+  grade1Performers : Restated.Grade1ClauseOverPerformers M S Sched x r T
   /-- No non-empty height vote authored and signed up to step `n + 1` by a validator honest through
       its send names a height greater than the anchor's. -/
   heightCeiling : ∀ (v : V) (n' : Nat) (a : NamedAttestation V) (h' : Height)

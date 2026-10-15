@@ -35,29 +35,14 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- At an instant that is a whole multiple of `S.E.Δ`, the tick reactions of the wiring are exactly
-    those that pass on the state and the sent objects of an outcome of the model's tick. -/
-theorem reaction_tick_of_emod (facts : Record.Facts M) (S : Setup V) (p : V) (n : M.N) {t : Int}
-    (ht : t % S.E.Δ = 0) :
+/-- At every reading, the tick reactions of the wiring are exactly those that pass on the state and
+    the sent objects of an outcome of the model's tick. -/
+theorem reaction_tick (facts : Record.Facts M) (S : Setup V) (p : V) (n : M.N) {t : Int} :
     Record.reactionsOf M S p n t Event.tick
       = { res | ∃ out₁, M.tick (Setup.alwaysAwake S) p n t ⇢ out₁ ∧
           res = { state := out₁.1,
                   send := (out₁.2 : Multiset (NamedObject V)) } } := by
-  simp only [Record.reactionsOf, if_pos ht]
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- At an instant that is not a whole multiple of `S.E.Δ`, the one tick reaction of the wiring keeps
-    the state and sends nothing. -/
-theorem reaction_tick_of_not_emod (facts : Record.Facts M) (S : Setup V) (p : V) (n : M.N) {t : Int}
-    (ht : ¬ t % S.E.Δ = 0) :
-    Record.reactionsOf M S p n t Event.tick = { { state := n, send := 0 } } := by
-  simp only [Record.reactionsOf, if_neg ht]
+  simp only [Record.reactionsOf]
 
 end
 

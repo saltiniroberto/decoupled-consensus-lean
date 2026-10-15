@@ -7,9 +7,9 @@ import Proofs.Instance.NoRaise.Routines
 import Proofs.Vocabulary.ModelVocabulary
 
 /-!
-# The fork-choice members of `Model.specDraft` and of `Model.vocabulary`
+# The fork-choice members of `Model.spec` and of `Model.vocabulary`
 
-Each theorem compares one member of the fork-choice family of `Model.specDraft` with the same member
+Each theorem compares one member of the fork-choice family of `Model.spec` with the same member
 of `Model.vocabulary`, at the same arguments and, for a member that reads a store, at a store
 `st : OkStore V` of the instance and its image. Some members are equal as functions; for the
 Goldfish fork choice every outcome is the value of `Model.vocabulary`; the views agree at `OkStore V`.
@@ -18,10 +18,10 @@ Goldfish fork choice every outcome is the value of `Model.vocabulary`; the views
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.ForkChoiceImages
+namespace SpecRecord.ForkChoiceImages
 
 open Spec
-open SpecDraftRecord.ForkChoiceGrades
+open SpecRecord.ForkChoiceGrades
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V]
@@ -1020,12 +1020,12 @@ theorem goldfish_fork_choice_at
 
 end ScoresAt
 
-end SpecDraftRecord.ForkChoiceImages
+end SpecRecord.ForkChoiceImages
 
-namespace SpecDraftRecord.ForkChoiceImages
+namespace SpecRecord.ForkChoiceImages
 
 open Spec
-open SpecDraftRecord.ForkChoiceGrades
+open SpecRecord.ForkChoiceGrades
 open DecoupledConsensusModel.Sts.Record
 open scoped DC
 
@@ -1265,10 +1265,10 @@ theorem included_votes_map (st : Store V) (s : Slot) :
     obtain ⟨v, hv, rfl⟩ := hu
     exact ⟨v, ⟨B, ⟨hB, by rw [← toProof_slot]; exact hBs⟩, hv, hus⟩, rfl⟩
 
-/-- The member `voter_view` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `voter_view` of `Model.spec` at a store `st` of the instance is the member
     `voter_view` of `Model.vocabulary` at the store's image. -/
-theorem specDraft_voter_view_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V) (s : Slot) :
-    (Model.specDraft (V := V)).voter_view E st s =
+theorem spec_voter_view_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V) (s : Slot) :
+    (Model.spec (V := V)).voter_view E st s =
       (Model.vocabulary (V := V)).voter_view E st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s := by
   obtain ⟨hst, -, -, -⟩ := st.property
   show successOutcomes (Except.map (fun votes => votes.map GoldfishVote.toProofEmb)
@@ -1289,9 +1289,9 @@ theorem specDraft_voter_view_eq (E : DecoupledConsensusModel.Env V) (st : OkStor
 
 /-! ## Equal members -/
 
-/-- The member `equivocates` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_equivocates_eq :
-    (Model.specDraft (V := V)).equivocates = (Model.vocabulary (V := V)).equivocates := by
+/-- The member `equivocates` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_equivocates_eq :
+    (Model.spec (V := V)).equivocates = (Model.vocabulary (V := V)).equivocates := by
   funext votes v
   show Protocol.equivocates (votes.map ChainStateToHandlers.goldfishVoteToSpecEmb) v =
     DecoupledConsensusModel.Protocol.equivocates votes v
@@ -1300,9 +1300,9 @@ theorem specDraft_equivocates_eq :
   ext u
   simp [ChainStateToHandlers.goldfishVoteToSpecEmb]
 
-/-- The member `votes_by` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_votes_by_eq :
-    (Model.specDraft (V := V)).votes_by = (Model.vocabulary (V := V)).votes_by := by
+/-- The member `votes_by` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_votes_by_eq :
+    (Model.spec (V := V)).votes_by = (Model.vocabulary (V := V)).votes_by := by
   funext votes v
   show (Protocol.votes_by (votes.map ChainStateToHandlers.goldfishVoteToSpecEmb) v).map
     GoldfishVote.toProofEmb = DecoupledConsensusModel.Protocol.votes_by votes v
@@ -1311,9 +1311,9 @@ theorem specDraft_votes_by_eq :
   ext u
   simp [ChainStateToHandlers.goldfishVoteToSpecEmb]
 
-/-- The member `voters_count` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_voters_count_eq :
-    (Model.specDraft (V := V)).voters_count = (Model.vocabulary (V := V)).voters_count := by
+/-- The member `voters_count` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_voters_count_eq :
+    (Model.spec (V := V)).voters_count = (Model.vocabulary (V := V)).voters_count := by
   funext E votes s
   show Protocol.raw_voters_count (votes.map voteToSpecEmb) =
     DecoupledConsensusModel.Protocol.voters_count E votes s
@@ -1321,48 +1321,48 @@ theorem specDraft_voters_count_eq :
   unfold DecoupledConsensusModel.Protocol.voters_count
   rfl
 
-/-- The member `no_second_vote_in` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_no_second_vote_in_eq :
-    (Model.specDraft (V := V)).no_second_vote_in =
+/-- The member `no_second_vote_in` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_no_second_vote_in_eq :
+    (Model.spec (V := V)).no_second_vote_in =
       (Model.vocabulary (V := V)).no_second_vote_in := by
   funext late vote
   show Protocol.no_second_vote_in (late.map voteToSpecEmb) (GoldfishVote.toSpec vote) =
     DecoupledConsensusModel.Protocol.no_second_vote_in late vote
   rw [← toProof_no_second_vote_in, map_voteToSpec_map_toProof, GoldfishVote.toProof_toSpec]
 
-/-- The member `targets_under` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_targets_under_eq :
-    (Model.specDraft (V := V)).targets_under = (Model.vocabulary (V := V)).targets_under := by
+/-- The member `targets_under` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_targets_under_eq :
+    (Model.spec (V := V)).targets_under = (Model.vocabulary (V := V)).targets_under := by
   funext T B vote
   exact successOutcomes_orVocabulary _ _ (fun _ h => targets_under_of_ok T B vote h)
 
-/-- The member `raw_supporters` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_raw_supporters_eq :
-    (Model.specDraft (V := V)).raw_supporters = (Model.vocabulary (V := V)).raw_supporters := by
+/-- The member `raw_supporters` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_raw_supporters_eq :
+    (Model.spec (V := V)).raw_supporters = (Model.vocabulary (V := V)).raw_supporters := by
   funext T votes support_votes s B
   exact successOutcomes_orVocabulary _ _
     (fun _ h => raw_supporters_of_ok T votes support_votes s B h)
 
-/-- The member `goldfish_score` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_goldfish_score_eq :
-    (Model.specDraft (V := V)).goldfish_score = (Model.vocabulary (V := V)).goldfish_score := by
+/-- The member `goldfish_score` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_goldfish_score_eq :
+    (Model.spec (V := V)).goldfish_score = (Model.vocabulary (V := V)).goldfish_score := by
   funext E T votes support_votes s B
   exact successOutcomes_orVocabulary _ _
     (fun _ h => raw_goldfish_score_of_ok E T votes support_votes s B h)
 
-/-- The member `goldfish_eligible` of `Model.specDraft` at a map `σ` to the spec's chain states
+/-- The member `goldfish_eligible` of `Model.spec` at a map `σ` to the spec's chain states
     equals that of `Model.vocabulary` at the map `fun C => (σ C).toProof`. -/
-theorem specDraft_goldfish_eligible_eq (E : DecoupledConsensusModel.Env V)
+theorem spec_goldfish_eligible_eq (E : DecoupledConsensusModel.Env V)
     (σ : DecoupledConsensusModel.Block V → Protocol.ChainState V) :
-    (Model.specDraft (V := V)).goldfish_eligible E σ =
+    (Model.spec (V := V)).goldfish_eligible E σ =
       (Model.vocabulary (V := V)).goldfish_eligible E (fun C => (σ C).toProof) := by
   funext h_max T cur votes support_votes s B
   exact successOutcomes_orVocabulary _ _
     (fun _ h => goldfish_eligible_of_ok E σ h_max T cur votes support_votes s B h)
 
-/-- The member `ghost_step` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_ghost_step_eq :
-    (Model.specDraft (V := V)).ghost_step = (Model.vocabulary (V := V)).ghost_step := by
+/-- The member `ghost_step` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_ghost_step_eq :
+    (Model.spec (V := V)).ghost_step = (Model.vocabulary (V := V)).ghost_step := by
   funext tree score eligible H
   obtain ⟨o, ho⟩ := NoRaise.ghost_step_ok
     (score := fun C : Block V => (pure (score C.toProof) : DC.DRE ℕ))
@@ -1380,9 +1380,9 @@ theorem specDraft_ghost_step_eq :
   rw [Option.map_map]
   simp [blockToSpecEmb, Function.comp_def, Model.vocabulary]
 
-/-- The member `ghost` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_ghost_eq :
-    (Model.specDraft (V := V)).ghost = (Model.vocabulary (V := V)).ghost := by
+/-- The member `ghost` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_ghost_eq :
+    (Model.spec (V := V)).ghost = (Model.vocabulary (V := V)).ghost := by
   funext B tree score eligible
   obtain ⟨X, hX⟩ := NoRaise.ghost_ok
     (score := fun C : Block V => (pure (score C.toProof) : DC.DRE ℕ))
@@ -1400,16 +1400,16 @@ theorem specDraft_ghost_eq :
   rw [Block.toProof_toSpec]
   rfl
 
-/-- Every outcome of the member `goldfish_fork_choice` of `Model.specDraft` at a map `σ` to the
+/-- Every outcome of the member `goldfish_fork_choice` of `Model.spec` at a map `σ` to the
     spec's chain states is `DecoupledConsensusModel.Protocol.goldfish_fork_choice` at the map
     `fun C => (σ C).toProof`. -/
-theorem specDraft_goldfish_fork_choice_of_returns (E : DecoupledConsensusModel.Env V)
+theorem spec_goldfish_fork_choice_of_returns (E : DecoupledConsensusModel.Env V)
     (σ : DecoupledConsensusModel.Block V → Protocol.ChainState V) (h_max : Height)
     (T : Finset (DecoupledConsensusModel.Block V)) (cur : Slot)
     (anchor : DecoupledConsensusModel.Block V) (tree : Finset (DecoupledConsensusModel.Block V))
     (votes support_votes : Finset (DecoupledConsensusModel.GoldfishVote V)) (s : Slot)
     {X : DecoupledConsensusModel.Block V}
-    (hX : (Model.specDraft (V := V)).goldfish_fork_choice E σ h_max T cur anchor tree votes
+    (hX : (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur anchor tree votes
       support_votes s ⇢ X) :
     X = DecoupledConsensusModel.Protocol.goldfish_fork_choice E (fun C => (σ C).toProof) h_max T
       cur anchor tree votes support_votes s := by
@@ -1437,47 +1437,47 @@ theorem specDraft_goldfish_fork_choice_of_returns (E : DecoupledConsensusModel.E
     unfold DecoupledConsensusModel.Protocol.goldfish_fork_choice
     rfl
 
-/-- Every outcome of the member `goldfish_fork_choice` of `Model.specDraft` is an outcome of the
+/-- Every outcome of the member `goldfish_fork_choice` of `Model.spec` is an outcome of the
     same member of `Model.vocabulary` at the mapped chain states. -/
-theorem vocabulary_returns_of_specDraft_goldfish_fork_choice (E : DecoupledConsensusModel.Env V)
+theorem vocabulary_returns_of_spec_goldfish_fork_choice (E : DecoupledConsensusModel.Env V)
     (σ : DecoupledConsensusModel.Block V → Protocol.ChainState V) (h_max : Height)
     (T : Finset (DecoupledConsensusModel.Block V)) (cur : Slot)
     (anchor : DecoupledConsensusModel.Block V) (tree : Finset (DecoupledConsensusModel.Block V))
     (votes support_votes : Finset (DecoupledConsensusModel.GoldfishVote V)) (s : Slot)
     {X : DecoupledConsensusModel.Block V}
-    (hX : (Model.specDraft (V := V)).goldfish_fork_choice E σ h_max T cur anchor tree votes
+    (hX : (Model.spec (V := V)).goldfish_fork_choice E σ h_max T cur anchor tree votes
       support_votes s ⇢ X) :
     (Model.vocabulary (V := V)).goldfish_fork_choice E (fun C => (σ C).toProof) h_max T cur anchor
       tree votes support_votes s ⇢ X := by
-  rw [specDraft_goldfish_fork_choice_of_returns E σ h_max T cur anchor tree votes support_votes s
+  rw [spec_goldfish_fork_choice_of_returns E σ h_max T cur anchor tree votes support_votes s
     hX]
   exact (returns_pure _ _).mpr rfl
 
-/-- The member `goldfish_fork_choice` of `Model.specDraft` at a map `σ` to the spec's chain states
+/-- The member `goldfish_fork_choice` of `Model.spec` at a map `σ` to the spec's chain states
     equals that of `Model.vocabulary` at the map `fun C => (σ C).toProof`. -/
-theorem specDraft_goldfish_fork_choice_eq (E : DecoupledConsensusModel.Env V)
+theorem spec_goldfish_fork_choice_eq (E : DecoupledConsensusModel.Env V)
     (σ : DecoupledConsensusModel.Block V → Protocol.ChainState V) :
-    (Model.specDraft (V := V)).goldfish_fork_choice E σ =
+    (Model.spec (V := V)).goldfish_fork_choice E σ =
       (Model.vocabulary (V := V)).goldfish_fork_choice E (fun C => (σ C).toProof) := by
   funext h_max T cur anchor tree votes support_votes s
   refine successOutcomes_orVocabulary _ _ (fun b hb => ?_)
-  apply specDraft_goldfish_fork_choice_of_returns E σ h_max T cur anchor tree votes support_votes s
+  apply spec_goldfish_fork_choice_of_returns E σ h_max T cur anchor tree votes support_votes s
   show Returns (successOutcomes (orVocabulary _ _)) b
   rw [hb]
   exact (returns_successOutcomes _ _).2 rfl
 
 /-! ## The support views, the processed tree and the voter's filtered tree -/
 
-/-- The member `view_freeze` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_view_freeze_eq :
-    (Model.specDraft (V := V)).view_freeze = (Model.vocabulary (V := V)).view_freeze := by
+/-- The member `view_freeze` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_view_freeze_eq :
+    (Model.spec (V := V)).view_freeze = (Model.vocabulary (V := V)).view_freeze := by
   funext E s
   exact (toProof_view_freeze E unreadHealConfig unreadHeightConfig s).symm
 
-/-- The member `gs_pool` of `Model.specDraft` at a store of the instance is the member `gs_pool` of
+/-- The member `gs_pool` of `Model.spec` at a store of the instance is the member `gs_pool` of
     `Model.vocabulary` at the store's image. -/
-theorem specDraft_gs_pool_eq (gs : OkStore V) (s : Slot) :
-    (Model.specDraft (V := V)).gs_pool gs s =
+theorem spec_gs_pool_eq (gs : OkStore V) (s : Slot) :
+    (Model.spec (V := V)).gs_pool gs s =
       (Model.vocabulary (V := V)).gs_pool gs.val.toProof.toHealing.toFG.toSG.toGoldfishStore s :=
   (ForkChoiceImages.image_gs_pool gs.val s).symm
 
@@ -1509,17 +1509,17 @@ theorem resolved_of_ok (T : Finset (DecoupledConsensusModel.Block V))
       rw [← Except.ok.inj h', toSpec_slot]
       rfl
 
-/-- The member `resolved` of `Model.specDraft` equals that of `Model.vocabulary`. -/
-theorem specDraft_resolved_eq :
-    (Model.specDraft (V := V)).resolved = (Model.vocabulary (V := V)).resolved := by
+/-- The member `resolved` of `Model.spec` equals that of `Model.vocabulary`. -/
+theorem spec_resolved_eq :
+    (Model.spec (V := V)).resolved = (Model.vocabulary (V := V)).resolved := by
   funext T u
   exact successOutcomes_orVocabulary _ _ (fun _ h => resolved_of_ok T u h)
 
-/-- The member `voter_processed_block_tree` of `Model.specDraft` at a store `st` of the instance is
+/-- The member `voter_processed_block_tree` of `Model.spec` at a store `st` of the instance is
     the same member of `Model.vocabulary` at the store's image. -/
-theorem specDraft_voter_processed_block_tree_eq (E : DecoupledConsensusModel.Env V)
+theorem spec_voter_processed_block_tree_eq (E : DecoupledConsensusModel.Env V)
     (st : OkStore V) (s : Slot) :
-    (Model.specDraft (V := V)).voter_processed_block_tree E st s =
+    (Model.spec (V := V)).voter_processed_block_tree E st s =
       (Model.vocabulary (V := V)).voter_processed_block_tree E
         st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s := by
   obtain ⟨hst, hT, hpar, -⟩ := st.property
@@ -1630,10 +1630,10 @@ theorem resolved_toProof_of_ok {T : Finset (Block V)} (hT : NoRaise.DistinctRoot
     rw [← Except.ok.inj h']
     simp [GoldfishVote.toProof]
 
-/-- The member `proposer_support_view` of `Model.specDraft` at a store `st` of the instance is the
+/-- The member `proposer_support_view` of `Model.spec` at a store `st` of the instance is the
     same member of `Model.vocabulary` at the store's image. -/
-theorem specDraft_proposer_support_view_eq (st : OkStore V) (s : Slot) :
-    (Model.specDraft (V := V)).proposer_support_view st s =
+theorem spec_proposer_support_view_eq (st : OkStore V) (s : Slot) :
+    (Model.spec (V := V)).proposer_support_view st s =
       (Model.vocabulary (V := V)).proposer_support_view
         st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s := by
   obtain ⟨-, hT, -, -⟩ := st.property
@@ -1702,11 +1702,11 @@ theorem bind_eq_ok {α β : Type} {x : DC.DRE α} {f : α → DC.DRE β} {v : β
   | error e => rw [hx] at h; cases h
   | ok a => rw [hx] at h; exact ⟨a, rfl, h⟩
 
-/-- The member `voter_support_view` of `Model.specDraft` at a store `st` of the instance is the same
+/-- The member `voter_support_view` of `Model.spec` at a store `st` of the instance is the same
     member of `Model.vocabulary` at the store's image. -/
-theorem specDraft_voter_support_view_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V)
+theorem spec_voter_support_view_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V)
     (s : Slot) :
-    (Model.specDraft (V := V)).voter_support_view E st s =
+    (Model.spec (V := V)).voter_support_view E st s =
       (Model.vocabulary (V := V)).voter_support_view E
         st.val.toProof.toHealing.toFG.toSG.toGoldfishStore s := by
   obtain ⟨hst, hT, hpar, -⟩ := st.property
@@ -1832,4 +1832,4 @@ theorem draft_filtered_from_mono (st : Store V) {Q Q' : Finset (Block V)} (hQ : 
   obtain ⟨⟨⟨hBQ, hF⟩, W, hW, hBW, hh⟩, hr⟩ := hB
   exact ⟨⟨⟨hQ hBQ, hF⟩, W, hQ hW, hBW, hh⟩, hr⟩
 
-end SpecDraftRecord.ForkChoiceImages
+end SpecRecord.ForkChoiceImages

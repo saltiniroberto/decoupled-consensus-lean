@@ -13,15 +13,15 @@ import Model.Record.Model
 /-!
 # Shared definitions of the member pages
 
-What the pages defining the members of `Model.specDraft` share: `successOutcomes`, the unread
+What the pages defining the members of `Model.spec` share: `successOutcomes`, the unread
 configurations, the grade clipping tested on block images, the fill of pending grade results,
 `orVocabulary`, and the spec's block admission split into its parts in the namespace
-`SpecDraftRecord.Handlers`.
+`SpecRecord.Handlers`.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 open scoped DC
@@ -315,4 +315,4 @@ def admitCarried (before after : Store V) (B : Block V) : Store V :=
 
 end Handlers
 
-end SpecDraftRecord
+end SpecRecord

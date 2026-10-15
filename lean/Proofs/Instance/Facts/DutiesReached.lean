@@ -5,16 +5,16 @@ import Proofs.Instance.Facts.NonEmpty
 import Proofs.Instance.Equalities.ContractImages
 
 /-!
-# Duty facts at reached stores of `Model.specDraft`
+# Duty facts at reached stores of `Model.spec`
 
-Fields of `DutiesFacts`, `NodeFacts` and `HandlersFacts` at `Model.specDraft` that hold at a store a
+Fields of `DutiesFacts`, `NodeFacts` and `HandlersFacts` at `Model.spec` that hold at a store a
 run reaches. There, reading the store through its tree is the identity, and a duty's store is the
 store that received the object the duty sent, with the contract written in.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.DutiesReached
+namespace SpecRecord.DutiesReached
 
 open Spec
 open scoped DC
@@ -85,12 +85,12 @@ theorem goldfish_vote_out [Fintype V] {C : Config} {P : Provisional V} {v : V} {
     subst h
     exact Or.inr ⟨rfl, rfl⟩
 
-end SpecDraftRecord.DutiesReached
+end SpecRecord.DutiesReached
 
-namespace SpecDraftRecord.DutiesReached
+namespace SpecRecord.DutiesReached
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.ContractImages
+open SpecRecord.ContractImages
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -102,8 +102,8 @@ theorem propose_out {contract : Spec.SavedGrades V} {E : Env V}
     {hc : Protocol.HealConfig} {cfg : Protocol.HeightConfig} {nd : Protocol.Node V}
     {st : OkStore V} (hinv : SubtypeEqualities.RunStoreInv st.val)
     (hconf : HandlersRunFacts.ConfirmedInTree st.val)
-    {D : (Model.specDraft (V := V)).NS × Option (NamedBlock V)}
-    (hD : (Model.specDraft (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D) :
+    {D : (Model.spec (V := V)).NS × Option (NamedBlock V)}
+    (hD : (Model.spec (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D) :
     ∃ B' : Spec.Block V, D.2 = some B'.toProofNamed ∧
       D.1.val = { Spec.Protocol.on_block (Spec.Config.toSpec E hc cfg)
         (Spec.Provisional.toSpec E) st.val B' with saved_grades := contract } := by
@@ -118,7 +118,7 @@ theorem on_block_with_val {E : Env V} {hc : Protocol.HealConfig} {cfg : Protocol
     (st : OkStore V) (B' : Spec.Block V)
     (hd : NoRaise.DistinctRoots (Spec.Protocol.on_block (Spec.Config.toSpec E hc cfg)
         (Spec.Provisional.toSpec E) st.val B').T) :
-    ((Model.specDraft (V := V)).on_block_with .alsoCarried E hc cfg st B'.toProofNamed).val =
+    ((Model.spec (V := V)).on_block_with .alsoCarried E hc cfg st B'.toProofNamed).val =
       Spec.Protocol.on_block (Spec.Config.toSpec E hc cfg)
         (Spec.Provisional.toSpec E) st.val B' := by
   show (OkMember.on_block_with .alsoCarried E hc cfg st B'.toProofNamed).val = _
@@ -138,8 +138,8 @@ theorem attest_out {contract : Spec.SavedGrades V} {E : Env V}
     {hc : Protocol.HealConfig} {nd : Protocol.Node V} {st : OkStore V}
     (hinv : SubtypeEqualities.RunStoreInv st.val)
     (hconf : HandlersRunFacts.ConfirmedInTree st.val) {record : Spec.SigningHistory}
-    {D : (Model.specDraft (V := V)).NS × (Model.specDraft (V := V)).NR × NamedAttestation V}
-    (hD : (Model.specDraft (V := V)).duties_attest_with contract E hc nd st record ⇢ D) :
+    {D : (Model.spec (V := V)).NS × (Model.spec (V := V)).NR × NamedAttestation V}
+    (hD : (Model.spec (V := V)).duties_attest_with contract E hc nd st record ⇢ D) :
     ∃ p, Spec.Protocol.build_attestation (Spec.Config.toSpec E hc unreadHeightConfig)
         nd.val_index { Spec.Store.ofImage st.val with saved_grades := fill (Spec.Protocol.advance_to_round
           (st.val.contractOfImage contract) ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) }
@@ -158,8 +158,8 @@ theorem vote_out {contract : Spec.SavedGrades V} {E : Env V}
     {hc : Protocol.HealConfig} {nd : Protocol.Node V} {st : OkStore V}
     (hinv : SubtypeEqualities.RunStoreInv st.val)
     (hconf : HandlersRunFacts.ConfirmedInTree st.val)
-    {D : (Model.specDraft (V := V)).NS × Option (GoldfishVote V)}
-    (hD : (Model.specDraft (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D) :
+    {D : (Model.spec (V := V)).NS × Option (GoldfishVote V)}
+    (hD : (Model.spec (V := V)).duties_goldfish_vote_with contract E hc nd st ⇢ D) :
     (∃ u : Spec.GoldfishVote V, D.2 = some u.toProof ∧
       D.1.val = { Spec.Protocol.on_goldfish_vote_checked (Spec.Provisional.toSpec E)
         st.val u with saved_grades := contract }) ∨
@@ -181,11 +181,11 @@ theorem vote_out {contract : Spec.SavedGrades V} {E : Env V}
       rfl
     · rw [e1, hs, ofImage_eq_of_inv hinv hconf]
 
-end SpecDraftRecord.DutiesReached
+end SpecRecord.DutiesReached
 
 namespace DecoupledConsensusModel.Sts.Record
 
-open SpecDraftRecord
+open SpecRecord
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
@@ -209,12 +209,12 @@ open Protocol
 open DecoupledConsensusModel.Protocol
 open Protocol (HeightConfig)
 
-/-- At `Model.specDraft`, if the proposal duty at a reached store `st` sends `B`, its outcome is the
+/-- At `Model.spec`, if the proposal duty at a reached store `st` sends `B`, its outcome is the
     store that received `B` with the contract's cache written in, and `B`. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_eq_of_snd :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) {B : NamedBlock V}
-      (D : (Model.specDraft (V := V)).NS × Option (NamedBlock V)) (hD : (Model.specDraft (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D)
-      (h : D.2 = some B) (hn : (Model.specDraft (V := V)).reachedStore st), D = ((Model.specDraft (V := V)).store_with_cache ((Model.specDraft (V := V)).on_block_with .alsoCarried E hc cfg st B) ((Model.specDraft (V := V)).contractCache contract), some B) := by
+theorem _root_.SpecRecord.DutiesFacts.spec_propose_block_with_eq_of_snd :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) {B : NamedBlock V}
+      (D : (Model.spec (V := V)).NS × Option (NamedBlock V)) (hD : (Model.spec (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D)
+      (h : D.2 = some B) (hn : (Model.spec (V := V)).reachedStore st), D = ((Model.spec (V := V)).store_with_cache ((Model.spec (V := V)).on_block_with .alsoCarried E hc cfg st B) ((Model.spec (V := V)).contractCache contract), some B) := by
   intro contract E hc cfg nd st B D hD h hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   obtain ⟨B', h2, h1⟩ := DutiesReached.propose_out hinv hconf hD
@@ -229,31 +229,31 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_eq_of_sn
   simp only at h1 h2
   subst h2
   refine Prod.ext (Subtype.ext ?_) rfl
-  show D1.val = { ((Model.specDraft (V := V)).on_block_with .alsoCarried E hc cfg st B'.toProofNamed).val with saved_grades := contract }
+  show D1.val = { ((Model.spec (V := V)).on_block_with .alsoCarried E hc cfg st B'.toProofNamed).val with saved_grades := contract }
   rw [h1, DutiesReached.on_block_with_val st B' hd]
 
-/-- At `Model.specDraft`, if the proposal read at a reached store `st` answers the block `B`, the
+/-- At `Model.spec`, if the proposal read at a reached store `st` answers the block `B`, the
     store of every outcome of the proposal duty is the store that received `B`, with the contract's
     cache written in. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_fst_of_some :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) {B : NamedBlock V}
-      (o : Option (NamedBlock V)) (ho : (Model.specDraft (V := V)).proposal_with contract .poolAndCarried E hc nd st ⇢ o) (h : o = some B)
-      (D : (Model.specDraft (V := V)).NS × Option (NamedBlock V)) (hD : (Model.specDraft (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D)
-      (hn : (Model.specDraft (V := V)).reachedStore st),
-      D.1 = (Model.specDraft (V := V)).store_with_cache ((Model.specDraft (V := V)).on_block_with .alsoCarried E hc cfg st B) ((Model.specDraft (V := V)).contractCache contract) := by
+theorem _root_.SpecRecord.DutiesFacts.spec_propose_block_with_fst_of_some :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (cfg : Protocol.HeightConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) {B : NamedBlock V}
+      (o : Option (NamedBlock V)) (ho : (Model.spec (V := V)).proposal_with contract .poolAndCarried E hc nd st ⇢ o) (h : o = some B)
+      (D : (Model.spec (V := V)).NS × Option (NamedBlock V)) (hD : (Model.spec (V := V)).duties_propose_block_with contract E hc cfg nd st ⇢ D)
+      (hn : (Model.spec (V := V)).reachedStore st),
+      D.1 = (Model.spec (V := V)).store_with_cache ((Model.spec (V := V)).on_block_with .alsoCarried E hc cfg st B) ((Model.spec (V := V)).contractCache contract) := by
   intro contract E hc cfg nd st B o ho h D hD hn
-  have h2 := SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_snd_of_some contract E hc cfg nd
+  have h2 := SpecRecord.DutiesFacts.spec_propose_block_with_snd_of_some contract E hc cfg nd
     st o ho h D hD
-  rw [SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_eq_of_snd contract E hc cfg nd st D hD
+  rw [SpecRecord.DutiesFacts.spec_propose_block_with_eq_of_snd contract E hc cfg nd st D hD
     h2 hn]
 
-/-- At `Model.specDraft`, the store of an outcome `D` of the attestation duty at a reached store
+/-- At `Model.spec`, the store of an outcome `D` of the attestation duty at a reached store
     `st` is `st` after admitting `D`'s attestation, with the contract's cache written in. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_namedDuties_attest_with_fst :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) (record : (Model.specDraft (V := V)).NR)
-      (D : (Model.specDraft (V := V)).NS × (Model.specDraft (V := V)).NR × NamedAttestation V) (hD : (Model.specDraft (V := V)).duties_attest_with contract E hc nd st record ⇢ D)
-      (hn : (Model.specDraft (V := V)).reachedStore st),
-      D.1 = (Model.specDraft (V := V)).store_with_cache ((Model.specDraft (V := V)).admit_row hc st D.2.2) ((Model.specDraft (V := V)).contractCache contract) := by
+theorem _root_.SpecRecord.DutiesFacts.spec_namedDuties_attest_with_fst :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) (record : (Model.spec (V := V)).NR)
+      (D : (Model.spec (V := V)).NS × (Model.spec (V := V)).NR × NamedAttestation V) (hD : (Model.spec (V := V)).duties_attest_with contract E hc nd st record ⇢ D)
+      (hn : (Model.spec (V := V)).reachedStore st),
+      D.1 = (Model.spec (V := V)).store_with_cache ((Model.spec (V := V)).admit_row hc st D.2.2) ((Model.spec (V := V)).contractCache contract) := by
   intro contract E hc nd st record D hD hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   obtain ⟨p, -, h1, h2⟩ := DutiesReached.attest_out hinv hconf hD
@@ -265,15 +265,15 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_namedDuties_attest_with_fst
   rw [Spec.Attestation.toSpecNamed_toProofNamed]
   rfl
 
-/-- At `Model.specDraft`, the store of an outcome of the attestation duty at a reached store `st` is
+/-- At `Model.spec`, the store of an outcome of the attestation duty at a reached store `st` is
     `st` after admitting the attestation of any outcome `A` of the round action, with the contract's
     cache written in. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_namedDuties_attest_with_fst_eq_round_action :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) (record : (Model.specDraft (V := V)).NR)
-      (D : (Model.specDraft (V := V)).NS × (Model.specDraft (V := V)).NR × NamedAttestation V) (hD : (Model.specDraft (V := V)).duties_attest_with contract E hc nd st record ⇢ D)
-      (A : (Model.specDraft (V := V)).NR × NamedAttestation V) (hA : (Model.specDraft (V := V)).round_action_with contract E hc nd ((Model.specDraft (V := V)).toHealing st.core) record ⇢ A)
-      (hn : (Model.specDraft (V := V)).reachedStore st),
-      D.1 = (Model.specDraft (V := V)).store_with_cache ((Model.specDraft (V := V)).admit_row hc st A.2) ((Model.specDraft (V := V)).contractCache contract) := by
+theorem _root_.SpecRecord.DutiesFacts.spec_namedDuties_attest_with_fst_eq_round_action :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) (record : (Model.spec (V := V)).NR)
+      (D : (Model.spec (V := V)).NS × (Model.spec (V := V)).NR × NamedAttestation V) (hD : (Model.spec (V := V)).duties_attest_with contract E hc nd st record ⇢ D)
+      (A : (Model.spec (V := V)).NR × NamedAttestation V) (hA : (Model.spec (V := V)).round_action_with contract E hc nd ((Model.spec (V := V)).toHealing st.core) record ⇢ A)
+      (hn : (Model.spec (V := V)).reachedStore st),
+      D.1 = (Model.spec (V := V)).store_with_cache ((Model.spec (V := V)).admit_row hc st A.2) ((Model.spec (V := V)).contractCache contract) := by
   intro contract E hc nd st record D hD A hA hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   obtain ⟨p, hp, -, h2⟩ := DutiesReached.attest_out hinv hconf hD
@@ -282,7 +282,7 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_namedDuties_attest_with_fst
   subst e
   have hA2 : A.2 = D.2.2 := by rw [hA', h2]
   rw [hA2]
-  exact SpecDraftRecord.DutiesFacts.specDraft_namedDuties_attest_with_fst contract E hc nd st record
+  exact SpecRecord.DutiesFacts.spec_namedDuties_attest_with_fst contract E hc nd st record
     D hD hn
 
 /-! ## The two case fields of `NodeFacts` -/
@@ -290,40 +290,40 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_namedDuties_attest_with_fst
 open DecoupledConsensusModel.Execution
 open scoped DC
 
-/-- At `Model.specDraft`, the proposal duty at a reached store either keeps the store, writing the
+/-- At `Model.spec`, the proposal duty at a reached store either keeps the store, writing the
     contract's cache, and sends nothing, or sends a block `B` and returns the store that received
     `B`, writing the contract's cache. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_named_propose_cases :
-    ∀ (S : DecoupledConsensusModel.Execution.Setup V) (gc : (Model.specDraft (V := V)).Contract) (nd : DecoupledConsensusModel.Protocol.Node V) (st : (Model.specDraft (V := V)).NS)
-      (out : (Model.specDraft (V := V)).NS × Option (NamedBlock V)), (Model.specDraft (V := V)).duties_propose_block_with gc S.E S.hc S.cfg nd st ⇢ out →
-      ∀ (hn : (Model.specDraft (V := V)).reachedStore st),
-      out = ((Model.specDraft (V := V)).store_with_cache st ((Model.specDraft (V := V)).contractCache gc), Option.none) ∨ ∃ B, out = ((Model.specDraft (V := V)).store_with_cache ((Model.specDraft (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.block B)) ((Model.specDraft (V := V)).contractCache gc), Option.some B) := by
+theorem _root_.SpecRecord.NodeFacts.spec_named_propose_cases :
+    ∀ (S : DecoupledConsensusModel.Execution.Setup V) (gc : (Model.spec (V := V)).Contract) (nd : DecoupledConsensusModel.Protocol.Node V) (st : (Model.spec (V := V)).NS)
+      (out : (Model.spec (V := V)).NS × Option (NamedBlock V)), (Model.spec (V := V)).duties_propose_block_with gc S.E S.hc S.cfg nd st ⇢ out →
+      ∀ (hn : (Model.spec (V := V)).reachedStore st),
+      out = ((Model.spec (V := V)).store_with_cache st ((Model.spec (V := V)).contractCache gc), Option.none) ∨ ∃ B, out = ((Model.spec (V := V)).store_with_cache ((Model.spec (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.block B)) ((Model.spec (V := V)).contractCache gc), Option.some B) := by
   intro S gc nd st out h₁ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   obtain ⟨B', h2, -⟩ := DutiesReached.propose_out hinv hconf h₁
   refine Or.inr ⟨B'.toProofNamed, ?_⟩
-  rw [SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_eq_of_snd gc S.E S.hc S.cfg nd st out
+  rw [SpecRecord.DutiesFacts.spec_propose_block_with_eq_of_snd gc S.E S.hc S.cfg nd st out
     h₁ h2 hn]
   rfl
 
-/-- At `Model.specDraft`, the Goldfish vote duty at a reached store either keeps the store, writing
+/-- At `Model.spec`, the Goldfish vote duty at a reached store either keeps the store, writing
     the contract's cache, and sends nothing, or sends a vote `u` and returns the store that received
     `u`, writing the contract's cache. -/
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_named_vote_cases :
-    ∀ (S : DecoupledConsensusModel.Execution.Setup V) (gc : (Model.specDraft (V := V)).Contract) (nd : DecoupledConsensusModel.Protocol.Node V) (st : (Model.specDraft (V := V)).NS)
-      (out : (Model.specDraft (V := V)).NS × Option (GoldfishVote V)), (Model.specDraft (V := V)).duties_goldfish_vote_with gc S.E S.hc nd st ⇢ out →
-      ∀ (hn : (Model.specDraft (V := V)).reachedStore st),
-      out = ((Model.specDraft (V := V)).store_with_cache st ((Model.specDraft (V := V)).contractCache gc), Option.none) ∨ ∃ u, out = ((Model.specDraft (V := V)).store_with_cache ((Model.specDraft (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u)) ((Model.specDraft (V := V)).contractCache gc), Option.some u) := by
+theorem _root_.SpecRecord.NodeFacts.spec_named_vote_cases :
+    ∀ (S : DecoupledConsensusModel.Execution.Setup V) (gc : (Model.spec (V := V)).Contract) (nd : DecoupledConsensusModel.Protocol.Node V) (st : (Model.spec (V := V)).NS)
+      (out : (Model.spec (V := V)).NS × Option (GoldfishVote V)), (Model.spec (V := V)).duties_goldfish_vote_with gc S.E S.hc nd st ⇢ out →
+      ∀ (hn : (Model.spec (V := V)).reachedStore st),
+      out = ((Model.spec (V := V)).store_with_cache st ((Model.spec (V := V)).contractCache gc), Option.none) ∨ ∃ u, out = ((Model.spec (V := V)).store_with_cache ((Model.spec (V := V)).receipt_process S st (DecoupledConsensusModel.Execution.NamedObject.gfVote u)) ((Model.spec (V := V)).contractCache gc), Option.some u) := by
   intro S gc nd st out h₁ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   rcases DutiesReached.vote_out hinv hconf h₁ with ⟨u, h2, h1⟩ | ⟨h2, h1⟩
   · refine Or.inr ⟨u.toProof, Prod.ext (Subtype.ext ?_) h2⟩
-    have e : ((Model.specDraft (V := V)).receipt_process S st (.gfVote u.toProof)).val =
+    have e : ((Model.spec (V := V)).receipt_process S st (.gfVote u.toProof)).val =
         Member.receipt_process S st.val (.gfVote u.toProof) := by
       show (OkMember.receipt_process S st (.gfVote u.toProof)).val = _
       unfold OkMember.receipt_process
       rw [dif_neg (show ¬ objectRootHeldByOther st.val.T (.gfVote u.toProof) from fun h => h.elim)]
-    show out.1.val = { ((Model.specDraft (V := V)).receipt_process S st (.gfVote u.toProof)).val with
+    show out.1.val = { ((Model.spec (V := V)).receipt_process S st (.gfVote u.toProof)).val with
       saved_grades := gc }
     rw [e, h1]
     show _ = { Spec.Protocol.on_goldfish_vote_checked (Spec.Provisional.toSpec S.E)
@@ -333,13 +333,13 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_named_vote_cases :
 
 end DecoupledConsensusModel.Sts.Record
 
-namespace SpecDraftRecord.DutiesReached
+namespace SpecRecord.DutiesReached
 
 /-! ## The core block call and the checked handler -/
 
 open Spec
-open SpecDraftRecord.NoRaise
-open SpecDraftRecord.SubtypeEqualities
+open SpecRecord.NoRaise
+open SpecRecord.SubtypeEqualities
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V]
@@ -602,11 +602,11 @@ theorem core_image_eq [Inhabited V] (E : DecoupledConsensusModel.Env V)
         · rw [hXpar, ← hYpar, ← hslot]; exact not_le.mp h6
       · rfl
 
-end SpecDraftRecord.DutiesReached
+end SpecRecord.DutiesReached
 
 namespace DecoupledConsensusModel.Sts.Record
 
-open SpecDraftRecord
+open SpecRecord
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
@@ -639,17 +639,17 @@ open DecoupledConsensusModel.Protocol
 open Protocol (HeightConfig)
 open scoped DC
 
-/-- At `Model.specDraft`, if the named parent of `B` is among the named blocks of a reached store
+/-- At `Model.spec`, if the named parent of `B` is among the named blocks of a reached store
     `st`, the core block call's store and the checked handler's store have one image. -/
-theorem _root_.SpecDraftRecord.HandlersFacts.specDraft_process_block_core_of_parent_mem :
+theorem _root_.SpecRecord.HandlersFacts.spec_process_block_core_of_parent_mem :
     ∀ (E : Env V) (hc : Protocol.HealConfig)
-      (cfg : Protocol.HeightConfig) {st : (Model.specDraft (V := V)).NS} {B : NamedBlock V}, B.parent ∈ st.bodies →
-      ∀ (hn : (Model.specDraft (V := V)).reachedStore st),
-      (Model.specDraft (V := V)).sameCore ((Model.specDraft (V := V)).ns_process_block_core E hc cfg st B).core
-        ((Model.specDraft (V := V)).commitBlock st
-          ((Model.specDraft (V := V)).on_block_checked_using
-            (fun current => (Model.specDraft (V := V)).on_block_using E current B.erase
-              (fun ps => (Model.specDraft (V := V)).named_transition E cfg ps B)) hc st.core B.erase) B).core := by
+      (cfg : Protocol.HeightConfig) {st : (Model.spec (V := V)).NS} {B : NamedBlock V}, B.parent ∈ st.bodies →
+      ∀ (hn : (Model.spec (V := V)).reachedStore st),
+      (Model.spec (V := V)).sameCore ((Model.spec (V := V)).ns_process_block_core E hc cfg st B).core
+        ((Model.spec (V := V)).commitBlock st
+          ((Model.spec (V := V)).on_block_checked_using
+            (fun current => (Model.spec (V := V)).on_block_using E current B.erase
+              (fun ps => (Model.spec (V := V)).named_transition E cfg ps B)) hc st.core B.erase) B).core := by
   intro E hc cfg st B h₁ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
   exact DutiesReached.core_image_eq E hc cfg st hinv B h₁
@@ -658,7 +658,7 @@ end DecoupledConsensusModel.Sts.Record
 
 namespace DecoupledConsensusModel.Sts.Record
 
-open SpecDraftRecord
+open SpecRecord
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
@@ -682,21 +682,21 @@ open Protocol
 open DecoupledConsensusModel.Protocol
 open Protocol (HeightConfig)
 
-/-- At `Model.specDraft`, if the proposal duty at a reached store `st` proposes `B`, then `B`'s
+/-- At `Model.spec`, if the proposal duty at a reached store `st` proposes `B`, then `B`'s
     parent is a named block of `st`, `B` has the parent, slot, root, votes, support votes and
     proposer of every outcome `input` of the proposal input, and its attestations are those
     `proposalRows` keeps on `B`'s parent of every outcome `L` of the selection. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_proposal_payload :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (source : Protocol.ProposalRowSource) (E : Env V)
-      (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS) (B : NamedBlock V)
-      (o : Option (NamedBlock V)), (Model.specDraft (V := V)).proposal_with contract source E hc nd st ⇢ o → o = some B →
-      ∀ input : Protocol.ProposalInput V, (Model.specDraft (V := V)).with_proposal_input contract E hc nd ((Model.specDraft (V := V)).toHealing st.core) id ⇢ input →
-      ∀ L : List (NamedAttestation V), (Model.specDraft (V := V)).select source hc st ⇢ L →
-      ∀ (hn : (Model.specDraft (V := V)).reachedStore st),
+theorem _root_.SpecRecord.DutiesFacts.spec_proposal_payload :
+    ∀ (contract : (Model.spec (V := V)).Contract) (source : Protocol.ProposalRowSource) (E : Env V)
+      (hc : Protocol.HealConfig) (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS) (B : NamedBlock V)
+      (o : Option (NamedBlock V)), (Model.spec (V := V)).proposal_with contract source E hc nd st ⇢ o → o = some B →
+      ∀ input : Protocol.ProposalInput V, (Model.spec (V := V)).with_proposal_input contract E hc nd ((Model.spec (V := V)).toHealing st.core) id ⇢ input →
+      ∀ L : List (NamedAttestation V), (Model.spec (V := V)).select source hc st ⇢ L →
+      ∀ (hn : (Model.spec (V := V)).reachedStore st),
       B.parent ∈ st.bodies ∧ B.parent.erase = input.parent ∧
       B.slot = input.slot ∧ B.root = input.root ∧
       B.gf_votes = input.gf_votes ∧ B.gf_support_votes = input.gf_support_votes ∧
-      B.attestations = (Model.specDraft (V := V)).proposalRows B.parent L ∧
+      B.attestations = (Model.spec (V := V)).proposalRows B.parent L ∧
       B.proposer? = some input.proposer := by
   intro contract source E hc nd st B o h₁ h₂ input h₃ L h₄ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedStore_elim hn
@@ -737,11 +737,11 @@ end DecoupledConsensusModel.Sts.Record
 ## The fields `update_confirmation_with_toHealing_gradeView` and `propose_block_with_nonempty`
 -/
 
-namespace SpecDraftRecord.DutiesReached
+namespace SpecRecord.DutiesReached
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NodeFacts
+open SpecRecord.NodeFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -825,13 +825,13 @@ theorem tick_detail {C : Spec.Config} {P : Spec.Provisional V}
     obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h4
     exact ⟨rfl, rfl, rfl⟩
 
-end SpecDraftRecord.DutiesReached
+end SpecRecord.DutiesReached
 
-namespace SpecDraftRecord.DutiesReached
+namespace SpecRecord.DutiesReached
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NodeFacts SpecDraftRecord.NoRaise SpecDraftRecord.GradesRunFacts
+open SpecRecord.NodeFacts SpecRecord.NoRaise SpecRecord.GradesRunFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -879,16 +879,16 @@ theorem claim_of_contractInTree {T : Finset (Spec.Block V)}
 /-- For an outcome `c` of `onPhaseTick` at `t` on a reached node state, the spec's grades update of
     the tick at `t` on the node's store answers a store whose saved grades are `c`, at the round of
     `t`'s slot and holding blocks of the node's tree only. -/
-theorem onPhaseTick_eq (S : Setup V) (n : (Model.specDraft (V := V)).N) (t : Time)
-    (hn : (Model.specDraft (V := V)).reachedNode n) {c : (Model.specDraft (V := V)).Cache}
-    (hc : (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c) :
+theorem onPhaseTick_eq (S : Setup V) (n : (Model.spec (V := V)).N) (t : Time)
+    (hn : (Model.spec (V := V)).reachedNode n) {c : (Model.spec (V := V)).Cache}
+    (hc : (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c) :
     ∃ st0 : Spec.Store V,
       Spec.Protocol.update_grades (Setup.toSpec S).C (Setup.toSpec S).P n.val.st t =
         .ok st0 ∧ c = st0.saved_grades ∧
       st0 = { n.val.st with saved_grades := c } ∧
       c.round = (Setup.toSpec S).C.round_of ((Setup.toSpec S).C.slotOf t) ∧
       Spec.Store.ContractInTree n.val.st.T c := by
-  obtain ⟨st0, h0, rfl, -⟩ := SpecDraftRecord.GradesFacts.sd_onPhaseTick_ok hc
+  obtain ⟨st0, h0, rfl, -⟩ := SpecRecord.GradesFacts.sd_onPhaseTick_ok hc
   have h0' : Spec.Protocol.update_grades (Setup.toSpec S).C (Setup.toSpec S).P
       n.val.st t = .ok st0 := h0
   obtain ⟨e0, hr⟩ := update_grades_ok h0'
@@ -909,13 +909,13 @@ theorem propose_block_external {C : Spec.Config} {P : Spec.Provisional V}
   rw [h]
 
 
-end SpecDraftRecord.DutiesReached
+end SpecRecord.DutiesReached
 
-namespace SpecDraftRecord.DutiesReached
+namespace SpecRecord.DutiesReached
 
 open DecoupledConsensusModel DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NodeFacts SpecDraftRecord.NoRaise
+open SpecRecord.NodeFacts SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -956,19 +956,19 @@ theorem tick_T_after_proposal {C : Spec.Config} {P : Spec.Provisional V}
   rw [e, ← h3, ← h4]
   exact h5
 
-/-- At `Model.specDraft`, at a proposal time of a reached node state running as its proposer, the
+/-- At `Model.spec`, at a proposal time of a reached node state running as its proposer, the
     proposal duty has an outcome. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_nonempty :
-    ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Time)
-      (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
-      (hs : 0 < S.E.slotOf t) (ht : t = (Model.specDraft (V := V)).proposal_time S.E (S.E.slotOf t))
+theorem _root_.SpecRecord.DutiesFacts.spec_propose_block_with_nonempty :
+    ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Time)
+      (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
+      (hs : 0 < S.E.slotOf t) (ht : t = (Model.spec (V := V)).proposal_time S.E (S.E.slotOf t))
       (hv : S.E.proposer (S.E.slotOf t) = v)
-      (hawake : (Model.specDraft (V := V)).awake_for_grade1 S v n ((Model.specDraft (V := V)).round_of S.hc (S.E.slotOf t)))
-      (c : (Model.specDraft (V := V)).Cache) (hc : (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
-      (hn : (Model.specDraft (V := V)).reachedNode n) (hruns : (Model.specDraft (V := V)).runs_as n v),
-      ∃ D : (Model.specDraft (V := V)).NS × Option (NamedBlock V),
-        (Model.specDraft (V := V)).duties_propose_block_with ((Model.specDraft (V := V)).frameContract c) S.E S.hc S.cfg (S.node v)
-          ((Model.specDraft (V := V)).ns_setClock S.E n.st t) ⇢ D := by
+      (hawake : (Model.spec (V := V)).awake_for_grade1 S v n ((Model.spec (V := V)).round_of S.hc (S.E.slotOf t)))
+      (c : (Model.spec (V := V)).Cache) (hc : (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
+      (hn : (Model.spec (V := V)).reachedNode n) (hruns : (Model.spec (V := V)).runs_as n v),
+      ∃ D : (Model.spec (V := V)).NS × Option (NamedBlock V),
+        (Model.spec (V := V)).duties_propose_block_with ((Model.spec (V := V)).frameContract c) S.E S.hc S.cfg (S.node v)
+          ((Model.spec (V := V)).ns_setClock S.E n.st t) ⇢ D := by
   intro S v n t out hout hs ht hv hawake c hc hn hruns
   have hruns' : n.val.v = v := hruns
   obtain ⟨sent, hrun, -⟩ := NodeFacts.tick_out S v n t out hout
@@ -987,7 +987,7 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_nonempty
   have est : st0' = st0 := Except.ok.inj (h0'.symm.trans h0)
   rw [est] at e0 hc0
   obtain ⟨h1, h2, -⟩ := reached_elim hn
-  set X := (Model.specDraft (V := V)).ns_setClock S.E n.st t with hXdef
+  set X := (Model.spec (V := V)).ns_setClock S.E n.st t with hXdef
   have hstage : ({ X.val with saved_grades := c } : Spec.Store V) =
       { st0 with t := t, s := (Setup.toSpec S).C.slotOf t } := by rw [e0]; rfl
   have hX : Inv3 X.val := ⟨X.property, h1, h2⟩
@@ -1024,10 +1024,10 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_propose_block_with_nonempty
     (Member.firstSentBlock l1).map Spec.Block.toProofNamed),
     (returns_preimageOutcomes _ _ _).2 hr1⟩
 
-/-- At `Model.specDraft`, at a reached store, the confirmation update keeps the grade view. -/
-theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_update_confirmation_with_toHealing_gradeView :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).S) (s : Slot) (st' : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ st' → ∀ (hn : (Model.specDraft (V := V)).reachedCore st), ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing st')) =
-      ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing st)) := by
+/-- At `Model.spec`, at a reached store, the confirmation update keeps the grade view. -/
+theorem _root_.SpecRecord.DutiesFacts.spec_update_confirmation_with_toHealing_gradeView :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).S) (s : Slot) (st' : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ st' → ∀ (hn : (Model.spec (V := V)).reachedCore st), ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing st')) =
+      ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing st)) := by
   intro contract E hc st s st' h₁ hn
   obtain ⟨hinv, hconf, -⟩ := reachedCore_elim hn
   obtain ⟨x1, x2, x3, he⟩ :=
@@ -1040,4 +1040,4 @@ theorem _root_.SpecDraftRecord.DutiesFacts.specDraft_update_confirmation_with_to
   rw [he, hof]
   rfl
 
-end SpecDraftRecord.DutiesReached
+end SpecRecord.DutiesReached

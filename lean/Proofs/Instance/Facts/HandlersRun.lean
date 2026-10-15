@@ -2,32 +2,32 @@ import Proofs.Instance.Facts.Handlers
 import Proofs.Instance.RunInvariant
 
 /-!
-# Two run facts at `Model.specDraft`
+# Two run facts at `Model.spec`
 
 Proofs of the fields `finalizedViable_stateBeforeTime` and `sgRowRounds_stateBeforeTime` of
-`HandlersRunFacts` at `Model.specDraft`, and of `ConfirmedInTree` along the steps of a store.
+`HandlersRunFacts` at `Model.spec`, and of `ConfirmedInTree` along the steps of a store.
 -/
 
-namespace SpecDraftRecord.HandlersRunFacts
+namespace SpecRecord.HandlersRunFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
 /-! ## The attestations of each round are of that round -/
 
-/-- The field `sgRowRounds_stateBeforeTime` of `HandlersRunFacts` at `Model.specDraft`: in every
+/-- The field `sgRowRounds_stateBeforeTime` of `HandlersRunFacts` at `Model.spec`: in every
     world the events of `rho` with time less than `t` can reach from the initial world, every named
     attestation of round `r` in `v`'s store is of round `r`. -/
-theorem specDraft_sgRowRounds_stateBeforeTime : ∀ (S : Setup V) (rho : Record.Run V) (t : Time)
+theorem spec_sgRowRounds_stateBeforeTime : ∀ (S : Setup V) (rho : Record.Run V) (t : Time)
     (v : V),
     ∀ w₁ ∈ (rho.events.filter (fun e => decide (e.time < t))).foldlM
-        (worldStepOf (Model.specDraft (V := V)) S) (fun u => (Model.specDraft (V := V)).initial S u),
+        (worldStepOf (Model.spec (V := V)) S) (fun u => (Model.spec (V := V)).initial S u),
       ∀ (r : Round), ∀ row ∈ (w₁ v).st.sg_rows r, row.round = r := by
   intro S rho t v w₁ hw₁ r row hrow
   have hI := rows_fold_ok S _ w₁ hw₁ v
@@ -86,14 +86,14 @@ theorem viableInv_init : ViableInv (Spec.Store.init : Spec.Store V) := by
   show (1 : Nat) - 1 ≤ _
   exact Nat.zero_le _
 
-/-- The field `finalizedViable_stateBeforeTime` of `HandlersRunFacts` at `Model.specDraft`: in every
+/-- The field `finalizedViable_stateBeforeTime` of `HandlersRunFacts` at `Model.spec`: in every
     world the events of `rho` with time less than `t` can reach from the initial world, the
     finalized block of `v`'s store is in its tree, and some tree block `W` descending from it has a
     chain-state height at least `h_max - 1`. -/
-theorem specDraft_finalizedViable_stateBeforeTime : ∀ (S : Setup V) (rho : Record.Run V)
+theorem spec_finalizedViable_stateBeforeTime : ∀ (S : Setup V) (rho : Record.Run V)
     (t : Time) (v : V),
     ∀ w₁ ∈ (rho.events.filter (fun e => decide (e.time < t))).foldlM
-        (worldStepOf (Model.specDraft (V := V)) S) (fun u => (Model.specDraft (V := V)).initial S u),
+        (worldStepOf (Model.spec (V := V)) S) (fun u => (Model.spec (V := V)).initial S u),
       (w₁ v).st.core.F ∈ (w₁ v).st.core.T ∧ ∃ W ∈ (w₁ v).st.core.T,
         Block.Preceq (w₁ v).st.core.F W ∧ (w₁ v).st.core.h_max - 1 ≤ ((w₁ v).st.core.σ W).h := by
   intro S rho t v w₁ hw₁
@@ -174,4 +174,4 @@ theorem confirmedInTree_init :
     ConfirmedInTree (Spec.Store.init : Spec.Store V) :=
   ⟨Finset.mem_singleton_self _, Finset.mem_singleton_self _, Finset.mem_singleton_self _⟩
 
-end SpecDraftRecord.HandlersRunFacts
+end SpecRecord.HandlersRunFacts

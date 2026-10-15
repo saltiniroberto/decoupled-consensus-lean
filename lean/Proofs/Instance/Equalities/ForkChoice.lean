@@ -14,7 +14,7 @@ the image of the spec's routine on the data. The members `fg_σ`, `finalized_des
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 

@@ -96,7 +96,7 @@ theorem framePhaseAwake_sts (facts : Record.Facts M) (S : Setup V) (Sched : Sche
           have _hr_w : M.reachedNode (Record.wakeStage M Sched (τ : Int) x[k] v) :=
             Record.reachedNode_wakeStage facts S Sched x k v τ
           rcases Restated.st_succ_of_tick facts S Sched x v hl with
-            ⟨hvτ, -, out₁, hout, hst⟩ | hst
+            ⟨hvτ, out₁, hout, hst⟩ | hst
           · obtain ⟨c, hc⟩ := facts.gr.onPhaseTick_nonempty S.E S.hc
               (Record.wakeStage M Sched (τ : Int) x[k] v).st.core.toHealing (τ : Int)
               (Record.wakeStage M Sched (τ : Int) x[k] v).cache
@@ -215,32 +215,6 @@ theorem emptyHeightPair_of_asleep_at_g2 (facts : Record.Facts M) (S : Setup V) (
   intro root hroot
   exact hasleep (Restated.awake_of_actionFrame_phaseResult facts S Sched x n v r .g2 root
     _ ⟨m, hm, rfl⟩ (by rw [facts.gr.Sts_phaseResult_g2]; exact hroot))
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- Under `WakesAtActionInstants` and `SleepsAfterActionInstants`, a validator awake at round `r`'s
-    action instant, one of whose round-`r` attestations computed from its node state after `n` steps
-    carries a non-empty height pair, was awake throughout the attester window before that instant. -/
-theorem active_of_nonEmpty_heightVote (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
-    {r : Round} {n : Nat} {v : V} {h₀ : Height} {root : BlockId} {tmo : Bool}
-    (hv : v ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S r)))
-    (a : NamedAttestation V)
-    (ha : a ∈ Restated.actionAttestationFrom M (Setup.alwaysAwake S) (x[n][v].st) v r)
-    (hne : a.height_pair = NamedHeightPair.vote h₀ root tmo) :
-    v ∈ Restated.activeRoundW M S Sched r := by
-  by_cases h1 : v ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S r) - 1)
-  · exact Restated.active_of_awake_prev facts S Sched hw hv h1
-  · have hempty := Restated.emptyHeightPair_of_asleep_at_g2 facts S Sched x (n := n)
-      (Restated.asleep_at_domain facts S Sched hs h1 .g2) a ha
-    rw [hempty] at hne
-    cases hne
 
 end
 

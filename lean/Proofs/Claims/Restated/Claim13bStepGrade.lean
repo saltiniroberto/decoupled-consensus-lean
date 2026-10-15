@@ -190,7 +190,7 @@ private theorem tick_step_st_cases_grade (facts : Record.Facts M) (S : Setup V)
   · have hx1 : x[k + 1][v].st = (tk v).state := by
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react haw]
-    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨-, out, hout, hres⟩ | ⟨-, hres⟩
+    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨out, hout, hres⟩ | ⟨-, hres⟩
     · have hwS : (w v).state = Record.wakeStage M Sched (t : Int) x[k] v :=
         Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake v)
       exact Or.inl ⟨(w v).state, out, hwst,
@@ -500,7 +500,7 @@ theorem token_of_honest_sender (facts : Record.Facts M) (S : Setup V) (Sched : S
   have hlog : ∃ i' : Nat, i' ≤ m ∧
       (⟨q, NamedObject.attest B⟩ : SignedMsg V (NamedObject V)) ∈ x[i'].sent := by
     rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-      ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout₁, hst₁, hem⟩
+      ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst₁, hem⟩
     · refine ⟨i, le_of_lt him, ?_⟩
       have hsm : sm ∈ x[i].sent := (Restated.sent_of_deliver facts S Sched x hlbl).1
       have hhon : Restated.HonestThrough M Sched x i q := fun t ht =>
@@ -518,10 +518,10 @@ theorem token_of_honest_sender (facts : Record.Facts M) (S : Setup V) (Sched : S
       have hsend := facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) w
         (Record.wakeStage M Sched (τ : Int) x[i] w) (τ : Int)
       rcases hem with hmem | ⟨Bl, hmem, hcc⟩
-      · have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd hsend
+      · have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hsend
           hout₁ hst₁ hmem
         exact hexec.unforgeable (i + 1) ⟨w, NamedObject.attest B⟩ q hsent hauthor hhon
-      · have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd hsend
+      · have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hsend
           hout₁ hst₁ hmem
         exact hexec.carried (i + 1) ⟨w, NamedObject.block Bl⟩ (NamedObject.attest B) q hsent
           (Restated.carries_of_carriedCall facts (Setup.alwaysAwake S) _ Bl hcc) hauthor hhon
@@ -550,6 +550,98 @@ theorem token_of_honest_sender (facts : Record.Facts M) (S : Setup V) (Sched : S
       Record.runs_as_wakeStage facts S Sched x n' q _
     have hBeq : B = a := Restated.attest_of_tick_eq facts S q _ B.round hout hemit a ha
     rw [← hBeq]; exact hu_eq
+
+
+/-- The honest sender `q` of an SG vote `u` in `w`'s store after `m` steps, `q` honest through step
+    `m`, is in `attestersAt` of `u`'s round, when that round's grade-2 window start is at or after
+    time `0`: the attestation behind `u` was emitted by `q`'s tick at the round's action instant,
+    whose node state passed the grade-2 awake test. -/
+theorem sender_mem_attestersAt_of_sgVote (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
+    (x : AtomicExec (Record.protocolOf M S) Sched)
+    (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
+    {m : Nat} {w q : V} (hq : Restated.HonestThrough M Sched x m q)
+    {r' : Round} {u : Protocol.SGVote V}
+    (hu : u ∈ (M.gradeView (M.toHealing (x[m][w].st).st.core)).sg_votes r')
+    (hsender : u.val_index = q) (hr : 0 ≤ M.early S.E S.hc u.round .g2 - S.E.Δ) :
+    q ∈ Restated.attestersAt M S Sched u.round := by
+  have _hr_0 : M.reachedNode (x[m][w].st) := Record.reachedNode_sts facts S Sched x m w
+  have _hr_1 : M.reachedNode (x[0][w].st) := Record.reachedNode_sts facts S Sched x 0 w
+  rw [facts.gr.gradeView_sg_votes, Finset.mem_image] at hu
+  obtain ⟨c, hc, hcu⟩ := hu
+  rw [facts.sto.Sts_mem_sg_pool_iff] at hc
+  have hpv := Restated.poolView_sts facts S Sched x m w r'
+  rw [hpv] at hc
+  obtain ⟨B, hB, hBc⟩ := List.mem_map.mp hc
+  have hBround : B.round = r' := ((Restated.sgRowData_sts facts S Sched x m w).2 r' B hB).1
+  have hu_eq : u = M.sgVote B.erase := by rw [← hcu, ← hBc]
+  have hur : u.round = B.round := by
+    rw [hu_eq, facts.sto.sgVote_round_eq_round, Proofs.ModelProperties.erase_round]
+  have hBidx : B.val_index = q := by
+    have h : u.val_index = B.val_index := by
+      rw [hu_eq, facts.sto.sgVote_val_index_eq_val_index, Proofs.ModelProperties.erase_val_index]
+    rw [← h]; exact hsender
+  have hBmem : B ∈ (x[m][w].st).st.sg_rows B.round := by rw [hBround]; exact hB
+  have h0 : Restated.Vocabulary.Execution.Object.processed M (x[0][w].st).st
+      (NamedObject.attest B) = false := by
+    rw [Record.st_zero M S Sched x w]
+    simp only [Restated.Vocabulary.Execution.Object.processed, facts.nd.initial_st,
+      facts.hd.initial_sg_rows]
+    simp
+  have hm : Restated.Vocabulary.Execution.Object.processed M (x[m][w].st).st
+      (NamedObject.attest B) = true := by
+    simp only [Restated.Vocabulary.Execution.Object.processed]
+    exact decide_eq_true hBmem
+  obtain ⟨i, him, hf0, hf1⟩ :=
+    Restated.exists_flip_of_processed facts S Sched x w (NamedObject.attest B) h0 hm
+  have hauthor : NamedObject.author (NamedObject.attest B) = some q := by
+    rw [author_attest, hBidx]
+  have hlog : ∃ i' : Nat, i' ≤ m ∧
+      (⟨q, NamedObject.attest B⟩ : SignedMsg V (NamedObject V)) ∈ x[i'].sent := by
+    rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
+      ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst₁, hem⟩
+    · refine ⟨i, le_of_lt him, ?_⟩
+      have hsm : sm ∈ x[i].sent := (Restated.sent_of_deliver facts S Sched x hlbl).1
+      have hhon : Restated.HonestThrough M Sched x i q := fun t ht =>
+        hq t (le_trans ht (Restated.time_mono_int facts S Sched x (le_of_lt him)))
+      rcases hpay with hmsg | ⟨Bl, hmsg, hcc⟩
+      · have := hexec.unforgeable i sm q hsm (by rw [hmsg]; exact hauthor) hhon
+        rw [hmsg] at this
+        exact this
+      · refine hexec.carried i sm (NamedObject.attest B) q hsm ?_ hauthor hhon
+        rw [hmsg]
+        exact Restated.carries_of_carriedCall facts (Setup.alwaysAwake S) (x[i][w].st).st Bl hcc
+    · refine ⟨i + 1, Nat.succ_le_of_lt him, ?_⟩
+      have hhon : Restated.HonestThrough M Sched x (i + 1) q := fun t ht =>
+        hq t (le_trans ht (Restated.time_mono_int facts S Sched x (Nat.succ_le_of_lt him)))
+      have hsend := facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) w
+        (Record.wakeStage M Sched (τ : Int) x[i] w) (τ : Int)
+      rcases hem with hmem | ⟨Bl, hmem, hcc⟩
+      · have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hsend
+          hout₁ hst₁ hmem
+        exact hexec.unforgeable (i + 1) ⟨w, NamedObject.attest B⟩ q hsent hauthor hhon
+      · have hsent := Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hsend
+          hout₁ hst₁ hmem
+        exact hexec.carried (i + 1) ⟨w, NamedObject.block Bl⟩ (NamedObject.attest B) q hsent
+          (Restated.carries_of_carriedCall facts (Setup.alwaysAwake S) _ Bl hcc) hauthor hhon
+  obtain ⟨i', hi'm, hsent⟩ := hlog
+  obtain ⟨-, n', hni, htick, hawn, out, hout, hemit⟩ :=
+    Restated.attest_round_of_sent facts S Sched x (tB := (x[m].time : Int)) hq
+      hexec.toUnforgeability hBidx (Restated.time_mono_int facts S Sched x hi'm) hsent
+  obtain ⟨τ, hlbl, hτ⟩ := htick
+  have hτm : (τ : Int) ≤ (x[m].time : Int) := by
+    have h1 := (Restated.tickStepAt_time facts x (⟨τ, hlbl, rfl⟩ : Restated.tickStepAt M x n' (τ : Int))).1
+    rw [← h1]
+    exact le_trans (Restated.time_mono_int facts S Sched x (Nat.succ_le_of_lt hni))
+      (Restated.time_mono_int facts S Sched x hi'm)
+  have hf := facts.nd.tick_attestation_fields (Setup.alwaysAwake S) q _ _
+    (Record.runs_as_wakeStage facts S Sched x n' q _) out hout B hemit
+  have hrB : 0 ≤ M.early S.E S.hc B.round .g2 - S.E.Δ := by rw [← hur]; exact hr
+  have hwin := facts.ndWake.run_fact_g2_sound_at S Sched x n' τ B.round q hlbl hrB
+    (fun t ht => hq t (le_trans ht hτm))
+    (by rw [hτ]; exact (Finset.mem_sdiff.1 hawn).1) (by rw [hτ]; exact hf.2.1)
+  rw [hτ] at hwin
+  rw [hur]
+  exact hwin
 
 end
 

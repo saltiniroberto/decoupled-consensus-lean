@@ -41,9 +41,7 @@ awake from the start passes every duty's wake test.
 
 ## The three events, and what runs on each
 
-`tick` runs `Spec.tick` when the reading is a whole multiple of
-`S.C.Δ`, and not otherwise. At a reading that is not such a multiple the state is unchanged and
-nothing is sent. The section "## The clock" says why. The node's `tick` takes the parameters `C` and
+`tick` runs `Spec.tick` at every reading. The node's `tick` takes the parameters `C` and
 the values `P` and `X`; the reaction passes `S.C`, `S.P` and `S.X`, and the node state carries its
 validator. The tick runs in the monad `DREB` of `lean/Spec/Broadcast.lean`: its duties
 broadcast what they send. The reaction runs it with nothing sent (`.run []`), which gives either an
@@ -70,10 +68,9 @@ The framework hands a reaction `r`, the validator's own clock reading, a `Nat`. 
 time is `Spec.Time`, which is `Int`. So a reading `r` is the
 instant `(r : Int)`: one framework instant per unit of the node's time.
 
-A framework tick at the reading `r` runs the node's `tick` only when `(r : Int) % S.C.Δ = 0`.
-The store's own clock is advanced by the node's tick and by nothing else, so between two
-instants that are whole multiples of `S.C.Δ` it holds the earlier of the two, and an object
-delivered at a reading that is not such a multiple is stamped with that earlier multiple.
+A framework tick at the reading `r` runs the node's `tick` at `(r : Int)`, at every reading.
+The store's own clock is advanced by the node's tick and by nothing else, so an object delivered
+at a reading is stamped with the reading of the validator's latest tick that did not fail.
 Deliveries and wakes are not restricted: a `recv m` or a `wake` step may sit at any reading.
 
 ## Awakeness
@@ -144,22 +141,20 @@ def relayedObjects (o : NamedObject V) : Multiset (NamedObject V) :=
 
     A function, not a relation: each of the three events has exactly one reaction.
 
-    - `tick`: when `t % S.C.Δ = 0`, the node's `tick` at `t`, applied to the setup's
+    - `tick`: the node's `tick` at `t`, at every reading, applied to the setup's
       parameters `S.C` and its values `S.P` and `S.X`, and run with nothing sent
       (`.run []`). If it answers with a node
       state and the list of objects it broadcast, the reaction's state is that node state and its
       `send` is that list. If it fails, the reaction keeps `n` and sends nothing; the failure is
-      not a step, and this branch exists only so that the protocol is never stuck. When `t` is
-      not a multiple of `S.C.Δ`, the reaction keeps `n` and sends nothing.
+      not a step, and this branch exists only so that the protocol is never stuck.
     - `recv m`: `receive` with `S.C` and `S.P` on the delivered object `m.msg`, at any
       reading;
       the reaction re-sends `relayedObjects m.msg`.
     - `wake`: `wake` of `lean/Spec/NodeState.lean`, which sets `awakeSince` to `none`;
       nothing is sent.
 
-    Read aloud: at a tick on a multiple of the delay bound, the node ticks and, when the tick
-    succeeds, the validator takes the tick's state and sends what it broadcast, and when it fails,
-    stays where it was and sends nothing; at any other tick it stays where it was and sends
+    Read aloud: at a tick, the node ticks and, when the tick succeeds, the validator takes the
+    tick's state and sends what it broadcast, and when it fails, stays where it was and sends
     nothing; on a delivery it processes the object and re-sends it, with a block's Goldfish
     votes and attestations; on a wake it forgets the instant it had been awake since and sends
     nothing. -/
@@ -168,11 +163,9 @@ def reaction (S : Setup V) (n : NodeState V) (t : Int)
     NodeStepResult (NodeState V) (NamedObject V) :=
   match e with
   | .tick =>
-      if t % S.C.Δ = 0 then
-        match (tick S.C S.P S.X n t).run [] with
-        | Except.ok (n', sent) => { state := n', send := (sent : Multiset (NamedObject V)) }
-        | Except.error _ => { state := n, send := 0 }
-      else { state := n, send := 0 }
+      match (tick S.C S.P S.X n t).run [] with
+      | Except.ok (n', sent) => { state := n', send := (sent : Multiset (NamedObject V)) }
+      | Except.error _ => { state := n, send := 0 }
   | .recv m => { state := receive S.C S.P n m.msg,
                  send := relayedObjects m.msg }
   | .wake => { state := wake n, send := 0 }

@@ -57,6 +57,7 @@ import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13bK_ConeChain
 import Proofs.Claims.Restated.WakeWindow
+import Proofs.Claims.Restated.Claim13bK_ConeAnchorRecv
 
 /-!
 # The chain from the SG root to a held block is in the voter tree
@@ -736,6 +737,7 @@ theorem confAnchor_compatible_at_honRound (facts : Record.Facts M) (S : Setup V)
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r)
     (c : M.Cache) (hc : M.onPhaseTick S.E S.hc (M.toHealing (x[n'][v].st).st.core)
       (M.confirmation_time S.E ((M.opening_slot S.hc (r + 1)))) (x[n'][v].st).cache ⇢ c) :
     ∀ A, Restated.Vocabulary.Protocol.confAnchorWith M (M.gradeContract c) S.E S.hc
@@ -757,7 +759,7 @@ theorem confAnchor_compatible_at_honRound (facts : Record.Facts M) (S : Setup V)
       Restated.confFrame_g1_provenance facts S Sched x hn'' v root c hc hroot
     rw [hround] at hm hB
     have hdom := facts.gr.domain_le_action S (r + 1) .g1
-    have hawT := Restated.hawT_of_honRound_succ facts S Sched hv hdom
+    have hawT := Restated.awakeThroughout_late_domain_of_honRound_succ facts S Sched hv hdom
     have hvS : v ∉ Sched.adv (M.domain S.E S.hc (r + 1) .g1) := fun hin =>
       hvadv (hmono _ _ hdom hin)
     obtain ⟨b, hb⟩ := facts.gr.gradeBool_nonempty S.E (M.gradeView (M.toHealing (x[m][v].st).st.core))
@@ -766,8 +768,9 @@ theorem confAnchor_compatible_at_honRound (facts : Record.Facts M) (S : Setup V)
     have hbt := hB b hb
     subst hbt
     exact Protocol.compatible_of_preceq_of_compatible hpre
-      (Restated.grade1_compatible_at_awakeReader facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
-        hlen hcv hthird hphase hrsW hcs hr hinv hdom hawT hvS hm B hb hneTick hneAtt)
+      (Restated.grade1_compatible_at_awakeReader_recv facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
+        hlen hcv hthird hphase hrsW hcs hr hinv hdom _ le_rfl hawT
+        (hrecvR.at facts hv .g1) hvS hm B hb hneTick hneAtt)
   · exact compatible_of_preceq_common_Preceq
       (Restated.fin_old_anchor_before_succ_tick_of_hypotheses facts (hcross := hcross) S Sched x tE hexec hmono tGAT gap hgst hlen
         hthird hphase hrsW hr hinv hn' v n' le_rfl hvn)
@@ -852,7 +855,7 @@ private theorem live_confirmed_after_confirmation_tick_cases (facts : Record.Fac
     rw [ht', hct]
     exact facts.sch.support_cutoff_emod_delta S (s + 1)
   have haw' : w ∈ Sched.awake (t' : Int) \ Sched.adv (t' : Int) := by rw [ht']; exact haw
-  rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' hdvd with
+  rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' with
     ⟨out₁, hout, hst⟩ | ⟨hno, -⟩
   · rw [hst]
     rw [ht', hct] at hout
@@ -1019,10 +1022,7 @@ theorem live_confirmed_compatible_at_action_afterPhase_ofCompatible (facts : Rec
       hgst hcv hawake hthird hcs hlen hunder hunderS hsE hsR hn hv hprev c hc A hA hAT hpath hs hhs hF hJ
       hneTickVote hneTick
   · have haw : v ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) :=
-      mem_awake_of_awakeThroughout Sched (Restated.hawT_of_honRound_succ facts S Sched hv le_rfl)
-        (by have := S.E.Δ_pos; have := facts.gr.action_succ_eq_add_rounds S r
-            have : (0 : Int) ≤ 4 * (S.hc.R : Int) * S.E.Δ := by positivity
-            linarith) le_rfl
+      Restated.awake_action_of_mem_honRound facts hv
     exact Restated.live_confirmed_compatible_of_anchor_descendant facts S Sched x hn
       (Finset.mem_sdiff.2 ⟨haw, (Finset.mem_sdiff.1 hv).2⟩) c hc A hA hTA hs hhs hF hJ
       (hneTick n _ hn (Restated.action_emod_delta facts S (r + 1))
@@ -1044,8 +1044,9 @@ theorem live_confirmed_compatible_at_action_afterPhase_ofCompatible (facts : Rec
           exact Restated.honest_upTo_of_mono hmono (Finset.mem_sdiff.2 ⟨haw, (Finset.mem_sdiff.1 hv).2⟩))
         have hw := (Finset.mem_sdiff.1 hv).1
         have h12 := twelve_delta_le_wAttest S
-        simp only [Restated.activeRoundW, Schedule.awakeThroughout, Finset.mem_inf,
+        simp only [Restated.activeRoundW, Restated.attestersAt, Schedule.awakeThroughout, Finset.mem_inf,
           Finset.mem_Icc] at hw ⊢
+        try rw [facts.gr.early_g2_eq S (r + 1)] at hw
         rw [facts.gr.early_g2_eq S (r + 1)]
         intro t ht
         exact hw t ⟨by linarith [ht.1], ht.2⟩)

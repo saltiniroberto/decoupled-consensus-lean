@@ -43,6 +43,7 @@ import Model.Conditions.Vocabulary_Protocol_Handlers_NamedStore
 import Model.Conditions.Vocabulary_Protocol_Handlers_StoreRoots
 import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bW_ReceiptBefore
 
 /-!
 # Confirmed blocks on one chain with the attested confirmed blocks, with synchrony up to the action
@@ -178,8 +179,7 @@ theorem confAnchorChainInTree_at_honRound_ofHolder_upTo (facts : Record.Facts M)
   have hvn : Restated.HonestThrough M Sched x n' v := fun t ht hin =>
     hvadv (hmono t _ (le_trans ht htn) hin)
   have hwaw : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1 - 2 * S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1) :=
-    awakeThroughout_mono Sched (Restated.hawT_of_honRound_succ facts S Sched hv (by linarith)) (by linarith)
-      le_rfl
+    Restated.awakeThroughout_sub_of_mem_honRound facts hv (by linarith) (by linarith)
   have hchain := fun (X : Block V) (hX : Block.Preceq X B.erase) =>
     Restated.chain_in_reader_tree_of_holder_upTo facts S Sched x hexec (t := (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1)
       (synchronyFromWakeBefore_mono (by linarith) hsync) hmult htd hmono (tR := (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1)
@@ -237,7 +237,7 @@ theorem confAnchor_compatible_at_honRound_ofFreshSG_upTo (facts : Record.Facts M
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (tGAT : Int) (gap : Nat)
     (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
@@ -271,6 +271,10 @@ theorem confAnchor_compatible_at_honRound_ofFreshSG_upTo (facts : Record.Facts M
     ∀ A, Restated.Vocabulary.Protocol.confAnchorWith M (M.gradeContract c) S.E S.hc
         (Restated.confStoreAt M S (x[n'][v].st) ((M.opening_slot S.hc (r + 1)))) ⇢ A →
       Block.compatible A C.erase = true := by
+  have hrecvR : Restated.NextRoundReceipts M S Sched x r :=
+    Restated.nextRoundReceipts_of_before facts S Sched x hsync hcatchB
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr)
+      (by have := Restated.early_g1_le_action_rb facts S (r + 1); have := S.E.Δ_pos; linarith)
   have hround := Restated.round_of_confStoreAt_opening_slot facts S (x[n'][v].st) (r + 1)
   have hct := Restated.confirmation_time_opening_slot facts S (r + 1)
   have hn'' : Restated.tickStepAt M x n' (M.confirmation_time S.E ((M.opening_slot S.hc (r + 1)))) := by
@@ -292,7 +296,7 @@ theorem confAnchor_compatible_at_honRound_ofFreshSG_upTo (facts : Record.Facts M
     have hbt := hB b hb
     subst hbt
     obtain ⟨v_2, hv_2, a', ha', hav', hsent', G, hG, hconf', hBG⟩ :=
-      Restated.graded_preceq_freshSG_of_premises_upTo facts S Sched x tE hexec hmono htd hsync hmult tGAT
+      Restated.graded_preceq_freshSG_of_premises_upTo (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult tGAT
         gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcross hv (facts.gr.domain_le_action S (r + 1) .g1)
         hm B hb hneTick hneAtt
     have hGC : Block.compatible G.erase C.erase = true :=
@@ -319,8 +323,7 @@ open DecoupledConsensusModel.Execution
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
 /-- With synchrony up to `S.a (r + 1)`, under its premises on the execution and the phase ending at
-    `tE`, with the invariant `hinv` at a round `r` at or after the switch round with anchor `T`, the
-    conditions `hcross` and `hjust`, and `WakesAtActionInstants`: if `n'` is the tick step at
+    `tE`, with the invariant `hinv` at a round `r` at or after the switch round with anchor `T`, and the conditions `hcross` and `hjust`: if `n'` is the tick step at
     `S.a (r + 1)`, `v_1` is in `HonRound S Sched r`, its round-`r` attestation `a` is in the sent
     log `x[n + 1].sent` and names as confirmed the block `C` among `v_1`'s bodies after `n + 1`
     steps, every honest active member of the committee of round `r + 1`'s opening slot votes for a
@@ -332,7 +335,7 @@ theorem freshSG_compatible_live_confirmed_of_openingHeads_upTo (facts : Record.F
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (tGAT : Int) (gap : Nat)
@@ -349,7 +352,6 @@ theorem freshSG_compatible_live_confirmed_of_openingHeads_upTo (facts : Record.F
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     {v_1 : V} (hv_1 : v_1 ∈ Restated.HonRound M S Sched r) {a : NamedAttestation V}
     (ha : a.round = r) (hav : a.val_index = v_1)
@@ -378,8 +380,8 @@ theorem freshSG_compatible_live_confirmed_of_openingHeads_upTo (facts : Record.F
   intro hs hhs
   have hd := S.E.Δ_pos
   have hd1 : (1 : Int) ≤ S.E.Δ := hd
-  have hold := Restated.confirmedOld_at_honRound_upTo facts (hcross := hcross) (hjust := hjust) S Sched x tE
-    hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hn' hv
+  have hold := Restated.confirmedOld_at_honRound_upTo (hcatchB := hcatchB) facts (hcross := hcross) (hjust := hjust) S Sched x tE
+    hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hv
     hneTickVote hneTick (hneTickW v hv) hneAtt hs hhs
   have hsg := hinv.sg v_1 hv_1 a ha hav hsent C hC hconf
   rcases compatible_cases hsg with hCT | hTC
@@ -440,7 +442,7 @@ theorem freshSG_compatible_live_confirmed_of_openingHeads_upTo (facts : Record.F
       have hpath := Restated.confAnchorChainInTree_at_honRound_ofHolder_upTo facts S Sched x tE hexec hmono
         htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcross hC hv_1h
         (by rw [hn1]; exact htGAT) (by rw [hn1]; linarith) hTC hn' hv (hneTickW v hv) c hc A hA
-      have hAB := Restated.confAnchor_compatible_at_honRound_ofFreshSG_upTo facts S Sched x tE hexec hmono
+      have hAB := Restated.confAnchor_compatible_at_honRound_ofFreshSG_upTo (hcatchB := hcatchB) facts S Sched x tE hexec hmono
         htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcross hjust hv_1 ha hav
         hsent hC hconf hTC hn' hv hneTickW hneAtt c hc A hA
       have hF : Block.Preceq hs.F C.erase := by
@@ -480,8 +482,7 @@ open DecoupledConsensusModel.Execution
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
 /-- With synchrony up to `S.a (r + 1)`, under its premises on the execution and the phase ending at
-    `tE`, with the invariant `hinv` at a round `r` at or after the switch round with anchor `T`, the
-    conditions `hcross` and `hjust`, and `WakesAtActionInstants`: if `n'` is the tick step at
+    `tE`, with the invariant `hinv` at a round `r` at or after the switch round with anchor `T`, and the conditions `hcross` and `hjust`: if `n'` is the tick step at
     `S.a (r + 1)`, every block `C` that a member of `HonRound S Sched r` names as confirmed in its
     round-`r` attestation and that is a strict descendant of `T` has every honest active member of
     the committee of round `r + 1`'s opening slot voting for a descendant of it, and the ticks named
@@ -491,7 +492,7 @@ theorem confirmedCompatibleFreshSG_of_openingHeads_upTo (facts : Record.Facts M)
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (tGAT : Int) (gap : Nat)
@@ -508,7 +509,6 @@ theorem confirmedCompatibleFreshSG_of_openingHeads_upTo (facts : Record.Facts M)
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hheads : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∀ a : NamedAttestation V,
       a.round = r → a.val_index = v_1 →
@@ -533,8 +533,8 @@ theorem confirmedCompatibleFreshSG_of_openingHeads_upTo (facts : Record.Facts M)
       M.tick (Setup.alwaysAwake S) v_2 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_2) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
     Restated.ConfirmedCompatibleFreshSGOverHonRound M S Sched x r n n' :=
   fun _ hv v_1 hv_1 a ha hav hsent C hC hconf =>
-    Restated.freshSG_compatible_live_confirmed_of_openingHeads_upTo facts S Sched x tE hexec hmono htd hsync hmult
-      hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcross hjust hw hn' hv_1 ha hav
+    Restated.freshSG_compatible_live_confirmed_of_openingHeads_upTo (hcatchB := hcatchB) facts S Sched x tE hexec hmono htd hsync hmult
+      hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hcross hjust hn' hv_1 ha hav
       hsent hC hconf (hheads v_1 hv_1 a ha hav hsent C hC hconf) hv hneTickVote hneTick hneTickW hneAtt
 
 end

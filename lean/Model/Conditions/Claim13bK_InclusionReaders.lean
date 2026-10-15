@@ -1,6 +1,7 @@
 import Model.Record.ModelSpellings
 import Proofs.Vocabulary.ModelVocabulary
 import Model.Conditions.Sts_Interface
+import Model.Conditions.Sts_Spec2Claims_ClaimConfirmedIncludedAfterHealing
 import Model.Record.Wiring
 
 /-!
@@ -28,8 +29,10 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 
 /-- If slot `s`'s proposer is honest through `s`'s vote time, then every block that proposer put in
     the sent log `x[i].sent` at a step `i` no later than that vote time is an ancestor of the
-    confirmed output of every validator honest through its read and awake throughout the vote window
-    of its read's slot, at every read from `s`'s proposal time plus the confirmation delay on. -/
+    confirmed output of every validator honest through its read that ran, at or after slot `s`'s
+    confirmation instant and at or before its read, a confirmation while awake throughout that
+    confirmation's grade-2 window, at every read from `s`'s proposal time plus the confirmation
+    delay on. -/
 def ConfirmedIncludedAtSlot (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (s : Slot) : Prop :=
   HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s) →
@@ -37,7 +40,7 @@ def ConfirmedIncludedAtSlot (M : Record.Model V) (S : Setup V) (Sched : Schedule
       (x[i].time : Int) ≤ M.vote_time S.E s →
       ∀ (v : V) (j : Nat), Restated.HonestThrough M Sched x j v →
         M.proposal_time S.E s + confirmedInclusionDelay S ≤ (x[j].time : Int) →
-        v ∈ activeAtW S Sched (S.E.slotOf (x[j].time : Int)) →
+        Restated.awakeThroughConfirmationWindow M S Sched (M.confirmation_time S.E s) (x[j].time : Int) v →
         Block.Preceq B (M.get_confirmed (x[j][v].st).st.core)
 
 end

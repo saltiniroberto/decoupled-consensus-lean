@@ -44,6 +44,7 @@ import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Conditions.Vocabulary_Statements_Instantiation_Proposals
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13beRoute3_95
+import Proofs.Claims.Restated.Claim13bK_ProposalAdoptionBounded
 
 /-!
 # The anchor's height and the chain of windows
@@ -129,7 +130,6 @@ theorem secondWindowClear_f2d (facts : Record.Facts M) (S : Setup V) (Sched : Sc
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -231,10 +231,10 @@ theorem secondWindowClear_f2d (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   have hAcmN : (Restated.Vocabulary.Execution.Setup.a M S (c - 1)) ≤ (x[N].time : Int) :=
     ((Restated.Vocabulary.Proofs.HealingSurface.action_strictMono facts S).monotone (Nat.sub_le c 1)).trans hAcN
   have hCc := Restated.openingRowsPlanned_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hNW hN hA hc1r hAcN hopening hopeningM cp hcp hP cp' hcp' hP'
   have keym := Restated.openingRowsPlanned_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hNW hN hA (q := c - 1) hcm1r hAcmN hopeningM (by rw [hsub]; exact hopeningMM)
     (P := P') (P' := P'')
   rw [hsub] at keym
@@ -281,7 +281,6 @@ theorem thirdWindowParent_f2d (facts : Record.Facts M) (S : Setup V) (Sched : Sc
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -376,9 +375,9 @@ theorem thirdWindowParent_f2d (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     (mem_notHeldAt.mp hprop₂) (hmono t' _ (ht'.trans (facts.sch.Sts_vote_time_le_confirmation_time S _)) hadv)
   have hi : (x[j].time : Int) ≤ M.vote_time S.E ((M.opening_slot S.hc c₂) + 2) := by
     rw [hj]; exact (facts.sch.proposal_time_lt_vote_time S.E _).le
-  have hHeads := Restated.honestProposal_ancestorOfHonestHeadsFrom_i1b facts S Sched x tE hexec hmono htd tGAT
-    gap hgst hlen' hsync hthirdE hphaseE hrsW hmult hcv hcs hcom hw hs hrecE hprev hclear hB' hnW
-    hAW hJswitch hr₀ hTW₀ hJ₀ hawake hthird hrec hs0 hct hpropT hjB hi
+  have hHeads := Restated.honestProposal_ancestorOfHonestHeadsFrom_fromSwitch_bounded facts S Sched x tE hexec
+    hmono htd tGAT gap hgst hlen' hsync hthirdE hphaseE tL hEL hawake hrsW hmult hcv hcs hcom hrecE hprev hclear
+    hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hthird hrec hs0 hct hpropT hjB hi
   have hf := Restated.admissibleFieldsOn_runAll_notHeld facts S Sched x v₀ N hsync hmono hawake hgst hcv hexec
     hmult hthird hN
   obtain ⟨hspos, hlo⟩ := Restated.windowSlot_bounds_g1 facts S tGAT gap (s := (M.opening_slot S.hc c₂) + 2)
@@ -432,7 +431,7 @@ theorem thirdWindowParent_f2d (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   have hBP : Block.Preceq P₂.erase P₃.erase :=
     Restated.preceq_openingProposal_of_heads_f2b facts S Sched x v₀ N hsync hmono hawake hgst hcv hexec
       hmult hthird hN hcom hrec htd hcs₁ hd₃ (ht₁s.trans (slotStart_mono S hoP1)) hAc₃N hopening₃
-      hHeads hs₀ cp₃ hcp₃ hP₃
+      (hHeads _ hs₀ (by rw [facts.gr.round_of_opening_slot_eq]; have := Restated.action_switchRound_add_delta_le_b facts S tGAT tL gap hgst (le_trans hlen' hEL); have := Restated.action_mono facts S (Nat.le_of_succ_le hc₃W); linarith)) cp₃ hcp₃ hP₃
   obtain ⟨hP₃run, -, -⟩ := Restated.openingProposal_runBlock_runAll_l85c facts S Sched x v₀ N hsync hmono
     hawake hgst hcv hexec hmult hthird hN hd₃ hAc₃N hopening₃ cp₃ hcp₃ hP₃
   have hP₃log := Restated.blockInLog_of_blockInRunOn_univ facts S Sched x v₀ _ N hmono hzero hP₃run

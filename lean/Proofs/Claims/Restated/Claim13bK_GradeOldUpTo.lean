@@ -21,6 +21,7 @@ import Model.Conditions.Sts_Interface
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bK_GradeLateRecv
 
 /-!
 # The grade-1 condition at the next round, with synchrony up to a bound
@@ -46,7 +47,8 @@ open DecoupledConsensusModel.Execution
 
 /-- With synchrony up to `S.a r + Δ`: if `r` is at or after the switch round, the invariant holds at
     round `r` with tick step `n` and anchor `T`, `FreshSGHeadsAtLate` holds, and the ticks at step
-    `n` of the members of `HonRound S Sched r` and `HonRound S Sched (r + 1)` have an outcome, then
+    `n` of the members of `HonRound S Sched r` have an outcome, and `NextRoundReceipts` holds at
+    round `r`, then
     every block a member of `HonRound S Sched (r + 1)` can grade at least 1 for round `r + 1`, at a
     phase whose domain instant is at or before `S.a (r + 1)`, is compatible with `T`. -/
 theorem gradeOld_of_premises_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
@@ -64,8 +66,7 @@ theorem gradeOld_of_premises_upTo (facts : Record.Facts M) (S : Setup V) (Sched 
     {n : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r) (hinv : Restated.AfterPhaseInvariantOverActiveSetsTop M S Sched x r n T)
     (hheadsP : Restated.FreshSGHeadsAtLate M S Sched x r n)
-    (hneTick : ∀ v ∈ Restated.HonRound M S Sched (r + 1), ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r)
     (hneAtt : ∀ v ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
@@ -88,9 +89,10 @@ theorem gradeOld_of_premises_upTo (facts : Record.Facts M) (S : Setup V) (Sched 
   have htm := Restated.time_le_action_succ_of_stepBefore facts S Sched x htd hdom hm
   have hrs := Restated.roundSleepinessW_switchOpening_of_phase facts S Sched tGAT tE gap hgst hlen hmono hthird
     hphase hrsW
-  exact Restated.grade1_of_sg_prevLate_upTo facts S Sched x hexec hsync htd hn hgstr (Restated.HonRound M S Sched r) hinv.sg hm
+  exact Restated.grade1_of_sg_prevLate_recv facts S Sched x hexec htd hn hgstr (Restated.HonRound M S Sched r) hinv.sg hm
     (Restated.hfreshH_of_stepBefore facts S Sched x htd hm)
-    (Restated.hawT_of_honRound_succ facts S Sched hv htm) (Restated.hwh_of_honRound_succ facts S Sched hmono hv)
+    (hrecvR.at facts hv p)
+    (fun t ht hin => (Finset.mem_sdiff.1 hv).2 (hmono t _ (le_trans ht htm) hin))
     (Restated.hexp_of_domain facts S htm)
     (fun k hk v_1 hv_1 a ha _ => Restated.hroom_of_fresh facts S Sched x hexec hn
       (fun t ht => Restated.honestThrough_of_mem_freshAttestersW facts hv_1 t
@@ -98,8 +100,9 @@ theorem gradeOld_of_premises_upTo (facts : Record.Facts M) (S : Setup V) (Sched 
     (fun v_1 hv_1 a ha C hC hconf => hheadsP v hv p hdom m hm v_1 hv_1 C hC a ha hconf)
     (fun v_1 _ a ha root hconf => Restated.hhead_mem_of_tick facts S Sched x n r v_1 a ha root hconf)
     (Restated.hhalf_of_roundSleepinessW facts S Sched x hexec htd hmono hrs
-      (Restated.switchOpening_le_opening facts S (le_trans hr (Nat.le_succ r))) hdom hm)
-    B hgrade (hneTick v hv)
+      (Restated.switchOpening_le_opening facts S (le_trans hr (Nat.le_succ r)))
+      (Restated.eta_le_of_switchRound_le facts S tGAT tE gap hgst hlen hr) hdom hm)
+    B hgrade (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew)
     (fun v_1 hv_1 => hneAtt v_1 (Restated.hfreshH_of_stepBefore facts S Sched x htd hm hv_1))
 
 end

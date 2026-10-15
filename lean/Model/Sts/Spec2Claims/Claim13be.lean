@@ -7,7 +7,7 @@ public import Model.Sts.Spec2Claims.Claim13bd
 # Synchrony from the wake, awake windows and sleepiness
 
 The premises on honest sends and their delivery (`HonestSendAt`, `SynchronyFromWake`), on when
-validators wake and fall asleep, the awake windows `wVote` and `wAttest` with the validator sets
+validators wake (`AwakeAtMultiples`), the awake windows `wVote` and `wAttest` with the validator sets
 they define, the sleepiness premises over those sets, and the common-view premises.
 -/
 
@@ -45,18 +45,6 @@ def SynchronyFromWake (S : Setup V) {Sched : Schedule V} (x : AtomicExec (protoc
 def AwakeAtMultiples (S : Setup V) (Sched : Schedule V) : Prop :=
   ∀ (t : Int) (v : V), v ∈ Sched.awake t → v ∉ Sched.awake (t - 1) → t % S.E.Δ = 0
 
-/-- Validators wake only at action instants: a validator awake at `t` and asleep at `t − 1` has `t`
-    a round's action instant. -/
-def WakesAtActionInstants (S : Setup V) (Sched : Schedule V) : Prop :=
-  ∀ (t : Int) (v : V), v ∈ Sched.awake t → v ∉ Sched.awake (t - 1) →
-    ∃ r : Round, t = S.hc.a S.E.Δ r
-
-/-- Validators fall asleep only right after an action instant: a validator awake at `t − 1` and
-    asleep at `t` has `t` one after a round's action instant. -/
-def SleepsAfterActionInstants (S : Setup V) (Sched : Schedule V) : Prop :=
-  ∀ (t : Int) (v : V), v ∈ Sched.awake (t - 1) → v ∉ Sched.awake t →
-    ∃ r : Round, t = S.hc.a S.E.Δ r + 1
-
 /-- The awake window `(4R + 2)Δ` a voter needs before slot `s`'s vote instant: for every slot of a
     round it reaches back to five delays before the round's opening, so the voter has read the
     cutoff view from which the round's g1 anchor is computed. -/
@@ -75,14 +63,15 @@ def activeAtW (S : Setup V) (Sched : Schedule V) (s : Slot) : Finset V :=
 def activeRoundW (S : Setup V) (Sched : Schedule V) (r : Nat) : Finset V :=
   Sched.awakeThroughout (S.hc.a S.E.Δ r - wAttest S) (S.hc.a S.E.Δ r)
 
-/-- The validators the vote duty makes vote at slot `s`: those awake at its vote instant. -/
+/-- The validators the awake rule lets vote at slot `s`: awake at every time from one delay before the
+    grade-1 first cutoff of `s`'s round to `s`'s vote instant. -/
 def votersAt (S : Setup V) (Sched : Schedule V) (s : Slot) : Finset V :=
-  Sched.awake (slotStart S.E.Δ s + S.E.Δ)
+  Sched.awakeThroughout (Protocol.opening S.E S.hc (S.hc.round_of s) - 5 * S.E.Δ) (slotStart S.E.Δ s + S.E.Δ)
 
-/-- The validators the attestation duty makes attest at round `r`: those awake at its action
-    instant. -/
+/-- The validators the awake rule lets attest at round `r`: awake at every time from one delay before
+    round `r`'s grade-2 first cutoff to its action instant. -/
 def attestersAt (S : Setup V) (Sched : Schedule V) (r : Nat) : Finset V :=
-  Sched.awake (S.hc.a S.E.Δ r)
+  Sched.awakeThroughout (Protocol.opening S.E S.hc r - 6 * S.E.Δ) (S.hc.a S.E.Δ r)
 
 /-- The validators that attest at some round of `[lo, hi]`. -/
 def attestersIn (S : Setup V) (Sched : Schedule V) (lo hi : Nat) : Finset V :=
@@ -112,11 +101,13 @@ def roundSleepinessW (S : Setup V) (Sched : Schedule V) (anchor : Int) : Prop :=
 
 /-- Committee sleepiness from `anchor` on: in the committee of every slot `s − 1`, the members in
     `activeAtW (s − 1)` not held by the adversary at that slot's confirmation instant outnumber the
-    other members. -/
+    other members that the awake rule lets vote at `s − 1` or that the adversary holds at that
+    instant. -/
 def committeeSleepinessW (S : Setup V) (Sched : Schedule V) (anchor : Int) : Prop :=
   ∀ s : Slot, 1 ≤ s → anchor ≤ slotStart S.E.Δ s →
-    ((S.E.committee (s - 1)) \
-        (activeAtW S Sched (s - 1) \ Sched.adv (Protocol.confirmation_time S.E (s - 1)))).card
+    ((S.E.committee (s - 1) ∩
+        (votersAt S Sched (s - 1) ∪ Sched.adv (Protocol.confirmation_time S.E (s - 1)))) \
+      (activeAtW S Sched (s - 1) \ Sched.adv (Protocol.confirmation_time S.E (s - 1)))).card
       < ((activeAtW S Sched (s - 1) ∩ S.E.committee (s - 1)) \
           Sched.adv (Protocol.confirmation_time S.E (s - 1))).card
 

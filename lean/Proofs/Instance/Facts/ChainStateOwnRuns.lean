@@ -2,24 +2,24 @@ import Proofs.Instance.Facts.ChainState
 import Proofs.Instance.Facts.Handlers
 
 /-!
-# The chain-state facts about runs, over `Model.specDraft`'s own runs
+# The chain-state facts about runs, over `Model.spec`'s own runs
 
-The fields of `ChainStateRunFacts` at `Model.specDraft` that read the worlds the model's own runs
+The fields of `ChainStateRunFacts` at `Model.spec` that read the worlds the model's own runs
 reach, proved from the store invariant `OwnRunsInv` carried along every fold of events from the
-initial world, and the bundle `Model.specDraft_runFacts_cs`.
+initial world, and the bundle `Model.spec_runFacts_cs`.
 -/
 
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.ChainStateRunFacts
+namespace SpecRecord.ChainStateRunFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.HandlersRunFacts
-open SpecDraftRecord.NoRaise
+open SpecRecord.HandlersRunFacts
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -97,21 +97,21 @@ theorem ownRunsInv_init (S : Setup V) (v : V) :
   rw [toProof_ns_initial] at h1 h2 h3
   exact ⟨h1, h2, h3⟩
 
-/-- At `Model.specDraft`, `OwnRunsInv` holds at every validator of every world the events `es` lead
+/-- At `Model.spec`, `OwnRunsInv` holds at every validator of every world the events `es` lead
     to from the initial world. -/
 theorem ownRunsInv_fold (S : Setup V) (es : List (Record.Event V)) (v₀ : V) :
-    ∀ w ∈ es.foldlM (worldStepOf (Model.specDraft (V := V)) S)
-        (fun u => (Model.specDraft (V := V)).initial S u),
+    ∀ w ∈ es.foldlM (worldStepOf (Model.spec (V := V)) S)
+        (fun u => (Model.spec (V := V)).initial S u),
       ∀ v, OwnRunsInv S (w v).val.st :=
   inv_fold S (OwnRunsInv S) (ownRunsInv_step S) (ownRunsInv_init S v₀) es
 
 /-- From `OwnRunsInv`, some held named block derives the store's justified block and justified
     height. -/
-theorem justification_of_inv (S : Setup V) (n : (Model.specDraft (V := V)).N)
+theorem justification_of_inv (S : Setup V) (n : (Model.spec (V := V)).N)
     (h : OwnRunsInv S n.val.st) :
     ∃ D : NamedBlock V, D ∈ n.st.bodies ∧
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg D).J = n.st.core.J ∧
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h_j = n.st.core.h_j := by
+      ((Model.spec (V := V)).derive_named S.E S.cfg D).J = n.st.core.J ∧
+      ((Model.spec (V := V)).derive_named S.E S.cfg D).h_j = n.st.core.h_j := by
   obtain ⟨D, hD, hJ, hh⟩ := (priv% Proofs.Vocabulary.Protocol.Handlers.JustificationCarrier
     DecoupledConsensusModel.Proofs.NamedJustificationCarrier.named_justifier) S
     n.val.st.toProofNamed h.2.2.1 h.1
@@ -124,10 +124,10 @@ theorem justification_of_inv (S : Setup V) (n : (Model.specDraft (V := V)).N)
     exact hh
 
 /-- From `OwnRunsInv`, every held named block's derived height is at most the store's `h_max`. -/
-theorem heights_of_inv (S : Setup V) (n : (Model.specDraft (V := V)).N)
+theorem heights_of_inv (S : Setup V) (n : (Model.spec (V := V)).N)
     (h : OwnRunsInv S n.val.st) :
     ∀ D ∈ n.st.bodies,
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h ≤ n.st.core.h_max := by
+      ((Model.spec (V := V)).derive_named S.E S.cfg D).h ≤ n.st.core.h_max := by
   intro D hD
   have hb := (priv% Proofs.Vocabulary.Protocol.Handlers.NumericStore
     DecoupledConsensusModel.Proofs.NamedNumericStore.named_bound) S n.val.st.toProofNamed
@@ -138,92 +138,92 @@ theorem heights_of_inv (S : Setup V) (n : (Model.specDraft (V := V)).N)
 
 /-- From `OwnRunsInv`, for every held named block, the height the store records at its erasure is
     its derived height. -/
-theorem derivedView_h_of_inv (S : Setup V) (n : (Model.specDraft (V := V)).N)
+theorem derivedView_h_of_inv (S : Setup V) (n : (Model.spec (V := V)).N)
     (h : OwnRunsInv S n.val.st) :
     ∀ D ∈ n.st.bodies,
-      (n.st.core.σ D.erase).h = ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h := by
+      (n.st.core.σ D.erase).h = ((Model.spec (V := V)).derive_named S.E S.cfg D).h := by
   intro D hD
   have he := h.2.2.1.2.2.2.2 D hD
   show _ = (Member.derive_named S.E S.cfg D).toProof.h
   rw [image_derive_named, ← he]
   rfl
 
-/-- At `Model.specDraft`, for every world `w` the run `rho` can reach before its `i`-th event, some
+/-- At `Model.spec`, for every world `w` the run `rho` can reach before its `i`-th event, some
     body `C` that validator `v` holds in `w` has `v`'s store's justified block and justified height
     as its own. -/
-theorem specDraft_justification_carrier_stateBefore_ownRuns : ∀ (S : Setup V)
+theorem spec_justification_carrier_stateBefore_ownRuns : ∀ (S : Setup V)
     (rho : Record.Run V) (i : Nat) (v : V),
-    ∀ w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i,
+    ∀ w ∈ stateBeforeOf (Model.spec (V := V)) S rho i,
     ∃ C : NamedBlock V, C ∈ (w v).st.bodies ∧
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg C).J = (w v).st.core.J ∧
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg C).h_j = (w v).st.core.h_j := by
+      ((Model.spec (V := V)).derive_named S.E S.cfg C).J = (w v).st.core.J ∧
+      ((Model.spec (V := V)).derive_named S.E S.cfg C).h_j = (w v).st.core.h_j := by
   intro S rho i v w hw
   exact justification_of_inv S (w v) (ownRunsInv_fold S (rho.events.take i) v w hw v)
 
-/-- At `Model.specDraft`, for every world `w` the events of `rho` timed before `t` lead to from the
+/-- At `Model.spec`, for every world `w` the events of `rho` timed before `t` lead to from the
     initial world, some body `D` that validator `v` holds in `w` has `v`'s store's justified block
     and justified height as its own. -/
-theorem specDraft_storeJustificationOnChain_stateBeforeTime_ownRuns : ∀ (S : Setup V)
+theorem spec_storeJustificationOnChain_stateBeforeTime_ownRuns : ∀ (S : Setup V)
     (rho : Record.Run V) (t : Time) (v : V),
     ∀ w ∈ (rho.events.filter (fun e => decide (e.time < t))).foldlM
-        (worldStepOf (Model.specDraft (V := V)) S) (fun u => (Model.specDraft (V := V)).initial S u),
+        (worldStepOf (Model.spec (V := V)) S) (fun u => (Model.spec (V := V)).initial S u),
     ∃ D ∈ (w v).st.bodies,
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg D).J = (w v).st.core.J ∧
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h_j = (w v).st.core.h_j := by
+      ((Model.spec (V := V)).derive_named S.E S.cfg D).J = (w v).st.core.J ∧
+      ((Model.spec (V := V)).derive_named S.E S.cfg D).h_j = (w v).st.core.h_j := by
   intro S rho t v w hw
   obtain ⟨D, hD, hJ, hh⟩ := justification_of_inv S (w v) (ownRunsInv_fold S _ v w hw v)
   exact ⟨D, hD, hJ, hh⟩
 
-/-- At `Model.specDraft`, for every world `w` the run `rho` can reach before its `i`-th event, every
+/-- At `Model.spec`, for every world `w` the run `rho` can reach before its `i`-th event, every
     body validator `v` holds in `w` has a height at most `v`'s store's `h_max`. -/
-theorem specDraft_heights_le_hMax_stateBefore_ownRuns : ∀ (S : Setup V) (rho : Record.Run V)
+theorem spec_heights_le_hMax_stateBefore_ownRuns : ∀ (S : Setup V) (rho : Record.Run V)
     (i : Nat) (v : V),
-    ∀ w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i,
+    ∀ w ∈ stateBeforeOf (Model.spec (V := V)) S rho i,
     ∀ D ∈ (w v).st.bodies,
-      ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h ≤ (w v).st.core.h_max := by
+      ((Model.spec (V := V)).derive_named S.E S.cfg D).h ≤ (w v).st.core.h_max := by
   intro S rho i v w hw
   exact heights_of_inv S (w v) (ownRunsInv_fold S (rho.events.take i) v w hw v)
 
-/-- At `Model.specDraft`, for every world `w` the run `rho` can reach before its `i`-th event and
+/-- At `Model.spec`, for every world `w` the run `rho` can reach before its `i`-th event and
     every body `D` validator `v` holds in `w`, the height `v`'s store records for `D`'s erasure is
     the height of `D`'s chain state. -/
-theorem specDraft_derivedView_stateBefore_h_ownRuns : ∀ (S : Setup V) (rho : Record.Run V)
+theorem spec_derivedView_stateBefore_h_ownRuns : ∀ (S : Setup V) (rho : Record.Run V)
     (i : Nat) (v : V),
-    ∀ w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i,
+    ∀ w ∈ stateBeforeOf (Model.spec (V := V)) S rho i,
     ∀ D ∈ (w v).st.bodies,
-      ((w v).st.core.σ D.erase).h = ((Model.specDraft (V := V)).derive_named S.E S.cfg D).h := by
+      ((w v).st.core.σ D.erase).h = ((Model.spec (V := V)).derive_named S.E S.cfg D).h := by
   intro S rho i v w hw
   exact derivedView_h_of_inv S (w v) (ownRunsInv_fold S (rho.events.take i) v w hw v)
 
-end SpecDraftRecord.ChainStateRunFacts
+end SpecRecord.ChainStateRunFacts
 
 namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- `Model.specDraft` satisfies `ChainStateRunFacts`. -/
-theorem Model.specDraft_runFacts_cs : ChainStateRunFacts (Model.specDraft (V := V)) where
+/-- `Model.spec` satisfies `ChainStateRunFacts`. -/
+theorem Model.spec_runFacts_cs : ChainStateRunFacts (Model.spec (V := V)) where
   storeFinalizationOnChain_stateBefore := fun S rho i v w hw =>
-    SpecDraftRecord.HandlersRunFacts.specDraft_finalization_carrier_stateBefore S rho i v w hw
+    SpecRecord.HandlersRunFacts.spec_finalization_carrier_stateBefore S rho i v w hw
   storeFinalizationOnChain_stateBeforeTime := fun S rho t v w hw =>
-    SpecDraftRecord.HandlersRunFacts.specDraft_finalization_carrier_stateBeforeTime S rho t v w hw
+    SpecRecord.HandlersRunFacts.spec_finalization_carrier_stateBeforeTime S rho t v w hw
   justification_carrier_stateBefore :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_justification_carrier_stateBefore_ownRuns
+    SpecRecord.ChainStateRunFacts.spec_justification_carrier_stateBefore_ownRuns
   storeJustificationOnChain_stateBeforeTime :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_storeJustificationOnChain_stateBeforeTime_ownRuns
+    SpecRecord.ChainStateRunFacts.spec_storeJustificationOnChain_stateBeforeTime_ownRuns
   noHighJustifications_stateBeforeTime :=
-    SpecDraftRecord.HandlersRunFacts.specDraft_noHighJustifications_stateBeforeTime
+    SpecRecord.HandlersRunFacts.spec_noHighJustifications_stateBeforeTime
   heights_le_hMax_stateBefore :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_heights_le_hMax_stateBefore_ownRuns
+    SpecRecord.ChainStateRunFacts.spec_heights_le_hMax_stateBefore_ownRuns
   derivedView_stateBefore_h :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_derivedView_stateBefore_h_ownRuns
-  action_witness := SpecDraftRecord.ChainStateRunFacts.specDraft_action_witness
+    SpecRecord.ChainStateRunFacts.spec_derivedView_stateBefore_h_ownRuns
+  action_witness := SpecRecord.ChainStateRunFacts.spec_action_witness
   derivedStateAgrees_actionStoreAtOn :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_derivedStateAgrees_actionStoreAtOn
-  action_named_checkpointOn := SpecDraftRecord.ChainStateRunFacts.specDraft_action_named_checkpointOn
+    SpecRecord.ChainStateRunFacts.spec_derivedStateAgrees_actionStoreAtOn
+  action_named_checkpointOn := SpecRecord.ChainStateRunFacts.spec_action_named_checkpointOn
   honestHeightRow_confirmationWitnessOn :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_honestHeightRow_confirmationWitnessOn
+    SpecRecord.ChainStateRunFacts.spec_honestHeightRow_confirmationWitnessOn
   storeF_preceq_checkpoint_of_windowOn :=
-    SpecDraftRecord.ChainStateRunFacts.specDraft_storeF_preceq_checkpoint_of_windowOn
+    SpecRecord.ChainStateRunFacts.spec_storeF_preceq_checkpoint_of_windowOn
 
 end DecoupledConsensusModel.Sts.Record

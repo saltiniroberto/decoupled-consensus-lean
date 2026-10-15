@@ -60,6 +60,6 @@ theorem tick_outcome_of_tickStepAt_honest (facts : Record.Facts M) (S : Setup V)
     ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched t x[m] q) t ⇢ out := by
   obtain ⟨τ, hl, rfl⟩ := hm
-  exact facts.ndRun.tick_outcome_sts S Sched x hroot hnew m τ q hl hΔ hq hh
+  exact facts.ndRun.tick_outcome_sts S Sched x hroot hnew m τ q hl hq hh
 
 end DecoupledConsensusModel.Sts.Restated

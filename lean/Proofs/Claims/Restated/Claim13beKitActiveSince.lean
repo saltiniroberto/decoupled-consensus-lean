@@ -36,6 +36,7 @@ import Model.Conditions.Sts_Spec2Claims_Claim13bd
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13beRoute3_74NotHeld
 
 /-!
 # Safety from the invariant with the target clause since the switch round
@@ -111,7 +112,6 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises (facts : Record.Fa
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -163,7 +163,7 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises (facts : Record.Fa
   have hchain : Restated.BaseSGOneChainAtSwitchRound M S Sched x v tE N :=
     Restated.baseSGOneChainAtSwitchRound_of_premises facts S Sched x v hsync hmono hawake hgst hcv hexec
       hmult hthird hcom hlen' htd hN hreg harW hn₀ htop (hP v N hN)
-  have hgrade1 := Restated.grade1_at_switchRound facts S Sched x v hsync hmono hawake hgst hcv hexec hmult
+  have hgrade1 := Restated.grade1_at_switchRound_notHeld facts S Sched x v hsync hmono hawake hgst hcv hexec hmult
     hthird hcom hlen' htd hN hreg harW hn₀ hfin
     (fun heq => Restated.basePreviousRoundSGCompatibleWithAnchor_of_belowOpeningVotes facts S Sched x v
       hsync hmono hawake hgst hcv hexec hmult hthird hcom hlen' htd hN hreg heq (hP v N hN))
@@ -178,7 +178,10 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises (facts : Record.Fa
       heads := Restated.headsBelow_of_regime facts S Sched x v hsync hmono hawake hgst hcv hexec hmult hthird
         hcom hlen' htd hN hreg harW
       fin := hfin
-      grade1 := fun w hw' p hp m hm B b hb hbt => hgrade1 w hw' p hp m hm B (hbt ▸ hb)
+      grade1 := fun w hw' p _hpg1 hp m hm B b hb hbt => hgrade1 w p hp
+        (fun h => (Finset.mem_sdiff.1 hw').2 (hmono _ _ hp h)) m hm B (hbt ▸ hb)
+      grade1Performers := fun w hw' m hm B b hb hbt => hgrade1 w .g1
+        (facts.gr.domain_le_action S _ .g1) (Finset.mem_sdiff.1 hw').2 m hm B (hbt ▸ hb)
       heightCeiling := Restated.heightCeiling_of_topHonestRow facts S Sched x hexec.toUnforgeability htop
       targetsTop := Restated.targetsTop_at_switchRound facts S Sched x v hsync hmono hawake hgst hcv hexec hmult
         hthird hcom hlen' htd hN hreg hn₀ }
@@ -194,10 +197,12 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises (facts : Record.Fa
       heads := hTop.heads
       fin := hTop.fin
       grade1 := hTop.grade1
+      grade1Performers := hTop.grade1Performers
       heightCeiling := hTop.heightCeiling
       targetsTop := hTop.targetsTop
       targetsSince := Restated.targetsSince_at_switchRound facts S Sched x v hsync hmono hawake hgst hcv hexec
-        hmult hthird hcom hlen' htd hN hreg harW hn₀ (fun _ => hgrade1)
+        hmult hthird hcom hlen' htd hN hreg harW hn₀
+        (fun _ w hw' p hp m hm B hB => hgrade1 w p hp (fun h => (Finset.mem_sdiff.1 hw').2 (hmono _ _ hp h)) m hm B hB)
         (fun heq => hclear v N blocked first i a ta Cfg T Tprev c0 n₀ hN hreg heq hn₀) }
 
 end
@@ -272,118 +277,6 @@ theorem claim13be_conclusion_of_base_and_stepFrom_overActiveSetsSince (facts : R
   -- both finalized blocks are ancestors of that round's one anchor
   exact compatible_iff_Compatible.mpr
     (compatible_of_preceq_common_Preceq (hinv.fin v₁ i hi hhon₁) (hinv.fin v₂ j hj hhon₂))
-
-end
-
-section
-set_option autoImplicit false
-open DecoupledConsensusModel.Execution
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Statements.Instantiation
-
-/-- If every tick has an outcome, then under the listed premises, the condition `hP` on the
-    round-`(rW − 1)` SG blocks, the per-round step fields `hf`, the conditions `hprev` and `hclear`
-    at every round from the deadline round to the switch round, and the justified-height condition
-    `hB`, no two blocks finalized in the stores of two validators honest through their own reads
-    conflict. -/
-theorem claim13be_conclusion_of_step_overActiveSetsSince (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched)
-    (tGAT tE : Int) (gap : Nat)
-    (hgap : gap + 2 ≤ S.cfg.K)
-    (hlen : tGAT + (Restated.healingLengthη M S gap + (Restated.constants M S).period) ≤ tE)
-    (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
-    (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
-    (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
-    (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
-    (htd : Restated.TimeDiverges M x)
-    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hthird : ∀ t : Int, t ≤ tE →
-      3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight)
-    (hawake : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
-    (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
-    (hsl : sleepinessW S Sched tE) (hrs : Restated.roundSleepinessW M S Sched tE)
-    (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hP : ∀ (v : V) (N : Nat),
-      (x[N].time : Int) = M.confirmation_time S.E ((M.opening_slot S.hc (Restated.switchRound M S tE)) + 2) →
-      ∀ nprev : V → M.N,
-        (∀ u : V, nprev u ∈ Restated.Vocabulary.Execution.NamedActionReads.actionReadFrom M (Setup.alwaysAwake S)
-          (Restated.runAllPath M S Sched x v N
-            (Restated.strictEventIndex
-              ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
-              (Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE - 1))) u)
-          (Restated.switchRound M S tE - 1)) →
-        Restated.BasePreviousRoundSGBelowOpeningVotes M S Sched x v tE N
-          (Restated.runAllPath M S Sched x v N) nprev)
-    (hf : ∀ (r : Round) (n n' : Nat) (T : NamedBlock V),
-      Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T → Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
-      Restated.StepFieldsAt M S Sched x tE r n n' T)
-    (hprev : ∀ r : Round, Restated.deadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
-      ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
-      (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
-      (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
-      Restated.NamedHeightRegimeRunOn M (Setup.alwaysAwake S)
-        ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
-        (Restated.runAllPath M S Sched x v N)
-        (fun t => Restated.runAllPath M S Sched x v N (Restated.strictEventIndex
-          ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V) t))
-        (notHeldAt Sched) Finset.univ Finset.univ
-        (Restated.roundAt M S tGAT + S.hc.η_SG + 2) blocked first i a ta Cfg T Tprev c0 →
-      a.round = r → Restated.BasePreviousRoundSGCompatibleWithAnchorAtRound M S Sched x v r N
-        (Restated.runAllPath M S Sched x v N) T)
-    (hclear : ∀ r : Round, Restated.deadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
-      ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
-      (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round) (n₀ : Nat),
-      (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
-      Restated.NamedHeightRegimeRunOn M (Setup.alwaysAwake S)
-        ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
-        (Restated.runAllPath M S Sched x v N)
-        (fun t => Restated.runAllPath M S Sched x v N (Restated.strictEventIndex
-          ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V) t))
-        (notHeldAt Sched) Finset.univ Finset.univ
-        (Restated.roundAt M S tGAT + S.hc.η_SG + 2) blocked first i a ta Cfg T Tprev c0 →
-      a.round = r → Restated.tickStepAt M x n₀ ((Restated.Vocabulary.Execution.Setup.a M S r)) →
-      Restated.BaseClearFGSourceCompatibleWithAnchorAtRound M S Sched x r n₀ T)
-    (hB : Restated.BaseJustifiedHighAtSwitchRound M S Sched x tGAT tE gap) :
-    ∀ (v₁ v₂ : V) (i j : Nat),
-      Restated.HonestThrough M Sched x i v₁ → Restated.HonestThrough M Sched x j v₂ →
-      Block.Compatible (x[i][v₁].st).st.core.F (x[j][v₂].st).st.core.F := by
-  have hlen' : tGAT + Restated.healingLengthη M S gap ≤ tE := Restated.healingLength_le_of_kit_l76 facts S hlen
-  obtain ⟨v₀, -⟩ := exists_not_adv_l76 S Sched (hthird tE le_rfl)
-  have hrDW : Restated.deadlineRoundW M S tGAT gap ≤ Restated.switchRound M S tE :=
-    Restated.deadlineRoundW_le_switchRound facts S tGAT tE gap (Restated.runAll M S Sched x v₀ 0) hgst hlen'
-  -- `hclear` at the switch round
-  have hclearW : ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
-      (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round) (n₀ : Nat),
-      (x[N].time : Int)
-        = M.confirmation_time S.E ((M.opening_slot S.hc (Restated.switchRound M S tE)) + 2) →
-      Restated.NamedHeightRegimeRunOn M (Setup.alwaysAwake S)
-        ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
-        (Restated.runAllPath M S Sched x v N)
-        (fun t => Restated.runAllPath M S Sched x v N (Restated.strictEventIndex
-          ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V) t))
-        (notHeldAt Sched) Finset.univ Finset.univ
-        (Restated.roundAt M S tGAT + S.hc.η_SG + 2) blocked first i a ta Cfg T Tprev c0 →
-      a.round = Restated.switchRound M S tE →
-      Restated.tickStepAt M x n₀ ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE))) →
-      Restated.BaseClearFGSourceCompatibleWithAnchor M S Sched x tE n₀ T := by
-    intro v N blocked first i a ta Cfg T Tprev c0 n₀ hN hreg heq hn₀
-    obtain ⟨N', hN', hN'E, -, hrWN', -, -, -⟩ := Restated.switchRound_instants facts S Sched x tGAT tE gap
-      (Restated.runAll M S Sched x v 0) hgst hlen' htd
-    have hNeq : (x[N].time : Int) = (x[N'].time : Int) := hN.trans hN'.symm
-    rw [Restated.baseClearFGSource_atRound_switchRound facts]
-    exact hclear (Restated.switchRound M S tE) hrDW le_rfl v N blocked first i a ta Cfg T Tprev c0 n₀
-      (by rw [hNeq]; exact hrWN') (by rw [hNeq]; exact hN'E) hreg heq hn₀
-  obtain ⟨n₀, T₀, hn₀, hA₀, hbase⟩ :=
-    Restated.claim13beBaseOverActiveSetsSince_anchored_of_premises facts S Sched x tGAT tE gap hgap hlen hgst
-      hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs hP hclearW
-  have hstep : Restated.AfterPhaseStepOverActiveSetsSinceFrom M S Sched x tE n₀ T₀ :=
-    Restated.afterPhaseStepOverActiveSetsSinceFrom_of_hypotheses facts S Sched x tE hexec hmono htd hf tGAT gap
-      hgst hlen' hsync hthird hawake hrs hmult hcv hcs hcom hwakes hsleeps hrec hprev hclear hB
-      hn₀ hA₀
-  exact Restated.claim13be_conclusion_of_base_and_stepFrom_overActiveSetsSince facts S Sched x tE n₀ T₀ hbase
-    hstep
 
 end
 

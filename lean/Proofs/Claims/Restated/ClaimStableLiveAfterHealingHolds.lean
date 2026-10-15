@@ -101,7 +101,6 @@ theorem claimStableLiveAfterHealing_conclusion (facts : Record.Facts M) (S : Set
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -177,7 +176,7 @@ theorem claimStableLiveAfterHealing_conclusion (facts : Record.Facts M) (S : Set
   have hwin' : tGAT + 8 * (S.hc.R : Int) * S.E.Δ ≤ tE' := le_trans hwin8 (le_of_lt h12)
   have hsettle : Restated.RecordsSettledAtSettleTick M S Sched x tE' :=
     Restated.recordsSettledAtSettleTick_atStrongRound facts S Sched x tGAT tE gap hgap hgst hmono hexec hsync
-      hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
+      hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
       hopening hprev1
   have hle : Restated.confirmedSettleTime M S tE' ≤ tE := Restated.confirmedSettleTime_third_le facts S hc1 hcE
   have hthird' := third_of_later S Sched tE tE' htE' hthird
@@ -188,7 +187,7 @@ theorem claimStableLiveAfterHealing_conclusion (facts : Record.Facts M) (S : Set
   have hcs' := Restated.committeeSleepinessW_of_later facts S Sched tGAT tE tE' hmono hawake hcom hwin' hcs
   have hlen'' : tGAT + Restated.healingLengthη M S gap ≤ tE' := Restated.healingLength_le_of_kit_l76 facts S hlen'
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE' gap hgap hlen' hgst hmono hexec hsync
-    hmult hwakes hsleeps hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
+    hmult hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE' gap hlen' hgst
     hmono hexec hsync hmult hcv hcom hthird' hawake' hrec'
   have hclear := fun r (hrD' : Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r)
@@ -198,7 +197,7 @@ theorem claimStableLiveAfterHealing_conclusion (facts : Record.Facts M) (S : Set
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE' gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE' gap hgap hlen' hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom
+    x tGAT tE' gap hgap hlen' hgst hmono hexec hsync hmult hcatch hcv htd hcom
     hthird' hawake' hrec' hsl' hrs' hcs' hlow
   have htEpos : 0 < tE := pos_of_phase S hlen hgst (Restated.healingLengthDevice_pos facts S gap)
   have hincl : Restated.StableIncludedAfterHealing M S Sched x tE := by
@@ -206,13 +205,13 @@ theorem claimStableLiveAfterHealing_conclusion (facts : Record.Facts M) (S : Set
     refine ⟨Restated.confirmedIncludedExists_inclX facts S Sched x hexec htd htEpos s hsE hhon, ?_⟩
     intro k B hB hk
     exact Restated.stableIncluded_afterPhase facts S Sched x tE' hexec hmono htd hcatch tGAT gap hgst hlen''
-      hsync hthird' hawake' hrs' hmult hcv hcs' hcom hwakes hsleeps hrec' hprev hclear hB' hnW
+      hsync hthird' hawake' hrs' hmult hcv hcs' hcom hrec' hprev hclear hB' hnW
       hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle (Restated.slot_ge_of_le_phaseEnd facts S hle hsE) hhon hB
       hk
   refine ⟨hincl, ?_, ?_⟩
   ·
     have hext := Restated.stableOnlyExtendsAfterHealing_of_settle facts S Sched x tE' hexec hmono htd hcatch tGAT
-      gap hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hwakes hsleeps hrec' hprev
+      gap hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hrec' hprev
       hclear hB' hnW hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle
     intro v i j hij hvj hti
     exact hext v i j hij hvj (le_trans hle hti)
@@ -239,12 +238,15 @@ theorem claimStableLiveAfterHealing_conclusion (facts : Record.Facts M) (S : Set
         linarith
       have hlt : (x[i].time : Int) < M.proposal_time S.E s := by rw [hti]; exact hts
       exact (Restated.prec_get_confirmed_of_honestProposal facts S Sched x tE' hexec hmono htd hcatch tGAT gap
-        hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hwakes hsleeps hrec' hprev
+        hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hrec' hprev
         hclear hB' hnW hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle
         (Restated.slot_ge_of_le_phaseEnd facts S hle hsE) hhon hB hkv hn_b v hi hv hlt).2
     ·
       intro v j hv hj hact
-      exact (hincl s hsE hhon).2 k B hB hkv v j hv (by rw [hG] at hj; linarith) hact
+      obtain ⟨s_w, hlo, hhi, haw⟩ := hact
+      refine (hincl s hsE hhon).2 k B hB hkv v j hv (by rw [hG] at hj; linarith) ⟨s_w, ?_, hhi, haw⟩
+      rw [hG] at hlo
+      linarith
 
 end
 
@@ -268,8 +270,6 @@ theorem claimStableLiveAfterHealing_holds_at (facts : Record.Facts M) (S : Setup
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -289,7 +289,7 @@ theorem claimStableLiveAfterHealing_holds_at (facts : Record.Facts M) (S : Setup
     htd hgst (tE := tE) (by have := Restated.delta_le_healingLengthη_add_gap_period facts S gap; linarith)
     hawake
   exact Restated.claimStableLiveAfterHealing_conclusion facts S Sched x tGAT tE gap hgap hlen hgst hmono
-    hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs
+    hexec hsync hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs
 
 /-- For every setup `S` and schedule `Sched`,
     `Restated.claimStableLiveAfterHealingStatement M S Sched` holds. -/
@@ -298,10 +298,10 @@ theorem claimStableLiveAfterHealing_holds (facts : Record.Facts M) (S : Setup V)
   intro gap hgap
   refine ⟨Restated.healingLengthη M S gap + ((gap : Int) + 2) * (Restated.constants M S).period,
     le_of_lt (Restated.healingLengthDevice_pos facts S gap), ?_⟩
-  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake
+  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird hawake
     hrec hsl hrs hcs =>
     Restated.claimStableLiveAfterHealing_holds_at facts S Sched gap hgap x tGAT tE hlen hgst hmono
-      hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake hrec hsl hrs hcs
+      hexec hsync hmult hcatch htd hcom hthird hawake hrec hsl hrs hcs
 
 end
 

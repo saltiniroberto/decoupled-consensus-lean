@@ -80,7 +80,7 @@ theorem gfVote_delivered_of_recorded_phase (facts : Record.Facts M) (S : Setup V
   have hsend : Restated.HonestSendAt M S x i
       (⟨v, NamedObject.gfVote u⟩ : SignedMsg V (NamedObject V)) := by
     rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-      ⟨m, hl, -, -, hcase⟩ | ⟨τ, hl, haw, hdvd, out₁, hout, hst, hcase⟩
+      ⟨m, hl, -, -, hcase⟩ | ⟨τ, hl, haw, out₁, hout, hst, hcase⟩
     · have ho : NamedObject.gfVote u ∈ relayedObjects m.msg := by
         rw [mem_relayedObjects_iff]
         rcases hcase with heq | ⟨B, hB, hcc⟩
@@ -89,7 +89,7 @@ theorem gfVote_delivered_of_recorded_phase (facts : Record.Facts M) (S : Setup V
       exact Restated.honestSendAt_of_deliver_relay facts S Sched x hl ho
         (Restated.receipt_outcome_of_flip facts S Sched x hl hf0 hf1)
     · rcases hcase with hmem | ⟨B, hem, hcc⟩
-      · exact ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hl haw hdvd
+      · exact ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hl haw
           (fun o₁ o₂ h₁ h₂ h12 =>
             facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) v _ _ o₁ o₂ h₁ h₂ h12)
           hout hst hmem,

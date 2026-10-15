@@ -5,9 +5,9 @@ import Proofs.Instance.Model
 import Proofs.Instance.NoRaise.Routines
 
 /-!
-# Outcomes of the contract-reading members of `Model.specDraft`
+# Outcomes of the contract-reading members of `Model.spec`
 
-The members of `Model.specDraft` that take a grade contract `c` run the spec's routine on the store
+The members of `Model.spec` that take a grade contract `c` run the spec's routine on the store
 with its saved grades replaced by `c`. The lemmas of this file say what an outcome of such a member
 is, read off the spec's routine.
 -/
@@ -15,25 +15,25 @@ is, read off the spec's routine.
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.ContractImages
+namespace SpecRecord.ContractImages
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The member `early` of `Model.specDraft` equals the member `early` of `Model.vocabulary`. -/
+/-- The member `early` of `Model.spec` equals the member `early` of `Model.vocabulary`. -/
 theorem early_eq (E : Env V) (hc : Protocol.HealConfig) (r : Round) (p : Protocol.Phase) :
-    (Model.specDraft (V := V)).early E hc r p = (Model.vocabulary (V := V)).early E hc r p := by
+    (Model.spec (V := V)).early E hc r p = (Model.vocabulary (V := V)).early E hc r p := by
   show Member.early E hc r p = Protocol.early E hc r p
   have h := toProof_early E hc unreadHeightConfig r (Spec.Protocol.Phase.toSpec p)
   have hp : (Spec.Protocol.Phase.toSpec p).toProof = p := by cases p <;> rfl
   rw [hp] at h
   exact h.symm
 
-/-- The member `late` of `Model.specDraft` equals the member `late` of `Model.vocabulary`. -/
+/-- The member `late` of `Model.spec` equals the member `late` of `Model.vocabulary`. -/
 theorem late_eq (E : Env V) (hc : Protocol.HealConfig) (r : Round) (p : Protocol.Phase) :
-    (Model.specDraft (V := V)).late E hc r p = (Model.vocabulary (V := V)).late E hc r p := by
+    (Model.spec (V := V)).late E hc r p = (Model.vocabulary (V := V)).late E hc r p := by
   show Member.late E hc r p = Protocol.late E hc r p
   unfold Member.late Protocol.late
   rw [toProof_opening E hc unreadHeightConfig r]
@@ -806,7 +806,7 @@ theorem map_toProofEmb_voteToSpec (S : Finset (Spec.GoldfishVote V)) :
     the vote of the node's validator for the head's root when the validator is in the slot's
     committee, and none otherwise. -/
 theorem duties_goldfish_vote_with_snd_spec {c : Spec.SavedGrades V} {E : Env V}
-    {hc : Protocol.HealConfig} {nd : Protocol.Node V} {st : SpecDraftRecord.OkStore V}
+    {hc : Protocol.HealConfig} {nd : Protocol.Node V} {st : SpecRecord.OkStore V}
     {D : Spec.Store V × Option (GoldfishVote V)}
     (hD : Returns (Member.duties_goldfish_vote_with c E hc nd st.val) D)
     {tree : Finset (Block V)} {votes support : Finset (GoldfishVote V)} {H : Block V}
@@ -1621,7 +1621,7 @@ theorem get_head_with_contractStore_fixed (st : OkStore V) (c : Spec.SavedGrades
 /-- The members' support votes of slot `s`, the votes the outcomes `res` of the member `resolved`
     keep, written in the spec's type, are the spec's support votes. -/
 theorem support_filter_eq (st : OkStore V) (s : Slot) (res : GoldfishVote V → Bool)
-    (hres : ∀ u, (Model.specDraft (V := V)).resolved (st.val.T.image Spec.Block.toProof) u ⇢ res u)
+    (hres : ∀ u, (Model.spec (V := V)).resolved (st.val.T.image Spec.Block.toProof) u ⇢ res u)
     {S : Finset (Spec.GoldfishVote V)}
     (hS : (st.val.pool s).filterM (fun u => Spec.Protocol.resolved st.val.T u) = .ok S) :
     (((st.val.pool s).map Spec.GoldfishVote.toProofEmb).filter (fun u => res u = true)).map
@@ -1634,7 +1634,7 @@ theorem support_filter_eq (st : OkStore V) (s : Slot) (res : GoldfishVote V → 
       DecoupledConsensusModel.Protocol.resolved (st.val.T.image Spec.Block.toProof) u := by
     intro u
     have h := hres u
-    rw [ForkChoiceImages.specDraft_resolved_eq] at h
+    rw [ForkChoiceImages.spec_resolved_eq] at h
     exact (returns_pure _ _).1 h
   rw [hS', Finset.filter_map, Finset.map_map]
   ext u
@@ -1830,4 +1830,4 @@ theorem member_get_head_with_eq_layer (st : OkStore V) (c : Spec.SavedGrades V)
   rw [e1]
   rfl
 
-end SpecDraftRecord.ContractImages
+end SpecRecord.ContractImages

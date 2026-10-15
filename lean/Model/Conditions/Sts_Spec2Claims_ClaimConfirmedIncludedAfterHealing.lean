@@ -11,8 +11,9 @@ import Model.Record.Wiring
 /-!
 # Inclusion into confirmed outputs after healing
 
-The inclusion of honest proposals in the confirmed outputs after a phase, the monotonicity of those
-outputs, and the statement that both hold, stated over a model `M : Record.Model V`.
+The window of a confirmation the awake rule lets run, the inclusion of honest proposals in the
+confirmed outputs after a phase, the monotonicity of those outputs, and the statement that both
+hold, stated over a model `M : Record.Model V`.
 -/
 
 set_option autoImplicit false
@@ -29,12 +30,30 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
+/-- `v` was awake throughout the grade-2 window of a confirmation whose instant lies in `[lo, hi]`:
+    for some slot `s_w` with `lo ≤ confirmation_time s_w ≤ hi`, `v` is awake at every time from one
+    delay before the grade-2 first cutoff of the round of `s_w + 1` to slot `s_w`'s confirmation
+    instant. This is the awake rule's condition for `v`'s confirmation duty to run at `s_w`. -/
+def awakeThroughConfirmationWindow (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
+    (lo hi : Int) (v : V) : Prop :=
+  ∃ s_w : Slot, lo ≤ M.confirmation_time S.E s_w ∧ M.confirmation_time S.E s_w ≤ hi ∧
+    v ∈ Sched.awakeThroughout (M.early S.E S.hc (M.round_of S.hc (s_w + 1)) .g2 - S.E.Δ)
+      (M.confirmation_time S.E s_w)
+
+end
+
+section
+set_option autoImplicit false
+open Framework.StsMultisetLog
+open DecoupledConsensusModel.Execution
+
 /-- For every slot `s` with proposal instant at or after `tE` whose proposer is not held up to `s`'s
     vote instant: if the proposer is awake from `M.proposal_wake_start S s` to the proposal instant,
     it sends a block of slot `s` at that instant; and every block it sent by `s`'s vote instant is
-    an ancestor of the confirmed output of every validator honest through its read and awake
-    throughout the vote window of its read's slot, at every read from the proposal instant plus the
-    confirmation delay on. -/
+    an ancestor of the confirmed output of every validator honest through its read that ran, at or
+    after slot `s`'s confirmation instant and at or before its read, a confirmation while awake
+    throughout that confirmation's grade-2 window (`awakeThroughConfirmationWindow`), at every read
+    from the proposal instant plus the confirmation delay on. -/
 def ConfirmedIncludedAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) : Prop :=
   ∀ s : Slot,
@@ -48,7 +67,7 @@ def ConfirmedIncludedAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Sc
       (x[i].time : Int) ≤ M.vote_time S.E s →
       ∀ (v : V) (j : Nat), Restated.HonestThrough M Sched x j v →
         M.proposal_time S.E s + confirmedInclusionDelay S ≤ (x[j].time : Int) →
-        v ∈ activeAtW S Sched (S.E.slotOf (x[j].time : Int)) →
+        Restated.awakeThroughConfirmationWindow M S Sched (M.confirmation_time S.E s) (x[j].time : Int) v →
         Block.Preceq B (Restated.Read.confirmed M x[j][v].st)
 
 end
@@ -89,8 +108,6 @@ def claimConfirmedIncludedAfterHealingStatement (M : Record.Model V) (S : Setup 
     Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x →
     Restated.SynchronyFromWake M S x →
     AwakeAtMultiples S Sched →
-    Restated.WakesAtActionInstants M S Sched →
-    Restated.SleepsAfterActionInstants M S Sched →
     Restated.CatchUpOnWake M S x →
     Restated.TimeDiverges M x →
     Restated.HonestCommittees M S Sched (Restated.interface M S Sched) →

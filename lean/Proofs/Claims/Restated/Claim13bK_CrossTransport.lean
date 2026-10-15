@@ -98,7 +98,7 @@ theorem clock_ge_of_tick_lt (facts : Record.Facts M) (S : Setup V) (Sched : Sche
       M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched c x[n] w) c ⇢ out)
     (hnm : n < m) :
     c ≤ (x[m][w].st).st.core.t :=
-  Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn haw hdvd hne (Nat.succ_le_of_lt hnm)
+  Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn haw hne (Nat.succ_le_of_lt hnm)
 
 end
 

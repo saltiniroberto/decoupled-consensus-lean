@@ -149,7 +149,7 @@ theorem preceq_latest_stable_succ (facts : Record.Facts M) (S : Setup V) (Sched 
       rw [ht', facts.sch.confirmation_time_eq_support_cutoff_succ]
       exact facts.sch.support_cutoff_emod_delta S (s + 1)
     have haw' : w ∈ Sched.awake (t' : Int) \ Sched.adv (t' : Int) := by rw [ht']; exact haw
-    rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' hdvd with
+    rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' with
       ⟨out, hout, hst⟩ | ⟨-, hst⟩
     · rw [ht'] at hout
       by_cases hrun : M.awake_for_grade2 (Setup.alwaysAwake S) w
@@ -201,7 +201,7 @@ theorem tick_tree_fields_at_confirmation (facts : Record.Facts M) (S : Setup V) 
       ≠ M.vote_time S.E (S.E.slotOf (M.confirmation_time S.E s)) := by
     rw [hslot, hcs]
     exact facts.sch.support_cutoff_ne_vote_time S.E (s + 1)
-  rcases Restated.st_succ_of_tick facts S Sched x w hlbl with ⟨-, -, out, hout, hst⟩ | hst
+  rcases Restated.st_succ_of_tick facts S Sched x w hlbl with ⟨-, out, hout, hst⟩ | hst
   · rw [hst]
     rw [ht'] at hout
     have h := facts.nd.tick_tree_fields_of_not_proposal_vote (Setup.alwaysAwake S) w _

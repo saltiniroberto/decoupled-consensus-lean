@@ -13,7 +13,7 @@ member `gs_timestamp_block` has no lemma here: two blocks of the tree can have o
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 
@@ -123,4 +123,4 @@ theorem toProof_store_init :
   simp only [Store.toProof, hT, hts, hσ]
   rfl
 
-end SpecDraftRecord
+end SpecRecord

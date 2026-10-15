@@ -11,7 +11,6 @@ import Proofs.Claims.Restated.Claim13bK_GradeFor
 import Proofs.Claims.Restated.Claim13bK_GradeOld
 import Proofs.Claims.Restated.Claim13bK_GradeOldHeads
 import Proofs.Claims.Restated.Claim13bK_ProposalVotesAfterPhase
-import Proofs.Claims.Restated.Claim13bK_StableReaders
 import Proofs.Claims.Restated.Claim13bK_StableRecord
 import Proofs.Claims.Restated.Claim13bK_StableRootFor
 import Proofs.Claims.Restated.Claim13bStepAssembly
@@ -61,6 +60,9 @@ import Model.Conditions.Vocabulary_Protocol_Handlers_NamedStore
 import Model.Conditions.Vocabulary_Protocol_Handlers_StoreRoots
 import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bK_GradeForRecv
+import Proofs.Claims.Restated.Claim13bW_Receipt
+import Proofs.Claims.Restated.Claim13bK_StableReadersRule
 
 /-!
 # Grades at the next round for every round length
@@ -164,7 +166,7 @@ theorem honestSend_of_holder (facts : Record.Facts M) (S : Setup V) (Sched : Sch
   have himt : (x[i].time : Int) ≤ (x[m].time : Int) := Restated.time_mono_int facts S Sched x (le_of_lt him)
   have hqi : Restated.HonestThrough M Sched x i v' := fun t' ht => hq t' (le_trans ht himt)
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hem⟩
   · rcases hpay with hmsg | ⟨Bl, -, hcc⟩
     · obtain ⟨u, o⟩ := sm
       have hmsg' : o = NamedObject.block B := hmsg
@@ -187,7 +189,7 @@ theorem honestSend_of_holder (facts : Record.Facts M) (S : Setup V) (Sched : Sch
         have h2 : (x[i + 1].time : Int) = (τ : Int) := by exact_mod_cast hτ'
         linarith
       exact ⟨i, i, v', him, hmemi, hbodyi, rfl, le_rfl, by rw [hdt],
-        Restated.block_honestSend_at_tick facts S Sched x hqi hlbl haw hdvd
+        Restated.block_honestSend_at_tick facts S Sched x hqi hlbl haw
           ⟨out₁, hout₁, hst₁, hemit⟩⟩
     · exact hcc.elim
 
@@ -303,6 +305,133 @@ theorem block_in_tree_of_holder_beforeAction_ofAdmits (facts : Record.Facts M) (
 
 end
 
+private theorem le_succ_of_not_add_two_le_cu (a b : Nat) (h : ¬ b + 2 ≤ a) : a ≤ b + 1 := by
+  omega
+
+private theorem false_of_slot_chain_cu (o o' s : Nat) (h1 : s ≤ o) (h2 : o ≤ o')
+    (h3 : o' + 2 ≤ s) : False := by
+  omega
+
+private theorem three_le_add_cu (o R : Nat) (h : 3 ≤ R) : 3 ≤ o + R := by
+  omega
+
+private theorem succ_le_succ_of_add_two_cu (a b : Nat) (h : b + 2 ≤ a) : b + 1 ≤ a + 1 := by
+  omega
+
+-- Folded in from the former module `Claim13bK_GradeForCatchUpRecv.lean` (wake switch, lane S).
+/-!
+# Grades for a descendant at a reader awake from t₀, from a receipt
+
+`hstamp_of_premises` and `gradeBool_of_headsBelow_of_three_le_R` of `Claim13bK_GradeForCatchUp.lean`
+with the reader awake from some `t₀` at or before the first cutoff of the grade read less
+`Δ` in place of `S.a q`, and, for the grade, its receipt of round `q`'s honest attestations
+before that cutoff. The block step under them is `block_in_tree_of_holder_awakeFrom_ofAdmits`:
+`block_in_tree_of_holder_beforeAction_ofAdmits` of the same file with the reader awake throughout
+`[t − Δ, t]` in place of its two-case awake condition.
+-/
+
+
+section
+set_option autoImplicit false
+open Framework.StsMultisetLog
+open DecoupledConsensusModel.Execution
+local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
+
+/-- A block `B` an honest validator holds, entered into its store strictly before `t_0`, is in the
+    tree of a validator `v` that admits it, at any step `mr` with `t ≤ x[mr].time`, stamped strictly
+    before `t`, when `tGAT < t_0`, `t_0 + Δ ≤ t`, and `v` is awake throughout `[t − Δ, t]`. -/
+theorem block_in_tree_of_holder_awakeFrom_ofAdmits (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
+    (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
+    (hsync : Restated.SynchronyFromWake M S x) (hcatch : Restated.CatchUpOnWake M S x)
+    (hmult : AwakeAtMultiples S Sched) (htd : Restated.TimeDiverges M x)
+    (hmono : Sched.MonotoneCorruption) {tGAT tE tR : Int}
+    (hgst : S.E.t_GST ≤ tGAT)
+    (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
+    (hawake : ∀ t : Int, tGAT ≤ t → t ≤ tE → ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
+    (hlen : tGAT + S.E.Δ ≤ tE)
+    {m mr : Nat} {v' v : V} {B : NamedBlock V} {t_0 t : Int}
+    (hadm : Restated.ReaderAdmitsInPhase M S Sched x tGAT tR v B)
+    (hadmS : Restated.ReaderAdmitsAtStepsInPhase M S Sched x tGAT tR v B)
+    (hB : B ∈ (x[m][v'].st).st.bodies)
+    (hq : Restated.HonestThrough M Sched x m v')
+    (hmlo : tGAT ≤ (x[m].time : Int))
+    (hpre : ∀ i : Nat, i < m → (x[i].time : Int) < t_0)
+    (hlo : tGAT < t_0) (hdl : t_0 + S.E.Δ ≤ t)
+    (hΓR : t ≤ tR) (hmr : t ≤ (x[mr].time : Int))
+    (hw : v ∉ Sched.adv (x[mr].time : Int))
+    (hrd : v ∈ Sched.awakeThroughout (t - S.E.Δ) t)
+    (hneTick : ∀ (n' : Nat) (t' : Int), Restated.tickStepAt M x n' t' → t' % S.E.Δ = 0 → v ∈ Sched.awake t' \ Sched.adv t' →
+      slotStart S.E.Δ B.erase.slot ≤ t' → t' ≤ (x[mr].time : Int) →
+      ∃ out : M.N × List (NamedObject V),
+        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out) :
+    B.erase ∈ (x[mr][v].st).st.core.T ∧
+      ∃ σ : Stamp, (x[mr][v].st).st.core.timestamp_block B.erase = some σ ∧
+        σ < (t : Stamp) := by
+  classical
+  have hd := S.E.Δ_pos
+  have hFst : ∀ d : Nat, (x[d].time : Int) = tGAT + S.E.Δ → Restated.HonestThrough M Sched x d v →
+      Block.compatible (x[d][v].st).st.core.F B.erase = true ∨ B ∈ (x[d][v].st).st.bodies :=
+    fun d hdt' hvd => (hadmS d hvd (by linarith) (by linarith)).imp
+      (fun h => compatible_of_cases (Or.inl (preceq_eq_true_iff_Preceq.mp h))) id
+  by_cases hgen : B = NamedBlock.genesis
+  · subst hgen
+    have hgb : (NamedBlock.genesis : NamedBlock V) ∈ (x[mr][v].st).st.bodies :=
+      ((Restated.nodeInvariant_sts facts S Sched x mr v).1.1.1.2.2.1).1
+    refine ⟨?_, ⊥, ?_, WithBot.bot_lt_coe t⟩
+    · rw [Restated.bodies_image_eq_T facts S Sched x mr v]
+      exact Finset.mem_image_of_mem NamedBlock.erase hgb
+    · refine Restated.block_stamp_carry facts S Sched x (Nat.zero_le mr) v ?_
+      have hge : (NamedBlock.genesis : NamedBlock V).erase = Block.genesis := erase_named_genesis
+      rw [Record.st_zero M S Sched x v, hge]
+      exact facts.nd.initial_timestamp_genesis _ _
+  obtain ⟨i, k, v_0, him, hmemi, hbodyi, hkt, hnk, hnk1, hsend⟩ :=
+    Restated.honestSend_of_holder facts S Sched x hB hq hgen
+  have hki : (x[k].time : Int) < t_0 := by rw [hkt]; exact hpre i him
+  by_cases hearly : (x[k].time : Int) < tGAT
+  · have hqT : HonestThroughTime Sched tGAT v' := fun t' ht => hq t' (le_trans ht hmlo)
+    exact Restated.block_in_tree_of_narrowedCommonView_afterPhase facts S Sched x hexec htd hmono hcv
+        hawake hlen
+      hbodyi hqT (by linarith) (by linarith) hmr hw hFst
+  · have hklo : tGAT ≤ (x[k].time : Int) := not_lt.mp hearly
+    have hrd' : v ∈ Sched.awakeThroughout (t - S.E.Δ) (t - S.E.Δ + S.E.Δ) := by
+      rw [sub_add_cancel]; exact hrd
+    obtain ⟨d, hkd, hdlbl, hdlt⟩ :=
+      Restated.delivered_before_of_honestSend_awakeFrom_healing facts S Sched x hsync hcatch hsend
+        (by linarith) (by linarith) hrd'
+    rw [sub_add_cancel] at hdlt
+    have hk1d : (x[k + 1].time : Int) ≤ (x[d].time : Int) := Restated.time_mono_int facts S Sched x hkd
+    have hkd' : (x[k].time : Int) ≤ (x[d].time : Int) :=
+      Restated.time_mono_int facts S Sched x (le_of_lt hkd)
+    have hdmr' : (x[d].time : Int) ≤ (x[mr].time : Int) := by linarith
+    have hwh : Restated.HonestThrough M Sched x d v := by
+      intro t' ht' hin
+      exact hw (hmono t' _ (le_trans ht' hdmr') hin)
+    have hbody : B ∈ (x[d + 1][v].st).st.bodies :=
+      Restated.block_admitted_of_deliver_ofAdmits facts S Sched x hexec hmult htd hadm hdlbl hwh hmemi hgen
+        (le_trans hnk hk1d) (by linarith) (by linarith)
+        (fun n' t' hn' hΔ hq hlo' hhi' => hneTick n' t' hn' hΔ hq hlo' (le_trans hhi' hdmr'))
+    have hdtime : (x[d + 1].time : Int) = (x[d].time : Int) := by
+      exact_mod_cast congrArg (fun j : Nat => (j : Int)) (Restated.deliver_time facts S Sched x hdlbl)
+    have hdmr : d + 1 ≤ mr := by
+      by_contra hcon
+      have hle : mr ≤ d := by omega
+      have h := Restated.time_mono_int facts S Sched x hle
+      linarith
+    have hbodymr : B ∈ (x[mr][v].st).st.bodies :=
+      of_decide_eq_true (Restated.processed_mono facts S Sched x v (NamedObject.block B) hdmr
+        (decide_eq_true hbody))
+    refine ⟨?_, ?_⟩
+    · rw [Restated.bodies_image_eq_T facts S Sched x mr v]
+      exact Finset.mem_image_of_mem NamedBlock.erase hbodymr
+    · have hmemTd : B.erase ∈ (x[d + 1][v].st).st.core.T := by
+        rw [Restated.bodies_image_eq_T facts S Sched x (d + 1) v]
+        exact Finset.mem_image_of_mem NamedBlock.erase hbody
+      obtain ⟨σ, hσ, hσlt⟩ :=
+        Restated.block_stamp_lt_of_time facts S Sched x (d + 1) v (Γ := t) hmemTd (by rw [hdtime]; linarith)
+      exact ⟨σ, Restated.block_stamp_carry facts S Sched x hdmr v hσ, hσlt⟩
+
+end
+
 section
 set_option autoImplicit false
 open Framework.StsMultisetLog
@@ -311,13 +440,13 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 
 /-- If `q` is at or after the switch round, `n` is the tick step at `S.a q`, `m` is the last step
     before round `q + 1`'s phase-`p` instant, and `v` is awake throughout
-    `[S.a q, domain (q + 1) p]` and not held by the adversary at `domain (q + 1) p`, then every
-    block named by a round-`q` attestation that a member of `freshAttestersW S Sched x q m` can
+    `[t₀, domain (q + 1) p]`, with `t₀` at or before round `q + 1`'s first cutoff of phase `p` less
+    `Δ`, and not held by the adversary at `domain (q + 1) p`, then every block named by a round-`q` attestation that a member of `freshAttestersW S Sched x q m` can
     compute resolves in `v`'s tree after `m` steps, stamped strictly before round `q + 1`'s early
     cutoff of phase `p`. -/
-theorem hstamp_of_premises (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
+theorem hstamp_of_premises_recv (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -352,7 +481,8 @@ theorem hstamp_of_premises (facts : Record.Facts M) (S : Setup V) (Sched : Sched
     {n : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S q)))
     {p : Protocol.Phase} {m : Nat}
     (hm : Restated.stepBeforeInstant M x m (M.domain S.E S.hc (q + 1) p))
-    {v : V} (hvaw : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) (M.domain S.E S.hc (q + 1) p))
+    {v : V} (t₀ : Int) (ht₀ : t₀ ≤ M.early S.E S.hc (q + 1) p - S.E.Δ)
+    (hvaw : v ∈ Sched.awakeThroughout t₀ (M.domain S.E S.hc (q + 1) p))
     (hvS : v ∉ Sched.adv (M.domain S.E S.hc (q + 1) p)) :
     ∀ v_1 ∈ Restated.freshAttestersW M S Sched x q m, ∀ C : NamedBlock V,
       C ∈ (x[n + 1][v_1].st).st.bodies →
@@ -387,7 +517,7 @@ theorem hstamp_of_premises (facts : Record.Facts M) (S : Setup V) (Sched : Sched
   have hv1n : Restated.HonestThrough M Sched x (n + 1) v_1 := fun t ht =>
     hv1m t (le_trans ht (by rw [hn1]; exact ham))
   have hFC := Restated.fresh_attested_compatible_finalized facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hTW₀ hJ₀ hr hn hn' hm hv_1 hC a ha hconf
   have hlog : Restated.blockInLog M S Sched x C := Restated.blockInLog_of_mem_bodies facts S Sched hv1n hC
   have hadm : Restated.ReaderAdmitsInPhase M S Sched x tGAT ((Restated.Vocabulary.Execution.Setup.a M S (q + 1)) - 1) v C := by
@@ -416,20 +546,12 @@ theorem hstamp_of_premises (facts : Record.Facts M) (S : Setup V) (Sched : Sched
     intro i hi
     have h := Restated.time_mono_int facts S Sched x (show i ≤ n by omega)
     linarith
-  have hrd : v ∈ Sched.awakeThroughout (M.early S.E S.hc (q + 1) p - 2 * S.E.Δ + 1)
-        (M.early S.E S.hc (q + 1) p) ∨
-      (v ∉ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S q) - 1) ∧ v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) ((Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ)) := by
-    by_cases hprev1 : v ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S q) - 1)
-    · left
-      have hbefore := Restated.awake_before_action_of_awake facts S Sched hmult hprev1
-      refine mem_awakeThroughout_of_forall Sched (fun t h0 h1 => ?_)
-      by_cases htq : t ≤ (Restated.Vocabulary.Execution.Setup.a M S q) - 1
-      · exact mem_awake_of_awakeThroughout Sched hbefore (by linarith) htq
-      · exact mem_awake_of_awakeThroughout Sched hvaw (by linarith) (by linarith)
-    · exact Or.inr ⟨hprev1, awakeThroughout_mono Sched hvaw le_rfl (by linarith)⟩
+  have hrd : v ∈ Sched.awakeThroughout (M.early S.E S.hc (q + 1) p - S.E.Δ)
+        (M.early S.E S.hc (q + 1) p) :=
+    awakeThroughout_mono Sched hvaw ht₀ (by linarith)
   obtain ⟨hmemT, σ, hσ, hσlt⟩ :=
-    Restated.block_in_tree_of_holder_beforeAction_ofAdmits facts S Sched x hexec hsync hcatch hmult htd hmono
-      hgst hcv hphase hthird hcs (Restated.delta_le_of_healingLengthη facts S hlen) hadm hadmS hC hv1n
+    Restated.block_in_tree_of_holder_awakeFrom_ofAdmits facts S Sched x hexec hsync hcatch hmult htd hmono
+      hgst hcv hphase (Restated.delta_le_of_healingLengthη facts S hlen) hadm hadmS hC hv1n
       (by rw [hn1]; exact le_of_lt htGAT) hpre htGAT hearly (by linarith) (by linarith)
       (fun hin => hvm _ le_rfl hin) hrd (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›)
   refine ⟨?_, stampedBefore_of_lt hσ hσlt⟩
@@ -447,12 +569,13 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 /-- If `q` is at least two rounds after the switch round, every honest active member of the
     committee of round `q`'s opening slot votes there for a descendant of `X`, `n` is the tick step
     at `S.a q`, `m` is the last step before round `q + 1`'s phase-`p` instant, and `v` is awake
-    throughout `[S.a q, domain (q + 1) p]` and not held by the adversary at `domain (q + 1) p`, then
-    every outcome of `v`'s grade test for `X` at round `q + 1` and phase `p` after `m` steps is
+    throughout `[t₀, domain (q + 1) p]`, with `t₀` at or before round `q + 1`'s first cutoff of phase
+    `p` less `Δ`, receives round `q`'s honest attestations before that cutoff and is not held
+    by the adversary at `domain (q + 1) p`, then every outcome of `v`'s grade test for `X` at round `q + 1` and phase `p` after `m` steps is
     `true`. -/
-theorem gradeBool_of_headsBelow_of_three_le_R (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
+theorem gradeBool_of_headsBelow_of_three_le_R_recv (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -488,32 +611,30 @@ theorem gradeBool_of_headsBelow_of_three_le_R (facts : Record.Facts M) (S : Setu
     {n : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S q)))
     {p : Protocol.Phase} {m : Nat}
     (hm : Restated.stepBeforeInstant M x m (M.domain S.E S.hc (q + 1) p))
-    {v : V} (hvaw : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) (M.domain S.E S.hc (q + 1) p))
+    {v : V} (t₀ : Int) (ht₀ : t₀ ≤ M.early S.E S.hc (q + 1) p - S.E.Δ)
+    (hvaw : v ∈ Sched.awakeThroughout t₀ (M.domain S.E S.hc (q + 1) p))
+    (hrecv : Restated.ReceivesRoundAttestationsBefore M S Sched x q v (M.early S.E S.hc (q + 1) p))
     (hvS : v ∉ Sched.adv (M.domain S.E S.hc (q + 1) p)) :
     ∀ g : Bool, M.gradeBool S.E (M.gradeView (M.toHealing (x[m][v].st).st.core)) (x[m][v].st).st.core.F
       S.hc.η_SG (q + 1) (M.early S.E S.hc (q + 1) p) (M.late S.E S.hc (q + 1) p)
       X ⇢ g → g = true :=
-  Restated.gradeBool_of_headsBelow_of_stamp facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-    hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
-    hTW₀ hJ₀ hq hX hn hm hvaw hvS
-    (Restated.hstamp_of_premises facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird
-      hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀
-      (le_trans (Nat.le_add_right _ 2) hq) hn hm hvaw hvS)
+  Restated.gradeBool_of_headsBelow_of_stamp_recv facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
+    hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
+    hTW₀ hJ₀ hq hX hn hm hrecv hvS
+    (Restated.hstamp_of_premises_recv facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird
+      hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀
+      (le_trans (Nat.le_add_right _ 2) hq) hn hm t₀ ht₀ hvaw hvS)
 
 end
 
-private theorem le_succ_of_not_add_two_le_cu (a b : Nat) (h : ¬ b + 2 ≤ a) : a ≤ b + 1 := by
-  omega
 
-private theorem false_of_slot_chain_cu (o o' s : Nat) (h1 : s ≤ o) (h2 : o ≤ o')
-    (h3 : o' + 2 ≤ s) : False := by
-  omega
 
-private theorem three_le_add_cu (o R : Nat) (h : 3 ≤ R) : 3 ≤ o + R := by
-  omega
 
-private theorem succ_le_succ_of_add_two_cu (a b : Nat) (h : b + 2 ≤ a) : b + 1 ≤ a + 1 := by
-  omega
+
+
+
+
+
 
 section
 set_option autoImplicit false
@@ -528,7 +649,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
     honest through `j` and in `activeAtW` at `j`'s slot. -/
 theorem stableIncluded_afterPhase (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -566,8 +687,12 @@ theorem stableIncluded_afterPhase (facts : Record.Facts M) (S : Setup V) (Sched 
     (hk : (x[k].time : Int) ≤ M.vote_time S.E s) :
     ∀ (v : V) (j : Nat), Restated.HonestThrough M Sched x j v →
       M.proposal_time S.E s + Restated.stableInclusionDelay M S ≤ (x[j].time : Int) →
-      v ∈ activeAtW S Sched (S.E.slotOf (x[j].time : Int)) →
+      Restated.awakeThroughConfirmationWindow M S Sched
+        (M.proposal_time S.E s + Restated.stableInclusionDelay M S) (x[j].time : Int) v →
       Block.Preceq B (M.get_stable (x[j][v].st).st.core) := by
+  have hrecvAll : ∀ r' : Round, Restated.switchRound M S tE ≤ r' → Restated.NextRoundReceipts M S Sched x r' :=
+    fun r' hr' => Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr')
   intro v j hvj htj hva
   have hd := S.E.Δ_pos
   have hd1 : (1 : Int) ≤ S.E.Δ := hd
@@ -588,34 +713,55 @@ theorem stableIncluded_afterPhase (facts : Record.Facts M) (S : Setup V) (Sched 
     rwa [slotOf_slotStart] at h
   have hst' : slotStart S.E.Δ (S.E.slotOf (x[j].time : Int)) ≤ (x[j].time : Int) :=
     slotStart_le_of_le_slotOf S hj0 le_rfl
-  obtain ⟨q, hso, hq1t, hawq⟩ := Restated.exists_readerRound_of_activeAtW facts S Sched hw hss hva
-  have hq1j : (Restated.Vocabulary.Execution.Setup.a M S (q + 1)) ≤ (x[j].time : Int) := by linarith
+  obtain ⟨q, s_w, hq1, hso, hwct, hwin⟩ := Restated.exists_readerRound_of_confirmed_rule facts S Sched hva
+  have hos : M.opening_slot S.hc (q + 1) ≤ s_w + 1 :=
+    facts.gr.opening_slot_le_of_le_round_of S.hc (le_of_eq hq1.symm)
   have hq : Restated.switchRound M S tE + 2 ≤ q := by
     by_contra hcon
     have hle : (M.opening_slot S.hc q) ≤ (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) :=
       facts.gr.opening_slot_mono S (le_succ_of_not_add_two_le_cu _ _ hcon)
     exact false_of_slot_chain_cu _ _ _ hso hle hsl
-  have hw1 : v ∈ Restated.HonRound M S Sched (q + 1) := by
-    refine Finset.mem_sdiff.2 ⟨?_, hvj _ hq1j⟩
-    show v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S (q + 1)) - wAttest S) ((Restated.Vocabulary.Execution.Setup.a M S (q + 1)))
-    rw [Restated.wAttest_eq_action_succ_sub facts S q]; exact hawq
+  have hq' : Restated.switchRound M S tE ≤ q := le_trans (Nat.le_add_right _ 2) hq
   have hop : (M.opening_slot S.hc (Restated.switchRound M S tE)) ≤ (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) :=
     facts.gr.opening_slot_mono S (Nat.le_succ _)
   have hs0 : (M.opening_slot S.hc (Restated.switchRound M S tE)) + 2 ≤ s :=
     le_trans (Nat.add_le_add_right hop 2) hsl
   have hadopt := Restated.honestProposalHeadsAtOwnSlot_afterPhase facts S Sched x tE hexec hmono htd hcatch tGAT
-    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hTW₀ hJ₀ (M.confirmation_time S.E s)
   have hBh : Restated.AncestorOfHonestHeadsFrom M S Sched x B s :=
-    Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 facts S Sched x tE hexec hmono htd tGAT gap hgst hlen
-      hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+    Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 (hrecvAll := hrecvAll) facts S Sched x tE hexec hmono htd tGAT gap hgst hlen
+      hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
       (r₀ := Restated.switchRound M S tE) le_rfl hTW₀ hJ₀ hadopt hs0
       (le_trans (Nat.le_add_right _ 2) hsl) le_rfl hprop hB hk
   have hX : Restated.HeadsBelow M S Sched x B ((M.opening_slot S.hc q)) := hBh _ hso
-  obtain ⟨nq, hnq⟩ := Restated.exists_tickStepAt facts x htd (Restated.action_pos facts S q)
+  -- `s ≤ o_q ≤ s_w`, so `B` is an ancestor of every honest head of slot `s_w`
+  have hssw : s ≤ s_w := by
+    have h1 := facts.gr.opening_slot_succ S.hc q
+    exact le_trans hso (Nat.le_of_lt_succ (lt_of_lt_of_le (lt_of_lt_of_le
+      (Nat.lt_add_of_pos_right (lt_of_lt_of_le (by decide : 0 < 3) hR3)) (le_of_eq h1.symm)) hos))
+  have hXs0 : M.opening_slot S.hc (q + 1) ≤ s_w ∨ Restated.HeadsBelow M S Sched x B s_w :=
+    Or.inr (hBh s_w hssw)
+  -- the instants, in closed form
   have hdomE : M.domain S.E S.hc (q + 1) .g2
       = 4 * S.E.Δ * (((M.opening_slot S.hc (q + 1)) : Nat) : Int) - S.E.Δ := by
     rw [← facts.gr.gammaNeg1_eq_domain_g2_succ S q, slotStart_closed]
+  have hea := facts.gr.early_g2_eq S (q + 1)
+  have ha1 : M.a S.hc S.E.Δ (q + 1) = M.confirmation_time S.E (M.opening_slot S.hc (q + 1)) :=
+    (Restated.confirmation_time_opening_slot facts S (q + 1)).symm
+  have hco := facts.sch.slotStart_add_six_delta_eq_confirmation_time S.E (M.opening_slot S.hc (q + 1))
+  have hcw := facts.sch.slotStart_add_six_delta_eq_confirmation_time S.E s_w
+  rw [slotStart_closed] at hco hcw
+  have hosI : (((M.opening_slot S.hc (q + 1)) : Nat) : Int) ≤ ((s_w : Nat) : Int) + 1 := by exact_mod_cast hos
+  have hmo := mul_le_mul_of_nonneg_left hosI (le_of_lt (by linarith : (0 : Int) < 4 * S.E.Δ))
+  have hl9 := Restated.action_sub_nine_delta_le_late facts S (q + 1) .g2
+  have haq := facts.gr.action_delta_le_early S hR3 (Nat.lt_succ_self q)
+  have hdom_cw : M.domain S.E S.hc (q + 1) .g2 ≤ M.confirmation_time S.E s_w := by
+    rw [hdomE]; linarith
+  have hear_cw : M.early S.E S.hc (q + 1) .g2 - S.E.Δ < M.confirmation_time S.E s_w := by
+    rw [hea, ha1]; linarith
+  -- the grade at round `q + 1`
+  obtain ⟨nq, hnq⟩ := Restated.exists_tickStepAt facts x htd (Restated.action_pos facts S q)
   have ho1 : (3 : Int) ≤ (((M.opening_slot S.hc (q + 1)) : Nat) : Int) := by
     have : 3 ≤ (M.opening_slot S.hc (q + 1)) := by
       rw [facts.gr.opening_slot_succ S.hc q]; exact three_le_add_cu _ _ hR3
@@ -623,13 +769,22 @@ theorem stableIncluded_afterPhase (facts : Record.Facts M) (S : Setup V) (Sched 
   have hdpos : 0 < M.domain S.E S.hc (q + 1) .g2 := by rw [hdomE]; nlinarith
   obtain ⟨md, hmd⟩ := Restated.exists_tickStepAt facts x htd hdpos
   have hm := Restated.stepBeforeInstant_of_tickStepAt facts x hmd
-  have hdom := facts.gr.domain_le_action S (q + 1) .g2
-  have hvaw : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) (M.domain S.E S.hc (q + 1) .g2) :=
-    awakeThroughout_mono Sched hawq le_rfl hdom
-  have hvS : v ∉ Sched.adv (M.domain S.E S.hc (q + 1) .g2) := hvj _ (by linarith)
-  have hgrall := Restated.gradeBool_of_headsBelow_of_three_le_R facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
-    hJswitch hTW₀ hJ₀ hq hX hnq hm hvaw hvS
+  have hvaw : v ∈ Sched.awakeThroughout (M.early S.E S.hc (q + 1) .g2 - S.E.Δ)
+      (M.domain S.E S.hc (q + 1) .g2) :=
+    awakeThroughout_mono Sched hwin le_rfl hdom_cw
+  have hvS : v ∉ Sched.adv (M.domain S.E S.hc (q + 1) .g2) := hvj _ (le_trans hdom_cw hwct)
+  have hG0 := Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hq'
+  have hrecv : Restated.ReceivesRoundAttestationsBefore M S Sched x q v (M.early S.E S.hc (q + 1) .g2) := by
+    have h := Restated.receivesRoundAttestationsBefore_of_awakeFrom facts S Sched x hsync hcatch
+      (r := q) (t₀ := M.early S.E S.hc (q + 1) .g2 - S.E.Δ)
+      (by show M.a S.hc S.E.Δ q ≤ _; linarith) (by show _ ≤ _; have : S.E.t_GST ≤ M.a S.hc S.E.Δ q := hG0; linarith)
+      (awakeThroughout_mono Sched hwin le_rfl (by linarith))
+    have e : M.early S.E S.hc (q + 1) .g2 - S.E.Δ + S.E.Δ = M.early S.E S.hc (q + 1) .g2 := by ring
+    rw [e] at h
+    exact h
+  have hgrall := Restated.gradeBool_of_headsBelow_of_three_le_R_recv facts S Sched x tE hexec hmono htd hcatch tGAT gap
+    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
+    hJswitch hTW₀ hJ₀ hq hX hnq hm _ le_rfl hvaw hrecv hvS
   have hgr : M.gradeBool S.E (M.gradeView (M.toHealing (x[md][v].st).st.core))
       (x[md][v].st).st.core.F S.hc.η_SG (q + 1) (M.early S.E S.hc (q + 1) .g2)
       (M.late S.E S.hc (q + 1) .g2) B ⇢ true := by
@@ -639,62 +794,55 @@ theorem stableIncluded_afterPhase (facts : Record.Facts M) (S : Setup V) (Sched 
     have hgt := hgrall g hg
     rw [hgt] at hg
     exact hg
-  have hctpos : 0 < M.confirmation_time S.E ((M.opening_slot S.hc (q + 1))) := by
-    rw [Restated.confirmation_time_opening_slot facts]; exact Restated.action_pos facts S (q + 1)
+  -- the confirmation tick at slot `s_w`'s confirmation instant
+  have hctpos : 0 < M.confirmation_time S.E s_w := lt_of_lt_of_le hdpos hdom_cw
   obtain ⟨n, hn⟩ := Restated.exists_tickStepAt facts x htd hctpos
-  have hn1 : (x[n + 1].time : Int) = (Restated.Vocabulary.Execution.Setup.a M S (q + 1)) := by
-    rw [(Restated.tickStepAt_time facts x hn).1, Restated.confirmation_time_opening_slot facts]
-  have hct : M.confirmation_time S.E ((M.opening_slot S.hc (q + 1))) = (Restated.Vocabulary.Execution.Setup.a M S (q + 1)) :=
-    Restated.confirmation_time_opening_slot facts S (q + 1)
-  have haw : v ∈ Sched.awake (M.confirmation_time S.E ((M.opening_slot S.hc (q + 1)))) \
-      Sched.adv (M.confirmation_time S.E ((M.opening_slot S.hc (q + 1)))) := by
-    rw [hct]
-    exact Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched hawq
-      (Restated.action_mono facts S (Nat.le_succ q)) le_rfl, hvj _ hq1j⟩
+  obtain ⟨hn1, hn0⟩ := Restated.tickStepAt_time facts x hn
+  have hvh' : HonestThroughTime Sched (M.confirmation_time S.E s_w) v := fun t ht => hvj t (le_trans ht hwct)
+  have haw : v ∈ Sched.awake (M.confirmation_time S.E s_w) \ Sched.adv (M.confirmation_time S.E s_w) :=
+    Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched hwin (le_of_lt hear_cw) le_rfl, hvh' _ le_rfl⟩
+  have hdvd : M.confirmation_time S.E s_w % S.E.Δ = 0 := by
+    rw [facts.sch.confirmation_time_eq_support_cutoff_succ]
+    exact facts.sch.support_cutoff_emod_delta S (s_w + 1)
   obtain ⟨c, hc⟩ := facts.gr.onPhaseTick_nonempty S.E S.hc (M.toHealing (x[n][v].st).st.core)
-    (M.confirmation_time S.E ((M.opening_slot S.hc (q + 1)))) (x[n][v].st).cache
+    (M.confirmation_time S.E s_w) (x[n][v].st).cache
   obtain ⟨o, ho'⟩ := facts.gr.frameStableRoot_nonempty c S.E S.hc
-    (M.toHealing (M.ns_setClock S.E (x[n][v].st).st
-      (M.confirmation_time S.E ((M.opening_slot S.hc (q + 1))))).core)
-    ((M.round_of S.hc) (M.ns_setClock S.E (x[n][v].st).st
-      (M.confirmation_time S.E ((M.opening_slot S.hc (q + 1))))).core.s)
+    (M.toHealing (M.ns_setClock S.E (x[n][v].st).st (M.confirmation_time S.E s_w)).core)
+    ((M.round_of S.hc) (M.ns_setClock S.E (x[n][v].st).st (M.confirmation_time S.E s_w)).core.s)
   have ho := (facts.nd.gradeContract_stableRoot _ _ _ _ _ o).2 ho'
   have hneTick := Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew
-    hmono hn (by rw [hct]; exact Restated.action_emod_delta facts S (q + 1)) haw
-  have hround : M.round_of S.hc (M.opening_slot S.hc (q + 1) + 1) = q + 1 :=
-    facts.gr.round_of_opening_slot_add S.hc (q + 1) (by omega)
+    hmono hn hdvd haw
   have hrun : M.awake_for_grade2 (Setup.alwaysAwake S) v
-      (Record.wakeStage M Sched (M.confirmation_time S.E (M.opening_slot S.hc (q + 1))) x[n] v)
-      (M.round_of S.hc (M.opening_slot S.hc (q + 1) + 1)) := by
-    obtain ⟨τ, hlbl, hτ⟩ := hn
-    rw [hround, hct]
-    exact Restated.run_fact_g2 facts S Sched x n τ (q + 1) v hlbl (hτ.trans hct)
-      (awakeThroughout_mono Sched hawq
-        (Restated.lo_le_early_g2_sub_delta_of_action_lt facts S le_rfl (Nat.lt_succ_self q)) le_rfl)
-      (fun t' ht' => hvj t' (by rw [hτ, hct] at ht'; linarith))
+      (Record.wakeStage M Sched (M.confirmation_time S.E s_w) x[n] v) (M.round_of S.hc (s_w + 1)) := by
+    obtain ⟨τ, hlbl, hτ⟩ := id hn
+    rw [hq1, ← hτ]
+    exact facts.ndRun.run_fact_g2_at S Sched x n τ (q + 1) v hlbl (by rw [hτ]; exact hear_cw)
+      (by rw [hτ]; exact hwin) (fun t' ht' => hvh' t' (by rw [hτ] at ht'; exact ht'))
   obtain ⟨G, rfl, -, -⟩ := Restated.records_after_confirmation_tick facts S Sched x hn haw
     hneTick hrun c hc _ ho
-  have hBG := Restated.stableRoot_descendant_of_graded_at_action facts S Sched x tE hexec hmono htd hcatch tGAT
-    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
-    hJswitch hTW₀ hJ₀ hq hw1 hm hgr hn hc ho
-  have hsettleq : Restated.confirmedSettleTime M S tE ≤ (Restated.Vocabulary.Execution.Setup.a M S (q + 1)) := by
-    show (Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE + 1)) ≤ (Restated.Vocabulary.Execution.Setup.a M S (q + 1))
-    exact Restated.action_mono facts S (succ_le_succ_of_add_two_cu _ _ hq)
+  have ht₀ : M.early S.E S.hc (q + 1) .g2 - S.E.Δ ≤ M.late S.E S.hc (q + 1) .g2 - 1 - 2 * S.E.Δ := by
+    rw [hea]; linarith
+  have hBG := Restated.stableRoot_descendant_of_graded_recv facts S Sched x tE hexec hmono htd hcatch tGAT
+    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
+    hJswitch hTW₀ hJ₀ hq _ ht₀ hvaw hrecv hm hgr hos hq1 hXs0 hn (by rw [hq1]; exact hwin) hvh' hc ho
+  have hsettleq : Restated.confirmedSettleTime M S tE ≤ M.confirmation_time S.E s_w := by
+    show (Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE + 1)) ≤ _
+    have h := Restated.action_mono facts S (le_trans (Nat.le_succ _) hq)
+    have h' : M.a S.hc S.E.Δ (Restated.switchRound M S tE + 1) ≤ M.a S.hc S.E.Δ q := h
+    show M.a S.hc S.E.Δ (Restated.switchRound M S tE + 1) ≤ _
+    linarith
   have hvh : Restated.HonestThrough M Sched x (n + 1) v := fun t ht => hvj t (by rw [hn1] at ht; linarith)
   have hwrite := (Restated.stable_records_preceq_after_confirmation_tick facts S Sched x tE hexec hmono htd hcatch
-    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW
-    hAW hJswitch hTW₀ hJ₀ hsettle hn (by rw [hct]; exact hsettleq) haw hvh hc ho hBG hrun).2
+    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW
+    hAW hJswitch hTW₀ hJ₀ hsettle hn hsettleq haw hvh hc ho hBG hrun).2
   have hnj : n + 1 ≤ j := by
     by_contra hcon
     have h := Restated.time_mono_int facts S Sched x (show j ≤ n by omega)
-    have h0 := (Restated.tickStepAt_time facts x hn).2
-    rw [hct] at h0
     linarith
   have hext := Restated.stableOnlyExtendsAfterHealing_of_settle facts S Sched x tE hexec hmono htd hcatch tGAT
-    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hTW₀ hJ₀ hsettle
   exact preceq_trans_Preceq hwrite (hext v (n + 1) j hnj hvj (by rw [hn1]; exact hsettleq))
-
 end
 
 end DecoupledConsensusModel.Sts.Restated

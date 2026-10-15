@@ -20,7 +20,7 @@ images of the spec's data, equals the image of the spec's routine at `Config.toS
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 
@@ -241,4 +241,4 @@ theorem toProof_ns_initial :
 
 end Admission
 
-end SpecDraftRecord
+end SpecRecord

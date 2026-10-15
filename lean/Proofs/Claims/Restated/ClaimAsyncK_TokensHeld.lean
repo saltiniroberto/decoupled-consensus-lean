@@ -108,16 +108,27 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
+/-- A member of `attestersAt S Sched ρ` is a member of `attestersAt S Sched ρ`: the window
+    `wAttest S ≥ 12Δ` before `S.a ρ` contains the rule's grade-2 window of round `ρ`. -/
+theorem attestersAt_of_activeRoundW (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
+    {ρ : Nat} {v : V} (hv : v ∈ Restated.activeRoundW M S Sched ρ) :
+    v ∈ Restated.attestersAt M S Sched ρ := by
+  have h1 := Restated.early_g2_eq_healA facts S ρ
+  have h2 := twelve_delta_le_wAttest_kit S
+  have hle : (M.a S.hc S.E.Δ ρ) - wAttest S ≤ M.early S.E S.hc ρ .g2 - S.E.Δ := by
+    rw [h1]; linarith
+  exact awakeThroughout_sub Sched hle le_rfl hv
+
 /-- If every tick at a multiple of `Δ` of a validator awake there and not held up to it has an
     outcome, step `n` is the tick step at `S.a ρ`, `v_1` is awake at every time of round `ρ`'s
     attester window, and the adversary holds `v_1` at no time up to a step `m` whose time is at or
     after `S.a ρ`, then every attestation `v_1`'s round-`ρ` action read can compute from its node
     state at step `n` is among the messages step `n` added to the sent log `x[n + 1].sent`, and the
     adversary does not hold `v_1` at the time step `n` starts from. -/
-theorem attest_honestSend_of_activeRoundW (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
+theorem attest_honestSend_of_attestersAt (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched)
     {ρ n m : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ)))
-    {v_1 : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : (Restated.Vocabulary.Execution.Setup.a M S ρ) ≤ (x[m].time : Int))
     (hnr : ∀ (k τ : Nat) (u : V), x.lbl k = AtomicAction.tickAllAwake τ →
       (τ : Int) % S.E.Δ = 0 → u ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
@@ -134,27 +145,23 @@ theorem attest_honestSend_of_activeRoundW (facts : Record.Facts M) (S : Setup V)
   have hW : 0 ≤ wAttest S := by
     have := twelve_delta_le_wAttest_kit S
     linarith [S.E.Δ_pos]
-  have hact : v_1 ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S ρ) - wAttest S) ((Restated.Vocabulary.Execution.Setup.a M S ρ)) := hv_1
-  have hawake : v_1 ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S ρ)) :=
-    mem_awake_of_mem_awakeThroughout Sched hact (by linarith) le_rfl
+  have hawT : v_1 ∈ Sched.awakeThroughout (M.early S.E S.hc ρ .g2 - S.E.Δ)
+      ((Restated.Vocabulary.Execution.Setup.a M S ρ)) := hv_1
+  have hawake : v_1 ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S ρ)) := by
+    have h1 := Restated.early_g2_eq_healA facts S ρ
+    have hd := S.E.Δ_pos
+    exact mem_awake_of_mem_awakeThroughout Sched hawT (by show _ ≤ M.a S.hc S.E.Δ ρ; rw [h1]; linarith) le_rfl
   have hhon : v_1 ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S ρ)) := hv_1m _ hm
   have hq : v_1 ∈ Sched.awake (t' : Int) \ Sched.adv (t' : Int) := by
     rw [ht']; exact Finset.mem_sdiff.2 ⟨hawake, hhon⟩
   have hdvd : (t' : Int) % S.E.Δ = 0 := by rw [ht']; exact Restated.action_emod_delta facts S ρ
   have hhonUp : ∀ t'' ≤ (t' : Int), v_1 ∉ Sched.adv t'' := fun t'' h =>
     hv_1m t'' (by rw [ht'] at h; linarith)
-  have hawT : v_1 ∈ Sched.awakeThroughout (M.early S.E S.hc ρ .g2 - S.E.Δ)
-      ((Restated.Vocabulary.Execution.Setup.a M S ρ)) := by
-    have h1 := Restated.early_g2_eq_healA facts S ρ
-    have h2 := twelve_delta_le_wAttest_kit S
-    have hle : (M.a S.hc S.E.Δ ρ) - wAttest S ≤ M.early S.E S.hc ρ .g2 - S.E.Δ := by
-      rw [h1]; linarith
-    exact awakeThroughout_sub Sched hle le_rfl hact
   have hrun : M.awake_for_grade2 (Setup.alwaysAwake S) v_1
       (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S ρ) x[n] v_1) ρ :=
     Restated.run_fact_g2 facts S Sched x n t' ρ v_1 hlbl ht' hawT hhonUp
   refine ⟨?_, hv_1m _ (by linarith)⟩
-  refine Restated.mem_sent_diff_of_tick facts S Sched x hlbl hq hdvd ?_
+  refine Restated.mem_sent_diff_of_tick facts S Sched x hlbl hq ?_
     (hnr n t' v_1 hlbl hdvd hq hhonUp)
   rw [ht']
   intro out hout
@@ -172,7 +179,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 /-- Under `SynchronyFromWakeOutside S x b₀ b₁`, with `S.a ρ + Δ ≤ b₀`, GST at or before `S.a ρ`, and
     every tick at a multiple of `Δ` of a validator awake there and not held up to it having an
     outcome: if step `n` is the tick step at `S.a ρ`, `v_1` is an honest member of
-    `activeRoundW S Sched ρ` through a step `m` with `S.a ρ + Δ ≤ x[m].time`, and `w` is awake at
+    `attestersAt S Sched ρ` through a step `m` with `S.a ρ + Δ ≤ x[m].time`, and `w` is awake at
     every time from `S.a ρ` to `x[m].time`, then every attestation `v_1`'s round-`ρ` action read can
     compute from its node state at step `n` is delivered to `w` at a step `d` after `n`, at a time
     of `[S.a ρ, S.a ρ + Δ)`. -/
@@ -180,7 +187,7 @@ theorem token_delivered_before_period (facts : Record.Facts M) (S : Setup V) (Sc
     (x : AtomicExec (Record.protocolOf M S) Sched) {b₀ b₁ : Int}
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁) {ρ n m : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ)))
     (hgst : S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S ρ)) (hb₀ : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ b₀)
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S ρ)) (x[m].time : Int))
     (hnr : ∀ (k τ : Nat) (u : V), x.lbl k = AtomicAction.tickAllAwake τ →
@@ -195,7 +202,7 @@ theorem token_delivered_before_period (facts : Record.Facts M) (S : Setup V) (Sc
   intro a ha
   have hd := S.E.Δ_pos
   obtain ⟨hn1, hn0⟩ := Restated.tickStepAt_time facts x hn
-  have hsend := Restated.attest_honestSend_of_activeRoundW facts S Sched x hn hv_1 hv_1m
+  have hsend := Restated.attest_honestSend_of_attestersAt facts S Sched x hn hv_1 hv_1m
     (show (Restated.Vocabulary.Execution.Setup.a M S ρ) ≤ (x[m].time : Int) by linarith) hnr a ha
   have hmax : max (x[n].time : Int) S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S ρ) := max_le (by linarith) hgst
   have hwin := Restated.receiverWindowA_of_tick facts S x hn hgst hm hw
@@ -269,7 +276,7 @@ open DecoupledConsensusModel.Execution
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
 /-- Under `SynchronyFromWakeOutside S x b₀ b₁`, with `S.a ρ + Δ ≤ b₀` and GST at or before `S.a ρ`:
-    if step `n` is the tick step at `S.a ρ`, `v_1` is an honest member of `activeRoundW S Sched ρ`
+    if step `n` is the tick step at `S.a ρ`, `v_1` is an honest member of `attestersAt S Sched ρ`
     through a step `m` with `S.a ρ + Δ ≤ x[m].time`, and `w` is honest through `m` and awake at
     every time from `S.a ρ` to `x[m].time`, then for every attestation `a` that `v_1`'s round-`ρ`
     action read can compute from its node state at step `n`, `w`'s grade view after `m` steps holds
@@ -280,7 +287,7 @@ theorem token_held_before_period (facts : Record.Facts M) (S : Setup V) (Sched :
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     {b₀ b₁ : Int} (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁) {ρ n m : Nat}
     (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ))) (hgst : S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S ρ)) (hb₀ : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ b₀)
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S ρ)) (x[m].time : Int))
     (hwm : Restated.HonestThrough M Sched x m w) :
@@ -297,7 +304,7 @@ theorem token_held_before_period (facts : Record.Facts M) (S : Setup V) (Sched :
   have hd := S.E.Δ_pos
   obtain ⟨d, hnd, hlbl, hdlo, hdlt⟩ :=
     Restated.token_delivered_before_period facts S Sched x hsync hn hgst hb₀ hv_1 hv_1m hm hw
-      (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew) a ha
+      (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl) a ha
   have hdm : d < m := by
     by_contra hcon
     have h := Restated.time_mono_int facts S Sched x (Nat.le_of_not_lt hcon)
@@ -334,15 +341,11 @@ theorem token_held_before_period (facts : Record.Facts M) (S : Setup V) (Sched :
     exact Restated.hroom_of_fresh facts S Sched x hexec hn
       (fun t ht => hv_1m t (le_trans ht (Restated.time_mono_int facts S Sched x hkm))) a ha
   obtain ⟨k, hkj, -, hcase⟩ :=
-    Restated.attest_recorded_of_mem_view_awake facts S Sched x hview haw hv hexec.toUnforgeability ha_idx
-      hawT hwh hexp hroom
-      (fun n' hn' => by
-        rw [ha_round] at hn' ⊢
-        exact Restated.tick_outcome_of_tickStepAt_honest facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew
-          hn' (Restated.action_emod_delta facts S ρ)
-          (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched hw le_rfl (by linarith),
-            hwm _ (by linarith)⟩)
-          (fun t' ht' => hwm t' (by linarith)))
+    Restated.attest_recorded_of_mem_view_recv facts S Sched x hview haw hv
+      (fun t ht => hwm t (le_trans ht (Restated.time_mono_int facts S Sched x hd1m)))
+      hexec.toUnforgeability ha_idx hexp hroom
+      (fun k τ u hl hmem hhon => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective
+        hexec.honestRootsNew k τ u hl hmem hhon)
       (fun k _ _ => facts.nd.process_nonempty _ _ _ (fun _ h => by cases h))
   have hk1m : k + 1 ≤ m := le_trans (Nat.succ_le_of_lt hkj) hd1m
   have hkt : (x[k].time : Int) ≤ (x[d].time : Int) :=
@@ -370,7 +373,7 @@ theorem token_raw_in_view (facts : Record.Facts M) (S : Setup V) (Sched : Schedu
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     {b₀ b₁ : Int} (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁) {ρ n m : Nat}
     (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ))) (hgst : S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S ρ)) (hb₀ : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ b₀)
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S ρ)) (x[m].time : Int))
     (hwm : Restated.HonestThrough M Sched x m w)
@@ -607,7 +610,7 @@ theorem token_ready_in_view (facts : Record.Facts M) (S : Setup V) (Sched : Sche
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) (hmult : AwakeAtMultiples S Sched)
     (htd : Restated.TimeDiverges M x) {ρ n m : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ)))
     (hgst : S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S ρ)) (hb₀ : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ b₀)
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S ρ)) (x[m].time : Int))
     (hwm : Restated.HonestThrough M Sched x m w)
@@ -664,7 +667,7 @@ theorem exists_ready_token_ge (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) (hmult : AwakeAtMultiples S Sched)
     (htd : Restated.TimeDiverges M x) {ρ n m : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ)))
     (hgst : S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S ρ)) (hb₀ : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ b₀)
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : (Restated.Vocabulary.Execution.Setup.a M S ρ) + S.E.Δ ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S ρ)) (x[m].time : Int))
     (hwm : Restated.HonestThrough M Sched x m w)

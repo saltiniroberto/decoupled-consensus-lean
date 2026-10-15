@@ -109,50 +109,19 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- The validators that, at some round `ρ` from `lo` to `hi`, are awake at `ρ`'s action instant
-    without having been awake at every instant from one delay before the first cutoff that round
-    `ρ`'s grade computation reads. -/
-def attestersNotAwakeSinceFirstCutoffIn (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (lo hi : Nat) :
-    Finset V :=
-  (Finset.Icc lo hi).biUnion fun ρ =>
-    Sched.awake ((M.a S.hc S.E.Δ ρ)) \
-      Sched.awakeThroughout (M.early S.E S.hc ρ .g2 - S.E.Δ) ((M.a S.hc S.E.Δ ρ))
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- The validators of `activeRoundWThroughNext S Sched r` that, at no round `ρ` from `r + 2` to
-    `r₀ − 1`, were awake at `ρ`'s action instant without having been awake at every instant from one
-    delay before `ρ`'s first cutoff to it. -/
-def activeRoundWThroughNextCountedAt (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (r r₀ : Nat) :
-    Finset V :=
-  Restated.activeRoundWThroughNext M S Sched r \
-    Restated.attestersNotAwakeSinceFirstCutoffIn M S Sched (r + 2) (r₀ - 1)
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
 /-- At every round `r₀` from `r + 1` to `r + η_SG + 1`, the validators of
-    `activeRoundWThroughNextCountedAt S Sched r r₀` not held by the adversary at the opening of
-    round `r₀ + 1` outweigh the adversary at that opening together with everyone else who attested
-    in the `η_SG` rounds before `r₀`. -/
+    `activeRoundWThroughNext S Sched r` not held by the adversary at the opening of round `r₀ + 1`
+    outweigh the adversary at that opening together with everyone else the awake rule let attest in
+    the `η_SG` rounds before `r₀`. -/
 def fixedRoundSleepinessCountedW (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (r : Nat) : Prop :=
   ∀ r₀ : Nat, r + 1 ≤ r₀ → r₀ ≤ r + S.hc.η_SG + 1 →
     S.E.electorate.weightOf
         (Sched.adv (M.opening S.E S.hc (r₀ + 1)) ∪
           (Restated.attestersIn M S Sched (r₀ - S.hc.η_SG) (r₀ - 1) \
-            (Restated.activeRoundWThroughNextCountedAt M S Sched r r₀ \
+            (Restated.activeRoundWThroughNext M S Sched r \
               Sched.adv (M.opening S.E S.hc (r₀ + 1)))))
       < S.E.electorate.weightOf
-          (Restated.activeRoundWThroughNextCountedAt M S Sched r r₀ \
+          (Restated.activeRoundWThroughNext M S Sched r \
             Sched.adv (M.opening S.E S.hc (r₀ + 1)))
 
 end
@@ -184,10 +153,10 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- The validators awake throughout the attester window of some round from `r + 2` to `r + η_SG` and
-    not in `activeRoundWThroughNext S Sched r`. -/
+/-- The validators the awake rule lets attest at some round from `r + 2` to `r + η_SG` and not in
+    `activeRoundWThroughNext S Sched r`. -/
 def activeOutsideFixedIn (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (r : Nat) : Finset V :=
-  (Finset.Icc (r + 2) (r + S.hc.η_SG)).biUnion (Restated.activeRoundW M S Sched) \
+  (Finset.Icc (r + 2) (r + S.hc.η_SG)).biUnion (Restated.attestersAt M S Sched) \
     Restated.activeRoundWThroughNext M S Sched r
 
 end
@@ -261,8 +230,6 @@ def claimStableThroughOneAsyncPeriodStatement (M : Record.Model V) (S : Setup V)
     Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x →
     Restated.SynchronyFromWakeOutside M S x b₀ b₁ →
     AwakeAtMultiples S Sched →
-    Restated.WakesAtActionInstants M S Sched →
-    Restated.SleepsAfterActionInstants M S Sched →
     Restated.CatchUpOnWakeOutside M S x b₀ b₁ →
     Restated.TimeDiverges M x →
     Restated.HonestCommittees M S Sched (Restated.interface M S Sched) →

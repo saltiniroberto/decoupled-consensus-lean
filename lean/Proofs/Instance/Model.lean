@@ -7,19 +7,19 @@ import Proofs.Instance.RunInvariant
 /-!
 # The spec's model as an instance of the record
 
-`Model.specDraft` fills every member of the record `Model V` with the spec's types and routines, the
+`Model.spec` fills every member of the record `Model V` with the spec's types and routines, the
 stores and node states restricted to those that meet `NoRaise.StoreOk` (`OkStore V`, `OkNode V`).
-`Model.specDraftBase` is the same model at the spec's unrestricted store and node types. The members
-that add a block to the tree are defined in the namespace `SpecDraftRecord.OkMember`.
+`Model.specBase` is the same model at the spec's unrestricted store and node types. The members
+that add a block to the tree are defined in the namespace `SpecRecord.OkMember`.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.OkMember
+namespace SpecRecord.OkMember
 
 open DecoupledConsensusModel (Block NamedBlock Env TimestampMap)
 open DecoupledConsensusModel.Protocol (HeightConfig HealConfig CarriedAdmission)
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -162,17 +162,17 @@ theorem receipt_process_val_of_not_held {S : DecoupledConsensusModel.Execution.S
   unfold receipt_process
   rw [dif_neg h]
 
-end SpecDraftRecord.OkMember
+end SpecRecord.OkMember
 
 namespace DecoupledConsensusModel.Sts.Record
 
-open SpecDraftRecord
+open SpecRecord
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
 /-- The spec's model at the spec's own types: the type members are the spec's types, and every other
-    member is `SpecDraftRecord.Member.<member>`. -/
-def Model.specDraftBase : Model V where
+    member is `SpecRecord.Member.<member>`. -/
+def Model.specBase : Model V where
   CS := Spec.Protocol.ChainState V
   h := Member.h
   T_h := Member.T_h
@@ -466,9 +466,9 @@ def Model.specDraftBase : Model V where
 
 /-- The spec's model: the type members are the spec's types with the stores and node states
     restricted to those whose store meets `StoreOk` (`OkStore V`, `OkNode V`), and every other
-    member is `SpecDraftRecord.Member.<member>` read on those types, or
-    `SpecDraftRecord.OkMember.<member>`. -/
-def Model.specDraft : Model V where
+    member is `SpecRecord.Member.<member>` read on those types, or
+    `SpecRecord.OkMember.<member>`. -/
+def Model.spec : Model V where
   CS := Spec.Protocol.ChainState V
   h := Member.h
   T_h := Member.T_h
@@ -783,40 +783,40 @@ def Model.specDraft : Model V where
 
 end DecoupledConsensusModel.Sts.Record
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- At `Model.specDraft`, the store of a node state a run reaches satisfies `RunStoreInv` and
+/-- At `Model.spec`, the store of a node state a run reaches satisfies `RunStoreInv` and
     `ConfirmedInTree`, and its saved grades name blocks of its tree. -/
-theorem reached_elim {n : OkNode V} (hn : (Model.specDraft (V := V)).reachedNode n) :
+theorem reached_elim {n : OkNode V} (hn : (Model.spec (V := V)).reachedNode n) :
     SubtypeEqualities.RunStoreInv n.val.st ∧ HandlersRunFacts.ConfirmedInTree n.val.st ∧
       Spec.Store.ContractInTree n.val.st.T n.val.st.saved_grades :=
   hn
 
-/-- At `Model.specDraft`, a named store a run reaches satisfies `RunStoreInv` and `ConfirmedInTree`,
+/-- At `Model.spec`, a named store a run reaches satisfies `RunStoreInv` and `ConfirmedInTree`,
     and its saved grades name blocks of its tree. -/
-theorem reachedStore_elim {st : OkStore V} (hst : (Model.specDraft (V := V)).reachedStore st) :
+theorem reachedStore_elim {st : OkStore V} (hst : (Model.spec (V := V)).reachedStore st) :
     SubtypeEqualities.RunStoreInv st.val ∧ HandlersRunFacts.ConfirmedInTree st.val ∧
       Spec.Store.ContractInTree st.val.T st.val.saved_grades :=
   hst
 
-/-- At `Model.specDraft`, a store a run reaches satisfies `RunStoreInv` and `ConfirmedInTree`, and
+/-- At `Model.spec`, a store a run reaches satisfies `RunStoreInv` and `ConfirmedInTree`, and
     its saved grades name blocks of its tree. -/
-theorem reachedCore_elim {st : OkStore V} (hst : (Model.specDraft (V := V)).reachedCore st) :
+theorem reachedCore_elim {st : OkStore V} (hst : (Model.spec (V := V)).reachedCore st) :
     SubtypeEqualities.RunStoreInv st.val ∧ HandlersRunFacts.ConfirmedInTree st.val ∧
       Spec.Store.ContractInTree st.val.T st.val.saved_grades :=
   hst
 
-/-- At `Model.specDraft`, a store a run reaches with the saved grades `c` satisfies `RunStoreInv`
+/-- At `Model.spec`, a store a run reaches with the saved grades `c` satisfies `RunStoreInv`
     and `ConfirmedInTree`, and `c` names blocks of its tree. -/
 theorem reachedRead_elim {st : OkStore V} {c : Spec.SavedGrades V}
-    (hst : (Model.specDraft (V := V)).reachedRead st c) :
+    (hst : (Model.spec (V := V)).reachedRead st c) :
     SubtypeEqualities.RunStoreInv st.val ∧ HandlersRunFacts.ConfirmedInTree st.val ∧
       Spec.Store.ContractInTree st.val.T c :=
   hst
 
-end SpecDraftRecord
+end SpecRecord

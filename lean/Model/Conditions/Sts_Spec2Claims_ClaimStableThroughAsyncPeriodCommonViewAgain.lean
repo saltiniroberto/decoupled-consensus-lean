@@ -45,8 +45,6 @@ def claimStableThroughOneAsyncPeriodCommonViewAgainStatement (M : Record.Model V
     Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x →
     Restated.SynchronyFromWakeOutside M S x b₀ b₁ →
     AwakeAtMultiples S Sched →
-    Restated.WakesAtActionInstants M S Sched →
-    Restated.SleepsAfterActionInstants M S Sched →
     Restated.CatchUpOnWakeOutside M S x b₀ b₁ →
     Restated.CommonViewAtGAT M S Sched x tGAT →
     Restated.TimeDiverges M x →

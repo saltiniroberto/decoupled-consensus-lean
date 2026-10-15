@@ -6,6 +6,7 @@ import Proofs.Claims.Restated.Claim13bK_FinalityDeadlineArith
 import Proofs.Claims.Restated.Claim13bK_FinalityInclusion
 import Proofs.Claims.Restated.Claim13bK_WindowProposalSent
 import Proofs.Claims.Restated.Claim13bKit
+import Proofs.Claims.Restated.Claim13beRoute3_85gBounded
 import Proofs.Claims.Restated.Claim13beRoute3_44
 import Proofs.Claims.Restated.Claim13beRoute3_46
 import Proofs.Claims.Restated.Claim13beRoute3_72
@@ -151,7 +152,6 @@ theorem finalityGrows_of_premises_f5 (facts : Record.Facts M) (S : Setup V) (Sch
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hthird : ∀ t : Int, t ≤ tL →
@@ -239,7 +239,7 @@ theorem finalityGrows_of_premises_f5 (facts : Record.Facts M) (S : Setup V) (Sch
     rw [hk]; exact (facts.sch.proposal_time_lt_vote_time S.E s).le
   -- the inclusion of that block
   have hincl := Restated.finalizedAfterDeadline_of_premises_f3 facts S Sched x tGAT tE tL gap hgap hlen hEL hgst
-    hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs hsE hcontS
+    hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hsl hrs hcs hsE hcontS
     hvote hkB hki
   have hspos : 0 < s := (Restated.windowSlot_bounds_g1 facts S tGAT gap hsW).1
   refine ⟨s, k, P.erase, by linarith, hvote, hkB, hki, ?_, ?_⟩
@@ -255,10 +255,14 @@ theorem finalityGrows_of_premises_f5 (facts : Record.Facts M) (S : Setup V) (Sch
     have hBj : Block.Preceq P.erase (x[n + 1][v'].st).st.core.F :=
       hincl v' (n + 1) hv'j (by rw [hn1, hgrowth]; linarith)
     have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync
-      hmult hwakes hsleeps hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
-    have hagree := Restated.claim13be_conclusion_of_joint_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono
-      hexec hsync hmult hwakes hsleeps hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs hlow
-      v' v (n + 1) i hv'j hv
+      hmult hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
+    have hceq := Restated.finalityPremisesContinueDirect_eq_f4 facts S gap
+    have hmaxT : max (x[n + 1].time : Int) (x[i].time : Int) + (Restated.constants M S).period ≤ tL := by
+      rw [max_eq_left (by rw [hn1, hit, hgrowth]; linarith), hn1, hgrowth]
+      linarith
+    have hagree := Restated.claim13be_conclusion_of_joint_bounded facts S Sched x tGAT tE gap hgap hlen hgst
+      hmono hexec hsync hmult hcv htd hcom hthirdE hphaseE tL hEL hawake hrecE hsl hrs hcs hlow
+      v' v (n + 1) i hv'j hv hmaxT
     have hcomp : Block.Compatible (x[i][v].st).st.core.F P.erase :=
       compatible_iff_Compatible.mpr (Protocol.compatible_comm
         (Protocol.compatible_of_preceq_of_compatible hBj (compatible_iff_Compatible.mp hagree)))

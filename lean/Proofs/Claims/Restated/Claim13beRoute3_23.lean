@@ -115,7 +115,7 @@ private theorem tick_step_st_cases (facts : Record.Facts M) (S : Setup V) (Sched
   · have hx1 : x[k + 1][v].st = (tk v).state := by
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react haw]
-    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨-, out, hout, hres⟩ | ⟨-, hres⟩
+    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨out, hout, hres⟩ | ⟨-, hres⟩
     · have hwS : (w v).state = Record.wakeStage M Sched (t : Int) x[k] v :=
         Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake v)
       exact Or.inl ⟨(w v).state, out, hwst,
@@ -299,7 +299,6 @@ theorem mem_sent_diff_of_tick_of_state (facts : Record.Facts M) (S : Setup V)
     {k t : Nat} {v : V}
     {o : NamedObject V} (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     (hsend : ∀ out out' : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out →
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out' →
@@ -320,11 +319,11 @@ theorem mem_sent_diff_of_tick_of_state (facts : Record.Facts M) (S : Setup V)
       have h' : ({ state := out.1, send := (out.2 : Multiset (NamedObject V)) } :
           NodeStepResult M.N (NamedObject V)) ∈
           Record.reactionsOf M S v ((w v).state) (t : Int) .tick := by
-        simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq]
+        simp only [Record.reactionsOf, Set.mem_setOf_eq]
         exact ⟨out, by rw [hwst]; exact hout, rfl⟩
       rw [hempty] at h'
       exact h'
-  simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq] at hmem
+  simp only [Record.reactionsOf, Set.mem_setOf_eq] at hmem
   obtain ⟨out', hout', htkv⟩ := hmem
   rw [hwst] at hout'
   have hx1 : x[k + 1][v].st = (tk v).state := by
@@ -378,7 +377,7 @@ theorem attest_delivered_of_recorded_phase (facts : Record.Facts M) (S : Setup V
   have hsend : Restated.HonestSendAt M S x i
       (⟨v, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) := by
     rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-      ⟨m, hl, hm0, hm1, hcase⟩ | ⟨τ, hl, haw, hdvd, out₁, hout, hst, hcase⟩
+      ⟨m, hl, hm0, hm1, hcase⟩ | ⟨τ, hl, haw, out₁, hout, hst, hcase⟩
     · have ho : NamedObject.attest a ∈ relayedObjects m.msg := by
         rw [mem_relayedObjects_iff]
         rcases hcase with heq | ⟨B, hB, hcc⟩
@@ -391,7 +390,7 @@ theorem attest_delivered_of_recorded_phase (facts : Record.Facts M) (S : Setup V
           exact absurd hm1 (by simp)
       exact Restated.honestSendAt_of_deliver_relay facts S Sched x hl ho hne
     · rcases hcase with hmem | ⟨B, hem, hcc⟩
-      · exact ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hl haw hdvd
+      · exact ⟨Restated.mem_sent_diff_of_tick_of_state facts S Sched x hl haw
           (fun o₁ o₂ h₁ h₂ h12 =>
             facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) v _ _ o₁ o₂ h₁ h₂ h12)
           hout hst hmem,

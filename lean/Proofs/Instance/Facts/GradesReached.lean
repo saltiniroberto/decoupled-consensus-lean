@@ -7,16 +7,16 @@ import Proofs.Instance.Equalities.Fill
 /-!
 # The cache update's grades and the tick's confirmation records
 
-Proofs, at `Model.specDraft`, of four fields of `GradesFacts` about the cache update `onPhaseTick`
+Proofs, at `Model.spec`, of four fields of `GradesFacts` about the cache update `onPhaseTick`
 and two fields of `NodeFacts` about the tick at a slot's support cutoff.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.GradesReached
+namespace SpecRecord.GradesReached
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord SpecDraftRecord.RemainingKit SpecDraftRecord.GradesFacts
+open SpecRecord SpecRecord.RemainingKit SpecRecord.GradesFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -45,10 +45,10 @@ theorem mem_of_inTree {T : Finset (Spec.Block V)} {c : Spec.SavedGrades V}
   · cases q <;> simp [Spec.Protocol.phaseResult, Spec.Protocol.pending_round_grades] at h
 
 /-- `phaseResult_onPhaseTick_kept` holds when every block the cache holds is a tree block. -/
-theorem kept_of_inTree : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache)
-    (hin : Spec.Store.ContractInTree st.val.T c) {r : Round} {p : Protocol.Phase} {e : Block V} (h : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c r) p = some (some e)) (hr : (((Model.specDraft (V := V)).round_of hc (E.slotOf t)) = c.round ∧ (r = c.round ∨ r = c.round + 1)) ∨
-    (((Model.specDraft (V := V)).round_of hc (E.slotOf t)) = c.round + 1 ∧ r = c.round + 1)) (c' : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c' → (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p
-    = some (some ((Model.specDraft (V := V)).clipGrade e st.toFG.F)) := by
+theorem kept_of_inTree : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache)
+    (hin : Spec.Store.ContractInTree st.val.T c) {r : Round} {p : Protocol.Phase} {e : Block V} (h : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c r) p = some (some e)) (hr : (((Model.spec (V := V)).round_of hc (E.slotOf t)) = c.round ∧ (r = c.round ∨ r = c.round + 1)) ∨
+    (((Model.spec (V := V)).round_of hc (E.slotOf t)) = c.round + 1 ∧ r = c.round + 1)) (c' : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c' → (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p
+    = some (some ((Model.spec (V := V)).clipGrade e st.toFG.F)) := by
   intro E hc st t c hin r p e h hr c' hc'
   obtain ⟨S, hS, rfl, hρ⟩ := sd_onPhaseTick_ok hc'
   rw [← hρ] at hr
@@ -70,8 +70,8 @@ theorem kept_of_inTree : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model
   · rw [hA, hR] at hp; cases hp
 
 /-- `onPhaseTick_phase_of_align` holds when every block the cache holds is a tree block. -/
-theorem phase_of_align_of_inTree : ∀ (E : DecoupledConsensusModel.Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : DecoupledConsensusModel.Time) (c : (Model.specDraft (V := V)).Cache)
-    (hin : Spec.Store.ContractInTree st.val.T c) (r : DecoupledConsensusModel.Round) (p : DecoupledConsensusModel.Protocol.Phase), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound ((Model.specDraft (V := V)).alignRound c (((Model.specDraft (V := V)).round_of hc (E.slotOf t)))) r) p ≠ Option.none → ∀ c'' : (Model.specDraft (V := V)).Cache, (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c'' → (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c'' r) p = (Model.specDraft (V := V)).clipResult st.toFG.F ((Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound ((Model.specDraft (V := V)).alignRound c (((Model.specDraft (V := V)).round_of hc (E.slotOf t)))) r) p) := by
+theorem phase_of_align_of_inTree : ∀ (E : DecoupledConsensusModel.Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : DecoupledConsensusModel.Time) (c : (Model.spec (V := V)).Cache)
+    (hin : Spec.Store.ContractInTree st.val.T c) (r : DecoupledConsensusModel.Round) (p : DecoupledConsensusModel.Protocol.Phase), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound ((Model.spec (V := V)).alignRound c (((Model.spec (V := V)).round_of hc (E.slotOf t)))) r) p ≠ Option.none → ∀ c'' : (Model.spec (V := V)).Cache, (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c'' → (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c'' r) p = (Model.spec (V := V)).clipResult st.toFG.F ((Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound ((Model.spec (V := V)).alignRound c (((Model.spec (V := V)).round_of hc (E.slotOf t)))) r) p) := by
   intro E hc st t c hin r p hne c'' hc''
   obtain ⟨S, hS, rfl, hρ⟩ := sd_onPhaseTick_ok hc''
   rw [← hρ] at hne ⊢
@@ -123,8 +123,8 @@ theorem round_of_before_opening (C : Spec.Config) (ρ : Round)
   exact Nat.ne_of_lt this
 
 /-- `phaseResult_onPhaseTick_domain_ne_none` holds at times that are not negative. -/
-theorem domain_ne_none_of_nonneg : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache)
-    (ht0 : 0 ≤ t) {r : Round} {p : Protocol.Phase} (hr : r = ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) ∨ r = ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) + 1) (ht : t = (Model.specDraft (V := V)).domain E hc r p) (c' : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c' → (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p ≠ none := by
+theorem domain_ne_none_of_nonneg : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache)
+    (ht0 : 0 ≤ t) {r : Round} {p : Protocol.Phase} (hr : r = ((Model.spec (V := V)).round_of hc (E.slotOf t)) ∨ r = ((Model.spec (V := V)).round_of hc (E.slotOf t)) + 1) (ht : t = (Model.spec (V := V)).domain E hc r p) (c' : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c' → (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p ≠ none := by
   intro E hc st t c ht0 r p hr ht c' hc'
   change t = Member.domain E hc r p at ht
   obtain ⟨S, hS, rfl, hρ⟩ := sd_onPhaseTick_ok hc'
@@ -153,15 +153,15 @@ theorem domain_ne_none_of_nonneg : ∀ (E : Env V) (hc : Protocol.HealConfig) (s
   · exact k.2.2.2.2.2.2 (Or.inr (ht.trans d2))
 
 /-- `phaseResult_onPhaseTick_domain_current` holds at times that are not negative. -/
-theorem domain_current_of_nonneg : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache)
-    (ht0 : 0 ≤ t) {r : Round} {p : Protocol.Phase} (hρ : ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) = r) (ht : t = (Model.specDraft (V := V)).domain E hc r p) (h : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c r) p = none)
-    (c' : (Model.specDraft (V := V)).Cache) (hc' : (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c')
-    (fr : Option (Block V)) (hfr : (Model.specDraft (V := V)).freezeRoot E ((Model.specDraft (V := V)).gradeView st) st.toFG.F hc.η_SG r ((Model.specDraft (V := V)).early E hc r p)
-    ((Model.specDraft (V := V)).late E hc r p) ⇢ fr), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p
-    = some (fr.map (fun B => (Model.specDraft (V := V)).clipGrade B st.toFG.F)) := by
+theorem domain_current_of_nonneg : ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache)
+    (ht0 : 0 ≤ t) {r : Round} {p : Protocol.Phase} (hρ : ((Model.spec (V := V)).round_of hc (E.slotOf t)) = r) (ht : t = (Model.spec (V := V)).domain E hc r p) (h : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c r) p = none)
+    (c' : (Model.spec (V := V)).Cache) (hc' : (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c')
+    (fr : Option (Block V)) (hfr : (Model.spec (V := V)).freezeRoot E ((Model.spec (V := V)).gradeView st) st.toFG.F hc.η_SG r ((Model.spec (V := V)).early E hc r p)
+    ((Model.spec (V := V)).late E hc r p) ⇢ fr), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p
+    = some (fr.map (fun B => (Model.spec (V := V)).clipGrade B st.toFG.F)) := by
   intro E hc st t c ht0 r p hρ ht h c' hc' fr hfr
   change t = Member.domain E hc r p at ht
-  change (Model.specDraft (V := V)).freezeRoot E ((Model.specDraft (V := V)).gradeView st)
+  change (Model.spec (V := V)).freezeRoot E ((Model.spec (V := V)).gradeView st)
     st.toFG.F hc.η_SG r (Member.early E hc r p) (Member.late E hc r p) ⇢ fr at hfr
   obtain ⟨S, hS, rfl, hρ'⟩ := sd_onPhaseTick_ok hc'
   have hr : (Spec.Config.toSpec E hc unreadHeightConfig).round_of
@@ -217,18 +217,18 @@ theorem domain_current_of_nonneg : ∀ (E : Env V) (hc : Protocol.HealConfig) (s
   · have e := ht.trans d2
     exact (round_of_before_opening _ _ (e ▸ ht0) (by rw [← e])).elim
 
-end SpecDraftRecord.GradesReached
+end SpecRecord.GradesReached
 
 /-! ## The tick at a support cutoff -/
 
-namespace SpecDraftRecord.GradesReached
+namespace SpecRecord.GradesReached
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise
-open SpecDraftRecord.GradesRunFacts
+open SpecRecord.NoRaise
+open SpecRecord.GradesRunFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -283,18 +283,18 @@ theorem tick_confirmation {C : Spec.Config} {P : Spec.Provisional V}
       exact ⟨rfl, rfl, rfl⟩
   exact k
 
-end SpecDraftRecord.GradesReached
+end SpecRecord.GradesReached
 
 /-! ## The tick at a support cutoff against the confirmation members -/
 
-namespace SpecDraftRecord.GradesReached
+namespace SpecRecord.GradesReached
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise
-open SpecDraftRecord.GradesRunFacts
+open SpecRecord.NoRaise
+open SpecRecord.GradesRunFacts
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -303,12 +303,12 @@ variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
     the Goldfish vote duty holds the three confirmation records of `update_confirmation` as the
     confirmation members run it, on the saved grades `c` of an outcome of the cache update
     `onPhaseTick` at `t`. -/
-theorem member_confirmation (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Int)
-    (hn : (Model.specDraft (V := V)).reachedNode n) {s : Slot} (hslot : S.E.slotOf t = s)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (hout : (Model.specDraft (V := V)).tick S v n t ⇢ out)
-    (c : (Model.specDraft (V := V)).Cache)
-    (hc : (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
+theorem member_confirmation (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Int)
+    (hn : (Model.spec (V := V)).reachedNode n) {s : Slot} (hslot : S.E.slotOf t = s)
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (hout : (Model.spec (V := V)).tick S v n t ⇢ out)
+    (c : (Model.spec (V := V)).Cache)
+    (hc : (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c)
     (hC : NodeFacts.condC (Setup.toSpec S).C n.val t)
     (hP : ¬ NodeFacts.condP (Setup.toSpec S).C (Setup.toSpec S).P n.val t)
     (hV : ¬ NodeFacts.condV (Setup.toSpec S).C n.val t) :
@@ -366,13 +366,13 @@ theorem member_confirmation (S : Setup V) (v : V) (n : (Model.specDraft (V := V)
 /-- At a time `t` that is the support cutoff of a slot `s > 0` and neither its proposal time nor its
     Goldfish vote time, a node state that passes the grade-2 awake test of `s`'s round passes the
     tick's confirmation test and fails its proposal and vote tests. -/
-theorem conds_of_support_cutoff (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
+theorem conds_of_support_cutoff (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
     (t : Int) (s : Slot) (hs : 0 < s) (hslot : S.E.slotOf t = s)
-    (ht : t = (Model.specDraft (V := V)).support_cutoff S.E s)
-    (hp : t ≠ (Model.specDraft (V := V)).proposal_time S.E s)
-    (hv : t ≠ (Model.specDraft (V := V)).vote_time S.E s)
-    (hrun : (Model.specDraft (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v n
-      ((Model.specDraft (V := V)).round_of S.hc s)) :
+    (ht : t = (Model.spec (V := V)).support_cutoff S.E s)
+    (hp : t ≠ (Model.spec (V := V)).proposal_time S.E s)
+    (hv : t ≠ (Model.spec (V := V)).vote_time S.E s)
+    (hrun : (Model.spec (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v n
+      ((Model.spec (V := V)).round_of S.hc s)) :
     NodeFacts.condC (Setup.toSpec S).C n.val t ∧
       ¬ NodeFacts.condP (Setup.toSpec S).C (Setup.toSpec S).P n.val t ∧
       ¬ NodeFacts.condV (Setup.toSpec S).C n.val t := by
@@ -398,34 +398,34 @@ theorem conds_of_support_cutoff (S : Setup V) (v : V) (n : (Model.specDraft (V :
     rw [hsl] at h
     exact hv h.1
 
-end SpecDraftRecord.GradesReached
+end SpecRecord.GradesReached
 
 namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-open SpecDraftRecord
+open SpecRecord
 open DecoupledConsensusModel.Execution
 open scoped DC
 
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_on_tick_emit_confirmation_of_outcomes :
-    ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (s : Slot) (hs : 0 < s)
-      (out : (Model.specDraft (V := V)).N × List (NamedObject V)) (hout : (Model.specDraft (V := V)).tick S v n ((Model.specDraft (V := V)).support_cutoff S.E s) ⇢ out)
-      (c : (Model.specDraft (V := V)).Cache) (hc : (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing ((Model.specDraft (V := V)).support_cutoff S.E s) n.cache ⇢ c)
-      (D : (Model.specDraft (V := V)).NS) (hD : (Model.specDraft (V := V)).duties_update_confirmation_with ((Model.specDraft (V := V)).gradeContract c) S.E S.hc
-        ((Model.specDraft (V := V)).ns_setClock S.E n.st ((Model.specDraft (V := V)).support_cutoff S.E s)) (s - 1) ⇢ D)
-      (hrun : (Model.specDraft (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v n ((Model.specDraft (V := V)).round_of S.hc s))
-      (hn : (Model.specDraft (V := V)).reachedNode n),
+theorem _root_.SpecRecord.NodeFacts.spec_on_tick_emit_confirmation_of_outcomes :
+    ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (s : Slot) (hs : 0 < s)
+      (out : (Model.spec (V := V)).N × List (NamedObject V)) (hout : (Model.spec (V := V)).tick S v n ((Model.spec (V := V)).support_cutoff S.E s) ⇢ out)
+      (c : (Model.spec (V := V)).Cache) (hc : (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing ((Model.spec (V := V)).support_cutoff S.E s) n.cache ⇢ c)
+      (D : (Model.spec (V := V)).NS) (hD : (Model.spec (V := V)).duties_update_confirmation_with ((Model.spec (V := V)).gradeContract c) S.E S.hc
+        ((Model.spec (V := V)).ns_setClock S.E n.st ((Model.spec (V := V)).support_cutoff S.E s)) (s - 1) ⇢ D)
+      (hrun : (Model.spec (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v n ((Model.spec (V := V)).round_of S.hc s))
+      (hn : (Model.spec (V := V)).reachedNode n),
       out.1.st.core.live_confirmed = D.core.live_confirmed := by
   intro S v n s hs out hout c hc D hD hrun hn
   obtain ⟨hinv, hconf, hcontract⟩ := reached_elim hn
-  have hsl := ScheduleFacts.specDraft_slotOf_support_cutoff (V := V) S.E s
+  have hsl := ScheduleFacts.spec_slotOf_support_cutoff (V := V) S.E s
   obtain ⟨hC, hP, hV⟩ := GradesReached.conds_of_support_cutoff S v n _ s hs hsl rfl
-    (ScheduleFacts.specDraft_support_cutoff_ne_proposal_time S.E s)
-    (ScheduleFacts.specDraft_support_cutoff_ne_vote_time S.E s) hrun
+    (ScheduleFacts.spec_support_cutoff_ne_proposal_time S.E s)
+    (ScheduleFacts.spec_support_cutoff_ne_vote_time S.E s) hrun
   obtain ⟨st4, hU, e1, -, -⟩ := GradesReached.member_confirmation S v n _ hn hsl out hout c hc hC hP hV
   have hD1 : Returns (Member.duties_update_confirmation_with c S.E S.hc
-      (Member.ns_setClock S.E n.val.st ((Model.specDraft (V := V)).support_cutoff S.E s)) (s - 1))
+      (Member.ns_setClock S.E n.val.st ((Model.spec (V := V)).support_cutoff S.E s)) (s - 1))
       D.val := hD
   unfold Member.duties_update_confirmation_with at hD1
   rw [returns_successOutcomes, update_confirmation_fill_ok _ _ _ _ hU] at hD1
@@ -433,16 +433,16 @@ theorem _root_.SpecDraftRecord.NodeFacts.specDraft_on_tick_emit_confirmation_of_
   have k : D.val.live_confirmed = st4.live_confirmed := by rw [← hD2]
   exact congrArg Spec.Block.toProof (e1.trans k.symm)
 
-theorem _root_.SpecDraftRecord.NodeFacts.specDraft_tick_records_at_confirmation_of_outcomes :
-    ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Int),
-      0 < S.E.slotOf t → t ≠ (Model.specDraft (V := V)).proposal_time S.E (S.E.slotOf t) →
-      t ≠ (Model.specDraft (V := V)).vote_time S.E (S.E.slotOf t) → t = (Model.specDraft (V := V)).support_cutoff S.E (S.E.slotOf t) →
-      (Model.specDraft (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v n ((Model.specDraft (V := V)).round_of S.hc (S.E.slotOf t)) →
-      ∀ (out : (Model.specDraft (V := V)).N × List (NamedObject V)), (Model.specDraft (V := V)).tick S v n t ⇢ out →
-      ∀ (c : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c →
-      ∀ (D : (Model.specDraft (V := V)).S), (Model.specDraft (V := V)).update_confirmation_with ((Model.specDraft (V := V)).gradeContract c) S.E S.hc
-        ((Model.specDraft (V := V)).ns_setClock S.E n.st t).core (S.E.slotOf t - 1) ⇢ D →
-      ∀ (hn : (Model.specDraft (V := V)).reachedNode n),
+theorem _root_.SpecRecord.NodeFacts.spec_tick_records_at_confirmation_of_outcomes :
+    ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Int),
+      0 < S.E.slotOf t → t ≠ (Model.spec (V := V)).proposal_time S.E (S.E.slotOf t) →
+      t ≠ (Model.spec (V := V)).vote_time S.E (S.E.slotOf t) → t = (Model.spec (V := V)).support_cutoff S.E (S.E.slotOf t) →
+      (Model.spec (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v n ((Model.spec (V := V)).round_of S.hc (S.E.slotOf t)) →
+      ∀ (out : (Model.spec (V := V)).N × List (NamedObject V)), (Model.spec (V := V)).tick S v n t ⇢ out →
+      ∀ (c : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick S.E S.hc n.st.core.toHealing t n.cache ⇢ c →
+      ∀ (D : (Model.spec (V := V)).S), (Model.spec (V := V)).update_confirmation_with ((Model.spec (V := V)).gradeContract c) S.E S.hc
+        ((Model.spec (V := V)).ns_setClock S.E n.st t).core (S.E.slotOf t - 1) ⇢ D →
+      ∀ (hn : (Model.spec (V := V)).reachedNode n),
       out.1.st.core.latest_stable = D.latest_stable ∧
         out.1.st.core.latest_confirmed = D.latest_confirmed := by
   intro S v n t h₁ h₂ h₃ h₄ h₅ out h₆ c h₇ D h₈ hn
@@ -501,31 +501,31 @@ open DecoupledConsensusModel.Internal.NamedRecoveryRead
 open DecoupledConsensusModel.Protocol (Token Supports Opposes CleanFrom)
 open scoped DC
 
-theorem _root_.SpecDraftRecord.GradesFacts.specDraft_phaseResult_onPhaseTick_kept :
-    ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache) {r : Round} {p : Protocol.Phase} {e : Block V} (h : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c r) p = some (some e)) (hr : (((Model.specDraft (V := V)).round_of hc (E.slotOf t)) = c.round ∧ (r = c.round ∨ r = c.round + 1)) ∨
-      (((Model.specDraft (V := V)).round_of hc (E.slotOf t)) = c.round + 1 ∧ r = c.round + 1)) (c' : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c' → ∀ (hn : (Model.specDraft (V := V)).reachedRead st c), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p
-      = some (some ((Model.specDraft (V := V)).clipGrade e st.toFG.F)) := by
+theorem _root_.SpecRecord.GradesFacts.spec_phaseResult_onPhaseTick_kept :
+    ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache) {r : Round} {p : Protocol.Phase} {e : Block V} (h : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c r) p = some (some e)) (hr : (((Model.spec (V := V)).round_of hc (E.slotOf t)) = c.round ∧ (r = c.round ∨ r = c.round + 1)) ∨
+      (((Model.spec (V := V)).round_of hc (E.slotOf t)) = c.round + 1 ∧ r = c.round + 1)) (c' : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c' → ∀ (hn : (Model.spec (V := V)).reachedRead st c), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p
+      = some (some ((Model.spec (V := V)).clipGrade e st.toFG.F)) := by
   intro E hc st t c r p e h hr c' h₁ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedRead_elim hn
   exact GradesReached.kept_of_inTree E hc st t c hcontract h hr c' h₁
 
-theorem _root_.SpecDraftRecord.GradesFacts.specDraft_onPhaseTick_phase_of_align :
-    ∀ (E : DecoupledConsensusModel.Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : DecoupledConsensusModel.Time) (c : (Model.specDraft (V := V)).Cache) (r : DecoupledConsensusModel.Round) (p : DecoupledConsensusModel.Protocol.Phase), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound ((Model.specDraft (V := V)).alignRound c (((Model.specDraft (V := V)).round_of hc (E.slotOf t)))) r) p ≠ Option.none → ∀ c'' : (Model.specDraft (V := V)).Cache, (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c'' → ∀ (hn : (Model.specDraft (V := V)).reachedRead st c), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c'' r) p = (Model.specDraft (V := V)).clipResult st.toFG.F ((Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound ((Model.specDraft (V := V)).alignRound c (((Model.specDraft (V := V)).round_of hc (E.slotOf t)))) r) p) := by
+theorem _root_.SpecRecord.GradesFacts.spec_onPhaseTick_phase_of_align :
+    ∀ (E : DecoupledConsensusModel.Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : DecoupledConsensusModel.Time) (c : (Model.spec (V := V)).Cache) (r : DecoupledConsensusModel.Round) (p : DecoupledConsensusModel.Protocol.Phase), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound ((Model.spec (V := V)).alignRound c (((Model.spec (V := V)).round_of hc (E.slotOf t)))) r) p ≠ Option.none → ∀ c'' : (Model.spec (V := V)).Cache, (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c'' → ∀ (hn : (Model.spec (V := V)).reachedRead st c), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c'' r) p = (Model.spec (V := V)).clipResult st.toFG.F ((Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound ((Model.spec (V := V)).alignRound c (((Model.spec (V := V)).round_of hc (E.slotOf t)))) r) p) := by
   intro E hc st t c r p h₁ c'' h₂ hn
   obtain ⟨hinv, hconf, hcontract⟩ := reachedRead_elim hn
   exact GradesReached.phase_of_align_of_inTree E hc st t c hcontract r p h₁ c'' h₂
 
-theorem _root_.SpecDraftRecord.GradesFacts.specDraft_phaseResult_onPhaseTick_domain_current :
-    ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (ht0 : 0 ≤ t) (c : (Model.specDraft (V := V)).Cache) {r : Round} {p : Protocol.Phase} (hρ : ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) = r) (ht : t = (Model.specDraft (V := V)).domain E hc r p) (h : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c r) p = none)
-      (c' : (Model.specDraft (V := V)).Cache) (hc' : (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c')
-      (fr : Option (Block V)) (hfr : (Model.specDraft (V := V)).freezeRoot E ((Model.specDraft (V := V)).gradeView st) st.toFG.F hc.η_SG r ((Model.specDraft (V := V)).early E hc r p)
-      ((Model.specDraft (V := V)).late E hc r p) ⇢ fr), (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p
-      = some (fr.map (fun B => (Model.specDraft (V := V)).clipGrade B st.toFG.F)) := by
+theorem _root_.SpecRecord.GradesFacts.spec_phaseResult_onPhaseTick_domain_current :
+    ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (ht0 : 0 ≤ t) (c : (Model.spec (V := V)).Cache) {r : Round} {p : Protocol.Phase} (hρ : ((Model.spec (V := V)).round_of hc (E.slotOf t)) = r) (ht : t = (Model.spec (V := V)).domain E hc r p) (h : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c r) p = none)
+      (c' : (Model.spec (V := V)).Cache) (hc' : (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c')
+      (fr : Option (Block V)) (hfr : (Model.spec (V := V)).freezeRoot E ((Model.spec (V := V)).gradeView st) st.toFG.F hc.η_SG r ((Model.spec (V := V)).early E hc r p)
+      ((Model.spec (V := V)).late E hc r p) ⇢ fr), (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p
+      = some (fr.map (fun B => (Model.spec (V := V)).clipGrade B st.toFG.F)) := by
   intro E hc st t ht0 c r p hρ ht h c' hc' fr hfr
   exact GradesReached.domain_current_of_nonneg E hc st t c ht0 hρ ht h c' hc' fr hfr
 
-theorem _root_.SpecDraftRecord.GradesFacts.specDraft_phaseResult_onPhaseTick_domain_ne_none :
-    ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (t : Int) (ht0 : 0 ≤ t) (c : (Model.specDraft (V := V)).Cache) {r : Round} {p : Protocol.Phase} (hr : r = ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) ∨ r = ((Model.specDraft (V := V)).round_of hc (E.slotOf t)) + 1) (ht : t = (Model.specDraft (V := V)).domain E hc r p) (c' : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c' → (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).cacheAtRound c' r) p ≠ none := by
+theorem _root_.SpecRecord.GradesFacts.spec_phaseResult_onPhaseTick_domain_ne_none :
+    ∀ (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (t : Int) (ht0 : 0 ≤ t) (c : (Model.spec (V := V)).Cache) {r : Round} {p : Protocol.Phase} (hr : r = ((Model.spec (V := V)).round_of hc (E.slotOf t)) ∨ r = ((Model.spec (V := V)).round_of hc (E.slotOf t)) + 1) (ht : t = (Model.spec (V := V)).domain E hc r p) (c' : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c' → (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).cacheAtRound c' r) p ≠ none := by
   intro E hc st t ht0 c r p hr ht c' h₁
   exact GradesReached.domain_ne_none_of_nonneg E hc st t c ht0 hr ht c' h₁
 

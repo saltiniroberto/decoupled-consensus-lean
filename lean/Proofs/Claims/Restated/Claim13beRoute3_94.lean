@@ -52,6 +52,7 @@ import Model.Conditions.Vocabulary_Protocol_ChainState_W4FKChainJustification
 import Model.Conditions.Vocabulary_Statements_Instantiation_Proposals
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13beRoute3_94
+import Proofs.Claims.Restated.Claim13bK_ConfirmedInclusionBounded
 
 /-!
 # The window step after the joint invariant's round
@@ -287,7 +288,6 @@ theorem openingRowsPlanned_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -380,9 +380,10 @@ theorem openingRowsPlanned_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
   obtain ⟨w, hwq⟩ := exists_notHeld_f2c S Sched hthird (hqA.trans hN)
   have hwM := hb w hwq
   have hstep := Restated.stateBeforeTime_runAll_tick facts S Sched x v₀ hmq hmqN w
-  obtain ⟨n_k, T_k, hJk, -, hWk⟩ := Restated.exists_anchor_chain_withoutCatchUp_i1 facts S Sched x tE hexec hmono
-    htd tGAT gap hgst hlen' hsync hthirdE hphaseE hrsW hmult hcv hcs hcom hw hs hrecE hprev hclear
+  obtain ⟨n_k, T_k, hJk, -, hWk⟩ := Restated.exists_anchor_chain_withoutCatchUp_bounded facts S Sched x tE hexec
+    hmono htd tGAT gap hgst hlen' hsync hthirdE hphaseE tL hEL hawake hrsW hmult hcv hcs hcom hrecE hprev hclear
     hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ (q - 1 - r₀)
+    (by rw [hrk]; exact le_trans (Restated.action_mono facts S (Nat.sub_le q 1)) (hqA.trans hN))
   rw [hrk] at hJk
   have hmq' : Restated.tickStepAt M x mq ((Restated.Vocabulary.Execution.Setup.a M S (q - 1 + 1))) := by
     rw [hq11]; exact hmq
@@ -404,8 +405,8 @@ theorem openingRowsPlanned_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
     Restated.justified_preceq_anchor_ofJoint facts S Sched x tE hexec hmono htd tGAT gap hgst hlen' hsync hthirdE
       hphaseE hrsW hmult hcv hcom hrecE hprev hclear hB' hnW hAW hrW1 hWk hJk hmq' w mq hWmq
       (Nat.le_succ mq) hwHon
-  have hTheads := Restated.anchor_ancestorOfHonestHeadsFrom_withoutCatchUp_i1 facts S Sched x tE hexec hmono htd
-    tGAT gap hgst hlen' hsync hthirdE hphaseE hrsW hmult hcv hcs hcom hw hs hrecE hprev hclear hB'
+  have hTheads := Restated.anchor_ancestorOfHonestHeadsFrom_withoutCatchUp_bounded facts S Sched x tE hexec hmono
+    htd tGAT gap hgst hlen' hsync hthirdE hphaseE tL hEL hawake hrsW hmult hcv hcs hcom hrecE hprev hclear hB'
     hnW hAW hJswitch hrW1 hWk hJk
   obtain ⟨t', -, ht's, -, hcs'⟩ :=
     Restated.exists_cone_cutoff facts S Sched tE hmono hcom tGAT gap hgst hlen' hphaseE hcs hrW1
@@ -416,7 +417,8 @@ theorem openingRowsPlanned_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
     ht's.trans (slotStart_mono S hoo1)
   have hTM : Block.Preceq T_k.erase P.erase :=
     Restated.preceq_openingProposal_of_heads_f2b facts S Sched x v₀ N hsync hmono hawake hgst hcv hexec hmult
-      hthird hN hcom hrec htd hcs' hqd hcsC hqA hopeningM hTheads hoo cp hcp hP
+      hthird hN hcom hrec htd hcs' hqd hcsC hqA hopeningM
+      (hTheads _ hoo (by rw [facts.gr.round_of_opening_slot_eq S.hc q]; have := Restated.action_switchRound_add_delta_le_b facts S tGAT tL gap hgst (le_trans hlen' hEL); linarith)) cp hcp hP
   have hf := Restated.admissibleFieldsOn_runAll_notHeld facts S Sched x v₀ N hsync hmono hawake hgst hcv hexec
     hmult hthird hN
   have hHs : ∀ t t' : Int, t ≤ t' → notHeldAt Sched t' ⊆ notHeldAt Sched t :=
@@ -501,7 +503,6 @@ theorem windowStep_ofHeads_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -553,7 +554,9 @@ theorem windowStep_ofHeads_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
       notHeldAt Sched (M.confirmation_time S.E ((M.opening_slot S.hc (c - 2)))))
     {P P₂ P' P'' : NamedBlock V}
     {B' : NamedBlock V} (hB'log : Restated.blockInLog M S Sched x B') {s : Slot}
-    (hheads : Restated.AncestorOfHonestHeadsFrom M S Sched x B'.erase s)
+    (hheads : ∀ s' : Slot, s ≤ s' →
+      Restated.Vocabulary.Execution.Setup.a M S (M.round_of S.hc s') + S.E.Δ ≤ tL →
+      Restated.HeadsBelow M S Sched x B'.erase s')
     (hsM : s ≤ (M.opening_slot S.hc (c - 1))) :
     let R : Record.Run V :=
       { Restated.runAll M S Sched x v₀ N with honest := notHeldAt Sched (x[N].time : Int) }
@@ -612,10 +615,10 @@ theorem windowStep_ofHeads_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
   have hAcmN : (Restated.Vocabulary.Execution.Setup.a M S (c - 1)) ≤ (x[N].time : Int) :=
     ((Restated.Vocabulary.Proofs.HealingSurface.action_strictMono facts S).monotone (Nat.sub_le c 1)).trans hAcN
   have hCc := Restated.openingRowsPlanned_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hNW hN hA hc1r hAcN hopening hopeningM cp hcp hP cp' hcp' hP'
   have keym := Restated.openingRowsPlanned_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hNW hN hA (q := c - 1) hcm1r hAcmN hopeningM (by rw [hsub]; exact hopeningMM)
     (P := P') (P' := P'')
   rw [hsub] at keym
@@ -636,11 +639,11 @@ theorem windowStep_ofHeads_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
   have hBP : Block.Preceq B'.erase P.erase :=
     Restated.preceq_openingProposal_of_heads_f2b facts S Sched x v₀ N hsync hmono hawake hgst hcv hexec
       hmult hthird hN hcom hrec htd hcs₁ hcd (ht₁s.trans (slotStart_mono S hoP1)) hAcN hopening
-      hheads hsP cp hcp hP
+      (hheads _ hsP (by rw [facts.gr.round_of_opening_slot_eq S.hc c]; have := Restated.action_switchRound_add_delta_le_b facts S tGAT tL gap hgst (le_trans hlen' hEL); linarith)) cp hcp hP
   have hBM : Block.Preceq B'.erase P'.erase :=
     Restated.preceq_openingProposal_of_heads_f2b facts S Sched x v₀ N hsync hmono hawake hgst hcv hexec
       hmult hthird hN hcom hrec htd hcs₂ hcd' (ht₂s.trans (slotStart_mono S hoM1)) hAcmN
-      hopeningM hheads hsM cp' hcp' hP'
+      hopeningM (hheads _ hsM (by rw [facts.gr.round_of_opening_slot_eq S.hc (c - 1)]; have := Restated.action_switchRound_add_delta_le_b facts S tGAT tL gap hgst (le_trans hlen' hEL); linarith)) cp' hcp' hP'
   have hzero : ∃ u : V, u ∉ Sched.adv 0 :=
     exists_notHeld_zero S Sched hthird (le_trans (Int.natCast_nonneg _) hN)
   obtain ⟨hPrun, -, -⟩ := Restated.openingProposal_runBlock_runAll_l85c facts S Sched x v₀ N hsync hmono
@@ -709,7 +712,6 @@ theorem windowAfterTimeout_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -830,10 +832,10 @@ theorem windowAfterTimeout_f2c (facts : Record.Facts M) (S : Setup V) (Sched : S
     hmult hthird hN hcom hrec hcd' hvoteHor hopening' hprop2 cp' hcp' hP' cp₂ hcp₂ hP₂
   have hP'P₂ : NamedBlock.Preceq P' P₂ := namedPreceq_trans_l85 hP'Q (parent_namedPreceq_l85 P₂)
   have hCc := Restated.openingRowsPlanned_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hNW hN hA hc1r hAcN hopening' hopeningM cp' hcp' hP' cpm hcpm hPm
   have keym := Restated.openingRowsPlanned_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hNW hN hA (q := c' - 1) hcm1r hAcmN hopeningM (by rw [hsub]; exact hopeningMM)
     (P := Pm) (P' := Pmm)
   rw [hsub] at keym

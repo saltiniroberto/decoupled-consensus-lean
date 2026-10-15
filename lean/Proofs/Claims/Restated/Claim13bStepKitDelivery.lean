@@ -78,7 +78,7 @@ private theorem clock_succ_of_tick (facts : Record.Facts M) (S : Setup V) (Sched
     have hx1 : x[k + 1][w].st = (tk w).state := by
       have h2 : x[k + 1][w] = (tickAllAwakeUpdate Sched τ x[k] w' tk)[w] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react hv]
-    rcases Record.protocolOf_step_tick M S (htick w hv) with ⟨-, out₁, hout, hst⟩ | ⟨-, hst⟩
+    rcases Record.protocolOf_step_tick M S (htick w hv) with ⟨out₁, hout, hst⟩ | ⟨-, hst⟩
     · refine Or.inl ?_
       rw [hx1, hst]
       exact (facts.nd.tick_clock (Setup.alwaysAwake S) w _ (τ : Int) out₁ hout).1
@@ -184,14 +184,13 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- After the tick at a multiple `τ` of `Δ`, a validator awake and not held by the adversary at `τ`
+/-- After the tick at `τ`, a validator awake and not held by the adversary at `τ`
     holds the node state of an outcome of its tick from `Record.wakeStage M Sched τ x[k] w`, or that
     tick has no outcome and it holds that wake-stage node state. -/
 theorem st_succ_of_tick_awake (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (w : V) {k τ : Nat}
     (hl : x.lbl k = AtomicAction.tickAllAwake τ)
-    (haw : w ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int))
-    (hdvd : (τ : Int) % S.E.Δ = 0) :
+    (haw : w ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int)) :
     (∃ out₁ : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (τ : Int) x[k] w) (τ : Int) ⇢ out₁ ∧ x[k + 1][w].st = out₁.1) ∨
       ((∀ out₁ : M.N × List (NamedObject V),
@@ -207,9 +206,9 @@ theorem st_succ_of_tick_awake (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     rw [h2, tickAllAwakeUpdate_getElem_react haw]
   have htk := Record.protocolOf_step_tick M S (htick w haw)
   rw [hwst] at htk
-  rcases htk with ⟨-, out₁, hout, hst⟩ | ⟨hno, hst⟩
+  rcases htk with ⟨out₁, hout, hst⟩ | ⟨hno, hst⟩
   · exact Or.inl ⟨out₁, hout, by rw [hx1, hst]⟩
-  · exact Or.inr ⟨hno.resolve_left (fun h => h hdvd), by rw [hx1, hst]⟩
+  · exact Or.inr ⟨hno, by rw [hx1, hst]⟩
 
 end
 
@@ -218,17 +217,16 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- After the tick at a multiple `τ` of `Δ`, a validator awake and not held by the adversary at `τ`,
+/-- After the tick at `τ`, a validator awake and not held by the adversary at `τ`,
     whose tick there has an outcome, has store clock `τ`. -/
 theorem clock_eq_of_tick_awake_sts (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) {k τ : Nat} {w : V}
     (hl : x.lbl k = AtomicAction.tickAllAwake τ)
     (haw : w ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int))
-    (hdvd : (τ : Int) % S.E.Δ = 0)
     (hne : ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (τ : Int) x[k] w) (τ : Int) ⇢ out) :
     (x[k + 1][w].st).st.core.t = (τ : Int) := by
-  rcases Restated.st_succ_of_tick_awake facts S Sched x w hl haw hdvd with
+  rcases Restated.st_succ_of_tick_awake facts S Sched x w hl haw with
     ⟨out₁, hout, hst⟩ | ⟨hno, -⟩
   · rw [hst]
     exact (facts.nd.tick_clock (Setup.alwaysAwake S) w _ (τ : Int) out₁ hout).1
@@ -242,18 +240,18 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- If step `n` is the tick at a multiple `t` of `Δ` and `w` is awake and not held by the adversary
+/-- If step `n` is the tick at `t` and `w` is awake and not held by the adversary
     at `t`, with a tick there that has an outcome, then `w`'s store clock is at or after `t` at
     every step from `n + 1` on. -/
 theorem clock_ge_of_tickStepAt_awake_sts (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) {n : Nat} {t : Int} {w : V}
-    (hn : Restated.tickStepAt M x n t) (haw : w ∈ Sched.awake t \ Sched.adv t) (hdvd : t % S.E.Δ = 0)
+    (hn : Restated.tickStepAt M x n t) (haw : w ∈ Sched.awake t \ Sched.adv t)
     (hne : ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched t x[n] w) t ⇢ out)
     {m : Nat} (hm : n + 1 ≤ m) : t ≤ (x[m][w].st).st.core.t := by
   obtain ⟨t', hlbl, ht'⟩ := hn
   subst ht'
-  rw [← Restated.clock_eq_of_tick_awake_sts facts S Sched x hlbl haw hdvd hne]
+  rw [← Restated.clock_eq_of_tick_awake_sts facts S Sched x hlbl haw hne]
   exact Restated.clock_mono_sts facts S Sched x w hm
 
 end
@@ -591,132 +589,6 @@ theorem sgRow_stamp_mono_sts (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     W₂ hW₂'
   rw [hW₁w, hW₂w] at h
   exact h
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- If `w` is awake from the action instant of `a`'s round to the time of step `j` and not held by
-    the adversary at that instant, `a` names `v`, `v` is honest through the time of step `j`, and
-    the round of that time's slot is at most `a.round + η_SG`, then no delivery of `⟨v, .attest a⟩`
-    to `w` before step `j` finds `a` stale or of a future round. The hypothesis `hneTick` says that
-    `w`'s tick at the action instant of `a`'s round has an outcome. -/
-theorem window_of_awakeThroughout (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched)
-    {j : Nat} {v w : V} {a : NamedAttestation V}
-    (hv : HonestThroughTime Sched (x[j].time : Int) v)
-    (hunf : Restated.Unforgeability M S x) (hidx : a.val_index = v)
-    (hawT : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S a.round)) (x[j].time : Int))
-    (hwh : w ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S a.round)))
-    (hexp : (M.round_of S.hc (S.E.slotOf (x[j].time : Int))) ≤ a.round + S.hc.η_SG)
-    (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (Restated.Vocabulary.Execution.Setup.a M S a.round) →
-      ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S a.round) x[n] w) (Restated.Vocabulary.Execution.Setup.a M S a.round) ⇢ out) :
-    ∀ k : Nat, k < j →
-      x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ →
-      ¬ (a.round < (M.round_of S.hc (x[k][w].st).st.core.s) - S.hc.η_SG ∨
-         (M.round_of S.hc (x[k][w].st).st.core.s) < a.round) := by
-  intro k hkj hlbl
-  have hkt : (x[k].time : Int) ≤ (x[j].time : Int) := Restated.time_mono_int facts S Sched x (le_of_lt hkj)
-  have hvk : HonestThroughTime Sched (x[k].time : Int) v :=
-    fun t ht => hv t (le_trans ht hkt)
-  obtain ⟨-, -, n, hnk, htick, hact⟩ := Restated.deliver_attest_after_action facts S Sched x hvk hunf hidx hlbl
-  have hawa : w ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S a.round)) :=
-    mem_awake_of_awakeThroughout Sched hawT (le_refl _) (le_trans hact hkt)
-  have hclock : (Restated.Vocabulary.Execution.Setup.a M S a.round) ≤ (x[k][w].st).st.core.t :=
-    Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x htick (Finset.mem_sdiff.2 ⟨hawa, hwh⟩)
-      (Restated.action_emod_delta facts S a.round) (hneTick n htick)
-      (Nat.succ_le_of_lt hnk)
-  have hge : a.round ≤ (M.round_of S.hc (x[k][w].st).st.core.s) :=
-    Restated.receiver_round_ge_of_clock_ge facts S Sched x k w a.round hclock
-  have hle : (M.round_of S.hc (x[k][w].st).st.core.s) ≤ a.round + S.hc.η_SG :=
-    le_trans (Restated.receiver_round_le_of_time_le facts S Sched x k w hkt) hexp
-  have hsub : (M.round_of S.hc (x[k][w].st).st.core.s) - S.hc.η_SG ≤ a.round :=
-    Nat.sub_le_iff_le_add.mpr hle
-  rintro (h | h)
-  · exact absurd h (Nat.not_lt.mpr hsub)
-  · exact absurd h (Nat.not_lt.mpr hge)
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- `attest_recorded_of_mem_view` with the window test discharged by `window_of_awakeThroughout`. -/
-theorem attest_recorded_of_mem_view_awake (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched)
-    {j : Nat} {v w : V} {a : NamedAttestation V}
-    (hview : (⟨v, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[j][w].view)
-    (haw : AtomicAwake x j w)
-    (hv : HonestThroughTime Sched (x[j].time : Int) v)
-    (hunf : Restated.Unforgeability M S x) (hidx : a.val_index = v)
-    (hawT : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S a.round)) (x[j].time : Int))
-    (hwh : w ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S a.round)))
-    (hexp : (M.round_of S.hc (S.E.slotOf (x[j].time : Int))) ≤ a.round + S.hc.η_SG)
-    (hroom : ∀ k : Nat, k < j →
-      x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ →
-      (M.round_votes (x[k][w].st).st.core a.erase).card ≠ 2)
-    (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (Restated.Vocabulary.Execution.Setup.a M S a.round) →
-      ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S a.round) x[n] w) (Restated.Vocabulary.Execution.Setup.a M S a.round) ⇢ out)
-    (hne : ∀ k : Nat, k < j →
-      x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ →
-      ∃ n' : M.N, M.process (Setup.alwaysAwake S) (x[k][w].st) (NamedObject.attest a) ⇢ n') :
-    ∃ k : Nat, k < j ∧ x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ ∧
-      (a.erase.confirmed ∈ M.round_votes (x[k][w].st).st.core a.erase ∨
-        (a ∈ (x[k + 1][w].st).st.sg_rows a.round ∧
-          a ∈ (x[j][w].st).st.sg_rows a.round ∧
-          (x[k + 1][w].st).st.core.timestamp_sg_vote (M.sgVote a.erase)
-            = some (((x[k][w].st).st.core.t : Stamp)))) :=
-  Restated.attest_recorded_of_mem_view facts S Sched x hview haw
-    (Restated.window_of_awakeThroughout facts S Sched x hv hunf hidx hawT hwh hexp hneTick) hroom hne
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- For an honest send of `⟨v, .attest a⟩` at step `k_0`, under `SynchronyFromWake`, with `w` awake
-    from the time the message is on the wire through its deadline, the conclusion of
-    `attest_recorded_of_mem_view_awake` holds. -/
-theorem attest_recorded_of_honestSend_awake_succ (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched)
-    (hsync : Restated.SynchronyFromWake M S x)
-    {k_0 j : Nat} {v w : V} {a : NamedAttestation V}
-    (hsend : Restated.HonestSendAt M S x k_0 (⟨v, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)))
-    (hlate : max (x[k_0].time : Int) S.E.t_GST + S.E.Δ ≤ (x[j].time : Int))
-    (haw : AtomicAwake x j w)
-    (hwaw : w ∈ Sched.awakeThroughout (x[k_0 + 1].time : Int)
-      (max (x[k_0].time : Int) S.E.t_GST + S.E.Δ))
-    (hv : HonestThroughTime Sched (x[j].time : Int) v)
-    (hunf : Restated.Unforgeability M S x) (hidx : a.val_index = v)
-    (hawT : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S a.round)) (x[j].time : Int))
-    (hwh : w ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S a.round)))
-    (hexp : (M.round_of S.hc (S.E.slotOf (x[j].time : Int))) ≤ a.round + S.hc.η_SG)
-    (hroom : ∀ k : Nat, k < j →
-      x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ →
-      (M.round_votes (x[k][w].st).st.core a.erase).card ≠ 2)
-    (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (Restated.Vocabulary.Execution.Setup.a M S a.round) →
-      ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S a.round) x[n] w) (Restated.Vocabulary.Execution.Setup.a M S a.round) ⇢ out)
-    (hne : ∀ k : Nat, k < j →
-      x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ →
-      ∃ n' : M.N, M.process (Setup.alwaysAwake S) (x[k][w].st) (NamedObject.attest a) ⇢ n') :
-    ∃ k : Nat, k < j ∧ x.lbl k = AtomicAction.deliver w ⟨v, NamedObject.attest a⟩ ∧
-      (a.erase.confirmed ∈ M.round_votes (x[k][w].st).st.core a.erase ∨
-        (a ∈ (x[k + 1][w].st).st.sg_rows a.round ∧
-          a ∈ (x[j][w].st).st.sg_rows a.round ∧
-          (x[k + 1][w].st).st.core.timestamp_sg_vote (M.sgVote a.erase)
-            = some (((x[k][w].st).st.core.t : Stamp)))) :=
-  Restated.attest_recorded_of_honestSend_succ facts S Sched x hsync hsend hlate haw hwaw
-    (Restated.window_of_awakeThroughout facts S Sched x hv hunf hidx hawT hwh hexp hneTick) hroom hne
 
 end
 

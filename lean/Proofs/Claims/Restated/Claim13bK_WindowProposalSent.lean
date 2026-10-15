@@ -105,11 +105,11 @@ theorem signedProposal_tick_g1 (facts : Record.Facts M) (S : Setup V) (Sched : S
   obtain ⟨B', hmem, hBe, hBslot, hauth⟩ := hB
   have hauthor : NamedObject.author (NamedObject.block B') = some (S.E.proposer s) :=
     (author_block B').trans hauth
-  obtain ⟨k, hki, t, hl, haw, hdvd, out, hout, hemit⟩ :=
+  obtain ⟨k, hki, t, hl, haw, out, hout, hemit⟩ :=
     Restated.tick_of_honest_signed_upTo facts S Sched x (S.E.proposer s) (.block B') (x[i].time : Int) hprop
       hunf hauthor i le_rfl hmem
   obtain ⟨W, hW, hemi⟩ :=
-    Restated.emits_runAll_of_tick facts S Sched x (S.E.proposer s) hki hl haw hdvd hout hemit
+    Restated.emits_runAll_of_tick facts S Sched x (S.E.proposer s) hki hl haw hout hemit
   have ht : (t : Int) = M.proposal_time S.E s := by
     have h := (Restated.Vocabulary.Proofs.HealingSurface.emits_block_shape facts (Setup.alwaysAwake S) _
       W hW hemi).2.1
@@ -294,7 +294,7 @@ theorem windowProposalSent_g1 (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     fun _ _ h => notHeldAt_anti hmono h
   obtain ⟨hslot, k, -, hktick, hsent⟩ :=
     Restated.proposedBlockAtStep_of_proposedBlockAtOn_g1 facts S Sched x v₀ hf hHs hs hprop hhor hlo
-      (facts.ndRun.tick_outcome_sts S Sched x hvalid.idealization.root_injective hvalid.honestRootsNew) hrun cp hcp hP
+      (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hvalid.idealization.root_injective hvalid.honestRootsNew k τ u hl) hrun cp hcp hP
   have hk1 : (x[k + 1].time : Int) = M.proposal_time S.E s := (Restated.tickStepAt_time facts x hktick).1
   have hhon : HonestThroughTime Sched (M.confirmation_time S.E s) (S.E.proposer s) :=
     fun t' ht' hadv => (mem_notHeldAt.mp hprop) (hmono _ _ ht' hadv)

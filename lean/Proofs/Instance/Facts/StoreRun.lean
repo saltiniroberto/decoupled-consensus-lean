@@ -1,14 +1,14 @@
 import Proofs.Instance.Facts.Node2
 
 /-!
-# The store run facts at `Model.specDraft`
+# The store run facts at `Model.spec`
 
-The five fields of `StoreRunFacts` proved at `Model.specDraft`, with the lemmas saying what each
+The five fields of `StoreRunFacts` proved at `Model.spec`, with the lemmas saying what each
 write of the spec's store adds to the Goldfish vote lists and the attestation lists, and the bundle
-`Model.specDraft_runFacts_store`.
+`Model.spec_runFacts_store`.
 -/
 
-namespace SpecDraftRecord.StoreRunFacts
+namespace SpecRecord.StoreRunFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
@@ -253,13 +253,13 @@ theorem att_of_toSpecNamed {B : NamedBlock V} {x : Spec.Attestation V}
   refine ⟨row, hrow, ?_⟩
   rw [HandlersFacts.toProof_toSpecNamed_attestation, Spec.Attestation.toProof_toSpec]
 
-/-- The field `tick_gf_votes_mem` of `StoreRunFacts` at `Model.specDraft`: for every outcome `out`
+/-- The field `tick_gf_votes_mem` of `StoreRunFacts` at `Model.spec`: for every outcome `out`
     of `v`'s tick at `t` from `n`, a vote `u` in the slot-`k` list of `out.1`'s core store is in the
     slot-`k` list of `n`'s core store, or `out` sends `u`, or `out` sends a block that includes `u`. -/
-theorem specDraft_tick_gf_votes_mem : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
+theorem spec_tick_gf_votes_mem : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
     (t : Time) (k : Slot) {u : GoldfishVote V}
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)),
-    (Model.specDraft (V := V)).tick S v n t ⇢ out →
+    (out : (Model.spec (V := V)).N × List (NamedObject V)),
+    (Model.spec (V := V)).tick S v n t ⇢ out →
     u ∈ out.1.st.core.gf_votes k →
       u ∈ n.st.core.gf_votes k ∨ NamedObject.gfVote u ∈ out.2 ∨
         ∃ B : NamedBlock V, NamedObject.block B ∈ out.2 ∧ u ∈ B.gf_votes := by
@@ -277,13 +277,13 @@ theorem specDraft_tick_gf_votes_mem : ∀ (S : Setup V) (v : V) (n : (Model.spec
   · exact Or.inr (Or.inr ⟨B.toProofNamed,
       List.mem_map_of_mem (f := Spec.NamedObject.toProof) hB, gf_toProofNamed hxB⟩)
 
-/-- The field `tick_sg_pool_mem` of `StoreRunFacts` at `Model.specDraft`: for every outcome `out` of
+/-- The field `tick_sg_pool_mem` of `StoreRunFacts` at `Model.spec`: for every outcome `out` of
     `v`'s tick at `t` from `n`, a round-`r` attestation in the attestation set of `out`'s store is
     in that of `n`'s store, or an object `out` sends carries it. -/
-theorem specDraft_tick_sg_pool_mem : ∀ (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
+theorem spec_tick_sg_pool_mem : ∀ (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
     (t : Time) (r : Round) {b : CombinedAttestation V}
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)),
-    (Model.specDraft (V := V)).tick S v n t ⇢ out →
+    (out : (Model.spec (V := V)).N × List (NamedObject V)),
+    (Model.spec (V := V)).tick S v n t ⇢ out →
     b ∈ out.1.st.core.sg_pool r →
       b ∈ n.st.core.sg_pool r ∨
         ∃ o ∈ out.2, DecoupledConsensusModel.Proofs.Optimistic.CarriesRow o b := by
@@ -310,12 +310,12 @@ theorem specDraft_tick_sg_pool_mem : ∀ (S : Setup V) (v : V) (n : (Model.specD
 
 /-! ## The receipt -/
 
-/-- The field `process_gf_votes_mem` of `StoreRunFacts` at `Model.specDraft`: for every node state
+/-- The field `process_gf_votes_mem` of `StoreRunFacts` at `Model.spec`: for every node state
     `n'` that `n`'s receipt of `o` can return, a vote `u` in the slot-`k` list of `n'`'s core store
     is in the slot-`k` list of `n`'s core store, or `o` is `u`, or `o` is a block that includes `u`. -/
-theorem specDraft_process_gf_votes_mem : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (k : Slot) {u : GoldfishVote V} (n' : (Model.specDraft (V := V)).N),
-    (Model.specDraft (V := V)).process S n o ⇢ n' →
+theorem spec_process_gf_votes_mem : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (k : Slot) {u : GoldfishVote V} (n' : (Model.spec (V := V)).N),
+    (Model.spec (V := V)).process S n o ⇢ n' →
     u ∈ n'.st.core.gf_votes k →
       u ∈ n.st.core.gf_votes k ∨ o = NamedObject.gfVote u ∨
         ∃ B : NamedBlock V, o = NamedObject.block B ∧ u ∈ B.gf_votes := by
@@ -341,12 +341,12 @@ theorem specDraft_process_gf_votes_mem : ∀ (S : Setup V) (n : (Model.specDraft
     rw [gf_attest_eq] at hx'
     exact Or.inl (List.mem_map_of_mem hx')
 
-/-- The field `process_sg_pool_mem` of `StoreRunFacts` at `Model.specDraft`: for every node state
+/-- The field `process_sg_pool_mem` of `StoreRunFacts` at `Model.spec`: for every node state
     `n'` that `n`'s receipt of `o` can return, a round-`r` attestation in the attestation set of
     `n'`'s store is in that of `n`'s store, or `o` carries it. -/
-theorem specDraft_process_sg_pool_mem : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (r : Round) {b : CombinedAttestation V} (n' : (Model.specDraft (V := V)).N),
-    (Model.specDraft (V := V)).process S n o ⇢ n' →
+theorem spec_process_sg_pool_mem : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (r : Round) {b : CombinedAttestation V} (n' : (Model.spec (V := V)).N),
+    (Model.spec (V := V)).process S n o ⇢ n' →
     b ∈ n'.st.core.sg_pool r →
       b ∈ n.st.core.sg_pool r ∨ DecoupledConsensusModel.Proofs.Optimistic.CarriesRow o b := by
   intro S n o r b n' hn' hb
@@ -377,30 +377,30 @@ theorem specDraft_process_sg_pool_mem : ∀ (S : Setup V) (n : (Model.specDraft 
 
 /-! ## The rows along a run -/
 
-/-- The field `row_round_stateBefore` of `StoreRunFacts` at `Model.specDraft`: for every world `w`
+/-- The field `row_round_stateBefore` of `StoreRunFacts` at `Model.spec`: for every world `w`
     that can hold before the `i`-th event of `rho`, a named row `a` in bucket `k` of `reader`'s
     store rows in `w` is a row of round `k`. -/
-theorem specDraft_row_round_stateBefore : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat)
-    (reader : V) (k : Round) (a : NamedAttestation V) (w : V → (Model.specDraft (V := V)).N)
-    (_hw : w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i)
+theorem spec_row_round_stateBefore : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat)
+    (reader : V) (k : Round) (a : NamedAttestation V) (w : V → (Model.spec (V := V)).N)
+    (_hw : w ∈ stateBeforeOf (Model.spec (V := V)) S rho i)
     (_ha : a ∈ (w reader).st.sg_rows k), a.round = k := by
   intro S rho i reader k a w hw ha
   have hI := HandlersRunFacts.rows_fold_ok S (rho.events.take i) w hw reader
   obtain ⟨a', rfl⟩ := HandlersFacts.exists_namedAtt a
   exact hI k a' ((HandlersRunFacts.mem_sg_rows_iff (w reader).val.st k a').1 ha)
 
-end SpecDraftRecord.StoreRunFacts
+end SpecRecord.StoreRunFacts
 
 namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- Every field of `StoreRunFacts` holds at `Model.specDraft`. -/
-theorem Model.specDraft_runFacts_store : StoreRunFacts (Model.specDraft (V := V)) where
-  tick_sg_pool_mem := SpecDraftRecord.StoreRunFacts.specDraft_tick_sg_pool_mem
-  row_round_stateBefore := SpecDraftRecord.StoreRunFacts.specDraft_row_round_stateBefore
-  process_sg_pool_mem := SpecDraftRecord.StoreRunFacts.specDraft_process_sg_pool_mem
-  tick_gf_votes_mem := SpecDraftRecord.StoreRunFacts.specDraft_tick_gf_votes_mem
-  process_gf_votes_mem := SpecDraftRecord.StoreRunFacts.specDraft_process_gf_votes_mem
+/-- Every field of `StoreRunFacts` holds at `Model.spec`. -/
+theorem Model.spec_runFacts_store : StoreRunFacts (Model.spec (V := V)) where
+  tick_sg_pool_mem := SpecRecord.StoreRunFacts.spec_tick_sg_pool_mem
+  row_round_stateBefore := SpecRecord.StoreRunFacts.spec_row_round_stateBefore
+  process_sg_pool_mem := SpecRecord.StoreRunFacts.spec_process_sg_pool_mem
+  tick_gf_votes_mem := SpecRecord.StoreRunFacts.spec_tick_gf_votes_mem
+  process_gf_votes_mem := SpecRecord.StoreRunFacts.spec_process_gf_votes_mem
 
 end DecoupledConsensusModel.Sts.Record

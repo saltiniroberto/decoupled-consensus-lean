@@ -44,6 +44,7 @@ import Model.Conditions.Vocabulary_Protocol_Handlers_StoreRoots
 import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
 import Proofs.Claims.Restated.WakeWindow
+import Proofs.Claims.Restated.Claim13bK_ConeAnchorUpToRecv
 
 /-!
 # The chain from the SG root to a held block is in the voter tree, synchrony up to a bound
@@ -377,6 +378,7 @@ theorem confAnchor_compatible_at_honRound_upTo (facts : Record.Facts M) (S : Set
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r)
     (c : M.Cache) (hc : M.onPhaseTick S.E S.hc (M.toHealing (x[n'][v].st).st.core)
       (M.confirmation_time S.E ((M.opening_slot S.hc (r + 1)))) (x[n'][v].st).cache ⇢ c) :
     ∀ A, Restated.Vocabulary.Protocol.confAnchorWith M (M.gradeContract c) S.E S.hc
@@ -398,7 +400,7 @@ theorem confAnchor_compatible_at_honRound_upTo (facts : Record.Facts M) (S : Set
       Restated.confFrame_g1_provenance facts S Sched x hn'' v root c hc hroot
     rw [hround] at hm hB
     have hdom := facts.gr.domain_le_action S (r + 1) .g1
-    have hawT := Restated.hawT_of_honRound_succ facts S Sched hv hdom
+    have hawT := Restated.awakeThroughout_late_domain_of_honRound_succ facts S Sched hv hdom
     have hvS : v ∉ Sched.adv (M.domain S.E S.hc (r + 1) .g1) := fun hin =>
       hvadv (hmono _ _ hdom hin)
     obtain ⟨b, hb⟩ := facts.gr.gradeBool_nonempty S.E (M.gradeView (M.toHealing (x[m][v].st).st.core))
@@ -407,10 +409,11 @@ theorem confAnchor_compatible_at_honRound_upTo (facts : Record.Facts M) (S : Set
     have hbt := hB b hb
     subst hbt
     exact Protocol.compatible_of_preceq_of_compatible hpre
-      (Restated.grade1_compatible_at_awakeReader_upTo facts (hcross := hcross) S Sched x tE hexec hmono htd
+      (Restated.grade1_compatible_at_awakeReader_upTo_recv facts (hcross := hcross) S Sched x tE hexec hmono htd
         (synchronyFromWakeBefore_mono (le_trans (facts.gr.late_le_domain S (r + 1) .g1) hdom) hsync)
         hmult tGAT gap hgst
-        hlen hcv hthird hphase hrsW hcs hr hinv hdom hawT hvS hm B hb hneTick hneAtt)
+        hlen hcv hthird hphase hrsW hcs hr hinv hdom _ le_rfl hawT
+        (hrecvR.at facts hv .g1) hvS hm B hb hneTick hneAtt)
   · exact compatible_of_preceq_common_Preceq
       (Restated.fin_old_anchor_before_succ_tick_of_hypotheses facts (hcross := hcross) S Sched x tE hexec hmono tGAT gap hgst hlen
         hthird hphase hrsW hr hinv hn' v n' le_rfl hvn) (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _))
@@ -477,10 +480,7 @@ theorem live_confirmed_compatible_at_action_afterPhase_ofCompatible_upTo (facts 
       hgst hcv hawake hthird hcs hlen hunder hunderS hsE hsR hn hv hprev c hc A hA hAT hpath hs hhs hF hJ
       hneTickVote hneTick
   · have haw : v ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) :=
-      mem_awake_of_awakeThroughout Sched (Restated.hawT_of_honRound_succ facts S Sched hv le_rfl)
-        (by have := S.E.Δ_pos; have := facts.gr.action_succ_eq_add_rounds S r
-            have : (0 : Int) ≤ 4 * (S.hc.R : Int) * S.E.Δ := by positivity
-            linarith) le_rfl
+      Restated.awake_action_of_mem_honRound facts hv
     exact Restated.live_confirmed_compatible_of_anchor_descendant facts S Sched x hn
       (Finset.mem_sdiff.2 ⟨haw, (Finset.mem_sdiff.1 hv).2⟩) c hc A hA hTA hs hhs hF hJ
       (hneTick n _ hn (Restated.action_emod_delta facts S (r + 1))
@@ -502,8 +502,9 @@ theorem live_confirmed_compatible_at_action_afterPhase_ofCompatible_upTo (facts 
           exact Restated.honest_upTo_of_mono hmono (Finset.mem_sdiff.2 ⟨haw, (Finset.mem_sdiff.1 hv).2⟩))
         have hw := (Finset.mem_sdiff.1 hv).1
         have h12 := twelve_delta_le_wAttest S
-        simp only [Restated.activeRoundW, Schedule.awakeThroughout, Finset.mem_inf,
+        simp only [Restated.activeRoundW, Restated.attestersAt, Schedule.awakeThroughout, Finset.mem_inf,
           Finset.mem_Icc] at hw ⊢
+        try rw [facts.gr.early_g2_eq S (r + 1)] at hw
         rw [facts.gr.early_g2_eq S (r + 1)]
         intro t ht
         exact hw t ⟨by linarith [ht.1], ht.2⟩)

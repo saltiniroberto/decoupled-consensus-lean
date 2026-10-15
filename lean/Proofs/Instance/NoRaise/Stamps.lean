@@ -11,7 +11,7 @@ and the same for the tick (`stamped_tick`).
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 open Spec Spec.Protocol
 open DC (DRE)
@@ -441,4 +441,4 @@ theorem stamped_tick {C : Config} {P : Provisional V} {X : External V} {n : Node
     exact stamped_update_grades h0 hs
   exact stamped_make_grades_compatible_with_finalized (hf.1 hs0)
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise

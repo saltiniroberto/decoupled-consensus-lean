@@ -6,6 +6,7 @@ import Model.Conditions.Sts_Interface
 import Model.Conditions.Sts_Spec2Claims_Claim13bd
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Sts_Spec2Claims_Claim13bf
+import Model.Conditions.Sts_Spec2Claims_ClaimConfirmedIncludedAfterHealing
 import Model.Record.Wiring
 
 /-!
@@ -13,6 +14,14 @@ import Model.Record.Wiring
 
 The recurrence of honest awake proposers, the growth delay, the growth of honest confirmed outputs
 after a phase, and the statement that it holds, stated over a model `M : Record.Model V`.
+
+The reader of the growth conclusion's last conjunct is a validator that ran a confirmation while
+awake throughout that confirmation's grade-2 window (`awakeThroughConfirmationWindow`), the reader
+of the inclusion clause of `claimConfirmedIncludedAfterHealingStatement`. Under the awake rule a
+validator's confirmation duty runs only when it has been awake since one delay before the grade-2
+first cutoff of the round of the next slot, so a reader only awake throughout the vote window of its
+read's slot need not have confirmed since it last slept. Roberto ruled the change in place on
+2026-10-15.
 -/
 
 set_option autoImplicit false
@@ -63,9 +72,10 @@ open DecoupledConsensusModel.Execution
 /-- For every instant `t ≥ tE` and every step `i` at `t`, some slot `s` proposed strictly after `t`,
     whose proposer is not held up to `s`'s vote instant, has a block that proposer sent by that vote
     instant which is a strict descendant of the confirmed output of every validator honest through
-    step `i`, and an ancestor of the confirmed output of every validator honest through its read and
-    awake throughout the vote window of its read's slot, at every read from `t` plus the growth
-    delay on. -/
+    step `i`, and an ancestor of the confirmed output of every validator honest through its read that
+    ran, at or after `t` plus the growth delay and at or before its read, a confirmation while awake
+    throughout that confirmation's grade-2 window (`awakeThroughConfirmationWindow`), at every read
+    from `t` plus the growth delay on. -/
 def ConfirmedGrowsAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (gapP : Nat) : Prop :=
   ∀ t : Int, tE ≤ t →
@@ -79,7 +89,8 @@ def ConfirmedGrowsAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Sched
         Block.Prec (Restated.Read.confirmed M x[i][v].st) B) ∧
       (∀ (v : V) (j : Nat), Restated.HonestThrough M Sched x j v →
         t + Restated.confirmedGrowthDelay M S gapP ≤ (x[j].time : Int) →
-        v ∈ activeAtW S Sched (S.E.slotOf (x[j].time : Int)) →
+        Restated.awakeThroughConfirmationWindow M S Sched
+          (t + Restated.confirmedGrowthDelay M S gapP) (x[j].time : Int) v →
         Block.Preceq B (Restated.Read.confirmed M x[j][v].st))
 
 end
@@ -103,8 +114,6 @@ def claimConfirmedGrowsAfterHealingStatement (M : Record.Model V) (S : Setup V) 
     Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x →
     Restated.SynchronyFromWake M S x →
     AwakeAtMultiples S Sched →
-    Restated.WakesAtActionInstants M S Sched →
-    Restated.SleepsAfterActionInstants M S Sched →
     Restated.CatchUpOnWake M S x →
     Restated.TimeDiverges M x →
     Restated.HonestCommittees M S Sched (Restated.interface M S Sched) →

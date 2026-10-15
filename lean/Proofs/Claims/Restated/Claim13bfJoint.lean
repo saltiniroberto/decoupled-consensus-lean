@@ -123,7 +123,6 @@ theorem afterPhaseStepOverActiveSetsJoint_of_premises (facts : Record.Facts M) (
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -179,7 +178,7 @@ theorem afterPhaseStepOverActiveSetsJoint_of_premises (facts : Record.Facts M) (
   choose att hattq using hne
   have hatt : Restated.ActionAttestationsOf M S Sched x r n' att := fun q _ => hattq q
   obtain ⟨-, hstep⟩ := Restated.afterPhaseJointRound_of_premises facts S Sched x tE hexec hmono htd hcatch
-    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB'
+    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB'
     hnW hAW hJswitch hr hTW hJ hn'
   obtain ⟨hJ', hTT'⟩ := hstep att hatt
   exact ⟨n', _, hJ', hTT'⟩
@@ -230,7 +229,6 @@ theorem afterPhaseJoint_base_and_step_of_premises (facts : Record.Facts M) (S : 
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -285,14 +283,14 @@ theorem afterPhaseJoint_base_and_step_of_premises (facts : Record.Facts M) (S : 
     rw [Restated.a_eq_confirmation_opening_l58 facts] at h1
     exact hlow n_W hnW T_D' hAD' v n_W (by linarith) le_rfl hv
   obtain ⟨n_W, T_W, hnW, hAW, hbase⟩ := Restated.afterPhaseInvariantOverActiveSetsJoint_at_switchRound facts S
-    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird
+    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcv htd hcom hthird
     hawake hrec hsl hrs hcs hprev hclear hB'
   have hJswitch := Restated.justifiedAncestor_before_switchTick_of_justifiedHigh facts S Sched x tE hexec hmono
     htd tGAT gap hgst hlen' hsync hthird hawake hrs hmult hcv hcom hrec hprev hclear hnW hAW
     (hlow n_W hnW)
   exact ⟨n_W, T_W, hnW, hbase,
     Restated.afterPhaseStepOverActiveSetsJoint_of_premises facts S Sched x tE hexec hmono htd hcatch tGAT gap
-      hgst hlen' hsync hthird hawake hrs hmult hcv hcs hcom hwakes hsleeps hrec hprev hclear hB'
+      hgst hlen' hsync hthird hawake hrs hmult hcv hcs hcom hrec hprev hclear hB'
       hnW hAW hJswitch⟩
 
 end
@@ -343,7 +341,6 @@ theorem claim13bf_conclusion_of_joint (facts : Record.Facts M) (S : Setup V) (Sc
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -367,7 +364,7 @@ theorem claim13bf_conclusion_of_joint (facts : Record.Facts M) (S : Setup V) (Sc
       Restated.HonestThrough M Sched x i v₁ → Restated.HonestThrough M Sched x j v₂ →
       Block.Compatible (x[i][v₁].st).st.core.F (x[j][v₂].st).st.core.F := by
   obtain ⟨n_W, T_W, -, hbase, hstepJ⟩ := Restated.afterPhaseJoint_base_and_step_of_premises facts S Sched x
-    tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird
+    tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcatch hcv htd hcom hthird
     hawake hrec hsl hrs hcs hlow
   have hstep : Restated.AfterPhaseStepOverActiveSetsSinceFrom M S Sched x tE n_W T_W := by
     intro r n T hr hTW hinvS
@@ -381,7 +378,8 @@ theorem claim13bf_conclusion_of_joint (facts : Record.Facts M) (S : Setup V) (Sc
         prevTick := hJ₁.prevTick
         prevHeads := hJ₁.prevHeads
         prevConfirmed := hJ₁.prevConfirmed
-        gradedUnderPrevSG := hJ₁.gradedUnderPrevSG }
+        gradedUnderPrevSG := hJ₁.gradedUnderPrevSG
+        gradedUnderPrevSGPerformers := hJ₁.gradedUnderPrevSGPerformers }
     obtain ⟨n', T', hJ', hTT'⟩ := hstepJ _ n₁ T hr hTW hJ
     exact ⟨n', T', hJ'.toAfterPhaseInvariantOverActiveSetsSince, hTT'⟩
   exact Restated.claim13be_conclusion_of_base_and_stepFrom_overActiveSetsSince facts S Sched x tE n_W T_W

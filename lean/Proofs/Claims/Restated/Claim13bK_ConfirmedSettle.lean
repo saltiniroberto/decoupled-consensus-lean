@@ -197,7 +197,7 @@ theorem records_after_confirmation_tick (facts : Record.Facts M) (S : Setup V) (
       M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (M.confirmation_time S.E s) x[n] w)
           (M.confirmation_time S.E s) ⇢ out ∧
         x[n + 1][w].st = out.1 := by
-    rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' hdvd with
+    rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' with
       ⟨out, hout, h⟩ | ⟨hno, -⟩
     · rw [ht'] at hout
       exact ⟨out, hout, h⟩

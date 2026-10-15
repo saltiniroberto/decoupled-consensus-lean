@@ -36,6 +36,7 @@ import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13bK_GradeDescendant
 import Proofs.Claims.Restated.WakeWindow
+import Proofs.Claims.Restated.Claim13bK_GradeLateRecv
 
 /-!
 # Graded blocks descend from fresh SG blocks
@@ -116,8 +117,9 @@ private theorem awake_for_grade2_of_mem_freshAttestersW_gd (facts : Record.Facts
   refine Restated.run_fact_g2 facts S Sched x n τ r v_1 hlbl hτ ?_ (by rw [hτ]; exact hhon)
   have h12 := twelve_delta_le_wAttest S
   have hΔ := S.E.Δ_pos
-  simp only [Restated.activeRoundW, Schedule.awakeThroughout, Finset.mem_inf,
+  simp only [Restated.activeRoundW, Restated.attestersAt, Schedule.awakeThroughout, Finset.mem_inf,
     Finset.mem_Icc] at hw ⊢
+  try rw [facts.gr.early_g2_eq S r] at hw
   rw [facts.gr.early_g2_eq S r]
   intro t ht
   exact hw t ⟨by linarith [ht.1], ht.2⟩
@@ -158,7 +160,8 @@ theorem graded_preceq_freshSG_of_premises (facts : Record.Facts M) (S : Setup V)
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out)
     (hneAtt : ∀ v ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∃ v_1 ∈ Restated.HonRound M S Sched r, ∃ a : NamedAttestation V,
       a.round = r ∧ a.val_index = v_1 ∧
       (⟨v_1, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n + 1].sent ∧
@@ -180,8 +183,9 @@ theorem graded_preceq_freshSG_of_premises (facts : Record.Facts M) (S : Setup V)
     gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hneTick hneAtt
   have hara : Restated.Vocabulary.Execution.Setup.a M S r ≤ Restated.Vocabulary.Execution.Setup.a M S (r + 1) :=
     le_trans (Restated.action_le_time_of_stepBefore facts S Sched x htd hm) htm
-  obtain ⟨v_1, hv_1, C, hC, hconf, hBC⟩ := Restated.graded_preceq_freshSG facts S Sched x hexec hsync htd hn
-    hgstr hm (Restated.hawT_of_honRound_succ facts S Sched hv htm) (Restated.hwh_of_honRound_succ facts S Sched hmono hv)
+  obtain ⟨v_1, hv_1, C, hC, hconf, hBC⟩ := Restated.graded_preceq_freshSG_recv facts S Sched x hexec htd hn
+    hgstr hm (hrecvR.at facts hv p)
+    (fun t ht hin => (Finset.mem_sdiff.1 hv).2 (hmono t _ (le_trans ht htm) hin))
     (Restated.hexp_of_domain facts S htm)
     (fun k hk v_2 hv_2 a ha _ => Restated.hroom_of_fresh facts S Sched x hexec hn
       (fun t ht => Restated.honestThrough_of_mem_freshAttestersW facts hv_2 t
@@ -189,11 +193,9 @@ theorem graded_preceq_freshSG_of_premises (facts : Record.Facts M) (S : Setup V)
     (fun v_2 hv_2 a ha C hC hc => hheadsP v hv p hdom m hm v_2 hv_2 C hC a ha hc)
     (fun v_2 _ a ha root hc => Restated.hhead_mem_of_tick facts S Sched x n r v_2 a ha root hc)
     (Restated.hhalf_of_roundSleepinessW facts S Sched x hexec htd hmono hrs
-      (Restated.switchOpening_le_opening facts S (le_trans hr (Nat.le_succ r))) hdom hm)
-    B hgrade (hneTick v hv n _ hn (Restated.action_emod_delta facts S r)
-      (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched
-          (Restated.hawT_of_honRound_succ facts S Sched hv hara) le_rfl le_rfl,
-        Restated.hwh_of_honRound_succ facts S Sched hmono hv⟩) hara)
+      (Restated.switchOpening_le_opening facts S (le_trans hr (Nat.le_succ r)))
+      (Restated.eta_le_of_switchRound_le facts S tGAT tE gap hgst hlen hr) hdom hm)
+    B hgrade (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew)
     (fun v_2 hv_2 => hneAtt v_2 (Restated.hfreshH_of_stepBefore facts S Sched x htd hm hv_2))
   have hqr : v_1 ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) :=
     Restated.honestThrough_of_mem_freshAttestersW facts hv_1 _ (Restated.action_le_time_of_stepBefore facts S Sched x htd hm)
@@ -256,13 +258,14 @@ theorem graded_compatible_graded_of_premises (facts : Record.Facts M) (S : Setup
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out)
     (hneAtt : ∀ v ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     Block.compatible B B' = true := by
   obtain ⟨v_1, hv_1, a, har, hai, has, C, hC, hac, hBC⟩ :=
-    Restated.graded_preceq_freshSG_of_premises facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen
+    Restated.graded_preceq_freshSG_of_premises (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen
       hcv hthird hphase hrsW hcs hr hinv hv hdom hm B hgrade hneTick hneAtt
   obtain ⟨v_2, hv_2, a', har', hai', has', C', hC', hac', hBC'⟩ :=
-    Restated.graded_preceq_freshSG_of_premises facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen
+    Restated.graded_preceq_freshSG_of_premises (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst hlen
       hcv hthird hphase hrsW hcs hr hinv hv' hdom' hm' B' hgrade' hneTick hneAtt
   exact compatible_of_preceq_of_preceq hBC hBC'
     (hinv.sgPairwise v_1 hv_1 v_2 hv_2 a a' har hai has har' hai' has' C C' hC hac hC' hac')
@@ -306,7 +309,8 @@ theorem gradeDescendant_ofConfirmedFreshSG (facts : Record.Facts M) (S : Setup V
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out)
     (hneAtt : ∀ v ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
     ∀ p : Protocol.Phase, M.domain S.E S.hc (r + 1) p ≤ (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) →
     ∀ m : Nat, Restated.stepBeforeInstant M x m (M.domain S.E S.hc (r + 1) p) →
@@ -335,7 +339,7 @@ theorem gradeDescendant_ofConfirmedFreshSG (facts : Record.Facts M) (S : Setup V
     rw [hchoice]
     rcases Restated.source_cases facts S (x[n'][q].st) (r + 1) nq hnq Cfg ho with hlc | hQ
     · obtain ⟨v_1, hv_1, a, har, hai, has, C, hC, hac, hBC⟩ :=
-        Restated.graded_preceq_freshSG_of_premises facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
+        Restated.graded_preceq_freshSG_of_premises (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
           hlen hcv hthird hphase hrsW hcs hr hinv hv hdom hm B hgrade hneTick hneAtt
       exact compatible_of_preceq_of_preceq hBC (preceq_trans_Preceq hpre hlc)
         (hconfSG q hqW v_1 hv_1 a har hai has C hC hac _ ⟨nq, hnq, rfl⟩)
@@ -358,7 +362,7 @@ theorem gradeDescendant_ofConfirmedFreshSG (facts : Record.Facts M) (S : Setup V
         (M.late S.E S.hc (r + 1) .g2) G
       have hbt := hG b hb
       subst hbt
-      have hBG := Restated.graded_compatible_graded_of_premises facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult
+      have hBG := Restated.graded_compatible_graded_of_premises (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult
         tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hv hqH hdom
         (facts.gr.domain_le_action S (r + 1) .g2) hm hm₂ hgrade hb hneTick hneAtt
       exact compatible_of_preceq_of_preceq (preceq_eq_true_iff_Preceq.mp (Block.preceq_self B))

@@ -93,8 +93,6 @@ def claimConfirmedAfterHealingStatement (M : Record.Model V) (S : Setup V) (Sche
     Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x →
     Restated.SynchronyFromWake M S x →
     AwakeAtMultiples S Sched →
-    Restated.WakesAtActionInstants M S Sched →
-    Restated.SleepsAfterActionInstants M S Sched →
     Restated.CatchUpOnWake M S x →
     Restated.TimeDiverges M x →
     Restated.HonestCommittees M S Sched (Restated.interface M S Sched) →

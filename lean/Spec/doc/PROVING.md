@@ -1,9 +1,9 @@
 # How the library `Spec` is proved
 
 The proofs are stated once over a record of operations, `Record.Model V`, and over the facts a
-model must prove about those operations, `Record.Facts M`. The spec is one model of the record, `Model.specDraft`, and
-`Model.specDraft_facts` proves the facts for it. The end results for the spec are the record's
-nine top-level theorems applied to `Model.specDraft_facts` (`lean/EndResults.lean` and
+model must prove about those operations, `Record.Facts M`. The spec is one model of the record, `Model.spec`, and
+`Model.spec_facts` proves the facts for it. The end results for the spec are the record's
+nine top-level theorems applied to `Model.spec_facts` (`lean/EndResults.lean` and
 `lean/EndResults/ExistentialForms.lean`). All
 nine assume nothing beyond their own statement's premises.
 
@@ -53,7 +53,7 @@ one hypothesis `facts : Record.Facts M` and calls a fact as a field of a field.
 
 ## The spec as a model of the record
 
-`Model.specDraft` (`lean/Proofs/Instance/Model.lean:471`) fills every member of the record with the
+`Model.spec` (`lean/Proofs/Instance/Model.lean:471`) fills every member of the record with the
 spec's behaviour.
 
 **The maps.** `lean/Proofs/Instance/Objects.lean` declares, for every object type, maps between
@@ -71,14 +71,14 @@ each of its blocks, and the tree holds the finalized block. The node type is the
 states whose store meets `StoreOk`.
 
 **The members.** Each other member is a spec routine read through the maps. The members of the
-namespace `SpecDraftRecord.OkMember` (`lean/Proofs/Instance/Model.lean:18`) differ from the spec
+namespace `SpecRecord.OkMember` (`lean/Proofs/Instance/Model.lean:18`) differ from the spec
 where a store would leave its type. Among them, the five that admit a block refuse it, and return the store unchanged, when another
 block of the tree has that block's root (`RootHeldByOther`,
 `lean/Proofs/Instance/StoreOk.lean:40`): the store type holds no two blocks of one root, and the
 spec's admission would add the second. The header of `lean/Proofs/Instance/Model.lean` names every
 member whose value is not the spec's routine as it is.
 
-**The facts at the spec.** `Model.specDraft_facts : Record.Facts Model.specDraft`
+**The facts at the spec.** `Model.spec_facts : Record.Facts Model.spec`
 (`lean/Proofs/Instance/Facts/Assembly.lean:1241`) proves every fact. Many fields are read from the
 same fact at the vocabulary model's instance of the record, `Model.vocabulary`
 (`lean/Proofs/Vocabulary/ModelVocabulary.lean:28`),
@@ -91,9 +91,9 @@ part of `Proofs`.
 **The wiring.** The record's wiring at the spec's model is the spec's own protocol
 `Spec.Sts.protocol` of `lean/Sts.lean`, read through the maps:
 
-- `protocolOf_specDraft_init` (`lean/Proofs/Instance/ModelWiring.lean:230`): the two protocols
+- `protocolOf_spec_init` (`lean/Proofs/Instance/ModelWiring.lean:216`): the two protocols
   start every validator from the same node state;
-- `protocolOf_specDraft_step_iff` (`lean/Proofs/Instance/ModelWiring.lean:238`): a step of the
+- `protocolOf_spec_step_iff` (`lean/Proofs/Instance/ModelWiring.lean:224`): a step of the
   record's wiring holds exactly when the spec's protocol takes the corresponding step, provided
   every step the spec's node takes there keeps its store in `StoreOk`.
 
@@ -111,14 +111,14 @@ step keeps the node state and sends nothing, a step the spec does not take.
 | theorem | file |
 | --- | --- |
 | `constants_holds` | `lean/Proofs/Claims/Restated/Constants.lean:30` |
-| `claimConfirmedAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimConfirmedAfterHealingHolds.lean:261` |
+| `claimConfirmedAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimConfirmedAfterHealingHolds.lean:259` |
 | `claimStableLiveAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimStableLiveAfterHealingHolds.lean:296` |
-| `claimConfirmedIncludedAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimConfirmedIncludedAfterHealingHolds.lean:322` |
-| `claimStableThroughOneAsyncPeriod_holds` | `lean/Proofs/Claims/Restated/ClaimStableThroughOneAsyncPeriodHolds.lean:209` |
-| `claim13bf_holds` | `lean/Proofs/Claims/Restated/Claim13bfKitTop.lean:104` |
-| `claimConfirmedGrowsAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimConfirmedGrowsAfterHealingHolds.lean:285` |
-| `claimFinalityLiveAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimFinalityLiveAfterHealingKit.lean:80` |
-| `claimStableThroughOneAsyncPeriodCommonViewAgain_holds` | `lean/Proofs/Claims/Restated/ClaimStableThroughAsyncPeriodCommonViewAgainHolds.lean:157` |
+| `claimConfirmedIncludedAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimConfirmedIncludedAfterHealingHolds.lean:317` |
+| `claimStableThroughOneAsyncPeriod_holds` | `lean/Proofs/Claims/Restated/ClaimStableThroughOneAsyncPeriodHolds.lean:218` |
+| `claim13bf_holds` | `lean/Proofs/Claims/Restated/Claim13bfKitTop.lean:102` |
+| `claimConfirmedGrowsAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimConfirmedGrowsAfterHealingHolds.lean:294` |
+| `claimFinalityLiveAfterHealing_holds` | `lean/Proofs/Claims/Restated/ClaimFinalityLiveAfterHealingKit.lean:78` |
+| `claimStableThroughOneAsyncPeriodCommonViewAgain_holds` | `lean/Proofs/Claims/Restated/ClaimStableThroughAsyncPeriodCommonViewAgainHolds.lean:166` |
 
 Each concludes a statement defined under `lean/Model/Conditions/`, for example
 `claim13bfStatement` (`lean/Model/Conditions/Sts_Spec2Claims_Claim13bf.lean:56`). Except for
@@ -127,15 +127,15 @@ Each concludes a statement defined under `lean/Model/Conditions/`, for example
 
 ## The end results
 
-The library `EndResults` applies each of the nine to `Model.specDraft_facts`. The theorem
-`EndResults.<name>` is `<name>` at `M := Model.specDraft`: `EndResults.constants_holds`,
+The library `EndResults` applies each of the nine to `Model.spec_facts`. The theorem
+`EndResults.<name>` is `<name>` at `M := Model.spec`: `EndResults.constants_holds`,
 `EndResults.claimConfirmedAfterHealing_holds`, `EndResults.claimStableLiveAfterHealing_holds`,
 `EndResults.claimConfirmedIncludedAfterHealing_holds`,
 `EndResults.claimStableThroughOneAsyncPeriod_holds`, `EndResults.claim13bf_holds`,
 `EndResults.claimConfirmedGrowsAfterHealing_holds`, `EndResults.claimFinalityLiveAfterHealing_holds`
 and `EndResults.claimStableThroughOneAsyncPeriodCommonViewAgain_holds`
 (`lean/EndResults.lean:62` for the first, `lean/EndResults/ExistentialForms.lean:42` to
-`lean/EndResults/ExistentialForms.lean:1291` for the other eight). Their Lean namespace is
+`lean/EndResults/ExistentialForms.lean:1287` for the other eight). Their Lean namespace is
 `EndResults`. Each of the eight with an `∃ tHeal` is followed by its per-execution form
 `EndResults.<name>_perExecution`, the same statement with the execution `x`, and each hypothesis
 naming only `x` and the binders before it, before the colon, so that `tHeal` is chosen for each
@@ -146,12 +146,12 @@ proof of `<name>` picks, with every hypothesis before the colon. That value is
 `claimFinalityLiveAfterHealing_holds`, and
 `healingLengthη M S gap + (gap + 2) * (constants M S).period` for the other six. They are
 `EndResults.claimConfirmedAfterHealing_holds_explicit` (`lean/EndResults.lean:101`),
-`EndResults.claimStableLiveAfterHealing_holds_explicit` (`lean/EndResults.lean:177`),
-`EndResults.claimConfirmedIncludedAfterHealing_holds_explicit` (`lean/EndResults.lean:256`),
-`EndResults.claimStableThroughOneAsyncPeriod_holds_explicit` (`lean/EndResults.lean:332`),
+`EndResults.claimStableLiveAfterHealing_holds_explicit` (`lean/EndResults.lean:176`),
+`EndResults.claimConfirmedIncludedAfterHealing_holds_explicit` (`lean/EndResults.lean:255`),
+`EndResults.claimStableThroughOneAsyncPeriod_holds_explicit` (`lean/EndResults.lean:331`),
 `EndResults.claim13bf_holds_explicit` (`lean/EndResults.lean:441`),
-`EndResults.claimConfirmedGrowsAfterHealing_holds_explicit` (`lean/EndResults.lean:525`),
-`EndResults.claimFinalityLiveAfterHealing_holds_explicit` (`lean/EndResults.lean:603`) and
+`EndResults.claimConfirmedGrowsAfterHealing_holds_explicit` (`lean/EndResults.lean:524`),
+`EndResults.claimFinalityLiveAfterHealing_holds_explicit` (`lean/EndResults.lean:602`) and
 `EndResults.claimStableThroughOneAsyncPeriodCommonViewAgain_holds_explicit`
 (`lean/EndResults.lean:684`).
 
@@ -164,10 +164,10 @@ premises over a phase at least that long, any two validators, each outside the a
 every time up to the step at which its store is read, hold finalized blocks that are compatible
 (one is an ancestor of the other, or they are equal).
 
-`claim13bf_holds` (`lean/Proofs/Claims/Restated/Claim13bfKitTop.lean:104`) proves it from the
+`claim13bf_holds` (`lean/Proofs/Claims/Restated/Claim13bfKitTop.lean:102`) proves it from the
 statement's premises alone. Its proof calls `claim13bf_conclusion_of_joint`
-(`lean/Proofs/Claims/Restated/Claim13bfJoint.lean:338`), which carries the invariant
-`AfterPhaseInvariantOverActiveSetsJoint` (`lean/Model/Conditions/Claim13bInvariantActiveJoint.lean:35`)
+(`lean/Proofs/Claims/Restated/Claim13bfJoint.lean:336`), which carries the invariant
+`AfterPhaseInvariantOverActiveSetsJoint` (`lean/Model/Conditions/Claim13bInvariantActiveJoint.lean:36`)
 from the switch round to every later round. The switch round is the last round whose third slot
 is confirmed at or before the end of the phase (`switchRound`,
 `lean/Model/Conditions/Claim13bSGCompatible.lean:30`). The one further input of

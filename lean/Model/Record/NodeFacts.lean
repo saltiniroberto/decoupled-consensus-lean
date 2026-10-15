@@ -1411,8 +1411,8 @@ structure NodeRunFacts (M : Model V) : Prop where
       (M.proposal_time S.E s) ⇢ out),
     ∃ B : NamedBlock V, NamedObject.block B ∈ out.2
   /-- In an execution where no two blocks in play have distinct ancestors with one root, and no
-      proposer holds a block with the root it is about to give its proposal, every tick at a public
-      instant `τ` of a validator awake at `τ` and never held by the adversary up to `τ` has an
+      proposer holds a block with the root it is about to give its proposal, every tick at a tick
+      step at `τ` of a validator awake at `τ` and never held by the adversary up to `τ` has an
       outcome. -/
   tick_outcome_sts : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
     (x : Framework.StsMultisetLog.AtomicExec (protocolOf M S) Sched),
@@ -1437,7 +1437,6 @@ structure NodeRunFacts (M : Model V) : Prop where
       (∀ t' ≤ (τ : Int), S.E.proposer s ∉ Sched.adv t') →
       ∀ B ∈ x[k][S.E.proposer s].st.st.bodies, B.root ≠ (S.node (S.E.proposer s)).new_root s) →
     ∀ (k τ : Nat) (v : V), x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
-      (τ : Int) % S.E.Δ = 0 →
       v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
       (∀ t' ≤ (τ : Int), v ∉ Sched.adv t') →
       ∃ out : M.N × List (NamedObject V),

@@ -201,7 +201,7 @@ theorem gf_window_of_awakeThroughout (facts : Record.Facts M) (S : Setup V) (Sch
     linarith
   exact Restated.gf_window_of_clock facts S Sched x k w u
     (Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x htick (Finset.mem_sdiff.2 ⟨haw, hwh⟩)
-      (slotStart_emod_delta S u.slot) (hneTick n htick) hnk)
+      (hneTick n htick) hnk)
     hhi
 
 end
@@ -229,15 +229,14 @@ theorem acceptsAtStep_of_flip (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     (h1 : Restated.Vocabulary.Execution.Object.processed M (x[i + 1][w].st).st o = true) :
     Restated.AcceptsAtStep M S x i w o := by
   rcases Restated.flip_step_cases facts S Sched x h0 h1 with
-    ⟨m, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, -, out₁, hout₁, hst, hem⟩
+    ⟨m, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst, hem⟩
   · refine Or.inl ⟨m, hlbl, ?_⟩
     rcases hpay with h | ⟨B, hB, hcc⟩
     · exact Or.inl h
     · rw [hB]
       exact Or.inr
         (Restated.carries_of_carriedCall facts (Setup.alwaysAwake S) (x[i][w].st).st B hcc)
-  · have hstep : w ∉ Sched.adv (τ : Int) → (τ : Int) % S.E.Δ = 0 →
-        x[i + 1][w].st = out₁.1 := fun _ _ => hst
+  · have hstep : w ∉ Sched.adv (τ : Int) → x[i + 1][w].st = out₁.1 := fun _ => hst
     rcases hem with h | ⟨B, hmem, hcc⟩
     · exact Or.inr ⟨τ, o, hlbl, (Finset.mem_sdiff.1 haw).1, ⟨out₁, hout₁, h, hstep⟩,
         Or.inl rfl⟩
@@ -289,15 +288,15 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- If step `k` is the tick at `t`, either `v` is awake and not held by the adversary at `t`, `t` is
-    a multiple of `Δ`, and the step took an outcome `out` of `v`'s tick from a node state `n₀` with
+/-- If step `k` is the tick at `t`, either `v` is awake and not held by the adversary at `t`, and
+    the step took an outcome `out` of `v`'s tick from a node state `n₀` with
     `v`'s store after `k` steps, which a run reaches and which runs as `v`, `v`'s node state after
     the step is `out`'s, and every object `out` sends is signed by `v` in
     `x[k + 1].sent - x[k].sent`; or `v`'s store after `k + 1` steps is its store after `k` steps. -/
 private theorem tick_step_cases_sent (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) {k t : Nat} (v : V)
     (hl : x.lbl k = AtomicAction.tickAllAwake t) :
-    (v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0 ∧
+    (v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
       ∃ (n₀ : M.N) (out : M.N × List (NamedObject V)), n₀.st = (x[k][v].st).st ∧
         (M.reachedNode n₀ ∧ M.runs_as n₀ v) ∧
         M.tick (Setup.alwaysAwake S) v n₀ (t : Int) ⇢ out ∧ x[k + 1][v].st = out.1 ∧
@@ -319,33 +318,28 @@ private theorem tick_step_cases_sent (facts : Record.Facts M) (S : Setup V) (Sch
   · have hx1 : x[k + 1][v].st = (tk v).state := by
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react haw]
-    by_cases hdvd : (t : Int) % S.E.Δ = 0
-    · rcases htick v haw with hmem | hrest
-      · simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq] at hmem
-        obtain ⟨out, hout, htkv⟩ := hmem
-        have hwS : (w v).state = Record.wakeStage M Sched (t : Int) x[k] v :=
-          Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake v)
-        refine Or.inl ⟨haw, hdvd, (w v).state, out, hwst,
-          ⟨by rw [hwS]; exact Record.reachedNode_wakeStage facts S Sched x k v t,
-            by rw [hwS]; exact Record.runs_as_wakeStage facts S Sched x k v t⟩, hout, ?_, ?_⟩
-        · rw [hx1, htkv]
-        · intro o ho
-          have hsent : x[k + 1].sent = x[k].sent
-              + (Sched.awake (t : Int) \ Sched.adv (t : Int)).sum
-                  (fun q => ((w q).send + (tk q).send).map (SignedMsg.mk q)) := by
-            rw [hc]; rfl
-          rw [hsent, add_tsub_cancel_left]
-          refine Multiset.mem_sum.2 ⟨v, haw, ?_⟩
-          refine Multiset.mem_map.2 ⟨o, Multiset.mem_add.2 (Or.inr ?_), rfl⟩
-          rw [htkv]
-          exact Multiset.mem_coe.2 ho
-      · refine Or.inr ?_
-        obtain ⟨-, hres⟩ := hrest
-        rw [hx1, hres, hwst]
+    rcases htick v haw with hmem | hrest
+    · simp only [Record.reactionsOf, Set.mem_setOf_eq] at hmem
+      obtain ⟨out, hout, htkv⟩ := hmem
+      have hwS : (w v).state = Record.wakeStage M Sched (t : Int) x[k] v :=
+        Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake v)
+      refine Or.inl ⟨haw, (w v).state, out, hwst,
+        ⟨by rw [hwS]; exact Record.reachedNode_wakeStage facts S Sched x k v t,
+          by rw [hwS]; exact Record.runs_as_wakeStage facts S Sched x k v t⟩, hout, ?_, ?_⟩
+      · rw [hx1, htkv]
+      · intro o ho
+        have hsent : x[k + 1].sent = x[k].sent
+            + (Sched.awake (t : Int) \ Sched.adv (t : Int)).sum
+                (fun q => ((w q).send + (tk q).send).map (SignedMsg.mk q)) := by
+          rw [hc]; rfl
+        rw [hsent, add_tsub_cancel_left]
+        refine Multiset.mem_sum.2 ⟨v, haw, ?_⟩
+        refine Multiset.mem_map.2 ⟨o, Multiset.mem_add.2 (Or.inr ?_), rfl⟩
+        rw [htkv]
+        exact Multiset.mem_coe.2 ho
     · refine Or.inr ?_
-      rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨hd, -⟩ | ⟨-, hres⟩
-      · exact absurd hd hdvd
-      · rw [hx1, hres, hwst]
+      obtain ⟨-, hres⟩ := hrest
+      rw [hx1, hres, hwst]
   · refine Or.inr ?_
     have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
     rw [h2, tickAllAwakeUpdate_getElem_st_of_not_react haw]
@@ -363,7 +357,7 @@ theorem poolStamps_sts (facts : Record.Facts M) (S : Setup V) (Sched : Schedule 
       cases hl : x.lbl i with
       | tickAllAwake τ =>
           rcases tick_step_cases_sent facts S Sched x w hl with
-            ⟨-, -, n₀, out₁, hn₀, -, hout, hst, -⟩ | hst
+            ⟨-, n₀, out₁, hn₀, -, hout, hst, -⟩ | hst
           · obtain ⟨hten, -⟩ := Restated.tickAllAwake_time facts S Sched x hl
             have hle : n₀.st.core.t ≤ (τ : Int) := by
               rw [hn₀]
@@ -521,7 +515,7 @@ theorem gfVoteRelayAtAccept_of_sync (facts : Record.Facts M) (S : Setup V) (Sche
           exact absurd h1' h0'
     | tickAllAwake τ =>
         rcases tick_step_cases_sent facts S Sched x v hl with
-          ⟨-, -, n₀, out, hn₀, ⟨hr₀, hv₀⟩, hout, hst, hsent⟩ | hst
+          ⟨-, n₀, out, hn₀, ⟨hr₀, hv₀⟩, hout, hst, hsent⟩ | hst
         · have hkey := (facts.nd.addsOnlyCarried_node_tick (Setup.alwaysAwake S) v n₀ (τ : Int)
             out hout).2.2.1 u
           have hpre : u ∉ (M.ns_setClock (Setup.alwaysAwake S).E n₀.st (τ : Int)).core.gf_votes

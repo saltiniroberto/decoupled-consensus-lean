@@ -10,7 +10,7 @@ only blocks of the store's tree `st.T`, when the store's `F`, `J`, `latest_confi
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NodeFacts
+namespace SpecRecord.NodeFacts
 
 open scoped DC
 
@@ -250,4 +250,4 @@ theorem update_confirmation_mem [Fintype V] {C : Spec.Config}
 
 end Store
 
-end SpecDraftRecord.NodeFacts
+end SpecRecord.NodeFacts

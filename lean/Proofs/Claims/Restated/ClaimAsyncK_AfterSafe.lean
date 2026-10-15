@@ -109,7 +109,6 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hthird : ∀ t : Int, t ≤ tL →
@@ -119,7 +118,8 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hsl : sleepinessW S Sched tE) (hrs : Restated.roundSleepinessW M S Sched tE)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hlive : tE + Restated.liveAgainAfterHealing M S gap ≤ tL) :
+    (hlive : tE + Restated.liveAgainAfterHealing M S gap ≤ tL)
+    (hrecvAll : ∀ r' : Round, Restated.switchRound M S tE ≤ r' → Restated.NextRoundReceipts M S Sched x r') :
     ∃ (B : NamedBlock V) (t : Int), t ≤ tL ∧
       (∀ (u : V) (i : Nat), (x[i].time : Int) ≤ tGAT →
         (x[i][u].st).st.core.h_max < (M.derive_named S.E S.cfg B).h) ∧
@@ -139,7 +139,7 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
   have hlenL' : tGAT + Restated.healingLengthη M S gap ≤ tL := hlen'.trans hEL
   -- Step 1: the anchor and the joint invariant.
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult
-    hwakes hsleeps hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
+     hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE gap hlen hgst
     hmono hexec hsync hmult hcv hcom hthirdE hphaseE hrecE
   have hclear : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
@@ -159,9 +159,9 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
       hexec hsync hmult hcv hcom hthirdE hphaseE r
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_phase facts S Sched x tGAT tE gap hgap hlen hgst hmono
-    hexec hsync hmult hwakes hsleeps hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
+    hexec hsync hmult hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
   obtain ⟨n_W, T_W, hnW, hAW, hJ⟩ := Restated.afterPhaseInvariantOverActiveSetsJoint_at_switchRound facts S
-    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthirdE
+    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcv htd hcom hthirdE
     hphaseE hrecE hsl hrs hcs hprev hclear hB'
   have hJswitch := Restated.justifiedAncestor_before_switchTick_of_justifiedHigh facts S Sched x tE hexec hmono
     htd tGAT gap hgst hlen' hsync hthirdE hphaseE hrs hmult hcv hcom hrecE hprev hclear hnW hAW
@@ -274,8 +274,8 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
     have h1 := facts.gr.opening_slot_le_of_le S.hc hq₀lo
     rw [facts.gr.opening_slot_succ] at h1
     exact le_trans (Nat.add_le_add_left (le_trans (by decide) S.hc.R_ge_three) _) h1
-  have hheads₀ := Restated.honestProposal_ancestorOfHonestHeadsFrom_i1b facts S Sched x tE hexec hmono htd tGAT
-    gap hgst hlen' hsync hthirdE hphaseE hrs hmult hcv hcs hcom hwakes hsleeps hrecE hprev hclear
+  have hheads₀ := Restated.honestProposal_ancestorOfHonestHeadsFrom_i1b (hrecvAll := hrecvAll) facts S Sched x tE hexec hmono htd tGAT
+    gap hgst hlen' hsync hthirdE hphaseE hrs hmult hcv hcs hcom hrecE hprev hclear
     hB' hnW hAW hJswitch le_rfl (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hJ hawake hthird hrec hs0₀
     (by rw [hconfq₀]; exact hq₀W.trans hN) hhon₀ hk₀B
     (by rw [hk₀t]; exact (facts.sch.proposal_time_lt_vote_time S.E _).le)
@@ -286,8 +286,8 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
     (S.cfg.timeoutDelay / S.hc.R) hWL hq₀lo hq₀hi hc₁lo hc₁hi
   obtain ⟨c₂, hc₁₂, hc₂hi, ⟨hw₂, -, -⟩, hall₂⟩ := Restated.secondWindowSharp_f7 facts S
     Sched x v₀ tGAT tE tL gap hgap hg3 hlen hEL hgst hmono hexec hsync hmult hcv htd hcom hthird
-    hawake hrec hrs hcs hwakes hsleeps hprev hclear hB' hnW hAW hJswitch le_rfl
-    (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hJ hNW hN hWN hA hB'log hheads₀ (facts.gr.opening_slot_mono S hq₀c₁) hc₁W2
+    hawake hrec hrs hcs hprev hclear hB' hnW hAW hJswitch le_rfl
+    (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hJ hNW hN hWN hA hB'log (fun s' h _ => hheads₀ s' h) (facts.gr.opening_slot_mono S hq₀c₁) hc₁W2
     hc₁mg hw₁ hw₁p hw₁pp
   obtain ⟨cp₂, P₂, hcp₂, hP₂⟩ := (p85f% exists_proposal₈₅f) facts hf.sorted hf.onePath
     ((M.opening_slot S.hc c₂) + 2)
@@ -341,7 +341,7 @@ theorem finalizedAboveSeen_ofPhase_inLog (facts : Record.Facts M) (S : Setup V) 
     have e4 := hC (Restated.switchRound M S tE) (2 * gap + S.cfg.timeoutDelay / S.hc.R + 3)
     linarith
   have hfin := Restated.finalizedAfterDeadline_of_premises_f3 facts S Sched x tGAT tE tL gap hgap hlen hEL hgst
-    hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs hsE hcont
+    hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hsl hrs hcs hsE hcont
     hhon₂ hk₂B (by rw [hk₂t]; exact (facts.sch.proposal_time_lt_vote_time S.E _).le)
   have hdeadEq : Restated.finalityDeadlineDirect M S gap =
       ((3 * gap + S.cfg.timeoutDelay / S.hc.R - 6 : Nat) : Int) * (Restated.constants M S).period +
@@ -451,7 +451,6 @@ theorem finalizedAboveSeen_afterPeriod_inLog (facts : Record.Facts M) (S : Setup
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hcvAgain : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tAgain)
@@ -461,7 +460,8 @@ theorem finalizedAboveSeen_afterPeriod_inLog (facts : Record.Facts M) (S : Setup
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight)
     (hawake : ∀ t : Int, tAgain ≤ t → t ≤ tSafe →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
-    (hrec : Restated.strongOpeningsRecurFrom M S Sched tAgain tSafe gap) :
+    (hrec : Restated.strongOpeningsRecurFrom M S Sched tAgain tSafe gap)
+    (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) :
     ∃ (B : NamedBlock V) (t : Int), t ≤ tSafe ∧
       (∀ (u : V) (i : Nat), (x[i].time : Int) ≤ tAgain →
         (x[i][u].st).st.core.h_max < (M.derive_named S.E S.cfg B).h) ∧
@@ -499,9 +499,16 @@ theorem finalizedAboveSeen_afterPeriod_inLog (facts : Record.Facts M) (S : Setup
   have hcom' := Restated.tr_HonestCommittees facts S b₁ hb1 Sched hcom
   have hrec' := Restated.tr_strongOpenings facts S b₁ hb1 Sched tAgain tSafe gap hrec
   have hslp' := Restated.tr_sleepiness facts S b₁ hb1 Sched (tAgain + tHeal) ⟨hsl₂, hrs₂, hcs₂⟩
-  obtain ⟨B, t, ht, hseen, hfin, hlog⟩ := Restated.finalizedAboveSeen_ofPhase_inLog facts (setupWithGST S b₁ hb1)
+  have hc' := Restated.tr_CatchUpBy facts S b₁ hb1 Sched x (Restated.catchUpBy_of_outside facts S x hb hg hcatch)
+  have hlenT := (Restated.tr_length facts S b₁ hb1 gap tAgain (tAgain + tHeal) ⟨hlen, hgap⟩).1
+  have hrecvAll' := fun (r' : Round) (hr' : Restated.switchRound M (setupWithGST S b₁ hb1) (tAgain + tHeal) ≤ r') =>
+    Restated.nextRoundReceipts_of_catchUp facts (setupWithGST S b₁ hb1) Sched
+      (Restated.toGST M S b₁ hb1 (Restated.protocol_setupWithGST facts S b₁ hb1) x) hs' hc'
+      (Restated.gst_le_action_of_switchRound_le facts (setupWithGST S b₁ hb1) tAgain (tAgain + tHeal) gap hgst'
+        (Restated.healingLength_le_of_kit_l76 facts (setupWithGST S b₁ hb1) hlenT) hr')
+  obtain ⟨B, t, ht, hseen, hfin, hlog⟩ := Restated.finalizedAboveSeen_ofPhase_inLog (hrecvAll := hrecvAll') facts (setupWithGST S b₁ hb1)
     Sched (Restated.toGST M S b₁ hb1 (Restated.protocol_setupWithGST facts S b₁ hb1) x) tAgain (tAgain + tHeal) tSafe gap hgap (Restated.tr_length facts S b₁ hb1 gap tAgain (tAgain + tHeal) ⟨hlen, hgap⟩).1 hEL hgst' hmono he' hs'
-    hmult hwakes hsleeps hcv' htd' hcom' hthird hawake hrec' hslp'.1 hslp'.2.1 hslp'.2.2 hliveE
+    hmult hcv' htd' hcom' hthird hawake hrec' hslp'.1 hslp'.2.1 hslp'.2.2 hliveE
   refine ⟨B, t, ht, fun u i hi => ?_, fun w j hw htj => ?_,
     Restated.tr_back_blockInLog facts S b₁ hb1 Sched x B hlog⟩
   · have h := hseen u i hi

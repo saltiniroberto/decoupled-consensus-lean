@@ -231,11 +231,11 @@ theorem switchRoundRegime_runAll_notHeld_atRound_upTo (facts : Record.Facts M)
   · -- the row case
     obtain ⟨v', n', b, entry, tmo, hn', hv', hidx, hsent, hpair⟩ :=
       Restated.topHonestRow_spec_of_pos facts S Sched x (n₀ := n₀) (Nat.lt_of_lt_of_le (Nat.succ_pos _) hcase)
-    obtain ⟨k, hkn', τ, hlbl, haw, hdvd, out, hout, hst, ho⟩ :=
+    obtain ⟨k, hkn', τ, hlbl, haw, out, hout, hst, ho⟩ :=
       Restated.tick_of_honest_signed_upTo_taken facts S Sched x v' (NamedObject.attest b) (x[n'].time : Int) hv'
         hvalid.toUnforgeability (by rw [author_attest, hidx]) n' le_rfl hsent
     have hkN : k < N := by omega
-    have hemit' := Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hdvd hout hst ho
+    have hemit' := Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hout hst ho
     have hemit : Restated.Vocabulary.Execution.NamedRun.emits M (Setup.alwaysAwake S)
         ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
         (Restated.runAllPath M S Sched x v N)

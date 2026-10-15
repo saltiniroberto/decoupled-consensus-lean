@@ -111,7 +111,6 @@ theorem finalizedAfterDeadline_of_premises_f3 (facts : Record.Facts M) (S : Setu
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hthird : ∀ t : Int, t ≤ tL →
@@ -142,7 +141,7 @@ theorem finalizedAfterDeadline_of_premises_f3 (facts : Record.Facts M) (S : Setu
   have hlen' : tGAT + Restated.healingLengthη M S gap ≤ tE := Restated.healingLength_le_of_kit_l76 facts S hlen
   -- the internal hypotheses
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult
-    hwakes hsleeps hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
+     hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE gap hlen hgst
     hmono hexec hsync hmult hcv hcom hthirdE hphaseE hrecE
   have hclear : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
@@ -162,9 +161,9 @@ theorem finalizedAfterDeadline_of_premises_f3 (facts : Record.Facts M) (S : Setu
       hexec hsync hmult hcv hcom hthirdE hphaseE r
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_phase facts S Sched x tGAT tE gap hgap hlen hgst hmono
-    hexec hsync hmult hwakes hsleeps hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
+    hexec hsync hmult hcv htd hcom hthirdE hphaseE hrecE hsl hrs hcs
   obtain ⟨n_W, T_W, hnW, hAW, hJ⟩ := Restated.afterPhaseInvariantOverActiveSetsJoint_at_switchRound facts S
-    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthirdE
+    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcv htd hcom hthirdE
     hphaseE hrecE hsl hrs hcs hprev hclear hB'
   have hJswitch := Restated.justifiedAncestor_before_switchTick_of_justifiedHigh facts S Sched x tE hexec hmono
     htd tGAT gap hgst hlen' hsync hthirdE hphaseE hrs hmult hcv hcom hrecE hprev hclear hnW hAW
@@ -173,7 +172,7 @@ theorem finalizedAfterDeadline_of_premises_f3 (facts : Record.Facts M) (S : Setu
   have hdead : M.proposal_time S.E s + Restated.finalityDeadlineSharpLanded_f7 M S gap ≤ tL :=
     le_trans (by linarith [Restated.finalityDeadlineSharpLanded_le_continue_f4 facts S gap]) hcont
   exact Restated.honestProposal_finalizedAfterDeadline_f7 facts S Sched x v tGAT tE tL gap hgap hlen hEL hgst
-    hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrs hcs hwakes hsleeps hprev hclear hB'
+    hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrs hcs hprev hclear hB'
     hnW hAW hJswitch le_rfl (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hJ hs0 hprop hB hi hdead
     v j hv hj
 
@@ -203,7 +202,6 @@ theorem finalityIncluded_of_premises_f3 (facts : Record.Facts M) (S : Setup V) (
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hthird : ∀ t : Int, t ≤ tL →
@@ -222,7 +220,7 @@ theorem finalityIncluded_of_premises_f3 (facts : Record.Facts M) (S : Setup V) (
     rw [h] at hstart
     linarith
   exact Restated.finalizedAfterDeadline_of_premises_f3 facts S Sched x tGAT tE tL gap hgap hlen hEL hgst hmono
-    hexec hsync hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs hsE hcont hprop
+    hexec hsync hmult hcv htd hcom hthird hawake hrec hsl hrs hcs hsE hcont hprop
     hB hi
 
 end

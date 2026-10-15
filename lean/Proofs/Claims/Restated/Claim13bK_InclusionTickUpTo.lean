@@ -55,9 +55,8 @@ private theorem confWalkWith_eligible_of_cone (facts : Record.Facts M)
     (E : Env V) (st : M.S) (s : Slot) (Hon : Finset V) {B : Block V} (A : Block V)
     (e : Finset (GoldfishVote V)) (sc : Block V → ℕ)
     (hsc : ∀ C, M.goldfish_score E st.T e e s C ⇢ sc C)
-    (hsup : Restated.Vocabulary.Proofs.Optimistic.ConeSupport M E st.T e e
+    (hsup : Restated.Vocabulary.Proofs.Optimistic.ConeSupportCount M E st.T e e
       (Restated.Vocabulary.Protocol.confLate M E st s) s Hon (fun X => Block.Preceq B X))
-    (hvalid : Protocol.VoteSetValid E s (Restated.Vocabulary.Protocol.confLate M E st s))
     (hpre : Block.Preceq A B)
     (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B →
       C ∈ Restated.Vocabulary.Protocol.confTree M st)
@@ -67,18 +66,18 @@ private theorem confWalkWith_eligible_of_cone (facts : Record.Facts M)
     Block.Preceq B W ∧
       decide (Restated.Vocabulary.Protocol.confCount M E st s < 2 * sc W) = true := by
   have hwalk : Block.Preceq B W :=
-    facts.fc.ghost_passes_cone E st.T (Restated.Vocabulary.Protocol.confTree M st) e e
-      (Restated.Vocabulary.Protocol.confLate M E st s) s Hon hsup.majority hsup.counted hsup.sub
-      hsup.no_equiv hsup.vote hvalid hpre hpath sc hsc W hW
+    facts.fc.ghost_passes_cone_count E st.T (Restated.Vocabulary.Protocol.confTree M st) e e
+      (Restated.Vocabulary.Protocol.confLate M E st s) s Hon hsup.count hsup.counted hsup.sub
+      hsup.no_equiv hsup.vote hpre hpath sc hsc W hW
   refine ⟨hwalk, ?_⟩
   rcases facts.fc.ghost_eligible A (Restated.Vocabulary.Protocol.confTree M st) sc
       (fun C => decide (Restated.Vocabulary.Protocol.confCount M E st s < 2 * sc C)) W hW with hA | hel
   · have hAB : A = B := Proofs.ModelProperties.Preceq_antisymm hpre (hA ▸ hwalk)
     rw [hA, hAB]
     simp only [decide_eq_true_eq, Restated.Vocabulary.Protocol.confCount]
-    exact facts.fc.ConeSupport_eligible E st.T e e (Restated.Vocabulary.Protocol.confLate M E st s)
-      s Hon (fun X => Block.Preceq B X) hsup.majority hsup.counted hsup.sub hsup.no_equiv
-      hsup.vote hvalid (fun X hX => preceq_eq_true_iff_Preceq.mpr hX) (sc B) (hsc B)
+    exact facts.fc.ConeSupport_eligible_count E st.T e e (Restated.Vocabulary.Protocol.confLate M E st s)
+      s Hon (fun X => Block.Preceq B X) hsup.count hsup.counted hsup.sub hsup.no_equiv
+      hsup.vote (fun X hX => preceq_eq_true_iff_Preceq.mpr hX) (sc B) (hsc B)
   · exact hel
 
 open scoped DC in
@@ -187,7 +186,8 @@ theorem walk_eligible_of_headsBelow_at_confirmation_tick_upTo (facts : Record.Fa
     (hneTick : ∀ (n' : Nat) (t' : Int), Restated.tickStepAt M x n' t' → t' % S.E.Δ = 0 → v ∈ Sched.awake t' \ Sched.adv t' →
       t' ≤ M.confirmation_time S.E s →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out) :
+        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out)
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     ∀ e, Restated.Vocabulary.Protocol.confVotes M S.E (Restated.confStoreAt M S (x[m][v].st) s) s ⇢ e →
     ∀ sc : Block V → ℕ, (∀ C, M.goldfish_score S.E (Restated.confStoreAt M S (x[m][v].st) s).T
         e e s C ⇢ sc C) →
@@ -225,10 +225,9 @@ theorem walk_eligible_of_headsBelow_at_confirmation_tick_upTo (facts : Record.Fa
     (hneTickVote mv hmv)
     (fun n hn => hneTick n _ hn (slotStart_emod_delta S s)
       (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched hwaw le_rfl (by rw [hsc]; linarith), hwh⟩)
-      (by rw [hct]; linarith)) e he
+      (by rw [hct]; linarith)) (Restated.voteSetValid_conf facts S Sched x m v s) hr1 e he
   exact confWalkWith_eligible_of_cone facts S.E (Restated.confStoreAt M S (x[m][v].st) s) s
-    (Restated.HonSlot M S Sched s) A e sc hscore hcone (Restated.voteSetValid_conf facts S Sched x m v s)
-    hAB hpath W hW
+    (Restated.HonSlot M S Sched s) A e sc hscore hcone hAB hpath W hW
 
 end
 

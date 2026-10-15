@@ -291,4 +291,34 @@ theorem hη_of_healingLengthη' (facts : Record.Facts M) (S : Setup V) (tGAT tE 
 
 end
 
+section
+set_option autoImplicit false
+open Framework.StsMultisetLog
+open DecoupledConsensusModel.Execution
+
+/-- After a healing phase from `tGAT` (at or after GST) of length `healingLengthη` ending at `tE`,
+    every round from the switch round on is at least `η_SG`. -/
+theorem eta_le_of_switchRound_le (facts : Record.Facts M) (S : Setup V) (tGAT tE : Int)
+    (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
+    {r : Round} (hr : Restated.switchRound M S tE ≤ r) : S.hc.η_SG ≤ r :=
+  le_trans (le_trans (Nat.le_add_left _ _)
+    (Restated.switchRound_ge_of_healingLengthη facts S tGAT tE gap hgst hlen)) hr
+
+/-- After a healing phase from `tGAT` (at or after GST) of length `healingLengthη` ending at `tE`,
+    the switch round is at least `1`. -/
+theorem one_le_switchRound (facts : Record.Facts M) (S : Setup V) (tGAT tE : Int) (gap : Nat)
+    (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) :
+    1 ≤ Restated.switchRound M S tE :=
+  le_trans (Nat.le_trans (by decide : 1 ≤ 2) (Nat.le_trans (Nat.le_add_left 2 _) (Nat.le_add_right _ _)))
+    (Restated.switchRound_ge_of_healingLengthη facts S tGAT tE gap hgst hlen)
+
+/-- From the opening slot of a round `r ≥ 1` on, every slot's round is at least `1`. -/
+theorem one_le_round_of_of_opening_slot_le (facts : Record.Facts M) (S : Setup V) {r : Round}
+    {s : Slot} (hr : 1 ≤ r) (hs : M.opening_slot S.hc r ≤ s) : 1 ≤ M.round_of S.hc s := by
+  have h := facts.gr.round_of_mono_sts S.hc hs
+  rw [facts.gr.round_of_opening_slot_eq S.hc r] at h
+  exact le_trans hr h
+
+end
+
 end DecoupledConsensusModel.Sts.Restated

@@ -47,6 +47,7 @@ import Model.Conditions.Vocabulary_Protocol_Handlers_StoreRoots
 import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.ClaimAsyncK_AfterPeriod
+import Proofs.Claims.Restated.Claim13bW_ScheduleRule
 
 /-!
 # Delivery and grading around an asynchronous period
@@ -177,7 +178,7 @@ theorem clock_ge_of_awake_sts (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     have hnk : n < k := Restated.lt_of_time_lt facts S Sched x (by linarith)
     have haw : w ∈ Sched.awake t₀ \ Sched.adv t₀ :=
       Finset.mem_sdiff.2 ⟨mem_awake_of_mem_awakeThroughout Sched hA le_rfl hle, hhon _ hle⟩
-    exact Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn haw hdvd
+    exact Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn haw
       (by
         obtain ⟨τ, hl, hτ⟩ := id hn
         rw [← hτ] at haw hdvd ⊢
@@ -214,7 +215,7 @@ theorem clock_ge_of_awake_sts (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     have hnk : n < k := Restated.lt_of_time_lt facts S Sched x (by linarith)
     have haw : w ∈ Sched.awake (t' + 1) \ Sched.adv (t' + 1) :=
       Finset.mem_sdiff.2 ⟨hwake, hhon _ (by linarith)⟩
-    have := Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn haw hdvd'
+    have := Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn haw
       (by
         obtain ⟨τ, hl, hτ⟩ := id hn
         rw [← hτ] at haw hdvd' ⊢
@@ -281,7 +282,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 
 /-- Under the delivery premises around `[b₀, b₁)` with `b₀ ≤ b₁`, if `n` is the tick step at
     `S.a ρ₀`, `S.a ρ₀ ≤ t_a`, the deadline of `t_a` is at or before `D ≤ S.a (ρ₀ + η_SG)`, `v_1` is
-    an honest member of `activeRoundW S Sched ρ₀` through a step `m` with `D ≤ x[m].time`, and `w`
+    an honest member of `attestersAt S Sched ρ₀` through a step `m` with `D ≤ x[m].time`, and `w`
     is honest through `m` and awake throughout `[t_a, D]`, then for every attestation `a` of `v_1`'s
     round-`ρ₀` action read, `w`'s grade view after `m` steps holds the SG-vote projection of `a` for
     round `ρ₀`, stamped strictly before `D`. -/
@@ -293,7 +294,7 @@ theorem token_held_by_outside (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     (htd : Restated.TimeDiverges M x) {ρ₀ n m : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ₀))) {t_a D : Int}
     (hta : (Restated.Vocabulary.Execution.Setup.a M S ρ₀) ≤ t_a) (hD : deadlineOutside S b₀ b₁ t_a ≤ D)
     (hDexp : D ≤ (Restated.Vocabulary.Execution.Setup.a M S (ρ₀ + S.hc.η_SG)))
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ₀) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ₀) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : D ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout t_a D) (hwm : Restated.HonestThrough M Sched x m w) :
     ∀ a ∈ Restated.actionAttestationFrom M (Setup.alwaysAwake S) (x[n][v_1].st) v_1 ρ₀,
@@ -310,7 +311,7 @@ theorem token_held_by_outside (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   have hd := S.E.Δ_pos
   have hle := le_deadlineOutside S b₀ b₁ t_a
   obtain ⟨hn1, hn0⟩ := Restated.tickStepAt_time facts x hn
-  have hsend := Restated.attest_honestSend_of_activeRoundW facts S Sched x hn hv_1 hv_1m (by linarith) (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew) a ha
+  have hsend := Restated.attest_honestSend_of_attestersAt facts S Sched x hn hv_1 hv_1m (by linarith) (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl) a ha
   obtain ⟨d, hnd, hlbl, -, hdlt⟩ :=
     Restated.deliver_by_outside facts S x hb hsync hcatch hsend (by linarith) hD hw
   have hdm : d < m := Restated.lt_of_time_lt facts S Sched x (by linarith)
@@ -330,7 +331,7 @@ theorem token_held_by_outside (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     rw [ha_round, ← Restated.round_of_slotOf_action facts S (ρ₀ + S.hc.η_SG)]
     exact Restated.roundAt_mono_sr facts S (by rw [hdtime]; linarith)
   have hwin := Restated.window_of_awake_at_delivery facts S Sched x htd hmult hv hexec.toUnforgeability ha_idx
-    (Restated.honestThrough_of_time_le facts hwm hd1le) hexp (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew)
+    (Restated.honestThrough_of_time_le facts hwm hd1le) hexp (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl)
   have hroom : ∀ k : Nat, k < d + 1 →
       x.lbl k = AtomicAction.deliver w ⟨v_1, NamedObject.attest a⟩ →
       (M.round_votes (x[k][w].st).st.core a.erase).card ≠ 2 := by
@@ -493,7 +494,7 @@ theorem exists_ready_token_ge_by_outside (facts : Record.Facts M) (S : Setup V) 
     (htd : Restated.TimeDiverges M x) {ρ₀ n m : Nat} (hn : Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ₀))) {t_a D : Int}
     (hta : (Restated.Vocabulary.Execution.Setup.a M S ρ₀) ≤ t_a) (hD : deadlineOutside S b₀ b₁ t_a ≤ D)
     (hDexp : D ≤ (Restated.Vocabulary.Execution.Setup.a M S (ρ₀ + S.hc.η_SG)))
-    {v_1 w : V} (hv_1 : v_1 ∈ Restated.activeRoundW M S Sched ρ₀) (hv_1m : Restated.HonestThrough M Sched x m v_1)
+    {v_1 w : V} (hv_1 : v_1 ∈ Restated.attestersAt M S Sched ρ₀) (hv_1m : Restated.HonestThrough M Sched x m v_1)
     (hm : D ≤ (x[m].time : Int))
     (hw : w ∈ Sched.awakeThroughout t_a D) (hwm : Restated.HonestThrough M Sched x m w)
     (hadm : ∀ C : NamedBlock V, C ∈ (x[n + 1][v_1].st).st.bodies →
@@ -638,7 +639,7 @@ theorem graded_expiry_of_rounds (facts : Record.Facts M) (S : Setup V) (Sched : 
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) (hmult : AwakeAtMultiples S Sched)
     (htd : Restated.TimeDiverges M x) (hmono : Sched.MonotoneCorruption) {r : Nat} {P : Block V}
     (hP : Restated.StableHandover M S Sched x r P) (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
-    {ρ : Nat} (hρ₁ : r + 2 ≤ ρ) (hρ₂ : ρ ≤ r + S.hc.η_SG + 1)
+    {ρ : Nat} (hρ₁ : r + 2 ≤ ρ) (hρ₂ : ρ ≤ r + S.hc.η_SG + 1) (hη : S.hc.η_SG ≤ r)
     (hR : ∀ q : Nat, r + 2 ≤ q → q < ρ → Restated.RoundAttestsAbove M S Sched x r P q)
     {t_a D : Int} (hta : (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) ≤ t_a) (hD : deadlineOutside S b₀ b₁ t_a ≤ D)
     (hDe : D ≤ M.early S.E S.hc ρ .g2)
@@ -669,12 +670,12 @@ theorem graded_expiry_of_rounds (facts : Record.Facts M) (S : Setup V) (Sched : 
   choose Wl hWl using fun v_1 : V => facts.gr.rawView_nonempty
     (M.gradeView (M.toHealing (x[m][u].st).st.core)) S.hc.η_SG ρ (M.late S.E S.hc ρ p) v_1
   refine Restated.gradeBool_period_of_tokens_resolved facts S Sched x hexec htd hmono hfix (by omega)
-    hρ₂ hm Re hRe ?_ Wl hWl ?_ g hg
+    hρ₂ hη hm Re hRe ?_ Wl hWl ?_ g hg
   ·
     intro v_1 hv_1
     have hv_1c := (Finset.mem_sdiff.1 hv_1).1
-    have hv_1A := Restated.activeRoundWThroughNextCountedAt_subset facts S Sched r ρ hv_1c
-    have hv_1W := Restated.activeRoundWThroughNext_subset_activeRoundW_succ facts S Sched r hv_1A
+    have hv_1A := hv_1c
+    have hv_1W := Restated.attestersAt_of_activeRoundW facts S Sched (Restated.activeRoundWThroughNext_subset_activeRoundW_succ facts S Sched r hv_1A)
     have hv_1m := Restated.honestThrough_of_mem_countedAt facts S Sched x htd hmono (by omega) hm hv_1
     have hv_1n : Restated.HonestThrough M Sched x (n₁ + 1) v_1 := by
       have hle := le_deadlineOutside S b₀ b₁ t_a
@@ -692,7 +693,7 @@ theorem graded_expiry_of_rounds (facts : Record.Facts M) (S : Setup V) (Sched : 
   ·
     intro v_1 hv_1 tok htok hq
     have hv_1c := (Finset.mem_sdiff.1 hv_1).1
-    have hv_1A := Restated.activeRoundWThroughNextCountedAt_subset facts S Sched r ρ hv_1c
+    have hv_1A := hv_1c
     have hv_1m := Restated.honestThrough_of_mem_countedAt facts S Sched x htd hmono (by omega) hm hv_1
     obtain ⟨hlt, n', hn', hawk, hkey⟩ :=
       Restated.rawView_token_facts facts S Sched x hexec hv_1m (hWl v_1) htok
@@ -709,20 +710,13 @@ theorem graded_expiry_of_rounds (facts : Record.Facts M) (S : Setup V) (Sched : 
         a.confirmed = some C.root →
         Block.Preceq P C.erase := by
       by_cases hr1 : tok.round = r + 1
-      · have hv_1W := Restated.activeRoundWThroughNext_subset_activeRoundW_succ facts S Sched r hv_1A
+      · have hv_1W := Restated.attestersAt_of_activeRoundW facts S Sched (Restated.activeRoundWThroughNext_subset_activeRoundW_succ facts S Sched r hv_1A)
         rw [hr1] at hn' ⊢
         exact hP.covers (r + 1) (Or.inr rfl) n' hn' v_1 hv_1W hv_1n
       · have hq2 : r + 2 ≤ tok.round := by omega
-        have hnot : v_1 ∉ Restated.attestersNotAwakeSinceFirstCutoffIn M S Sched (r + 2) (ρ - 1) := by
-          unfold Restated.activeRoundWThroughNextCountedAt at hv_1c
-          exact (Finset.mem_sdiff.1 hv_1c).2
         have hawT : v_1 ∈ Sched.awakeThroughout
-            (M.early S.E S.hc tok.round .g2 - S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S tok.round)) := by
-          by_contra hcon
-          apply hnot
-          unfold Restated.attestersNotAwakeSinceFirstCutoffIn
-          exact Finset.mem_biUnion.2 ⟨tok.round, Finset.mem_Icc.2 ⟨hq2, by omega⟩,
-            Finset.mem_sdiff.2 ⟨hawk, hcon⟩⟩
+            (M.early S.E S.hc tok.round .g2 - S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S tok.round)) :=
+          Restated.rawView_token_attestersAt facts S Sched x hexec hv_1m (hWl v_1) htok (by omega)
         exact fun C hC a' ha' hconf' =>
           (hR tok.round hq2 hlt n' hn' v_1 hv_1A hv_1n hawT a' ha').1 C hC hconf'
     exact Restated.preceq_of_find_attested facts S Sched x hexec hv_1n hcov a ha hconf hum hB
@@ -737,7 +731,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 
 /-- For a round `q` whose action instant is at or after `b₁` and GST, `m` the last step before one
     of round `q + 1`'s phase-domain instants, and `u` honest through `m`, awake throughout
-    `[S.a q, S.a q + Δ]`, with its finalized block an ancestor of `P` at a later step: if
+    `[t_a, t_a + Δ]` with `S.a q ≤ t_a` and `t_a + Δ ≤ early (q + 1) g2`, with its finalized block an ancestor of `P` at a later step: if
     round-level sleepiness holds from round `q + 1`'s opening at the latest, `RoundAttestsAll` holds
     at `q`, and the delivery premises hold around `[b₀, b₁)`, then every outcome of the grade test
     of `P` for round `q + 1` at that phase on `u`'s store after `m` steps is `true`. -/
@@ -748,12 +742,14 @@ theorem graded_after_of_round (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) (hmult : AwakeAtMultiples S Sched)
     (htd : Restated.TimeDiverges M x) (hmono : Sched.MonotoneCorruption) {tE : Int}
     (hrs : Restated.roundSleepinessW M S Sched tE) {q : Nat}
-    (htE : tE ≤ M.opening S.E S.hc (q + 1))
+    (htE : tE ≤ M.opening S.E S.hc (q + 1)) (hη : S.hc.η_SG ≤ q)
     (hgq : S.E.t_GST ≤ (Restated.Vocabulary.Execution.Setup.a M S q)) (hbq : b₁ ≤ (Restated.Vocabulary.Execution.Setup.a M S q)) {P : Block V}
     (hRq : Restated.RoundAttestsAll M S Sched x P q)
     {p : Protocol.Phase} {m : Nat}
     (hm : Restated.stepBeforeInstant M x m (M.domain S.E S.hc (q + 1) p))
-    {u : V} (hu : u ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) ((Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ))
+    {u : V} {t_a : Int} (hta : (Restated.Vocabulary.Execution.Setup.a M S q) ≤ t_a)
+    (htaE : t_a + S.E.Δ ≤ M.early S.E S.hc (q + 1) .g2)
+    (hu : u ∈ Sched.awakeThroughout t_a (t_a + S.E.Δ))
     (hum : Restated.HonestThrough M Sched x m u)
     {k : Nat} (hmk : (x[m].time : Int) < (x[k].time : Int))
     (hFk : Block.Preceq (x[k][u].st).st.core.F P) :
@@ -762,24 +758,25 @@ theorem graded_after_of_round (facts : Record.Facts M) (S : Setup V) (Sched : Sc
         (M.late S.E S.hc (q + 1) p) P ⇢ g → g = true := by
   intro g hg
   have hd := S.E.Δ_pos
-  have hη := S.hc.η_SG_ge_one
+  have hη1 := S.hc.η_SG_ge_one
   obtain ⟨n, hn⟩ := Restated.exists_tickStepAt facts x htd (Restated.action_pos facts S q)
   obtain ⟨hn1, -⟩ := Restated.tickStepAt_time facts x hn
-  have hmt : (Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ ≤ (x[m].time : Int) :=
-    Restated.action_delta_le_time_of_stepBefore facts S Sched x htd (show q + 1 ≤ q + 1 from le_rfl) hm
-  have hD : deadlineOutside S b₀ b₁ ((Restated.Vocabulary.Execution.Setup.a M S q)) ≤ (Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ := deadline_le_of_after S hgq hbq
-  have hDexp : (Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ ≤ (Restated.Vocabulary.Execution.Setup.a M S (q + S.hc.η_SG)) := by
-    have h1 := Restated.healA_succ facts S q
-    have h2 := twelve_delta_le_wAttest_kit S
+  have hmt : t_a + S.E.Δ ≤ (x[m].time : Int) :=
+    le_trans htaE (Restated.early_le_time_of_stepBefore facts S Sched x htd (Nat.le_add_left 1 q) hm)
+  have hD : deadlineOutside S b₀ b₁ t_a ≤ t_a + S.E.Δ :=
+    deadline_le_of_after S (le_trans hgq hta) (le_trans hbq hta)
+  have hDexp : t_a + S.E.Δ ≤ (Restated.Vocabulary.Execution.Setup.a M S (q + S.hc.η_SG)) := by
+    have h1 := Restated.early_g2_eq_healA facts S (q + 1)
     have h3 : (M.a S.hc S.E.Δ (q + 1)) ≤ (M.a S.hc S.E.Δ (q + S.hc.η_SG)) :=
-      Restated.healA_mono facts S (Nat.add_le_add_left hη q)
-    show (M.a S.hc S.E.Δ q) + S.E.Δ ≤ (M.a S.hc S.E.Δ (q + S.hc.η_SG))
+      Restated.healA_mono facts S (Nat.add_le_add_left hη1 q)
+    have h4 : t_a + S.E.Δ ≤ M.a S.hc S.E.Δ (q + 1) - 11 * S.E.Δ := by rw [← h1]; exact htaE
+    show t_a + S.E.Δ ≤ (M.a S.hc S.E.Δ (q + S.hc.η_SG))
     linarith
   have hFd : ∀ d : Nat, (x[d].time : Int) < (x[k].time : Int) →
       Block.Preceq (x[d][u].st).st.core.F P := fun d hd' =>
     preceq_trans_Preceq (Restated.F_mono facts S Sched x u (le_of_lt (Restated.lt_of_time_lt facts S Sched x hd'))) hFk
   have hmember : ∀ v_1 ∈ Restated.freshAttestersW M S Sched x q m,
-      v_1 ∈ Restated.activeRoundW M S Sched q ∧ Restated.HonestThrough M Sched x m v_1 ∧
+      v_1 ∈ Restated.attestersAt M S Sched q ∧ Restated.HonestThrough M Sched x m v_1 ∧
       Restated.HonestThrough M Sched x (n + 1) v_1 ∧
       ∀ C : NamedBlock V, C ∈ (x[n + 1][v_1].st).st.bodies →
         ∀ a ∈ Restated.actionAttestationFrom M (Setup.alwaysAwake S) (x[n][v_1].st) v_1 q,
@@ -794,7 +791,7 @@ theorem graded_after_of_round (facts : Record.Facts M) (S : Setup V) (Sched : Sc
       ∀ C : NamedBlock V, C ∈ (x[n + 1][v_1].st).st.bodies →
         ∀ a ∈ Restated.actionAttestationFrom M (Setup.alwaysAwake S) (x[n][v_1].st) v_1 q,
         a.confirmed = some C.root →
-        Restated.ReaderAdmitsInPhase M S Sched x 0 ((Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ) u C := by
+        Restated.ReaderAdmitsInPhase M S Sched x 0 (t_a + S.E.Δ) u C := by
     intro v_1 hv_1 C hC a ha hconf d v_0 _ _ _ hdle
     exact Or.inl (preceq_eq_true_iff_Preceq.mpr (preceq_trans_Preceq (hFd d (by linarith))
       ((hmember v_1 hv_1).2.2.2 C hC a ha hconf)))
@@ -804,16 +801,16 @@ theorem graded_after_of_round (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   choose Wl hWl using fun v_1 : V => facts.gr.rawView_nonempty
     (M.gradeView (M.toHealing (x[m][u].st).st.core)) S.hc.η_SG (q + 1)
     (M.late S.E S.hc (q + 1) p) v_1
-  refine (Restated.gradeBool_base_of_tokens facts S Sched x hexec htd hmono hrs htE hm
+  refine (Restated.gradeBool_base_of_tokens facts S Sched x hexec htd hmono hrs htE hη hm
     Re hRe ?_ Wl hWl ?_).1 g hg
   · intro v_1 hv_1
     obtain ⟨hv_1W, hv_1m, -, hcov⟩ := hmember v_1 hv_1
-    exact Restated.exists_ready_token_ge_by_outside facts S Sched x hexec hb hsync hcatch hmult htd hn le_rfl hD
+    exact Restated.exists_ready_token_ge_by_outside facts S Sched x hexec hb hsync hcatch hmult htd hn hta hD
       hDexp hv_1W hv_1m hmt hu hum (hadm v_1 hv_1)
       (fun C hC a ha hconf => compatible_of_cases
         (Or.inr (preceq_trans_Preceq (hFd m hmk) (hcov C hC a ha hconf))))
-      (q := q + 1) le_rfl (Nat.add_le_add_left hη q) p
-      (Restated.action_delta_le_early_of_lt facts S le_rfl p) (Re v_1) (hRe v_1)
+      (q := q + 1) le_rfl (Nat.add_le_add_left hη1 q) p
+      (le_trans htaE (Restated.early_g2_le_early facts S (q + 1) p)) (Re v_1) (hRe v_1)
   · intro v_1 hv_1 tok htok hq
     obtain ⟨-, hv_1m, -, hcov⟩ := hmember v_1 hv_1
     have hle := Restated.rawView_round_le facts S Sched x m u q _ v_1 (Wl v_1) (hWl v_1) tok htok
@@ -824,13 +821,23 @@ theorem graded_after_of_round (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     rw [hnn] at hkey
     obtain ⟨a, ha, root, hconf⟩ := (pPI% exists_attestation_confirmed_pi) facts S (x[n][v_1].st) v_1 q
     obtain ⟨C, hC, hCroot, hfind, -⟩ :=
-      Restated.attested_block_resolves_by_outside facts S Sched x hexec hb hsync hcatch hmult htd hn le_rfl hD
+      Restated.attested_block_resolves_by_outside facts S Sched x hexec hb hsync hcatch hmult htd hn hta hD
         hv_1m hmt hu hum (hadm v_1 hv_1) a ha root hconf
     refine ⟨root, C.erase, (hkey a ha).trans hconf, ?_, hcov C hC a ha (by rw [hconf, hCroot])⟩
     rw [facts.gr.Sts_gradeView_T]
     exact hfind
 
 end
+
+-- Folded in from the former module `ClaimAsyncK_AfterPeriodRule.lean` (wake switch, lane S).
+/-!
+# Height votes classified after the asynchronous period, under the awake-test rule
+
+The lemma of `ClaimAsyncK_AfterPeriod.lean` that classifies every honest height vote in the sent
+log after the hand-over, with the activity of a sender read off the attestation it sent. Stated
+over a model `M : Record.Model V`, its facts `facts : Record.Facts M`, whose field `ndWake` holds the converse awake facts.
+-/
+
 
 section
 set_option autoImplicit false
@@ -843,10 +850,9 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
     and `RoundAttestsAll` at every round from `r + η_SG + 1` whose action instant is at or before
     `x[k].time`, then `VotesClassified S Sched x r P n₁ k` holds: every height vote in the sent log
     after `k` steps whose signer is honest through `k` is classified. -/
-theorem votesClassified_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
+theorem votesClassified_upToSafe_rule (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     {r : Nat} {P : Block V} (hP : Restated.StableHandover M S Sched x r P)
     {n₁ : Nat} (hn₁ : Restated.tickStepAt M x n₁ ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) {k : Nat} (hk : n₁ + 1 ≤ k)
     (hR : ∀ q : Nat, r + 2 ≤ q → q ≤ r + S.hc.η_SG → Restated.RoundAttestsAbove M S Sched x r P q)
@@ -894,20 +900,19 @@ theorem votesClassified_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched :
       Restated.honestThrough_of_time_le facts hu (Restated.time_mono_int facts S Sched x hk)
     exact Restated.votesClassified_of_handover facts S Sched x r P hP hn₁ u a h root tmo hun ha hsent' hpair
   · have hq' : r + 2 ≤ a.round := Nat.succ_le_of_lt (Nat.lt_of_not_le hq)
-    have huW := Restated.active_of_nonEmpty_heightVote facts S Sched x hwakes hsleeps
-      (Finset.mem_sdiff.1 hawk).1 a hamem hpair
+    have huW : u ∈ Restated.attestersAt M S Sched a.round := (Finset.mem_sdiff.1
+      (Restated.honRound_of_attestation_sent facts S Sched x htick
+        (Restated.early_g2_sub_delta_nonneg facts S (r := a.round) (Nat.le_trans (Nat.le_add_left 1 (r + 1)) hq')) hawk
+        (fun t ht => Restated.honestThrough_of_time_le facts hu
+          (Restated.time_mono_int facts S Sched x hk'k) t (by rw [hk'1]; exact ht))
+        hout hemit rfl)).1
     by_cases hq2 : a.round ≤ r + S.hc.η_SG
     ·
       by_cases hin : u ∈ Restated.activeRoundWThroughNext M S Sched r
       · left
         have hawT : u ∈ Sched.awakeThroughout (M.early S.E S.hc a.round .g2 - S.E.Δ)
             ((Restated.Vocabulary.Execution.Setup.a M S a.round)) := by
-          have h1 := Restated.early_g2_eq_healA facts S a.round
-          have h2 := twelve_delta_le_wAttest_kit S
-          have hle : (M.a S.hc S.E.Δ a.round) - wAttest S
-              ≤ M.early S.E S.hc a.round .g2 - S.E.Δ := by rw [h1]; linarith
-          unfold Restated.activeRoundW at huW
-          exact awakeThroughout_sub Sched hle le_rfl huW
+          exact huW
         exact (hR a.round hq' hq2 k' htick u hin huk' hawT a hamem).2 h root tmo hpair
       · right; right
         unfold Restated.activeOutsideFixedIn
@@ -919,6 +924,7 @@ theorem votesClassified_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched :
       exact (hA a.round hq3 hSq k' htick u huW huk' a hamem).2 h root tmo hpair
 
 end
+
 
 section
 set_option autoImplicit false
@@ -935,12 +941,11 @@ theorem roundAttestsAll_step (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     {b₀ b₁ tSafe : Int} (hb : b₀ ≤ b₁) (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (htd : Restated.TimeDiverges M x) (hmono : Sched.MonotoneCorruption) {tE : Int}
     (hrs : Restated.roundSleepinessW M S Sched tE) {r : Nat} {P : Block V}
     (hP : Restated.StableHandover M S Sched x r P) (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
     (hlt : Restated.longTermConditionUpToW M S Sched r tSafe)
-    (htE : tE ≤ M.opening S.E S.hc r) (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r))
+    (htE : tE ≤ M.opening S.E S.hc r) (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r)) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S r b₀) (hb₁ : Restated.periodBeforeExpiry M S r b₁)
     (hR : ∀ q : Nat, r + 2 ≤ q → q ≤ r + S.hc.η_SG → Restated.RoundAttestsAbove M S Sched x r P q)
     {ρ : Nat} (hρ₁ : r + S.hc.η_SG + 1 ≤ ρ) (hρs : (Restated.Vocabulary.Execution.Setup.a M S ρ) ≤ tSafe)
@@ -949,7 +954,7 @@ theorem roundAttestsAll_step (facts : Record.Facts M) (S : Setup V) (Sched : Sch
   intro n hn u hu hun a ha
   obtain ⟨nr, hnr, ns, rec, hD⟩ := ha
   have hd := S.E.Δ_pos
-  have hη : (1 : Nat) ≤ S.hc.η_SG := S.hc.η_SG_ge_one
+  have hη1 : (1 : Nat) ≤ S.hc.η_SG := S.hc.η_SG_ge_one
   obtain ⟨n₁, hn₁⟩ := Restated.exists_tickStepAt facts x htd (Restated.action_pos facts S (r + 1))
   obtain ⟨hn₁1, -⟩ := Restated.tickStepAt_time facts x hn₁
   obtain ⟨hnt1, hnt0⟩ := Restated.tickStepAt_time facts x hn
@@ -963,7 +968,7 @@ theorem roundAttestsAll_step (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     by_contra hcon
     have h1 := Restated.time_mono_int facts S Sched x (show n + 1 ≤ n₁ + 1 by omega)
     linarith
-  have hvc := Restated.votesClassified_upToSafe facts S Sched x hexec hwakes hsleeps hP hn₁ hk hR
+  have hvc := Restated.votesClassified_upToSafe_rule facts S Sched x hexec hP hn₁ hk hR
     (fun q hq hSq => hA q hq (by
       by_contra hcon
       have := Restated.healA_mono facts S (Nat.le_of_not_lt hcon)
@@ -973,13 +978,8 @@ theorem roundAttestsAll_step (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     linarith) hlt
   have hun' : Restated.HonestThrough M Sched x n u :=
     Restated.honestThrough_of_time_le facts hun (Restated.time_mono_int facts S Sched x (Nat.le_succ n))
-  have hawT : u ∈ Sched.awakeThroughout (M.early S.E S.hc ρ .g2 - S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S ρ)) := by
-    have h1 := Restated.early_g2_eq_healA facts S ρ
-    have h2 := twelve_delta_le_wAttest_kit S
-    have hle : (M.a S.hc S.E.Δ ρ) - wAttest S ≤ M.early S.E S.hc ρ .g2 - S.E.Δ := by
-      rw [h1]; linarith
-    unfold Restated.activeRoundW at hu
-    exact awakeThroughout_sub Sched hle le_rfl hu
+  have hawT : u ∈ Sched.awakeThroughout (M.early S.E S.hc ρ .g2 - S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S ρ)) :=
+    hu
   obtain ⟨hFc, -⟩ := Restated.honest_roots_of_classified facts S Sched x hexec hmono hvc hltn hk hun'
   by_cases hPF : Block.Preceq P (x[n][u].st).st.core.F
   · have hPr := preceq_trans_Preceq hPF (Restated.F_preceq_fgRoot_sts facts S Sched x n u)
@@ -1019,18 +1019,26 @@ theorem roundAttestsAll_step (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       by_cases hqe : q = r + S.hc.η_SG
       ·
         subst hqe
-        have hta : (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) ≤ (Restated.Vocabulary.Execution.Setup.a M S (r + S.hc.η_SG)) := Restated.healA_mono facts S (by omega)
-        have hDl := Restated.deadline_le_early_expiry facts S hgst hb₀ hb hb₁
-        have hu' : u ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S (r + S.hc.η_SG)))
-            (M.early S.E S.hc (r + S.hc.η_SG + 1) .g2) := by
-          have h1 := Restated.early_g2_eq_healA facts S (r + S.hc.η_SG + 1)
-          unfold Restated.activeRoundW at hu
-          refine awakeThroughout_sub Sched ?_ ?_ hu
-          · show (M.a S.hc S.E.Δ (r + S.hc.η_SG + 1)) - wAttest S ≤ (M.a S.hc S.E.Δ (r + S.hc.η_SG))
-            linarith
-          · rw [h1]; linarith
-        exact Restated.graded_expiry_of_rounds facts S Sched x hexec hb hsync hcatch hmult htd hmono hP hfix
-          (by omega) le_rfl (fun q' h1 h2 => hR q' h1 (by omega)) hta hDl le_rfl hm hu' hum hmn
+        have h1 := Restated.early_g2_eq_healA facts S (r + S.hc.η_SG + 1)
+        have hs1 := Restated.healA_succ facts S (r + S.hc.η_SG)
+        have h12 := twelve_delta_le_wAttest_kit S
+        have hb₁' : b₁ + S.E.Δ ≤ M.early S.E S.hc (r + S.hc.η_SG + 1) .g2 := hb₁
+        have hra : (M.a S.hc S.E.Δ (r + 1)) ≤ (M.a S.hc S.E.Δ (r + S.hc.η_SG)) :=
+          Restated.healA_mono facts S (by omega)
+        have hra0 : (M.a S.hc S.E.Δ r) ≤ (M.a S.hc S.E.Δ (r + 1)) := Restated.healA_mono facts S (Nat.le_succ r)
+        have hgst₀ : S.E.t_GST ≤ (M.a S.hc S.E.Δ r) := hgst
+        have hta : (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) ≤ M.early S.E S.hc (r + S.hc.η_SG + 1) .g2 - S.E.Δ := by
+          show (M.a S.hc S.E.Δ (r + 1)) ≤ _
+          rw [h1]; linarith
+        have hDl : deadlineOutside S b₀ b₁ (M.early S.E S.hc (r + S.hc.η_SG + 1) .g2 - S.E.Δ)
+            ≤ M.early S.E S.hc (r + S.hc.η_SG + 1) .g2 - S.E.Δ + S.E.Δ :=
+          deadline_le_of_after S (by rw [h1]; linarith) (by linarith)
+        have hu' : u ∈ Sched.awakeThroughout (M.early S.E S.hc (r + S.hc.η_SG + 1) .g2 - S.E.Δ)
+            (M.early S.E S.hc (r + S.hc.η_SG + 1) .g2 - S.E.Δ + S.E.Δ) :=
+          awakeThroughout_sub Sched le_rfl
+            (by show _ ≤ M.a S.hc S.E.Δ (r + S.hc.η_SG + 1); rw [h1]; linarith) hu
+        exact Restated.graded_expiry_of_rounds (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hb hsync hcatch hmult htd hmono hP hfix
+          (by omega) le_rfl (fun q' h1 h2 => hR q' h1 (by omega)) hta hDl (le_of_eq (by ring)) hm hu' hum hmn
           hFP g hg
       ·
         have hq1 : r + S.hc.η_SG + 1 ≤ q := by omega
@@ -1042,16 +1050,19 @@ theorem roundAttestsAll_step (facts : Record.Facts M) (S : Setup V) (Sched : Sch
           have h1 := Restated.lt_action_of_periodBeforeExpiry facts S hb₁
           have h2 : (Restated.Vocabulary.Execution.Setup.a M S (r + S.hc.η_SG + 1)) ≤ (Restated.Vocabulary.Execution.Setup.a M S q) := Restated.healA_mono facts S hq1
           linarith
-        have hu' : u ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) ((Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ) := by
-          have h2 := twelve_delta_le_wAttest_kit S
-          unfold Restated.activeRoundW at hu
-          refine awakeThroughout_sub Sched ?_ ?_ hu
-          · show (M.a S.hc S.E.Δ (q + 1)) - wAttest S ≤ (M.a S.hc S.E.Δ q)
-            linarith
-          · show (M.a S.hc S.E.Δ q) + S.E.Δ ≤ (M.a S.hc S.E.Δ (q + 1))
-            linarith
-        exact Restated.graded_after_of_round facts S Sched x hexec hb hsync hcatch hmult htd hmono hrs hopen hgq
-          hbq (hA q hq1 (Nat.lt_succ_self q)) hm hu' hum hmn hFP g hg
+        have he1 := Restated.early_g2_eq_healA facts S (q + 1)
+        have hs1 := Restated.healA_succ facts S q
+        have h12 := twelve_delta_le_wAttest_kit S
+        have htaq : (Restated.Vocabulary.Execution.Setup.a M S q) ≤ M.early S.E S.hc (q + 1) .g2 - S.E.Δ := by
+          show (M.a S.hc S.E.Δ q) ≤ _
+          rw [he1]; linarith
+        have hu' : u ∈ Sched.awakeThroughout (M.early S.E S.hc (q + 1) .g2 - S.E.Δ)
+            (M.early S.E S.hc (q + 1) .g2 - S.E.Δ + S.E.Δ) :=
+          awakeThroughout_sub Sched le_rfl
+            (by show _ ≤ M.a S.hc S.E.Δ (q + 1); rw [he1]; linarith) hu
+        have hηq : S.hc.η_SG ≤ q := Nat.le_trans hη (by omega)
+        exact Restated.graded_after_of_round (hη := hηq) facts S Sched x hexec hb hsync hcatch hmult htd hmono hrs hopen hgq
+          hbq (hA q hq1 (Nat.lt_succ_self q)) hm htaq (le_of_eq (by ring)) hu' hum hmn hFP g hg
     obtain ⟨hdpos, -⟩ := Restated.domain_facts_att facts S (ρ - 1) .g2
     rw [hρq] at hdpos
     obtain ⟨m₂, hm₂⟩ := Restated.exists_tickStepAt facts x htd hdpos
@@ -1098,11 +1109,10 @@ theorem roundAttestsAll_afterPeriod (facts : Record.Facts M) (S : Setup V) (Sche
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x)
     (hrs : Restated.roundSleepinessW M S Sched tE) (htE : tE ≤ M.opening S.E S.hc r)
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r)) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S r b₀) (hb : b₀ ≤ b₁) (hb₁ : Restated.periodBeforeExpiry M S r b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
     (hlt : Restated.longTermConditionUpToW M S Sched r tSafe)
@@ -1114,10 +1124,10 @@ theorem roundAttestsAll_afterPeriod (facts : Record.Facts M) (S : Setup V) (Sche
   | _ ρ ih =>
       intro h1 h2
       have hsafe : (Restated.Vocabulary.Execution.Setup.a M S (r + S.hc.η_SG + 1)) ≤ tSafe := le_trans (Restated.healA_mono facts S h1) h2
-      have hR := Restated.roundAttestsAbove_all facts S Sched x hexec hsync hcatch hmult hwakes hsleeps htd
+      have hR := Restated.roundAttestsAbove_all (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hsync hcatch hmult htd
         hmono hP hfix (Restated.longTermConditionUpToW_mono facts S Sched r hmono hsafe hlt)
         (le_trans hgst (Restated.healA_mono facts S (Nat.le_succ r))) hb₀
-      exact Restated.roundAttestsAll_step facts S Sched x hexec hb hsync hcatch hmult hwakes hsleeps htd hmono
+      exact Restated.roundAttestsAll_step (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hb hsync hcatch hmult htd hmono
         hrs hP hfix hlt htE hgst hb₀ hb₁ hR h1 h2
         (fun q hq hqρ => ih q hqρ hq (le_trans (Restated.healA_mono facts S (le_of_lt hqρ)) h2))
 
@@ -1139,11 +1149,10 @@ theorem honestRoots_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x)
     (hrs : Restated.roundSleepinessW M S Sched tE) (htE : tE ≤ M.opening S.E S.hc r)
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r)) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S r b₀) (hb : b₀ ≤ b₁) (hb₁ : Restated.periodBeforeExpiry M S r b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
     (hlt : Restated.longTermConditionUpToW M S Sched r tSafe)
@@ -1154,12 +1163,12 @@ theorem honestRoots_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       ∀ w : V, Restated.HonestThrough M Sched x k w →
         Block.Compatible P (x[k][w].st).st.core.F ∧ Block.Compatible P (x[k][w].st).st.core.J := by
   intro k hk hkt w hw
-  have hR := Restated.roundAttestsAbove_all facts S Sched x hexec hsync hcatch hmult hwakes hsleeps htd
+  have hR := Restated.roundAttestsAbove_all (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hsync hcatch hmult htd
     hmono hP hfix (Restated.longTermConditionUpToW_mono facts S Sched r hmono hsafe hlt)
     (le_trans hgst (Restated.healA_mono facts S (Nat.le_succ r))) hb₀
-  have hA := Restated.roundAttestsAll_afterPeriod facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
-    hwakes hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hP
-  have hvc := Restated.votesClassified_upToSafe facts S Sched x hexec hwakes hsleeps hP hn₁ hk hR
+  have hA := Restated.roundAttestsAll_afterPeriod (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
+     hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hP
+  have hvc := Restated.votesClassified_upToSafe_rule facts S Sched x hexec hP hn₁ hk hR
     (fun q hq hSq => hA q hq (le_trans hSq hkt))
   exact Restated.honest_roots_of_classified facts S Sched x hexec hmono hvc
     (Restated.longTermConditionUpToW_mono facts S Sched r hmono hkt hlt) hk hw
@@ -1259,7 +1268,7 @@ theorem stableRoot_compatible_upToSafe (facts : Record.Facts M) (S : Setup V) (S
     (htd : Restated.TimeDiverges M x) (hmono : Sched.MonotoneCorruption) {tE : Int}
     (hrs : Restated.roundSleepinessW M S Sched tE) {r : Nat} {P : Block V}
     (hP : Restated.StableHandover M S Sched x r P) (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
-    (htE : tE ≤ M.opening S.E S.hc r) (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r))
+    (htE : tE ≤ M.opening S.E S.hc r) (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r)) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S r b₀) (hb₁ : Restated.periodBeforeExpiry M S r b₁)
     (hR : ∀ q : Nat, r + 2 ≤ q → q ≤ r + S.hc.η_SG → Restated.RoundAttestsAbove M S Sched x r P q)
     (hA : ∀ q : Nat, r + S.hc.η_SG + 1 ≤ q → (Restated.Vocabulary.Execution.Setup.a M S q) ≤ tSafe → Restated.RoundAttestsAll M S Sched x P q)
@@ -1340,10 +1349,10 @@ theorem stableRoot_compatible_upToSafe (facts : Record.Facts M) (S : Setup V) (S
     have hb₀r : (Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ ≤ b₀ := by linarith
     have hw : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) (x[m].time : Int) :=
       awakeThroughout_sub Sched (by linarith) (by linarith) hwr
-    exact Restated.graded_base_reader facts S Sched x hexec hsync hcatch hmult htd hmono hrs hP
+    exact Restated.graded_base_reader (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hsync hcatch hmult htd hmono hrs hP
       (le_trans htE (facts.gr.Sts_opening_mono S (Nat.le_succ q))) hgst hb₀r hm hw hwm hmk hFk g hg
   · by_cases hqη : q ≤ r + S.hc.η_SG
-    · exact Restated.graded_period_of_rounds facts S Sched x hexec hsync hcatch hmult htd hmono hP hfix hgst₁
+    · exact Restated.graded_period_of_rounds (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hsync hcatch hmult htd hmono hP hfix hgst₁
         hb₀' (ρ := q + 1) (by omega) (by omega)
         (fun q' h1 h2 => hR q' h1 (by omega)) hm hwA hwm hmk hFk g hg
     · have hq1 : r + S.hc.η_SG + 1 ≤ q := by omega
@@ -1360,8 +1369,9 @@ theorem stableRoot_compatible_upToSafe (facts : Record.Facts M) (S : Setup V) (S
       have hqs : (Restated.Vocabulary.Execution.Setup.a M S q) ≤ tSafe := by linarith
       have hu' : w ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S q)) ((Restated.Vocabulary.Execution.Setup.a M S q) + S.E.Δ) :=
         awakeThroughout_sub Sched (by linarith) (by linarith) hwr
-      exact Restated.graded_after_of_round facts S Sched x hexec hb hsync hcatch hmult htd hmono hrs hopen hgq
-        hbq (hA q hq1 hqs) hm hu' hwm hmk hFk g hg
+      have hηq : S.hc.η_SG ≤ q := Nat.le_trans hη (by omega)
+      exact Restated.graded_after_of_round (hη := hηq) facts S Sched x hexec hb hsync hcatch hmult htd hmono hrs hopen hgq
+        hbq (hA q hq1 hqs) hm le_rfl (Restated.action_delta_le_early_succ_kit facts S q) hu' hwm hmk hFk g hg
 
 end
 
@@ -1382,11 +1392,10 @@ theorem reader_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x)
     (hrs : Restated.roundSleepinessW M S Sched tE) (htE : tE ≤ M.opening S.E S.hc r)
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r)) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S r b₀) (hb : b₀ ≤ b₁) (hb₁ : Restated.periodBeforeExpiry M S r b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
     (hlt : Restated.longTermConditionUpToW M S Sched r tSafe)
@@ -1408,17 +1417,17 @@ theorem reader_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
   have hwA : w ∈ Restated.activeRoundWThroughNext M S Sched r :=
     Restated.mem_activeRoundWThroughNext_of_reader facts S Sched hwr hjA
   have hlt₁ := Restated.longTermConditionUpToW_mono facts S Sched r hmono hsafe hlt
-  have hR := Restated.roundAttestsAbove_all facts S Sched x hexec hsync hcatch hmult hwakes hsleeps htd
+  have hR := Restated.roundAttestsAbove_all (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hsync hcatch hmult htd
     hmono hP hfix hlt₁ (le_trans hgst hra) hb₀
-  have hA := Restated.roundAttestsAll_afterPeriod facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
-    hwakes hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hP
+  have hA := Restated.roundAttestsAll_afterPeriod (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
+     hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hP
   have htE' : tE ≤ M.opening S.E S.hc (r + 1) :=
     le_trans htE (facts.gr.Sts_opening_mono S (Nat.le_succ r))
   intro k hk
   induction k, hk using Nat.le_induction with
   | base =>
       intro hj
-      exact Restated.reader_base facts S Sched x hexec hsync hcatch hmult htd hmono hrs hP hlt₁ htE' hgst hb₀r
+      exact Restated.reader_base (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hsync hcatch hmult htd hmono hrs hP hlt₁ htE' hgst hb₀r
         hn₁ (awakeThroughout_sub Sched le_rfl (by linarith) hwr)
         (Restated.honestThrough_of_time_le facts hwj (Restated.time_mono_int facts S Sched x hj))
   | succ k hk ih =>
@@ -1433,7 +1442,7 @@ theorem reader_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
           have hkt0 : (x[k].time : Int) ≤ (x[k + 1].time : Int) :=
             Restated.time_mono_int facts S Sched x (Nat.le_succ k)
           have hkt : (x[k].time : Int) ≤ tSafe := by linarith
-          have hvc := Restated.votesClassified_upToSafe facts S Sched x hexec hwakes hsleeps hP hn₁ hk hR
+          have hvc := Restated.votesClassified_upToSafe_rule facts S Sched x hexec hP hn₁ hk hR
             (fun q hq hSq => hA q hq (le_trans hSq hkt))
           have hltk := Restated.longTermConditionUpToW_mono facts S Sched r hmono hkt hlt
           have hwk : Restated.HonestThrough M Sched x k w := Restated.honestThrough_of_time_le facts hwj (by linarith)
@@ -1441,10 +1450,10 @@ theorem reader_upToSafe (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
           have hFP : Block.Preceq (x[k][w].st).st.core.F P :=
             (compatible_cases (compatible_iff_Compatible.mp hFc)).resolve_left hPF
           refine Restated.preceq_latest_stable_succ facts S Sched x w k hrec
-            (fun s hks _ c hc G hG => ?_) (facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew)
+            (fun s hks _ c hc G hG => ?_) (fun k τ u hl _ => facts.ndRun.tick_outcome_sts S Sched x hexec.idealization.root_injective hexec.honestRootsNew k τ u hl)
           obtain ⟨hk1, hk0⟩ := Restated.tickStepAt_time facts x hks
           have hnk : (x[n₁ + 1].time : Int) ≤ (x[k].time : Int) := Restated.time_mono_int facts S Sched x hk
-          exact Restated.stableRoot_compatible_upToSafe facts S Sched x hexec hb hsync hcatch hmult htd hmono
+          exact Restated.stableRoot_compatible_upToSafe (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x hexec hb hsync hcatch hmult htd hmono
             hrs hP hfix htE hgst hb₀ hb₁ hR hA hwA hks
             (awakeThroughout_sub Sched le_rfl hkt1 hwr)
             (Restated.honestThrough_of_time_le facts hwj hkt1) (by linarith) (by linarith) hFP hJc
@@ -1470,11 +1479,10 @@ theorem stablePersists_untilSafe_ofHandover (facts : Record.Facts M) (S : Setup 
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x)
     (hrs : Restated.roundSleepinessW M S Sched tE) (htE : tE ≤ M.opening S.E S.hc r)
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ r)) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S r b₀) (hb : b₀ ≤ b₁) (hb₁ : Restated.periodBeforeExpiry M S r b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r)
     (hlt : Restated.longTermConditionUpToW M S Sched r tSafe)
@@ -1485,7 +1493,7 @@ theorem stablePersists_untilSafe_ofHandover (facts : Record.Facts M) (S : Setup 
       Block.Preceq P (M.get_stable (x[j][w].st).st.core) := by
   intro w j hwj hjlo hjt hwr
   have hd := S.E.Δ_pos
-  have hη : (1 : Nat) ≤ S.hc.η_SG := S.hc.η_SG_ge_one
+  have hη1 : (1 : Nat) ≤ S.hc.η_SG := S.hc.η_SG_ge_one
   have hsafe : (M.a S.hc S.E.Δ (r + S.hc.η_SG + 1)) ≤ tSafe := le_trans hjlo hjt
   have hjA : (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) + S.E.Δ ≤ (x[j].time : Int) := by
     have h1 := Restated.healA_succ facts S (r + 1)
@@ -1497,12 +1505,12 @@ theorem stablePersists_untilSafe_ofHandover (facts : Record.Facts M) (S : Setup 
   obtain ⟨n₁, hn₁⟩ := Restated.exists_tickStepAt facts x htd (Restated.action_pos facts S (r + 1))
   obtain ⟨hn1, hn0⟩ := Restated.tickStepAt_time facts x hn₁
   have hjn : n₁ + 1 ≤ j := Restated.lt_of_time_lt facts S Sched x (by linarith)
-  rcases Restated.reader_upToSafe facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult hwakes hsleeps
+  rcases Restated.reader_upToSafe (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
       hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hsafe hP hn₁ hwj hwr hjA hjt j hjn le_rfl
     with hF | hrec
   · exact preceq_trans_Preceq hF (facts.hd.finalized_preceq_get_stable _)
-  · obtain ⟨hFc, -⟩ := Restated.honestRoots_upToSafe facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
-      hwakes hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hsafe hP hn₁ j hjn hjt w hwj
+  · obtain ⟨hFc, -⟩ := Restated.honestRoots_upToSafe (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe r P hmono hexec hsync hmult
+       hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hsafe hP hn₁ j hjn hjt w hwj
     exact facts.hd.preceq_get_stable_of_record _ hrec hFc
 
 end
@@ -1524,11 +1532,10 @@ theorem honestRoots_upToSafe_atPage (facts : Record.Facts M) (S : Setup V) (Sche
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x)
     (hrs : Restated.roundSleepinessW M S Sched tE) (htE : tE ≤ M.opening S.E S.hc (r + 1))
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ (r + 1)))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ (r + 1))) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S (r + 1) b₀) (hb : b₀ ≤ b₁)
     (hb₁ : Restated.periodBeforeExpiry M S (r + 1) b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched (r + 1))
@@ -1545,8 +1552,8 @@ theorem honestRoots_upToSafe_atPage (facts : Record.Facts M) (S : Setup V) (Sche
     rw [Nat.add_right_comm r 1 S.hc.η_SG]
   have hlt : Restated.longTermConditionUpToW M S Sched (r + 1) tSafe :=
     Restated.longTermConditionUpToW_of_thirds facts S Sched (r + 1) tSafe tSafe le_rfl hadv hout
-  exact Restated.honestRoots_upToSafe facts S Sched x tE b₀ b₁ tSafe (r + 1) P hmono hexec hsync hmult hwakes
-    hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt (by rw [heq]; exact hsafe) hP hn₁
+  exact Restated.honestRoots_upToSafe (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe (r + 1) P hmono hexec hsync hmult
+    hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt (by rw [heq]; exact hsafe) hP hn₁
 
 end
 
@@ -1567,11 +1574,10 @@ theorem stablePersists_untilSafe_atPage (facts : Record.Facts M) (S : Setup V) (
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁)
     (htd : Restated.TimeDiverges M x)
     (hrs : Restated.roundSleepinessW M S Sched tE) (htE : tE ≤ M.opening S.E S.hc (r + 1))
-    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ (r + 1)))
+    (hgst : S.E.t_GST ≤ (M.a S.hc S.E.Δ (r + 1))) (hη : S.hc.η_SG ≤ r)
     (hb₀ : Restated.periodAfterRound M S (r + 1) b₀) (hb : b₀ ≤ b₁)
     (hb₁ : Restated.periodBeforeExpiry M S (r + 1) b₁)
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched (r + 1))
@@ -1588,8 +1594,8 @@ theorem stablePersists_untilSafe_atPage (facts : Record.Facts M) (S : Setup V) (
   have hlt : Restated.longTermConditionUpToW M S Sched (r + 1) tSafe :=
     Restated.longTermConditionUpToW_of_thirds facts S Sched (r + 1) tSafe tSafe le_rfl hadv hout
   intro w j hwj hjlo hjt hwr
-  exact Restated.stablePersists_untilSafe_ofHandover facts S Sched x tE b₀ b₁ tSafe (r + 1) P hmono hexec hsync
-    hmult hwakes hsleeps hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hP w j hwj
+  exact Restated.stablePersists_untilSafe_ofHandover (hη := by first | exact hη | exact le_trans hη (Nat.le_succ _) | exact le_trans hη (Nat.le_add_right _ _) | exact le_trans hη (by omega)) facts S Sched x tE b₀ b₁ tSafe (r + 1) P hmono hexec hsync
+    hmult hcatch htd hrs htE hgst hb₀ hb hb₁ hfix hlt hP w j hwj
     (by rw [heq]; exact hjlo) hjt hwr
 
 end

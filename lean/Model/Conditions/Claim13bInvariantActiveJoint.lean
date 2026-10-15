@@ -2,6 +2,7 @@ import Model.Record.ModelSpellings
 import Proofs.Vocabulary.ModelVocabulary
 import Model.Conditions.Claim13bInvariant
 import Model.Conditions.Claim13bInvariantActive
+import Model.Conditions.Claim13bInvariantGrade1Rule
 import Model.Conditions.Claim13bInvariantActiveSince
 import Model.Conditions.Claim13bK_GradePairwise
 import Model.Conditions.Claim13bStepConeIter
@@ -53,11 +54,11 @@ structure AfterPhaseInvariantOverActiveSetsJoint (M : Record.Model V) (S : Setup
   prevConfirmed : ∀ n_prev : Nat, Restated.tickStepAt M x n_prev ((Restated.Vocabulary.Execution.Setup.a M S (r - 1))) →
     Restated.ConfirmedCompatibleFreshSGOverHonRound M S Sched x (r - 1) n_prev n
   /-- At every round-`(r − 1)` tick step, every block an honest active attester of round `r` grades
-      at least 1 for round `r` (in some outcome of the grade test), at any phase whose domain time
-      is no later than round `r`'s action time, is an ancestor of the round-`(r − 1)` SG block of
-      some honest active attester of round `r − 1`. -/
+      at least 1 for round `r` (in some outcome of the grade test), at any phase other than the
+      grade-1 phase whose domain time is no later than round `r`'s action time, is an ancestor of the
+      round-`(r − 1)` SG block of some honest active attester of round `r − 1`. -/
   gradedUnderPrevSG : ∀ n_prev : Nat, Restated.tickStepAt M x n_prev ((Restated.Vocabulary.Execution.Setup.a M S (r - 1))) →
-    ∀ v ∈ Restated.HonRound M S Sched r, ∀ p : Protocol.Phase,
+    ∀ v ∈ Restated.HonRound M S Sched r, ∀ p : Protocol.Phase, p ≠ Protocol.Phase.g1 →
       M.domain S.E S.hc r p ≤ (Restated.Vocabulary.Execution.Setup.a M S r) →
       ∀ m : Nat, Restated.stepBeforeInstant M x m (M.domain S.E S.hc r p) →
       ∀ B : Block V, ∀ b : Bool,
@@ -69,6 +70,12 @@ structure AfterPhaseInvariantOverActiveSetsJoint (M : Record.Model V) (S : Setup
         (⟨v_1, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n_prev + 1].sent ∧
         ∃ C : NamedBlock V, C ∈ (x[n_prev + 1][v_1].st).st.bodies ∧ a.confirmed = some C.root ∧
           Block.Preceq B C.erase
+  /-- At every round-`(r − 1)` tick step, every block a grade-1 performer of round `r` grades at
+      least 1 for round `r` at the grade-1 phase is an ancestor of the round-`(r − 1)` SG block of
+      some honest active attester of round `r − 1`. -/
+  gradedUnderPrevSGPerformers : ∀ n_prev : Nat,
+    Restated.tickStepAt M x n_prev ((Restated.Vocabulary.Execution.Setup.a M S (r - 1))) →
+    Restated.GradedUnderPrevSGOverPerformers M S Sched x r n_prev
 
 end
 

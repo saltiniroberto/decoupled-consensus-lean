@@ -210,7 +210,6 @@ private theorem mem_sent_diff_of_tick_of_state (facts : Record.Facts M) (S : Set
     {o : NamedObject V}
     (hl : x.lbl k = AtomicAction.tickAllAwake t)
     (haw : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int))
-    (hdvd : (t : Int) % S.E.Δ = 0)
     {out : M.N × List (NamedObject V)}
     (hout : M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (t : Int) x[k] v) (t : Int) ⇢ out)
     (hst : x[k + 1][v].st = out.1) (ho : o ∈ out.2) :
@@ -228,7 +227,7 @@ private theorem mem_sent_diff_of_tick_of_state (facts : Record.Facts M) (S : Set
         tk v = { state := (w v).state, send := 0 }) := htick v haw
   have hsend : (tk v).send = (out.2 : Multiset (NamedObject V)) := by
     rcases htk with htk | ⟨hempty, -⟩
-    · simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq] at htk
+    · simp only [Record.reactionsOf, Set.mem_setOf_eq] at htk
       obtain ⟨out', hout', htkv⟩ := htk
       rw [hwst] at hout'
       rw [htkv] at hx1 ⊢
@@ -242,7 +241,7 @@ private theorem mem_sent_diff_of_tick_of_state (facts : Record.Facts M) (S : Set
       have h' : ({ state := out.1, send := (out.2 : Multiset (NamedObject V)) } :
           NodeStepResult M.N (NamedObject V)) ∈
           Record.reactionsOf M S v ((w v).state) (t : Int) .tick := by
-        simp only [Record.reactionsOf, if_pos hdvd, Set.mem_setOf_eq]
+        simp only [Record.reactionsOf, Set.mem_setOf_eq]
         exact ⟨out, by rw [hwst]; exact hout, rfl⟩
       rw [hempty] at h'
       exact h'
@@ -287,10 +286,10 @@ theorem honestSendAt_of_processesAtIndex (facts : Record.Facts M) (S : Setup V) 
     have ha' : Restated.runAllPath M S Sched x v n (i + 1) v₀ = x[k + 1][v₀].st := ha
     have hmem' : (Record.Event.tick v₀ t₀ : Record.Event V)
         ∈ Record.actionEventsOf M S Sched v₀ (x[k].time : Int) (x.lbl k) := hmem
-    obtain ⟨τ, hl, hτ, haw, hdvd⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem'
+    obtain ⟨τ, hl, hτ, haw⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem'
     rw [hb', ← htt, ← hτ] at hout
     rw [ha'] at hW1
-    refine ⟨k, hk, ⟨mem_sent_diff_of_tick_of_state facts S Sched x hl haw hdvd hout hW1 hem, ?_⟩,
+    refine ⟨k, hk, ⟨mem_sent_diff_of_tick_of_state facts S Sched x hl haw hout hW1 hem, ?_⟩,
       _, he, hmem'⟩
     intro hadv
     have hle : (x[k].time : Int) ≤ (τ : Int) := by
@@ -449,11 +448,11 @@ theorem proposal_time_le_of_acceptsAt_block (facts : Record.Facts M) (S : Setup 
       have h := hunf.unforgeable k sm w hsm (by rw [hmsg]; exact hauth)
         (fun t' ht' => hwt t' (le_trans ht' hkn))
       rwa [hmsg] at h
-    obtain ⟨k', hk', τ, hl', haw', hdvd', out', hout', hem'⟩ :=
+    obtain ⟨k', hk', τ, hl', haw', out', hout', hem'⟩ :=
       Restated.tick_of_honest_signed_upTo facts S Sched x w (NamedObject.block B) (x[n].time : Int) hwt hunf
         hauth k hkn hsent
     obtain ⟨W', hW', hemits⟩ := Restated.emits_runAll_of_tick facts S Sched x v (Nat.lt_trans hk' hk)
-      hl' haw' hdvd' hout' hem'
+      hl' haw' hout' hem'
     obtain ⟨-, hτ, -⟩ := Restated.Vocabulary.Proofs.HealingSurface.emits_block_shape facts (Setup.alwaysAwake S)
       (Restated.runAll M S Sched x v n) W' hW' hemits
     have hτk : (τ : Int) ≤ (x[k].time : Int) := by

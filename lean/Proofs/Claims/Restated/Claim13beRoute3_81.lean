@@ -168,17 +168,17 @@ theorem targetsSince_at_switchRound (facts : Record.Facts M)
   obtain ⟨-, -, hloOpen, -⟩ := Restated.roundAt_bounds_l71 facts S hgst
   have hlo := hreg.lo_le_opening_l71 facts hf hloOpen
   have hTlog : Restated.blockInLog M S Sched x T := Restated.inPlay_at_switchRound_of_regime facts S Sched x v hmono hreg
-  obtain ⟨k, hkn', τ, hlbl, haw, hdvd, out, hout, hst, hmemout⟩ :=
+  obtain ⟨k, hkn', τ, hlbl, haw, out, hout, hst, hmemout⟩ :=
     Restated.tick_of_honest_signed_upTo_taken facts S Sched x b.val_index (NamedObject.attest b)
       (x[n'].time : Int) hv' hvalid.toUnforgeability (by rw [author_attest]) n' le_rfl hsent
   have hkN : k < N := by omega
   have hsentk : (⟨b.val_index, NamedObject.attest b⟩ : SignedMsg V (NamedObject V)) ∈ x[k + 1].sent :=
-    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd
+    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw
       (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) b.val_index _ (τ : Int)) hout hst hmemout
   have hP : Restated.Vocabulary.Execution.NamedRun.OnePath M (Setup.alwaysAwake S)
       ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
       (Restated.runAllPath M S Sched x v N) := Restated.OnePath_runAllPath facts S Sched x v N
-  have hemit := Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hdvd hout hst
+  have hemit := Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hout hst
     hmemout
   obtain ⟨-, hτ0⟩ := Restated.Vocabulary.Proofs.Optimistic.emits_attest_shape facts (Setup.alwaysAwake S)
     _ hP hemit

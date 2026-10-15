@@ -714,7 +714,7 @@ theorem adoptionBackward_afterPhase (facts : Record.Facts M) (S : Setup V) (Sche
     have hi1 : (x[i + 1].time : Int) ≤ (x[mr].time : Int) :=
       Restated.time_mono_int facts S Sched x (Nat.succ_le_of_lt him)
     rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-      ⟨m, hl, -, -, hpay⟩ | ⟨τ, hl, -, -, hem⟩
+      ⟨m, hl, -, -, hpay⟩ | ⟨τ, hl, -, hem⟩
     · rcases hpay with hmsg | ⟨B, -, hcc⟩
       · have ho : NamedObject.gfVote u ∈ relayedObjects m.msg := by
           rw [hmsg, mem_relayedObjects_iff]

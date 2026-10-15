@@ -52,8 +52,11 @@ theorem honRound_awakeThroughout_confirmation (facts : Record.Facts M) (S : Setu
     v ∈ Sched.awakeThroughout
       (slotStart S.E.Δ ((M.opening_slot S.hc r)) - S.E.Δ)
       (M.confirmation_time S.E ((M.opening_slot S.hc r))) := by
-  have hact : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S r) - wAttest S) ((Restated.Vocabulary.Execution.Setup.a M S r)) :=
-    (Finset.mem_sdiff.1 hv).1
+  have hact : v ∈ Sched.awakeThroughout ((Restated.Vocabulary.Execution.Setup.a M S r) - 12 * S.E.Δ) ((Restated.Vocabulary.Execution.Setup.a M S r)) := by
+    have he := facts.gr.early_g2_eq S r
+    refine awakeThroughout_mono Sched (Finset.mem_sdiff.1 hv).1 ?_ le_rfl
+    show M.a S.hc S.E.Δ r - 12 * S.E.Δ ≥ M.early S.E S.hc r .g2 - S.E.Δ
+    linarith
   have hd : (0 : Int) < S.E.Δ := S.E.Δ_pos
   have hw : 12 * S.E.Δ ≤ wAttest S := twelve_delta_le_wAttest S
   have hconf : M.confirmation_time S.E ((M.opening_slot S.hc r)) = (Restated.Vocabulary.Execution.Setup.a M S r) :=

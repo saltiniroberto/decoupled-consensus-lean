@@ -159,8 +159,6 @@ theorem claimConfirmedAfterHealing_holds_at (facts : Record.Facts M) (S : Setup 
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -237,7 +235,7 @@ theorem claimConfirmedAfterHealing_holds_at (facts : Record.Facts M) (S : Setup 
   have hwin' : tGAT + 8 * (S.hc.R : Int) * S.E.Δ ≤ tE' := le_trans hwin8 (le_of_lt h12)
   have hsettle : Restated.RecordsSettledAtSettleTick M S Sched x tE' :=
     Restated.recordsSettledAtSettleTick_atStrongRound facts S Sched x tGAT tE gap hgap hgst hmono hexec hsync
-      hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
+      hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
       hopening hprev1
   have hthird' := third_of_later S Sched tE tE' htE' hthird
   have hawake' := awake_of_later Sched tGAT tE tE' htE' hawake
@@ -246,7 +244,7 @@ theorem claimConfirmedAfterHealing_holds_at (facts : Record.Facts M) (S : Setup 
   have hrs' := Restated.roundSleepinessW_of_later facts S Sched tGAT tE tE' hmono hawake hwin' hrs
   have hcs' := Restated.committeeSleepinessW_of_later facts S Sched tGAT tE tE' hmono hawake hcom hwin' hcs
   obtain ⟨hA, hM⟩ := Restated.claimConfirmedAfterHealing_conclusion_of_settleTick facts S Sched x tGAT tE' gap
-    hgap hlen' hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird' hawake'
+    hgap hlen' hgst hmono hexec hsync hmult hcatch hcv htd hcom hthird' hawake'
     hrec' hsl' hrs' hcs' hsettle
   have hmonoS := Restated.confirmedSettleTime_mono facts S htE'
   exact ⟨Restated.confirmedAgreeAfterHealing_of_earlier facts S Sched x hmonoS hA,
@@ -268,10 +266,10 @@ theorem claimConfirmedAfterHealing_holds (facts : Record.Facts M) (S : Setup V) 
   · have : (0 : Int) ≤ ((gap : Int) + 2) * (Restated.constants M S).period :=
       mul_nonneg (by positivity) (le_of_lt hper0)
     linarith
-  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird
+  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird
     hawake hrec hsl hrs hcs =>
     Restated.claimConfirmedAfterHealing_holds_at facts S Sched gap hgap x tGAT tE hlen hgst hmono
-      hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake hrec hsl hrs hcs
+      hexec hsync hmult hcatch htd hcom hthird hawake hrec hsl hrs hcs
 
 end
 

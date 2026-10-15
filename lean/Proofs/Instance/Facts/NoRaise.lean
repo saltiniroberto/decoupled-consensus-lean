@@ -2,11 +2,12 @@ import Proofs.Instance.Model
 import Proofs.Instance.NoRaise.Tick
 import Model.Record.Wiring
 import Model.Record.NodeFacts
+import Model.Record.NodeFactsWake
 
 /-!
-# The run facts of the no-raise invariant at `Model.specDraft`
+# The run facts of the no-raise invariant at `Model.spec`
 
-Proofs of five fields of `NodeRunFacts` at the model `Model.specDraft`: `tick_outcome_sts`,
+Proofs of five fields of `NodeRunFacts` at the model `Model.spec`: `tick_outcome_sts`,
 `run_fact_g1_at`, `run_fact_g2_at`, `tick_emits_proposal_inclX` and `stateBeforeOf_runs_as`. They
 rest on two invariants of an execution: a validator not held by the adversary and awake throughout
 `[w, now]` records a wake time at or before `w` (`inv_awake`); and, when honest proposers hold no
@@ -17,7 +18,7 @@ by less than one delay (`inv_due`).
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 open Spec Spec.Protocol
 open DC (DRE)
@@ -65,7 +66,7 @@ private theorem storeOk_propose_block {C : Config} {P : Provisional V} {X : Exte
     have h2 : (Except.ok (on_block C P st B, l ++ [NamedObject.block B]) :
         DRE (Store V × List (NamedObject V))) = Except.ok out := h
     cases h2
-    refine SpecDraftRecord.OkStore.on_block C P hok ?_
+    refine SpecRecord.OkStore.on_block C P hok ?_
     rintro ⟨B', hB', -, hr⟩
     exact hroot B' hB' (hr.trans (build_proposal_root hb))
 
@@ -88,7 +89,7 @@ private theorem storeOk_goldfish_vote {C : Config} {P : Provisional V} {v : V} {
     obtain ⟨_, _, -, h⟩ := h
     rw [DREB.pure_run_ok_iff] at h
     subst h
-    exact SpecDraftRecord.OkStore.on_goldfish_vote_checked P hok _
+    exact SpecRecord.OkStore.on_goldfish_vote_checked P hok _
   · rw [DREB.pure_run_ok_iff] at h
     subst h
     exact hok
@@ -106,7 +107,7 @@ private theorem storeOk_attest {C : Config} {v : V} {st : Store V} {sh : Signing
     have h2 : (Except.ok ((admit_attestation C st p.2, p.1), l ++ [NamedObject.attest p.2]) :
         DRE ((Store V × SigningHistory) × List (NamedObject V))) = Except.ok out := h
     cases h2
-    exact SpecDraftRecord.OkStore.admit_attestation C hok p.2
+    exact SpecRecord.OkStore.admit_attestation C hok p.2
 
 /-- The tick keeps `StoreOk` when its proposal, if it runs, gives a root that no block of the tree
     has. -/
@@ -331,24 +332,24 @@ private theorem initial_fields (C : Config) (v : V) :
       (initial C v).awakeSince = some (grade2_window_start C 0) :=
   ⟨rfl, rfl, rfl⟩
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise
 
-namespace SpecDraftRecord.NodeRunFacts
+namespace SpecRecord.NodeRunFacts
 
 open DecoupledConsensusModel.Execution DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-! ## The members of `Model.specDraft` the run facts read, unfolded -/
+/-! ## The members of `Model.spec` the run facts read, unfolded -/
 
-/-- The tick of `Model.specDraft` can return `out` exactly when the spec's tick answers with the
+/-- The tick of `Model.spec` can return `out` exactly when the spec's tick answers with the
     value of `out`'s node state and objects whose images are `out`'s. -/
-private theorem tick_returns (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Int)
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V)) :
-    (Model.specDraft (V := V)).tick S v n t ⇢ out ↔
+private theorem tick_returns (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Int)
+    (out : (Model.spec (V := V)).N × List (NamedObject V)) :
+    (Model.spec (V := V)).tick S v n t ⇢ out ↔
       ∃ sent, (Spec.tick (Setup.toSpec S).C (Setup.toSpec S).P (Setup.toSpec S).X
           n.val t).run [] = .ok (out.1.val, sent) ∧
         out.2 = sent.map Spec.NamedObject.toProof := by
@@ -371,30 +372,30 @@ private theorem tick_returns (S : Setup V) (v : V) (n : (Model.specDraft (V := V
 
 /-- An answer of the spec's tick whose store meets `StoreOk` gives an outcome of the instance's
     tick. -/
-private theorem tick_exists (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N) (t : Int)
+private theorem tick_exists (S : Setup V) (v : V) (n : (Model.spec (V := V)).N) (t : Int)
     {n' : Spec.NodeState V} {sent : List (Spec.NamedObject V)}
     (h : (Spec.tick (Setup.toSpec S).C (Setup.toSpec S).P (Setup.toSpec S).X
       n.val t).run [] = .ok (n', sent)) (hok : StoreOk n'.st) :
-    ∃ out, (Model.specDraft (V := V)).tick S v n t ⇢ out :=
+    ∃ out, (Model.spec (V := V)).tick S v n t ⇢ out :=
   ⟨(⟨n', hok⟩, sent.map Spec.NamedObject.toProof),
     (tick_returns S v n t _).2 ⟨sent, h, rfl⟩⟩
 
-/-- The receipt of `o` by `Model.specDraft` can return `n'` exactly when `n'`'s value is
+/-- The receipt of `o` by `Model.spec` can return `n'` exactly when `n'`'s value is
     `receiveNamedObject S n.val o`. -/
-private theorem process_returns (S : Setup V) (n : (Model.specDraft (V := V)).N)
-    (o : NamedObject V) (n' : (Model.specDraft (V := V)).N) :
-    (Model.specDraft (V := V)).process S n o ⇢ n' ↔ n'.val = receiveNamedObject S n.val o := by
+private theorem process_returns (S : Setup V) (n : (Model.spec (V := V)).N)
+    (o : NamedObject V) (n' : (Model.spec (V := V)).N) :
+    (Model.spec (V := V)).process S n o ⇢ n' ↔ n'.val = receiveNamedObject S n.val o := by
   show Returns (pure (receiveNamedObject S n.val o)) n'.val ↔ _
   exact returns_pure _ _
 
 /-- The node state the tick stage of a `tickAllAwake t` step reads is the wake of the node state
     before the step, for a validator entering the awake set at `t`, and that node state otherwise. -/
 private theorem wakeStage_cases (Sched : Framework.StsMultisetLog.Schedule V) (t : Int)
-    (c : Framework.StsMultisetLog.Config V (NamedObject V) (Model.specDraft (V := V)).N) (v : V) :
+    (c : Framework.StsMultisetLog.Config V (NamedObject V) (Model.spec (V := V)).N) (v : V) :
     (v ∈ (Sched.awake t \ Sched.adv t) \ Sched.awake (t - 1) ∧
-        (wakeStage (Model.specDraft (V := V)) Sched t c v).val = Spec.wake c[v].st.val) ∨
+        (wakeStage (Model.spec (V := V)) Sched t c v).val = Spec.wake c[v].st.val) ∨
       (v ∉ (Sched.awake t \ Sched.adv t) \ Sched.awake (t - 1) ∧
-        wakeStage (Model.specDraft (V := V)) Sched t c v = c[v].st) := by
+        wakeStage (Model.spec (V := V)) Sched t c v = c[v].st) := by
   unfold wakeStage
   split_ifs with h
   · exact Or.inl ⟨h, rfl⟩
@@ -405,32 +406,31 @@ private theorem wakeStage_cases (Sched : Framework.StsMultisetLog.Schedule V) (t
 /-- What step `k` of an execution does to `v`'s node state, with the time before and after it. A
     `tickAllAwake τ` step moves the time from `τ − 1` to `τ`; a validator awake at `τ` and not held
     by the adversary there holds, after it, an outcome of the instance's tick at `τ` on the node
-    state its tick stage reads, or, when `τ` is not a multiple of `Δ` or that tick has no outcome,
-    that node state itself; any other validator keeps its node state. Every other step keeps the
+    state its tick stage reads, or, when that tick has no outcome, that node state itself; any other
+    validator keeps its node state. Every other step keeps the
     time, and leaves the validator's node state unchanged or replaces it by an outcome of the
     instance's receipt of an object. -/
 private theorem step_shape (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k : Nat) (v : V) :
     (∃ τ : Nat, x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ ∧
       x[k].time + 1 = τ ∧ x[k + 1].time = τ ∧
       ((v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧
-        (((τ : Int) % S.E.Δ = 0 ∧ ∃ out : (Model.specDraft (V := V)).N × List (NamedObject V),
-            (Model.specDraft (V := V)).tick (Setup.alwaysAwake S) v
-              (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out ∧
+        ((∃ out : (Model.spec (V := V)).N × List (NamedObject V),
+            (Model.spec (V := V)).tick (Setup.alwaysAwake S) v
+              (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out ∧
             x[k + 1][v].st = out.1) ∨
-          ((¬ (τ : Int) % S.E.Δ = 0 ∨
-              ∀ out : (Model.specDraft (V := V)).N × List (NamedObject V),
-                ¬ (Model.specDraft (V := V)).tick (Setup.alwaysAwake S) v
-                  (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out) ∧
-            x[k + 1][v].st = wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v))) ∨
+          ((∀ out : (Model.spec (V := V)).N × List (NamedObject V),
+                ¬ (Model.spec (V := V)).tick (Setup.alwaysAwake S) v
+                  (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out) ∧
+            x[k + 1][v].st = wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v))) ∨
         (v ∉ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧ x[k + 1][v].st = x[k][v].st))) ∨
     (x[k + 1].time = x[k].time ∧
       (x[k + 1][v].st = x[k][v].st ∨
         ∃ o : NamedObject V,
-          (Model.specDraft (V := V)).process (Setup.alwaysAwake S) x[k][v].st o ⇢
+          (Model.spec (V := V)).process (Setup.alwaysAwake S) x[k][v].st o ⇢
             x[k + 1][v].st)) := by
-  have hs : Framework.StsMultisetLog.AtomicStep (protocolOf (Model.specDraft (V := V)) S) Sched
+  have hs : Framework.StsMultisetLog.AtomicStep (protocolOf (Model.spec (V := V)) S) Sched
       (x.lbl k) x[k] x[k + 1] := x.step k
   cases hl : x.lbl k with
   | tickAllAwake t =>
@@ -443,12 +443,12 @@ private theorem step_shape (S : Setup V) (Sched : Framework.StsMultisetLog.Sched
     · have hx1 : x[k + 1][v].st = (tk v).state := by
         rw [h2, Framework.StsMultisetLog.tickAllAwakeUpdate_getElem_awake
           (Finset.mem_sdiff.1 hv).1 (Finset.mem_sdiff.1 hv).2]
-      have hw := wakeStage_of_TickAllAwakeWake (Model.specDraft (V := V)) S Sched (hwake v)
-      have htk := protocolOf_step_tick (Model.specDraft (V := V)) S (htick v hv)
+      have hw := wakeStage_of_TickAllAwakeWake (Model.spec (V := V)) S Sched (hwake v)
+      have htk := protocolOf_step_tick (Model.spec (V := V)) S (htick v hv)
       rw [hw] at htk
       refine Or.inl ⟨hv, ?_⟩
-      rcases htk with ⟨hm, out, hout, hst⟩ | ⟨hno, hst⟩
-      · exact Or.inl ⟨hm, out, hout, by rw [hx1, hst]⟩
+      rcases htk with ⟨out, hout, hst⟩ | ⟨hno, hst⟩
+      · exact Or.inl ⟨out, hout, by rw [hx1, hst]⟩
       · exact Or.inr ⟨hno, by rw [hx1, hst]⟩
     · refine Or.inr ⟨hv, ?_⟩
       rw [h2]
@@ -462,19 +462,19 @@ private theorem step_shape (S : Setup V) (Sched : Framework.StsMultisetLog.Sched
     refine Or.inr ⟨ht, ?_⟩
     by_cases hp : p = v
     · subst hp
-      rcases st_succ_of_deliver (Model.specDraft (V := V)) S Sched x hl with h | ⟨-, h⟩
+      rcases st_succ_of_deliver (Model.spec (V := V)) S Sched x hl with h | ⟨-, h⟩
       · exact Or.inr ⟨m.msg, h⟩
       · exact Or.inl h
-    · exact Or.inl (by rw [getElem_succ_of_deliver_ne (Model.specDraft (V := V)) S Sched x hl hp])
+    · exact Or.inl (by rw [getElem_succ_of_deliver_ne (Model.spec (V := V)) S Sched x hl hp])
   | custom _ ev => exact ev.elim
   | adversarial p m =>
     refine Or.inr ⟨?_, Or.inl (by
-      rw [getElem_succ_of_adversarial (Model.specDraft (V := V)) S Sched x hl])⟩
+      rw [getElem_succ_of_adversarial (Model.spec (V := V)) S Sched x hl])⟩
     rw [hl] at hs
     rw [hs.2]
   | forward p m =>
     refine Or.inr ⟨?_, Or.inl (by
-      rw [getElem_succ_of_forward (Model.specDraft (V := V)) S Sched x hl])⟩
+      rw [getElem_succ_of_forward (Model.spec (V := V)) S Sched x hl])⟩
     rw [hl] at hs
     rw [hs.2]
 
@@ -482,12 +482,12 @@ private theorem step_shape (S : Setup V) (Sched : Framework.StsMultisetLog.Sched
     there, the node state its tick stage reads runs as the validator its node state runs as, has its
     store, and either has `awakeSince = none` or is its node state, `v` being awake at `τ − 1`. -/
 private theorem wakeStage_facts (Sched : Framework.StsMultisetLog.Schedule V) (τ : Int)
-    (c : Framework.StsMultisetLog.Config V (NamedObject V) (Model.specDraft (V := V)).N) (v : V)
+    (c : Framework.StsMultisetLog.Config V (NamedObject V) (Model.spec (V := V)).N) (v : V)
     (hv : v ∈ Sched.awake τ \ Sched.adv τ) :
-    (wakeStage (Model.specDraft (V := V)) Sched τ c v).val.v = c[v].st.val.v ∧
-      (wakeStage (Model.specDraft (V := V)) Sched τ c v).val.st = c[v].st.val.st ∧
-      ((wakeStage (Model.specDraft (V := V)) Sched τ c v).val.awakeSince = none ∨
-        (wakeStage (Model.specDraft (V := V)) Sched τ c v = c[v].st ∧
+    (wakeStage (Model.spec (V := V)) Sched τ c v).val.v = c[v].st.val.v ∧
+      (wakeStage (Model.spec (V := V)) Sched τ c v).val.st = c[v].st.val.st ∧
+      ((wakeStage (Model.spec (V := V)) Sched τ c v).val.awakeSince = none ∨
+        (wakeStage (Model.spec (V := V)) Sched τ c v = c[v].st ∧
           v ∈ Sched.awake (τ - 1))) := by
   rcases wakeStage_cases Sched τ c v with ⟨-, h⟩ | ⟨hn, h⟩
   · rw [h]
@@ -517,9 +517,9 @@ private theorem grade2_window_start_zero_le (C : Spec.Config) :
 
 /-- The instance's tick on a node state with `awakeSince = none` has an outcome at every
     non-negative time. -/
-private theorem tick_exists_of_none (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
+private theorem tick_exists_of_none (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
     (t : Int) (hn : n.val.awakeSince = none) (ht : 0 ≤ t) :
-    ∃ out, (Model.specDraft (V := V)).tick S v n t ⇢ out := by
+    ∃ out, (Model.spec (V := V)).tick S v n t ⇢ out := by
   obtain ⟨⟨n', sent⟩, h⟩ := tick_ok_of_none (Setup.toSpec S).C (Setup.toSpec S).P
     (Setup.toSpec S).X n.val t n.property.2.1 n.property.1 hn ht
   refine tick_exists S v n t h (storeOk_tick (out := (n', sent)) h n.property ?_)
@@ -535,7 +535,7 @@ private theorem tick_exists_of_none (S : Setup V) (v : V) (n : (Model.specDraft 
     current time, `w` being a multiple of `Δ` at or after round `0`'s grade-2 window start, `v`'s
     node state records a wake time at or before `w`. -/
 private def AwakeWin (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k : Nat) (v : V) : Prop :=
   ∀ w : Int, Spec.grade2_window_start (Setup.toSpec S).C 0 ≤ w → w % S.E.Δ = 0 →
     w ≤ (x[k].time : Int) →
@@ -546,7 +546,7 @@ private def AwakeWin (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
     no wake time after the current time, and, for a validator not held by the adversary up to the
     current time, `AwakeWin` holds. -/
 private theorem inv_awake (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k : Nat) (v : V) :
     (x[k][v].st.val).v = v ∧
       (∀ a : Int, (x[k][v].st.val).awakeSince = some a → a ≤ (x[k].time : Int)) ∧
@@ -576,27 +576,24 @@ private theorem inv_awake (S : Setup V) (Sched : Framework.StsMultisetLog.Schedu
       · obtain ⟨hnv, -, hns⟩ := wakeStage_facts Sched (τ : Int) x[k] v hv
         have key : (x[k + 1][v].st.val).v = v ∧
             ((x[k + 1][v].st.val).awakeSince =
-                (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v).val.awakeSince ∨
+                (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val.awakeSince ∨
               (x[k + 1][v].st.val).awakeSince = (Spec.record_awake
-                (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v).val τ).awakeSince) ∧
-            ((wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v).val.awakeSince = none →
-              (τ : Int) % S.E.Δ = 0 →
+                (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val τ).awakeSince) ∧
+            ((wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val.awakeSince = none →
               (x[k + 1][v].st.val).awakeSince = some (τ : Int)) := by
-          rcases hres with ⟨-, out, hout, hst⟩ | ⟨hno, hst⟩
+          rcases hres with ⟨out, hout, hst⟩ | ⟨hno, hst⟩
           · obtain ⟨sent, hrun, -⟩ := (tick_returns _ _ _ _ _).1 hout
             obtain ⟨-, -, -, -, -, haw, hv'⟩ := tick_outcome hrun
             rw [hst]
-            refine ⟨hv'.trans (hnv.trans ih1), Or.inr haw, fun hn _ => ?_⟩
+            refine ⟨hv'.trans (hnv.trans ih1), Or.inr haw, fun hn => ?_⟩
             rw [haw]
             exact record_awake_of_none hn
           · rw [hst]
-            refine ⟨hnv.trans ih1, Or.inl rfl, fun hn hm => ?_⟩
+            refine ⟨hnv.trans ih1, Or.inl rfl, fun hn => ?_⟩
             exfalso
             obtain ⟨out, hout⟩ := tick_exists_of_none (Setup.alwaysAwake S) v _ (τ : Int) hn
               (Int.natCast_nonneg _)
-            rcases hno with hno | hno
-            · exact hno hm
-            · exact hno out hout
+            exact hno out hout
         obtain ⟨k1, k2, k3⟩ := key
         refine ⟨k1, ?_, ?_⟩
         · intro a ha
@@ -626,10 +623,10 @@ private theorem inv_awake (S : Setup V) (Sched : Framework.StsMultisetLog.Schedu
               · exact ⟨a, by rw [k2, heq, record_awake_of_some ha], hle⟩
           · have hwτ' : w = (τ : Int) := by linarith
             rcases hns with hn | ⟨heq, -⟩
-            · refine ⟨(τ : Int), k3 hn (hwτ' ▸ hwm), by rw [hwτ']⟩
+            · refine ⟨(τ : Int), k3 hn, by rw [hwτ']⟩
             · rcases record_awake_cases (x[k][v].st.val) (τ : Int) with ⟨hn, -⟩ | ⟨b, hb, h⟩
               · rw [← heq] at hn
-                refine ⟨(τ : Int), k3 hn (hwτ' ▸ hwm), by rw [hwτ']⟩
+                refine ⟨(τ : Int), k3 hn, by rw [hwτ']⟩
               · have := ih2 _ hb
                 rcases k2 with k2 | k2
                 · exact ⟨b, by rw [k2, heq, hb], by linarith⟩
@@ -657,48 +654,47 @@ private theorem inv_awake (S : Setup V) (Sched : Framework.StsMultisetLog.Schedu
         exact ⟨a, e2.trans ha, hle⟩
 
 /-- After `k` steps of the execution `x`, `v` is asleep at the current time, or its node state has
-    run no tick since its last wake (`awakeSince = none`), or its store's clock is at or before the
-    current time and less than one delay `Δ` before it. -/
+    run no tick since its last wake (`awakeSince = none`), or its store's clock is the current
+    time. -/
 private def Consec (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k : Nat) (v : V) : Prop :=
   v ∉ Sched.awake (x[k].time : Int) ∨ (x[k][v].st.val).awakeSince = none ∨
-    ((x[k][v].st.val).st.t ≤ (x[k].time : Int) ∧
-      (x[k].time : Int) < (x[k][v].st.val).st.t + S.E.Δ)
+    (x[k][v].st.val).st.t = (x[k].time : Int)
 
 /-- At the tick step at a slot's proposal time, the slot's proposer, if honest up to that time,
     holds no block whose root is the root it gives its proposal. -/
 private def RootsNew (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched) :
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched) :
     Prop :=
   ∀ (k τ : Nat) (s : DecoupledConsensusModel.Slot),
     x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
-    (τ : Int) = (Model.specDraft (V := V)).proposal_time S.E s →
+    (τ : Int) = (Model.spec (V := V)).proposal_time S.E s →
     (∀ t' ≤ (τ : Int), S.E.proposer s ∉ Sched.adv t') →
     ∀ B ∈ x[k][S.E.proposer s].st.st.bodies, B.root ≠ (S.node (S.E.proposer s)).new_root s
 
-/-- Under `RootsNew`, at a tick step `k` at a multiple `τ` of `Δ`, a validator awake at `τ` and
+/-- Under `RootsNew`, at a tick step `k` at time `τ`, a validator awake at `τ` and
     honest up to `τ`, whose node state has its grades due and meets `Consec`, has an outcome of the
     instance's tick on the node state its tick stage reads; that outcome has its grades due and its
     clock at `τ`. -/
 private theorem outcome_of_due (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (hnew : RootsNew S Sched x) (k τ : Nat) (v : V)
     (hl : x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ)
-    (hmod : (τ : Int) % S.E.Δ = 0) (hv : v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int))
+    (hv : v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int))
     (hhon : ∀ t' ≤ (τ : Int), v ∉ Sched.adv t') (hv1 : (x[k][v].st.val).v = v)
     (hdue : GradesDue (Setup.toSpec S).C (x[k][v].st.val)) (hcons : Consec S Sched x k v) :
-    ∃ out : (Model.specDraft (V := V)).N × List (NamedObject V),
-      (Model.specDraft (V := V)).tick (Setup.alwaysAwake S) v
-        (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out ∧
+    ∃ out : (Model.spec (V := V)).N × List (NamedObject V),
+      (Model.spec (V := V)).tick (Setup.alwaysAwake S) v
+        (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out ∧
       GradesDue (Setup.toSpec S).C out.1.val ∧ out.1.val.st.t = (τ : Int) := by
-  have hT : x[k].time + 1 = τ := (tickAllAwake_time (Model.specDraft (V := V)) S Sched x hl).1
+  have hT : x[k].time + 1 = τ := (tickAllAwake_time (Model.spec (V := V)) S Sched x hl).1
   have hTi : (x[k].time : Int) + 1 = (τ : Int) := by exact_mod_cast hT
   have hΔ := (Setup.toSpec S).C.Δ_pos
   obtain ⟨hnv, hnst, -⟩ := wakeStage_facts Sched (τ : Int) x[k] v hv
-  set ns := wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v with hns
+  set ns := wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v with hns
   have hdue' : GradesDue (Setup.toSpec S).C ns.val ∧
-      (ns.val.awakeSince = none ∨ (τ : Int) = ns.val.st.t + S.E.Δ) := by
+      (ns.val.awakeSince = none ∨ (τ : Int) = ns.val.st.t + 1) := by
     rcases wakeStage_cases Sched (τ : Int) x[k] v with ⟨-, h⟩ | ⟨hne, h⟩
     · rw [hns, h]
       exact ⟨gradesDue_wake hdue, Or.inl rfl⟩
@@ -709,21 +705,16 @@ private theorem outcome_of_due (S : Setup V) (Sched : Framework.StsMultisetLog.S
         rw [this]
         by_contra ha
         exact hne (Finset.mem_sdiff.2 ⟨hv, ha⟩)
-      rcases hcons with hc | hc | ⟨hc1, hc2⟩
+      rcases hcons with hc | hc | hc
       · exact absurd haw hc
       · exact Or.inl hc
       · refine Or.inr ?_
-        have hd1 : (Setup.toSpec S).C.Δ ∣ (x[k][v].st.val).st.t + (Setup.toSpec S).C.Δ :=
-          Int.dvd_add (Int.dvd_of_emod_eq_zero hdue.1) (Int.dvd_refl _)
-        have hd2 : (Setup.toSpec S).C.Δ ∣ (τ : Int) := Int.dvd_of_emod_eq_zero hmod
-        have := eq_of_dvd_of_window (Setup.toSpec S).C hd2 hd1
-          (by show (x[k][v].st.val).st.t + S.E.Δ - S.E.Δ < (τ : Int); linarith)
-          (by show (τ : Int) ≤ (x[k][v].st.val).st.t + S.E.Δ; linarith)
-        exact this.symm
+        rw [hc]
+        exact hTi.symm
   obtain ⟨hdue1, hcons1⟩ := hdue'
   obtain ⟨out0, hrun, -, hdue0⟩ := tick_ok (Setup.toSpec (Setup.alwaysAwake S)).C
     (Setup.toSpec (Setup.alwaysAwake S)).P (Setup.toSpec (Setup.alwaysAwake S)).X ns.val
-    (τ : Int) ns.property.2.1 ns.property.1 hdue1 hcons1 (Int.natCast_nonneg _) hmod
+    (τ : Int) ns.property.2.1 ns.property.1 hdue1 hcons1 (Int.natCast_nonneg _)
   have hok : StoreOk out0.1.st := by
     refine storeOk_tick hrun ns.property ?_
     intro _ hc B hB hroot
@@ -746,10 +737,10 @@ private theorem outcome_of_due (S : Setup V) (Sched : Framework.StsMultisetLog.S
     (tick_returns _ _ _ _ _).2 ⟨sent, hrun, rfl⟩, hdue0, tick_clock hrun⟩
 
 /-- Two outcomes of the instance's tick from one node state at one time have the same node state. -/
-private theorem tick_outcome_unique (S : Setup V) (v : V) (n : (Model.specDraft (V := V)).N)
-    (t : Int) {out out' : (Model.specDraft (V := V)).N × List (NamedObject V)}
-    (h : (Model.specDraft (V := V)).tick S v n t ⇢ out)
-    (h' : (Model.specDraft (V := V)).tick S v n t ⇢ out') : out'.1 = out.1 := by
+private theorem tick_outcome_unique (S : Setup V) (v : V) (n : (Model.spec (V := V)).N)
+    (t : Int) {out out' : (Model.spec (V := V)).N × List (NamedObject V)}
+    (h : (Model.spec (V := V)).tick S v n t ⇢ out)
+    (h' : (Model.spec (V := V)).tick S v n t ⇢ out') : out'.1 = out.1 := by
   obtain ⟨sent, hr, -⟩ := (tick_returns _ _ _ _ _).1 h
   obtain ⟨sent', hr', -⟩ := (tick_returns _ _ _ _ _).1 h'
   rw [hr] at hr'
@@ -759,7 +750,7 @@ private theorem tick_outcome_unique (S : Setup V) (v : V) (n : (Model.specDraft 
 /-- Under `RootsNew`, after every number `k` of steps, every validator not held by the adversary up
     to the current time has its grades due (`GradesDue`) and meets `Consec`. -/
 private theorem inv_due (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (hnew : RootsNew S Sched x) (k : Nat) (v : V) :
     (∀ t' ≤ (x[k].time : Int), v ∉ Sched.adv t') →
       GradesDue (Setup.toSpec S).C (x[k][v].st.val) ∧ Consec S Sched x k v := by
@@ -772,10 +763,8 @@ private theorem inv_due (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule
     have ht0 : x[0].time = 0 := x.init.1
     refine ⟨by rw [h0]; exact gradesDue_initial _ v, Or.inr (Or.inr ?_)⟩
     rw [h0, ht0]
-    show (0 : Int) ≤ ((0 : Nat) : Int) ∧ ((0 : Nat) : Int) < 0 + S.E.Δ
-    constructor
-    · exact le_refl _
-    · push_cast; linarith
+    show (0 : Int) = ((0 : Nat) : Int)
+    rfl
   | succ k ih =>
     intro hhon
     rcases step_shape S Sched x k v with ⟨τ, hl, hT, hT', hcase⟩ | ⟨hT, hcase⟩
@@ -786,39 +775,13 @@ private theorem inv_due (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule
       unfold Consec
       rw [hT'i]
       rcases hcase with ⟨hv, hres⟩ | ⟨hv, hst⟩
-      · by_cases hm : (τ : Int) % S.E.Δ = 0
-        · obtain ⟨out, hout, hdue', hclock⟩ := outcome_of_due S Sched x hnew k τ v hl hm hv hhon
-            (inv_awake S Sched x k v).1 hdue hcons
-          rcases hres with ⟨-, out', hout', hst⟩ | ⟨hno, -⟩
-          · have he := tick_outcome_unique _ _ _ _ hout hout'
-            rw [hst, he]
-            refine ⟨hdue', Or.inr (Or.inr ⟨le_of_eq hclock, ?_⟩)⟩
-            rw [hclock]
-            linarith
-          · rcases hno with hno | hno
-            · exact absurd hm hno
-            · exact absurd hout (hno out)
-        · rcases hres with ⟨hm', -⟩ | ⟨-, hst⟩
-          · exact absurd hm' hm
-          · rw [hst]
-            rcases wakeStage_cases Sched (τ : Int) x[k] v with ⟨-, h⟩ | ⟨hne, h⟩
-            · rw [h]
-              exact ⟨gradesDue_wake hdue, Or.inr (Or.inl rfl)⟩
-            · rw [h]
-              refine ⟨hdue, ?_⟩
-              have haw : v ∈ Sched.awake (x[k].time : Int) := by
-                have : (x[k].time : Int) = (τ : Int) - 1 := by linarith
-                rw [this]
-                by_contra ha
-                exact hne (Finset.mem_sdiff.2 ⟨hv, ha⟩)
-              rcases hcons with hc | hc | ⟨hc1, hc2⟩
-              · exact absurd haw hc
-              · exact Or.inr (Or.inl hc)
-              · refine Or.inr (Or.inr ⟨by linarith, ?_⟩)
-                rcases lt_or_eq_of_le (show (τ : Int) ≤ (x[k][v].st.val).st.t + S.E.Δ by linarith)
-                  with hlt | heq
-                · exact hlt
-                · exact absurd (tick_time_mod hdue heq) hm
+      · obtain ⟨out, hout, hdue', hclock⟩ := outcome_of_due S Sched x hnew k τ v hl hv hhon
+          (inv_awake S Sched x k v).1 hdue hcons
+        rcases hres with ⟨out', hout', hst⟩ | ⟨hno, -⟩
+        · have he := tick_outcome_unique _ _ _ _ hout hout'
+          rw [hst, he]
+          exact ⟨hdue', Or.inr (Or.inr hclock)⟩
+        · exact absurd hout (hno out)
       · rw [hst]
         refine ⟨hdue, Or.inl fun ha => hv (Finset.mem_sdiff.2 ⟨ha, hhon _ (le_refl _)⟩)⟩
     · rw [hT] at hhon
@@ -866,8 +829,8 @@ private theorem window_start_facts (C : Spec.Config) (r : DecoupledConsensusMode
 /-- A validator awake at `τ − 1` does not enter the awake set at `τ`, so its tick stage at `τ` reads
     its own node state. -/
 private theorem wakeStage_of_awake_prev (Sched : Framework.StsMultisetLog.Schedule V) (τ : Int)
-    (c : Framework.StsMultisetLog.Config V (NamedObject V) (Model.specDraft (V := V)).N) (v : V)
-    (h : v ∈ Sched.awake (τ - 1)) : wakeStage (Model.specDraft (V := V)) Sched τ c v = c[v].st := by
+    (c : Framework.StsMultisetLog.Config V (NamedObject V) (Model.spec (V := V)).N) (v : V)
+    (h : v ∈ Sched.awake (τ - 1)) : wakeStage (Model.spec (V := V)) Sched τ c v = c[v].st := by
   rcases wakeStage_cases Sched τ c v with ⟨he, -⟩ | ⟨-, heq⟩
   · exact absurd h (Finset.mem_sdiff.1 he).2
   · exact heq
@@ -876,15 +839,15 @@ private theorem wakeStage_of_awake_prev (Sched : Framework.StsMultisetLog.Schedu
     throughout `[w, τ]` and honest up to `τ` has a node state, read by its tick, that records a wake
     time at or before `w`. -/
 private theorem awake_window_at (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k τ : Nat) (v : V) (w : Int)
     (hl : x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ)
     (hw0 : Spec.grade2_window_start (Setup.toSpec S).C 0 ≤ w) (hwm : w % S.E.Δ = 0)
     (hlt : w < (τ : Int)) (hawake : v ∈ Sched.awakeThroughout w (τ : Int))
     (hhon : ∀ t' ≤ (τ : Int), v ∉ Sched.adv t') :
-    ∃ a : Int, (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v).val.awakeSince =
+    ∃ a : Int, (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val.awakeSince =
       some a ∧ a ≤ w := by
-  have hT := (tickAllAwake_time (Model.specDraft (V := V)) S Sched x hl).1
+  have hT := (tickAllAwake_time (Model.spec (V := V)) S Sched x hl).1
   have hTi : (x[k].time : Int) + 1 = (τ : Int) := by exact_mod_cast hT
   have hawk := awake_of_awakeThroughout hawake
   rw [wakeStage_of_awake_prev Sched (τ : Int) x[k] v (hawk _ (by linarith) (by linarith))]
@@ -893,12 +856,12 @@ private theorem awake_window_at (S : Setup V) (Sched : Framework.StsMultisetLog.
 
 /-! ## The five fields -/
 
-/-- The field `tick_outcome_sts` of `NodeRunFacts` at `Model.specDraft`: in an execution in which an
+/-- The field `tick_outcome_sts` of `NodeRunFacts` at `Model.spec`: in an execution in which an
     honest proposer never already holds a block carrying the root of its proposal, every tick at a
-    tick step `k` at a multiple `τ` of `Δ`, for a validator awake at `τ` and not held by the
-    adversary at any time up to `τ`, has an outcome from the node state that tick reads. -/
-theorem specDraft_tick_outcome_sts : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched),
+    tick step `k` at `τ`, for a validator awake at `τ` and not held by the adversary at any time up
+    to `τ`, has an outcome from the node state that tick reads. -/
+theorem spec_tick_outcome_sts : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched),
     (∀ B C : DecoupledConsensusModel.NamedBlock V,
       (∃ B' : DecoupledConsensusModel.NamedBlock V,
         ((∃ (i : Nat) (sm : Framework.StsMultisetLog.SignedMsg V (NamedObject V)),
@@ -919,97 +882,96 @@ theorem specDraft_tick_outcome_sts : ∀ (S : Setup V) (Sched : Framework.StsMul
           DecoupledConsensusModel.NamedBlock.Preceq D C) → A.root = D.root → A = D) →
     (∀ (k τ : Nat) (s : DecoupledConsensusModel.Slot),
       x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
-      (τ : Int) = (Model.specDraft (V := V)).proposal_time S.E s →
+      (τ : Int) = (Model.spec (V := V)).proposal_time S.E s →
       (∀ t' ≤ (τ : Int), S.E.proposer s ∉ Sched.adv t') →
       ∀ B ∈ x[k][S.E.proposer s].st.st.bodies, B.root ≠ (S.node (S.E.proposer s)).new_root s) →
     ∀ (k τ : Nat) (v : V), x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
-      (τ : Int) % S.E.Δ = 0 →
       v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) →
       (∀ t' ≤ (τ : Int), v ∉ Sched.adv t') →
-      ∃ out : (Model.specDraft (V := V)).N × List (NamedObject V),
-        (Model.specDraft (V := V)).tick (Setup.alwaysAwake S) v
-          (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out := by
-  intro S Sched x _ hnew k τ v hl hmod hv hhon
-  have hT := (tickAllAwake_time (Model.specDraft (V := V)) S Sched x hl).1
+      ∃ out : (Model.spec (V := V)).N × List (NamedObject V),
+        (Model.spec (V := V)).tick (Setup.alwaysAwake S) v
+          (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) (τ : Int) ⇢ out := by
+  intro S Sched x _ hnew k τ v hl hv hhon
+  have hT := (tickAllAwake_time (Model.spec (V := V)) S Sched x hl).1
   have hTi : (x[k].time : Int) + 1 = (τ : Int) := by exact_mod_cast hT
   obtain ⟨hdue, hcons⟩ := inv_due S Sched x hnew k v (fun t' ht' => hhon t' (by linarith))
-  obtain ⟨out, hout, -⟩ := outcome_of_due S Sched x hnew k τ v hl hmod hv hhon
+  obtain ⟨out, hout, -⟩ := outcome_of_due S Sched x hnew k τ v hl hv hhon
     (inv_awake S Sched x k v).1 hdue hcons
   exact ⟨out, hout⟩
 
-/-- The field `run_fact_g1_at` of `NodeRunFacts` at `Model.specDraft`: at a tick step `k` whose time
+/-- The field `run_fact_g1_at` of `NodeRunFacts` at `Model.spec`: at a tick step `k` whose time
     `τ` is strictly after one delay before round `r`'s grade-1 cutoff, a validator awake at every
     time from that time to `τ`, and not held by the adversary at any time up to `τ`, passes the
     grade-1 awake test of round `r` on the node state its tick at `τ` reads. -/
-theorem specDraft_run_fact_g1_at : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+theorem spec_run_fact_g1_at : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k τ : Nat) (r : DecoupledConsensusModel.Round) (v : V),
     x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
-    (Model.specDraft (V := V)).early S.E S.hc r .g1 - S.E.Δ < (τ : Int) →
-    v ∈ Sched.awakeThroughout ((Model.specDraft (V := V)).early S.E S.hc r .g1 - S.E.Δ)
+    (Model.spec (V := V)).early S.E S.hc r .g1 - S.E.Δ < (τ : Int) →
+    v ∈ Sched.awakeThroughout ((Model.spec (V := V)).early S.E S.hc r .g1 - S.E.Δ)
       (τ : Int) →
     (∀ t' ≤ (τ : Int), v ∉ Sched.adv t') →
-    (Model.specDraft (V := V)).awake_for_grade1 (Setup.alwaysAwake S) v
-      (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v) r := by
+    (Model.spec (V := V)).awake_for_grade1 (Setup.alwaysAwake S) v
+      (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) r := by
   intro S Sched x k τ r v hl hlt hawake hhon
   obtain ⟨⟨h0, hm⟩, -⟩ := window_start_facts (Setup.toSpec S).C r
   exact awake_window_at S Sched x k τ v _ hl h0 hm hlt hawake hhon
 
-/-- The field `run_fact_g2_at` of `NodeRunFacts` at `Model.specDraft`: at a tick step `k` whose time
+/-- The field `run_fact_g2_at` of `NodeRunFacts` at `Model.spec`: at a tick step `k` whose time
     `τ` is strictly after one delay before round `r`'s grade-2 cutoff, a validator awake at every
     time from that time to `τ`, and not held by the adversary at any time up to `τ`, passes the
     grade-2 awake test of round `r` on the node state its tick at `τ` reads. -/
-theorem specDraft_run_fact_g2_at : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+theorem spec_run_fact_g2_at : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k τ : Nat) (r : DecoupledConsensusModel.Round) (v : V),
     x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
-    (Model.specDraft (V := V)).early S.E S.hc r .g2 - S.E.Δ < (τ : Int) →
-    v ∈ Sched.awakeThroughout ((Model.specDraft (V := V)).early S.E S.hc r .g2 - S.E.Δ)
+    (Model.spec (V := V)).early S.E S.hc r .g2 - S.E.Δ < (τ : Int) →
+    v ∈ Sched.awakeThroughout ((Model.spec (V := V)).early S.E S.hc r .g2 - S.E.Δ)
       (τ : Int) →
     (∀ t' ≤ (τ : Int), v ∉ Sched.adv t') →
-    (Model.specDraft (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v
-      (wakeStage (Model.specDraft (V := V)) Sched (τ : Int) x[k] v) r := by
+    (Model.spec (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v
+      (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) r := by
   intro S Sched x k τ r v hl hlt hawake hhon
   obtain ⟨-, ⟨h0, hm⟩⟩ := window_start_facts (Setup.toSpec S).C r
   exact awake_window_at S Sched x k τ v _ hl h0 hm hlt hawake hhon
 
-/-- The field `tick_emits_proposal_inclX` of `NodeRunFacts` at `Model.specDraft`: for a slot `s > 0`
+/-- The field `tick_emits_proposal_inclX` of `NodeRunFacts` at `Model.spec`: for a slot `s > 0`
     whose proposer is awake at every time from `proposal_wake_start S s` to `s`'s proposal time and
     not held by the adversary up to it, every outcome of the proposer's tick at that time, run on
     its node state after the tick step `k` of that time, emits a named block. -/
-theorem specDraft_tick_emits_proposal_inclX : ∀ (S : Setup V)
+theorem spec_tick_emits_proposal_inclX : ∀ (S : Setup V)
     (Sched : Framework.StsMultisetLog.Schedule V)
-    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.specDraft (V := V)) S) Sched)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
     (k : Nat) {s : DecoupledConsensusModel.Slot}
     (_hl : x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake
-      ((Model.specDraft (V := V)).proposal_time S.E s).toNat)
-    (_hhon : ∀ t' ≤ (Model.specDraft (V := V)).proposal_time S.E s, S.E.proposer s ∉ Sched.adv t')
+      ((Model.spec (V := V)).proposal_time S.E s).toNat)
+    (_hhon : ∀ t' ≤ (Model.spec (V := V)).proposal_time S.E s, S.E.proposer s ∉ Sched.adv t')
     (_hs : 0 < s)
     (_hawake : S.E.proposer s ∈
-      Sched.awakeThroughout ((Model.specDraft (V := V)).proposal_wake_start S s)
-        ((Model.specDraft (V := V)).proposal_time S.E s))
-    (out : (Model.specDraft (V := V)).N × List (NamedObject V))
-    (_hout : (Model.specDraft (V := V)).tick (Setup.alwaysAwake S) (S.E.proposer s)
-      (x[k][S.E.proposer s].st) ((Model.specDraft (V := V)).proposal_time S.E s) ⇢ out),
+      Sched.awakeThroughout ((Model.spec (V := V)).proposal_wake_start S s)
+        ((Model.spec (V := V)).proposal_time S.E s))
+    (out : (Model.spec (V := V)).N × List (NamedObject V))
+    (_hout : (Model.spec (V := V)).tick (Setup.alwaysAwake S) (S.E.proposer s)
+      (x[k][S.E.proposer s].st) ((Model.spec (V := V)).proposal_time S.E s) ⇢ out),
     ∃ B : DecoupledConsensusModel.NamedBlock V, NamedObject.block B ∈ out.2 := by
   intro S Sched x k s hl hhon hs hawake out hout
   set C := (Setup.toSpec S).C with hC
   have hΔ := C.Δ_pos
-  have htp : (Model.specDraft (V := V)).proposal_time S.E s = C.proposal_time s := rfl
+  have htp : (Model.spec (V := V)).proposal_time S.E s = C.proposal_time s := rfl
   rw [htp] at hl hhon hawake hout
   have ht0 : 0 ≤ C.proposal_time s := by
     simp only [Spec.Config.proposal_time]
     have : (0 : Int) ≤ (s : Int) := Int.natCast_nonneg _
     positivity
   have hτ : ((C.proposal_time s).toNat : Int) = C.proposal_time s := Int.toNat_of_nonneg ht0
-  have hT := (tickAllAwake_time (Model.specDraft (V := V)) S Sched x hl).1
+  have hT := (tickAllAwake_time (Model.spec (V := V)) S Sched x hl).1
   have hTi : (x[k].time : Int) + 1 = C.proposal_time s := by rw [← hτ]; exact_mod_cast hT
   obtain ⟨sent, hrun, hsent⟩ := (tick_returns _ _ _ _ _).1 hout
   have hrun' : (Spec.tick C (Setup.toSpec S).P (Setup.toSpec S).X
       (x[k][S.E.proposer s].st.val) (C.proposal_time s)).run [] = .ok (out.1.val, sent) := hrun
   obtain ⟨hv1, -, h3⟩ := inv_awake S Sched x k (S.E.proposer s)
   have hslot : C.slotOf (C.proposal_time s) = s := slotOf_proposal_time C s
-  have hwake : (Model.specDraft (V := V)).proposal_wake_start S s =
+  have hwake : (Model.spec (V := V)).proposal_wake_start S s =
       Spec.grade1_window_start C (C.round_of s) := rfl
   rw [hwake] at hawake
   have hawk := awake_of_awakeThroughout hawake
@@ -1034,17 +996,17 @@ theorem specDraft_tick_emits_proposal_inclX : ∀ (S : Setup V)
   rw [hsent]
   exact ⟨B.toProofNamed, List.mem_map.2 ⟨_, hB, rfl⟩⟩
 
-/-- The field `stateBeforeOf_runs_as` of `NodeRunFacts` at `Model.specDraft`: for every world `w`
+/-- The field `stateBeforeOf_runs_as` of `NodeRunFacts` at `Model.spec`: for every world `w`
     that the run `rho` can reach before its `i`-th event, the node state of `v` in `w` runs as `v`. -/
-theorem specDraft_stateBeforeOf_runs_as : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat)
-    (w : V → (Model.specDraft (V := V)).N)
-    (_hw : w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i) (v : V),
-    (Model.specDraft (V := V)).runs_as (w v) v := by
+theorem spec_stateBeforeOf_runs_as : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat)
+    (w : V → (Model.spec (V := V)).N)
+    (_hw : w ∈ stateBeforeOf (Model.spec (V := V)) S rho i) (v : V),
+    (Model.spec (V := V)).runs_as (w v) v := by
   intro S rho i w hw v
   show (w v).val.v = v
-  have key : ∀ (es : List (Record.Event V)) (w₁ : V → (Model.specDraft (V := V)).N),
+  have key : ∀ (es : List (Record.Event V)) (w₁ : V → (Model.spec (V := V)).N),
       (∀ u, (w₁ u).val.v = u) →
-      ∀ w₂ ∈ es.foldlM (worldStepOf (Model.specDraft (V := V)) S) w₁, ∀ u, (w₂ u).val.v = u := by
+      ∀ w₂ ∈ es.foldlM (worldStepOf (Model.spec (V := V)) S) w₁, ∀ u, (w₂ u).val.v = u := by
     intro es
     induction es with
     | nil =>
@@ -1095,4 +1057,136 @@ theorem specDraft_stateBeforeOf_runs_as : ∀ (S : Setup V) (rho : Record.Run V)
         · exact h u'
   exact key _ _ (fun u => rfl) w hw v
 
-end SpecDraftRecord.NodeRunFacts
+/-! ## The converse awake facts, the fields of `NodeWakeFacts` -/
+
+/-- After every number `k` of steps, a validator not held by the adversary at any time up to the
+    current time and awake at the current time, whose node state records the wake time `a`, has been
+    awake at every non-negative time from `a` to the current time. -/
+private theorem inv_awakeSince_sound (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
+    (k : Nat) (v : V) :
+    (∀ t' ≤ (x[k].time : Int), v ∉ Sched.adv t') → v ∈ Sched.awake (x[k].time : Int) →
+    ∀ a : Int, (x[k][v].st.val).awakeSince = some a →
+      ∀ t' : Int, 0 ≤ t' → a ≤ t' → t' ≤ (x[k].time : Int) → v ∈ Sched.awake t' := by
+  induction k with
+  | zero =>
+    intro _ hv a _ t' h0 _ h1
+    have ht0 : (x[0].time : Int) = 0 := by
+      have := x.init.1
+      exact_mod_cast this
+    have : t' = (x[0].time : Int) := by omega
+    rw [this]; exact hv
+  | succ k ih =>
+    intro hhon hv a ha t' h0 hat htT
+    rcases step_shape S Sched x k v with ⟨τ, hl, hT, hT', hcase⟩ | ⟨hT, hcase⟩
+    · have hTi : (x[k].time : Int) + 1 = (τ : Int) := by exact_mod_cast hT
+      have hT'i : (x[k + 1].time : Int) = (τ : Int) := by exact_mod_cast hT'
+      rw [hT'i] at hhon hv htT
+      rcases hcase with ⟨hvτ, hres⟩ | ⟨hvτ, -⟩
+      · have hns := (wakeStage_facts Sched (τ : Int) x[k] v hvτ).2.2
+        have k2 : (x[k + 1][v].st.val).awakeSince =
+                (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val.awakeSince ∨
+              (x[k + 1][v].st.val).awakeSince = (Spec.record_awake
+                (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val τ).awakeSince := by
+          rcases hres with ⟨out, hout, hst⟩ | ⟨-, hst⟩
+          · obtain ⟨sent, hrun, -⟩ := (tick_returns _ _ _ _ _).1 hout
+            obtain ⟨-, -, -, -, -, haw, -⟩ := tick_outcome hrun
+            rw [hst]; exact Or.inr haw
+          · rw [hst]; exact Or.inl rfl
+        by_cases htτ : t' = (τ : Int)
+        · rw [htτ]; exact (Finset.mem_sdiff.1 hvτ).1
+        · rcases hns with hn | ⟨heq, hprev⟩
+          · exfalso
+            rcases k2 with k2 | k2
+            · rw [k2, hn] at ha; cases ha
+            · rw [k2, record_awake_of_none hn] at ha; cases ha; omega
+          · have hprev' : v ∈ Sched.awake (x[k].time : Int) := by
+              have : (x[k].time : Int) = (τ : Int) - 1 := by omega
+              rw [this]; exact hprev
+            have hb : (x[k][v].st.val).awakeSince = some a := by
+              rcases k2 with k2 | k2
+              · rw [k2, heq] at ha; exact ha
+              · rw [k2, heq] at ha
+                rcases record_awake_cases (x[k][v].st.val) (τ : Int) with ⟨-, h⟩ | ⟨b, hb, h⟩
+                · rw [h] at ha; cases ha; omega
+                · rw [h] at ha; cases ha; exact hb
+            exact ih (fun t'' h => hhon t'' (by omega)) hprev' a hb t' h0 hat (by omega)
+      · exfalso
+        exact hvτ (Finset.mem_sdiff.2 ⟨hv, hhon _ (le_refl _)⟩)
+    · rw [hT] at hhon hv htT
+      have e2 : (x[k + 1][v].st.val).awakeSince = (x[k][v].st.val).awakeSince := by
+        rcases hcase with hst | ⟨o, ho⟩
+        · rw [hst]
+        · have hp := (process_returns _ _ _ _).1 ho
+          obtain ⟨-, r2, -, -⟩ := receive_fields (Setup.toSpec (Setup.alwaysAwake S)).C
+            (Setup.toSpec (Setup.alwaysAwake S)).P (x[k][v].st.val) (Spec.NamedObject.toSpec o)
+          rw [hp]; exact r2
+      exact ih hhon hv a (e2 ▸ ha) t' h0 hat htT
+
+/-- At a tick step at time `τ`, a validator not held by the adversary up to `τ` and awake at `τ`,
+    whose node state, as its tick reads it, records a wake time at or before a non-negative time
+    `w`, has been awake at every time from `w` to `τ`. -/
+private theorem awakeThroughout_of_test (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
+    (k τ : Nat) (v : V) (w : Int)
+    (hl : x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ) (h0 : 0 ≤ w)
+    (hhon : ∀ t' ≤ (τ : Int), v ∉ Sched.adv t') (hv : v ∈ Sched.awake (τ : Int))
+    (hfor : ∃ a, (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v).val.awakeSince =
+      some a ∧ a ≤ w) :
+    v ∈ Sched.awakeThroughout w (τ : Int) := by
+  obtain ⟨a, ha, haw⟩ := hfor
+  have hT := (tickAllAwake_time (Model.spec (V := V)) S Sched x hl).1
+  have hTi : (x[k].time : Int) + 1 = (τ : Int) := by exact_mod_cast hT
+  have hvτ : v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) :=
+    Finset.mem_sdiff.2 ⟨hv, hhon _ (le_refl _)⟩
+  unfold Framework.StsMultisetLog.Schedule.awakeThroughout
+  refine Finset.mem_inf.2 (fun t' ht' => ?_)
+  obtain ⟨h1, h2⟩ := Finset.mem_Icc.1 ht'
+  by_cases htτ : t' = (τ : Int)
+  · rw [htτ]; exact hv
+  · rcases (wakeStage_facts Sched (τ : Int) x[k] v hvτ).2.2 with hn | ⟨heq, hprev⟩
+    · rw [hn] at ha; cases ha
+    · rw [heq] at ha
+      have hprev' : v ∈ Sched.awake (x[k].time : Int) := by
+        have : (x[k].time : Int) = (τ : Int) - 1 := by omega
+        rw [this]; exact hprev
+      exact inv_awakeSince_sound S Sched x k v (fun t'' h => hhon t'' (by omega)) hprev' a ha t'
+        (by omega) (le_trans haw h1) (by omega)
+
+/-- The field `run_fact_g2_sound_at` of `NodeWakeFacts` at `Model.spec`: at a tick step `k` at
+    time `τ`, a validator not held by the adversary up to `τ` and awake at `τ`, whose node state, as
+    its tick at `τ` reads it, passes the grade-2 awake test of round `r`, has been awake at every
+    time from round `r`'s grade-2 window start, when that start is non-negative, to `τ`. -/
+theorem spec_run_fact_g2_sound_at : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
+    (k τ : Nat) (r : DecoupledConsensusModel.Round) (v : V),
+    x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
+    0 ≤ (Model.spec (V := V)).early S.E S.hc r .g2 - S.E.Δ →
+    (∀ t' ≤ (τ : Int), v ∉ Sched.adv t') →
+    v ∈ Sched.awake (τ : Int) →
+    (Model.spec (V := V)).awake_for_grade2 (Setup.alwaysAwake S) v
+      (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) r →
+    v ∈ Sched.awakeThroughout ((Model.spec (V := V)).early S.E S.hc r .g2 - S.E.Δ)
+      (τ : Int) := by
+  intro S Sched x k τ r v hl h0 hhon hv hfor
+  exact awakeThroughout_of_test S Sched x k τ v _ hl h0 hhon hv hfor
+
+/-- The field `run_fact_g1_sound_at` of `NodeWakeFacts` at `Model.spec`: at a tick step `k` at
+    time `τ`, a validator not held by the adversary up to `τ` and awake at `τ`, whose node state, as
+    its tick at `τ` reads it, passes the grade-1 awake test of round `r`, has been awake at every
+    time from round `r`'s grade-1 window start, when that start is non-negative, to `τ`. -/
+theorem spec_run_fact_g1_sound_at : ∀ (S : Setup V) (Sched : Framework.StsMultisetLog.Schedule V)
+    (x : Framework.StsMultisetLog.AtomicExec (protocolOf (Model.spec (V := V)) S) Sched)
+    (k τ : Nat) (r : DecoupledConsensusModel.Round) (v : V),
+    x.lbl k = Framework.StsMultisetLog.AtomicAction.tickAllAwake τ →
+    0 ≤ (Model.spec (V := V)).early S.E S.hc r .g1 - S.E.Δ →
+    (∀ t' ≤ (τ : Int), v ∉ Sched.adv t') →
+    v ∈ Sched.awake (τ : Int) →
+    (Model.spec (V := V)).awake_for_grade1 (Setup.alwaysAwake S) v
+      (wakeStage (Model.spec (V := V)) Sched (τ : Int) x[k] v) r →
+    v ∈ Sched.awakeThroughout ((Model.spec (V := V)).early S.E S.hc r .g1 - S.E.Δ)
+      (τ : Int) := by
+  intro S Sched x k τ r v hl h0 hhon hv hfor
+  exact awakeThroughout_of_test S Sched x k τ v _ hl h0 hhon hv hfor
+
+end SpecRecord.NodeRunFacts

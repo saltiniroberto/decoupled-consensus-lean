@@ -38,7 +38,6 @@ variable (S : Setup V) (Sched : Schedule V) (x : AtomicExec (protocol S) Sched) 
     (hmult : AwakeAtMultiples S Sched) (hcv : CommonViewOfFinalizedDescendantsAt S Sched x tGAT)
     (hcs : committeeSleepinessW S Sched tE)
     (hcom : HonestCommittees S Sched (interface S Sched))
-    (hw : WakesAtActionInstants S Sched) (hs : SleepsAfterActionInstants S Sched)
     (hrec : strongOpeningsRecurFrom S Sched tGAT tE gap)
     (hprev : ∀ r : Round, rebasedDeadlineRoundW S tGAT gap ≤ r → r ≤ switchRound S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -68,7 +67,7 @@ variable (S : Setup V) (Sched : Schedule V) (x : AtomicExec (protocol S) Sched) 
       n₁ ≤ n_W → HonestThrough Sched x n₁ v →
       Block.Preceq (x[n₁][v].st).st.core.J T_W.erase)
 
-include hexec hmono htd hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec
+include hexec hmono htd hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec
   hprev hclear hB' hnW hAW hJswitch
 
 end Premises

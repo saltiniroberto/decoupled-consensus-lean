@@ -46,6 +46,13 @@ theorem early_g2_eq (S : Setup V) (r : Round) :
   push_cast
   ring
 
+theorem early_g1_eq (S : Setup V) (r : Round) :
+    early S.E S.hc r .g1 = S.a r - 10 * S.E.Δ := by
+  simp only [early, opening, Protocol.proposal_time, Env.t, slotStart, Setup.a,
+    Protocol.HealConfig.a, Protocol.HealConfig.opening_slot, Phase.earlyOffset]
+  push_cast
+  ring
+
 end DecoupledConsensusModel.Proofs.NamedOutageClosure
 
 end

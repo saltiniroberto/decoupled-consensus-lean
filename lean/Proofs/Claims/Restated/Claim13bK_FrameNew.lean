@@ -109,32 +109,6 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- If validators wake only at action times and `n'` is the tick step at `S.a (r + 1)`, then every
-    validator awake throughout the `4Δ` before `S.a (r + 1)` and honest through step `n' + 1` is in
-    `HonRound S Sched (r + 1)`. -/
-theorem mem_honRound_of_mem_freshAttesters_ofWakes (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched) (hw : Restated.WakesAtActionInstants M S Sched)
-    {r : Round} {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) {v : V}
-    (hv : v ∈ Restated.freshAttesters M S Sched x (r + 1) (n' + 1)) :
-    v ∈ Restated.HonRound M S Sched (r + 1) := by
-  have hwin := ((Restated.mem_freshAttesters facts).mp hv).1
-  simp only [Restated.activeRound] at hwin
-  have hd := S.E.Δ_pos
-  have hprev : v ∈ Sched.awake ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)) - 1) :=
-    mem_awake_of_awakeThroughout Sched hwin (by linarith) (by linarith)
-  have hW : v ∈ Restated.freshAttestersW M S Sched x (r + 1) (n' + 1) :=
-    (Restated.mem_freshAttestersW facts).mpr
-      ⟨Restated.active_of_awake_prev facts S Sched hw (Restated.awake_of_mem_freshAttesters facts hv) hprev,
-        Restated.honestThrough_of_mem_freshAttesters facts hv⟩
-  exact Restated.freshAttestersW_subset_honRound facts S Sched x (le_of_eq (Restated.tickStepAt_time facts x hn').1.symm) hW
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
 /-- Some node state `n` is in round `r₁`'s action read from `before`, and some grade read `g` is an
     outcome of `M.frameGradeRead` at `n`'s cache and healing store. -/
 private theorem exists_actionRead_gradeRead_frameNew (facts : Record.Facts M) (S : Setup V)

@@ -63,7 +63,6 @@ def HonestProposalHeadsAtOwnSlotAfterPhase (M : Record.Model V) (S : Setup V) (S
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)

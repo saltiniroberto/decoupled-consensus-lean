@@ -18,7 +18,7 @@ open Spec Spec.Protocol
 open scoped DC
 open DC (DRE)
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 variable {V : Type} [DecidableEq V] [Fintype V]
 
@@ -728,4 +728,4 @@ theorem propose_block_ok (C : Config) (P : Provisional V) (X : External V) (v : 
   refine DREB.bind_ok_of (DREB.liftM_ok (build_proposal_ok C X v hT h1) l) fun _ l1 => ?_
   exact DREB.bind_ok_of (DREB.broadcast_ok _ l1) fun _ l2 => DREB.pure_ok _ l2
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise

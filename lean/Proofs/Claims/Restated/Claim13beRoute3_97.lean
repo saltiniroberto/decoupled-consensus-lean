@@ -39,6 +39,7 @@ import Model.Conditions.Vocabulary_Statements_Instantiation_Proposals
 import Model.Record.Wiring
 import Proofs.Claims.Restated.Claim13bK_ConfirmedRecord
 import Proofs.Claims.Spec2Claims.Claim13beRoute3_97
+import Proofs.Claims.Restated.Claim13bK_ProposalAdoptionBounded
 
 /-!
 # Finality of an honest proposal at the sharp spacing
@@ -207,7 +208,6 @@ theorem secondWindowAfterTimeoutSharp_f7 (facts : Record.Facts M) (S : Setup V) 
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -318,7 +318,7 @@ theorem secondWindowAfterTimeoutSharp_f7 (facts : Record.Facts M) (S : Setup V) 
     ⟨_, (p58% mkNode_mem_confirmationReadAt₅₈) hf.sorted hf.onePath _ _ cp₂ hcp₂,
       by rw [facts.nd.mkNode_cache]; exact ho⟩
   obtain ⟨hPP', hP'P₂, hlt⟩ := Restated.windowAfterTimeout_f2c facts S Sched x v₀ tGAT tE tL gap hgap hlen hEL
-    hgst hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB'
+    hgst hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB'
     hnW hAW hJswitch hr₀ hTW₀ hJ₀ hNW hN hA hr₀c₁ hlo hhi (Restated.voteHor_f2d facts S hc₂W hWN) hopening
     hw₂ hw₂p hw₂pp hnj cp hcp hP cp' hcp' hP' cp₂ hcp₂ ho cpm hcpm hPm cpmm hcpmm hPmm
   exact ⟨P₂, rfl, namedPreceq_trans_l85 hPP' hP'P₂, hlt⟩
@@ -358,7 +358,6 @@ theorem secondWindowSharp_f7 (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -401,7 +400,9 @@ theorem secondWindowSharp_f7 (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     {T_D' : NamedBlock V}
     (hA : Restated.AnchorAtRound M S Sched x tGAT tL (Restated.rebasedDeadlineRoundW M S tGAT gap) T_D')
     {B' : NamedBlock V} (hB'log : Restated.blockInLog M S Sched x B') {s : Slot}
-    (hheads : Restated.AncestorOfHonestHeadsFrom M S Sched x B'.erase s)
+    (hheads : ∀ s' : Slot, s ≤ s' →
+      Restated.Vocabulary.Execution.Setup.a M S (M.round_of S.hc s') + S.E.Δ ≤ tL →
+      Restated.HeadsBelow M S Sched x B'.erase s')
     {c₁ : Round} (hsM : s ≤ (M.opening_slot S.hc (c₁ - 1))) (hc₁ : r₀ + 2 ≤ c₁)
     (hc₁W : c₁ + S.cfg.timeoutDelay / S.hc.R + gap ≤ Restated.switchRound M S tL + 2)
     (hprops : ∀ k < 3, S.E.proposer ((M.opening_slot S.hc c₁) + k) ∈
@@ -463,7 +464,7 @@ theorem secondWindowSharp_f7 (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     (M.opening_slot S.hc (c₁ - 2))
   have hstep := fun (P₂ : NamedBlock V) =>
     Restated.windowStep_ofHeads_f2c facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst
-      hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW
+      hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW
       hAW hJswitch hr₀ hTW₀ hJ₀ hNW hN hA hc₁ (Restated.voteHor_f2d facts S hcW hWN) hprops hopeningM hopeningMM
       (P := P) (P₂ := P₂) (P' := P') (P'' := P'') hB'log hheads hsM cp hcp hP
   have hB'P : NamedBlock.Preceq B' P := (hstep Pb cpb hcpb hPb cp' hcp' hP' cp'' hcp'' hP'').1
@@ -480,7 +481,7 @@ theorem secondWindowSharp_f7 (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       facts.cs.derive_height_mono S.E S.cfg hB'P
     obtain ⟨c₂, hlo, hhi, hstrong, hall⟩ := Restated.secondWindowAfterTimeoutSharp_f7 facts S Sched
       x v₀ tGAT tE tL gap hgap hg3 hlen hEL hgst hmono hexec hsync hmult hcv htd hcom hthird hawake
-      hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hNW hN hWN hA hc₁ hc₁W
+      hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hNW hN hWN hA hc₁ hc₁W
       hopening hnj cp hcp hP
     refine ⟨c₂, le_trans (Nat.le_add_right _ _) hlo, hhi, hstrong, ?_⟩
     intro wp₂ cp₂ hcp₂ pn₂ o ho
@@ -502,7 +503,7 @@ theorem secondWindowSharp_f7 (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       · exact h
       · exact absurd h hnj
     have htop := Restated.secondWindowClear_f2d facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-      hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+      hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
       hTW₀ hJ₀ hNW hN hWN hA hc₁ hcW hprops hopeningM hopeningMM hnjf
       cp hcp hP cp₂ hcp₂ ho cp' hcp' hP' cp'' hcp'' hP''
     exact ⟨P₂, rfl, namedPreceq_trans_l85 hB'P hPP₂, hlt, htop⟩
@@ -542,7 +543,6 @@ theorem honestProposal_finalizedDescendant_f7 (facts : Record.Facts M) (S : Setu
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -642,9 +642,9 @@ theorem honestProposal_finalizedDescendant_f7 (facts : Record.Facts M) (S : Setu
   obtain ⟨T_D', hA⟩ := Restated.exists_anchorAtRound facts S Sched x hsync hmono hawake hgst hcv hexec hmult
     hthird hcom hrec hlenL' htd (Restated.deadlineRoundW_le_rebased facts S tGAT gap)
     (Restated.rebasedDeadlineRoundW_le_switchRound facts S tGAT tL gap rho₀ hgst hlenL')
-  have hHeads := Restated.honestProposal_ancestorOfHonestHeadsFrom_i1b facts S Sched x tE hexec hmono htd tGAT
-    gap hgst hlen' hsync hthirdE hphaseE hrsW hmult hcv hcs hcom hw hs hrecE hprev hclear hB' hnW
-    hAW hJswitch hr₀ hTW₀ hJ₀ hawake hthird hrec hs0 hct hprop hB hi
+  have hHeads := Restated.honestProposal_ancestorOfHonestHeadsFrom_fromSwitch_bounded facts S Sched x tE hexec
+    hmono htd tGAT gap hgst hlen' hsync hthirdE hphaseE tL hEL hawake hrsW hmult hcv hcs hcom hrecE hprev hclear
+    hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hthird hrec hs0 hct hprop hB hi
   obtain ⟨B', hmem, hBe, -, -⟩ := hB
   have hB'log : Restated.blockInLog M S Sched x B' :=
     ⟨B', Or.inl ⟨i, _, hmem, rfl⟩, Proofs.NamedAncestry.named_self B'⟩
@@ -652,7 +652,7 @@ theorem honestProposal_finalizedDescendant_f7 (facts : Record.Facts M) (S : Setu
     rw [(pCR% opening_slot_closed_cr) facts]; exact nat_slotPrev_f2c S.hc.R s c₁ hRpos hc₁rs
   obtain ⟨c₂, hc₁₂, hc₂hi, ⟨hw₂, -, -⟩, hall₂⟩ := Restated.secondWindowSharp_f7 facts S
     Sched x v₀ tGAT tE tL gap hgap hg3 hlen hEL hgst hmono hexec hsync hmult hcv htd hcom hthird
-    hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hNW hN hWN hA hB'log
+    hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hNW hN hWN hA hB'log
     (hBe ▸ hHeads) hsM hc₁r hc₁W hw₁ hw₁p hw₁pp
   have hf := Restated.admissibleFieldsOn_runAll_notHeld facts S Sched x v₀ (m₀ + 1) hsync hmono hawake hgst
     hcv hexec hmult hthird hN
@@ -669,7 +669,7 @@ theorem honestProposal_finalizedDescendant_f7 (facts : Record.Facts M) (S : Setu
   obtain ⟨cp₃₁, P₃₁, hcp₃₁, hP₃₁⟩ := (p85f% exists_proposal₈₅f) facts hf.sorted hf.onePath
     ((M.opening_slot S.hc c₃) + 1)
   have hP₂P₃₁ := Restated.thirdWindowParent_f2d facts S Sched x v₀ tGAT tE tL gap hlen hEL hgst hmono hexec hsync
-    hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev hclear hB' hnW hAW hJswitch hr₀
+    hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hN hWN hr₀c₂ hc₃lo hc₃W (hw₂ 2 (by decide)) hw₃ cp₂ hcp₂ hP₂ cp₃₁ hcp₃₁ hP₃₁
   have hmonoJ := Restated.h_j_mono_chain facts S hP₂P₃₁
   have hBJ : Block.Preceq B'.erase (M.derive_named S.E S.cfg P₃₁).J :=
@@ -721,7 +721,6 @@ theorem honestProposal_finalizedAfterDeadline_f7 (facts : Record.Facts M) (S : S
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tL gap)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
@@ -768,7 +767,7 @@ theorem honestProposal_finalizedAfterDeadline_f7 (facts : Record.Facts M) (S : S
       M.proposal_time S.E s + Restated.finalityDeadlineDirect M S gap ≤ (x[j].time : Int) →
       Block.Preceq B (x[j][v].st).st.core.F := by
   obtain ⟨t, ht, hF⟩ := Restated.honestProposal_finalizedDescendant_f7 facts S Sched x v₀ tGAT tE tL gap hgap
-    hlen hEL hgst hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrsW hcs hw hs hprev
+    hlen hEL hgst hmono hexec hsync hmult hcv htd hcom hthird hawake hrec hrsW hcs hprev
     hclear hB' hnW hAW hJswitch hr₀ hTW₀ hJ₀ hs0 hprop hB hi hdead
   intro v j hv hj
   have hD : Restated.finalityDeadlineDirect M S gap =

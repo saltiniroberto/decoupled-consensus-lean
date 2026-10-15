@@ -62,7 +62,6 @@ theorem afterPhaseJointSwitchRound_of_premises_upTo (facts : Record.Facts M) (S 
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeBefore M S x tE) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -110,7 +109,7 @@ theorem afterPhaseJointSwitchRound_of_premises_upTo (facts : Record.Facts M) (S 
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hbase⟩ := Restated.afterPhaseInvariantOverActiveSetsJoint_at_switchRound_upTo facts S
-    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird
+    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcv htd hcom hthird
     hawake hrec hsl hrs hcs hprev hclear hB'
   have hJswitch := Restated.justifiedAncestor_before_switchTick_of_justifiedHigh_upTo facts S Sched x tE hexec hmono
     htd tGAT gap hgst hlen' hsync hthird hawake hrs hmult hcv hcom hrec hprev hclear hnW hAW

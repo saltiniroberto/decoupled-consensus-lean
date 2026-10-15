@@ -411,7 +411,7 @@ theorem rootCollisionFreeOn_runAll_univ (facts : Record.Facts M) (S : Setup V) (
   have hnode : Record.Event.node (Record.Event.tick (S.E.proposer s) (M.proposal_time S.E s) :
       Record.Event V) = S.E.proposer s := rfl
   simp only [hnode] at hmem hcases
-  obtain ⟨τ, hl, hτ, hv, -⟩ := Restated.tick_mem_actionEventsOf hmem
+  obtain ⟨τ, hl, hτ, hv⟩ := Restated.tick_mem_actionEventsOf hmem
   rcases hcases with ⟨t', he', -, -⟩ | ⟨t', he', hb, -⟩ | ⟨o, t', he', -, -⟩
   · cases he'
   · rw [hb, Record.wakeStage_st facts] at hB
@@ -705,7 +705,7 @@ theorem relayBlock_of_commonView_honestThroughGAT (facts : Record.Facts M) (S : 
     exact Restated.time_le_of_key_le hkey
   obtain ⟨k₃, hk₃J, hmem₃⟩ := Restated.step_lt_of_lt_length facts S Sched x hJn hmL he₂
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨m', hl, -, -, hcase⟩ | ⟨τ, hl, haw, hdvd, hcase⟩
+    ⟨m', hl, -, -, hcase⟩ | ⟨τ, hl, haw, hcase⟩
   ·
     have hmsg : m'.msg = .block B := by
       rcases hcase with h | ⟨B', -, hcc⟩
@@ -1277,7 +1277,7 @@ theorem awake_g1_runAllPath (facts : Record.Facts M) (S : Setup V) (Sched : Sche
   obtain ⟨k, -, hmem, hcases⟩ := Restated.runAllPath_at_event facts S Sched x v n j he
   have hnode : Record.Event.node (Record.Event.tick u τ : Record.Event V) = u := rfl
   simp only [hnode] at hmem hcases
-  obtain ⟨τ', hl, hτ', hv, -⟩ := tick_mem_actionEventsOf hmem
+  obtain ⟨τ', hl, hτ', hv⟩ := tick_mem_actionEventsOf hmem
   rcases hcases with ⟨t', he', -, -⟩ | ⟨t', he', hb, -⟩ | ⟨o, t', he', -, -⟩
   · cases he'
   · have htt : τ = t' := (Record.Event.tick.inj he').2
@@ -1323,7 +1323,7 @@ theorem awake_g2_runAllPath (facts : Record.Facts M) (S : Setup V) (Sched : Sche
   have hnode : Record.Event.node
       (Record.Event.tick u (M.confirmation_time S.E s) : Record.Event V) = u := rfl
   simp only [hnode] at hmem hcases
-  obtain ⟨τ', hl, hτ', hv, -⟩ := tick_mem_actionEventsOf hmem
+  obtain ⟨τ', hl, hτ', hv⟩ := tick_mem_actionEventsOf hmem
   rcases hcases with ⟨t', he', -, -⟩ | ⟨t', he', hb, -⟩ | ⟨o, t', he', -, -⟩
   · cases he'
   · have htt : M.confirmation_time S.E s = t' := (Record.Event.tick.inj he').2
@@ -1379,7 +1379,6 @@ theorem admissibleFieldsOn_runAll_notHeld (facts : Record.Facts M) (S : Setup V)
       horizon_nonneg := Restated.horizon_nonneg_runAll_withHonest facts S Sched x v _ n
       sorted := Restated.sorted_runAll_withHonest_events facts S Sched x v _ n
       in_horizon := Restated.in_horizon_runAll_withHonest facts S Sched x v _ n
-      tick_public := Restated.tick_public_runAll_withHonest facts S Sched x v _ n
       tickIndexUnique := Restated.tickIndexUnique_runAll_withHonest facts S Sched x v _ n
       wire := Restated.wire_runAll_withHonest facts S Sched x v _ n hvalid.toDeliveryWellFormed
       onePath := hP

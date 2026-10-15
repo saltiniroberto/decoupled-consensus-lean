@@ -166,6 +166,8 @@ structure GradesFacts (M : Model V) : Prop where
     (h : M.Opposes covers te tl tr B), M.Opposes covers se sl sr B
   /-- The grade-2 early cutoff of round `r` is `11Δ` before round `r`'s action instant. -/
   early_g2_eq : ∀ (S : Setup V) (r : Round), M.early S.E S.hc r .g2 = M.a S.hc S.E.Δ r - 11 * S.E.Δ
+  /-- The grade-1 early cutoff of round `r` is `10Δ` before round `r`'s action instant. -/
+  early_g1_eq : ∀ (S : Setup V) (r : Round), M.early S.E S.hc r .g1 = M.a S.hc S.E.Δ r - 10 * S.E.Δ
   /-- One delay after the action instant of round `r` is at or before the earliest grade cutoff of
       round `r + 1`, one delay before the start of that round's opening slot. -/
   action_add_delta_le_next_Γ_neg1 : ∀ (S : Setup V) (r : Round),

@@ -4,7 +4,7 @@ import Proofs.Instance.Members.DutiesNode
 import Proofs.Instance.NoRaise.Stamps
 
 /-!
-# The store and node types of `Model.specDraft`
+# The store and node types of `Model.spec`
 
 The subtypes `OkStore V` and `OkNode V` of the stores and node states that meet `StoreOk`, the
 outcome sets read through a map (`preimageOutcomes`), the test `RootHeldByOther`, and the lemmas
@@ -14,10 +14,10 @@ that the spec's store writers keep `StoreOk`.
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 /-- The stores that meet `StoreOk`: stamped, with distinct roots, holding the parent of each of
@@ -359,4 +359,4 @@ theorem receipt_process [Inhabited V] (S : DecoupledConsensusModel.Execution.Set
 
 end OkStore
 
-end SpecDraftRecord
+end SpecRecord

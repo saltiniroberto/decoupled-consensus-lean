@@ -50,7 +50,8 @@ import Model.Record.Wiring
 # Confirmed outputs include the honest proposals
 
 After the phase, every block an honest proposer sends is an ancestor of the confirmed output of
-every honest reader awake through its vote window, from six delays after the proposal on, stated
+every honest reader that ran a confirmation from the proposal's slot on while awake throughout its
+grade-2 window, from six delays after the proposal on, stated
 over a model `M : Record.Model V` and its facts `facts : Record.Facts M`.
 -/
 
@@ -86,150 +87,6 @@ local macro "pCS% " n:ident : term =>
   `(priv% $(Lean.mkIdent `Proofs.Claims.Restated.Claim13bK_ConeSlots)
     $(Lean.mkIdent (`DecoupledConsensusModel.Sts.Restated ++ n.getId)))
 
-private theorem nat_pred_bounds_e (o s o' : Nat) (hs : 1 ≤ s) (h0 : o ≤ s - 1) (h1 : s - 1 < o') :
-    o + 1 ≤ s ∧ s ≤ o' := by
-  omega
-
-private theorem nat_sub_two_e (s s' R : Nat) (hlt : s + 1 < s') (h3 : 3 ≤ R) :
-    s' - 2 + 2 = s' ∧ s ≤ s' - 2 ∧ s' ≤ s' - 2 + R := by
-  omega
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-open DecoupledConsensusModel.Statements.Instantiation
-local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
-
-/-- Under `SleepsAfterActionInstants`, if `1 ≤ s` and `v` is in `activeAtW S Sched (s + 1)`, then
-    `v` is awake at every instant from `slotStart s − Δ` to slot `s`'s confirmation instant. -/
-theorem awakeThroughout_confirmation_of_activeAtW_next (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (hs : Restated.SleepsAfterActionInstants M S Sched) {s : Slot} (hs1 : 1 ≤ s) {v : V}
-    (hv : v ∈ activeAtW S Sched (s + 1)) :
-    v ∈ Sched.awakeThroughout (slotStart S.E.Δ s - S.E.Δ) (M.confirmation_time S.E s) := by
-  have hd := S.E.Δ_pos
-  have hR : (3 : Int) ≤ (S.hc.R : Int) := by exact_mod_cast S.hc.R_ge_three
-  have hwv : wVote S = (4 * (S.hc.R : Int) + 2) * S.E.Δ := rfl
-  have hss : slotStart S.E.Δ s = 4 * S.E.Δ * (s : Int) := slotStart_closed S.E.Δ s
-  have hss1 : slotStart S.E.Δ (s + 1) = 4 * S.E.Δ * (s : Int) + 4 * S.E.Δ := by
-    rw [slotStart_closed]; push_cast; ring
-  have hct : M.confirmation_time S.E s = 4 * S.E.Δ * (s : Int) + 6 * S.E.Δ :=
-    (pCR% confirmation_time_closed_cr) facts S.E s
-  have hv' : v ∈ Sched.awakeThroughout (slotStart S.E.Δ (s + 1) + S.E.Δ - wVote S)
-      (slotStart S.E.Δ (s + 1) + S.E.Δ) := hv
-  have hlow : v ∈ Sched.awakeThroughout (slotStart S.E.Δ s - S.E.Δ)
-      (slotStart S.E.Δ s + 5 * S.E.Δ) := by
-    refine awakeThroughout_mono Sched hv' ?_ ?_
-    · rw [hwv, hss1, hss]; nlinarith
-    · rw [hss1, hss]; linarith
-  have h0 := facts.gr.opening_slot_round_of_le_slot S.hc (s - 1)
-  have h1 := facts.gr.lt_opening_slot_round_of_succ S.hc (s - 1)
-  obtain ⟨hn0, hn1⟩ := nat_pred_bounds_e _ _ _ hs1 h0 h1
-  have hi0 : (((M.opening_slot S.hc ((M.round_of S.hc (s - 1)))) : Nat) : Int) + 1 ≤ (s : Int) := by
-    exact_mod_cast hn0
-  have hi1 : (s : Int) ≤ (((M.opening_slot S.hc ((M.round_of S.hc (s - 1)) + 1)) : Nat) : Int) := by
-    exact_mod_cast hn1
-  have ha0 : (Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (s - 1))))
-      = 4 * S.E.Δ * (((M.opening_slot S.hc ((M.round_of S.hc (s - 1)))) : Nat) : Int) + 6 * S.E.Δ := by
-    rw [← Restated.confirmation_time_opening_slot facts S ((M.round_of S.hc (s - 1))),
-      (pCR% confirmation_time_closed_cr) facts]
-  have ha1 : (Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (s - 1)) + 1))
-      = 4 * S.E.Δ * (((M.opening_slot S.hc ((M.round_of S.hc (s - 1)) + 1)) : Nat) : Int)
-        + 6 * S.E.Δ := by
-    rw [← Restated.confirmation_time_opening_slot facts S ((M.round_of S.hc (s - 1)) + 1),
-      (pCR% confirmation_time_closed_cr) facts]
-  have h4 : (0 : Int) ≤ 4 * S.E.Δ := by linarith
-  have hm0 := mul_le_mul_of_nonneg_left hi0 h4
-  have hm1 := mul_le_mul_of_nonneg_left hi1 h4
-  refine mem_awakeThroughout_of_forall Sched (fun t ht0 ht1 => ?_)
-  by_cases ht : t ≤ slotStart S.E.Δ s + 5 * S.E.Δ
-  · exact mem_awake_of_awakeThroughout Sched hlow ht0 ht
-  · have haw5 : v ∈ Sched.awake (slotStart S.E.Δ s + 5 * S.E.Δ) :=
-      mem_awake_of_awakeThroughout Sched hlow (by linarith) le_rfl
-    refine Restated.awake_forward_to_action facts S Sched hs (r := (M.round_of S.hc (s - 1))) ?_ haw5 t
-      (by linarith) ?_
-    · rw [ha0, hss]; nlinarith
-    · rw [ha1]; rw [hct] at ht1; nlinarith
-
-/-- If validators wake only at action instants, `s_w + 1 ≤ s' ≤ s_w + 2`, the round of `s_w + 1` is
-    not round `0`, and `v` is awake throughout the vote window of slot `s'` and from one delay
-    before slot `s_w`'s start to its confirmation instant, then `v` is awake from one delay before
-    the grade-2 early cutoff of the round of `s_w + 1` to slot `s_w`'s confirmation instant. -/
-theorem awakeThroughout_grade2_window_of_activeAtW (facts : Record.Facts M) (S : Setup V)
-    (Sched : Schedule V) (hw : Restated.WakesAtActionInstants M S Sched) {s_w s' : Slot}
-    (h1 : s_w + 1 ≤ s') (h2 : s' ≤ s_w + 2) (hr1 : 1 ≤ M.round_of S.hc (s_w + 1)) {v : V}
-    (hva : v ∈ activeAtW S Sched s')
-    (hwaw : v ∈ Sched.awakeThroughout (slotStart S.E.Δ s_w - S.E.Δ) (M.confirmation_time S.E s_w)) :
-    v ∈ Sched.awakeThroughout (M.early S.E S.hc (M.round_of S.hc (s_w + 1)) .g2 - S.E.Δ)
-      (M.confirmation_time S.E s_w) := by
-  have hd : (1 : Int) ≤ S.E.Δ := S.E.Δ_pos
-  have hR : (3 : Int) ≤ (S.hc.R : Int) := by exact_mod_cast S.hc.R_ge_three
-  have hwv : wVote S = (4 * (S.hc.R : Int) + 2) * S.E.Δ := rfl
-  have hv' : v ∈ Sched.awakeThroughout (slotStart S.E.Δ s' + S.E.Δ - wVote S)
-      (slotStart S.E.Δ s' + S.E.Δ) := hva
-  have hss': slotStart S.E.Δ s' = 4 * S.E.Δ * (s' : Int) := slotStart_closed S.E.Δ s'
-  have hssw : slotStart S.E.Δ s_w = 4 * S.E.Δ * (s_w : Int) := slotStart_closed S.E.Δ s_w
-  have hct : M.confirmation_time S.E s_w = 4 * S.E.Δ * (s_w : Int) + 6 * S.E.Δ :=
-    (pCR% confirmation_time_closed_cr) facts S.E s_w
-  have ho0 := facts.gr.opening_slot_round_of_le_slot S.hc (s_w + 1)
-  have ho1 := facts.gr.lt_opening_slot_round_of_succ S.hc (s_w + 1)
-  rw [facts.gr.opening_slot_succ] at ho1
-  have hA : (Restated.Vocabulary.Execution.Setup.a M S (M.round_of S.hc (s_w + 1))) =
-      4 * S.E.Δ * ((M.opening_slot S.hc (M.round_of S.hc (s_w + 1)) : Nat) : Int) + 6 * S.E.Δ := by
-    rw [← Restated.confirmation_time_opening_slot facts S (M.round_of S.hc (s_w + 1)),
-      (pCR% confirmation_time_closed_cr) facts]
-  have he := facts.gr.early_g2_eq S (M.round_of S.hc (s_w + 1))
-  have hprev : M.a S.hc S.E.Δ (M.round_of S.hc (s_w + 1) - 1) + S.E.Δ ≤
-      M.early S.E S.hc (M.round_of S.hc (s_w + 1)) .g2 :=
-    facts.gr.action_delta_le_early S S.hc.R_ge_three (Nat.sub_lt hr1 Nat.one_pos)
-  have hsucc : M.round_of S.hc (s_w + 1) - 1 + 1 = M.round_of S.hc (s_w + 1) :=
-    Nat.sub_add_cancel hr1
-  generalize M.round_of S.hc (s_w + 1) = r_w at *
-  generalize M.opening_slot S.hc r_w = o at *
-  have hA' : M.a S.hc S.E.Δ r_w = 4 * S.E.Δ * (o : Int) + 6 * S.E.Δ := hA
-  have h4 : (0 : Int) ≤ 4 * S.E.Δ := by linarith
-  have hRΔ : 3 * S.E.Δ ≤ (S.hc.R : Int) * S.E.Δ := by nlinarith
-  refine mem_awakeThroughout_of_forall Sched (fun t ht0 ht1 => ?_)
-  by_cases hta : slotStart S.E.Δ s_w - S.E.Δ ≤ t
-  · exact mem_awake_of_awakeThroughout Sched hwaw hta ht1
-  by_cases htb : slotStart S.E.Δ s' + S.E.Δ - wVote S ≤ t
-  · refine mem_awake_of_awakeThroughout Sched hv' htb ?_
-    have hI : ((s_w : Nat) : Int) + 1 ≤ ((s' : Nat) : Int) := by exact_mod_cast h1
-    have hm := mul_le_mul_of_nonneg_left hI h4
-    rw [hss']; rw [hssw] at hta; linarith
-  have hlate : o + S.hc.R ≤ s' + 1 := by
-    by_contra hcon
-    have hI : ((s' : Nat) : Int) + 2 ≤ ((o : Nat) : Int) + (S.hc.R : Int) := by
-      have : s' + 2 ≤ o + S.hc.R := Nat.succ_le_of_lt (Nat.lt_of_not_le hcon)
-      exact_mod_cast this
-    have hm := mul_le_mul_of_nonneg_left hI h4
-    rw [hss', hwv] at htb
-    rw [he, hA'] at ht0
-    nlinarith
-  have hI : ((o : Nat) : Int) + (S.hc.R : Int) ≤ ((s' : Nat) : Int) + 1 := by exact_mod_cast hlate
-  have hm := mul_le_mul_of_nonneg_left hI h4
-  have hI2 : ((s' : Nat) : Int) ≤ ((o : Nat) : Int) + (S.hc.R : Int) := by
-    have : s' ≤ o + S.hc.R := le_trans h2 (Nat.succ_le_of_lt ho1)
-    exact_mod_cast this
-  have hm2 := mul_le_mul_of_nonneg_left hI2 h4
-  have hawk : v ∈ Sched.awake (M.a S.hc S.E.Δ r_w - 1) := by
-    refine mem_awake_of_awakeThroughout Sched hv' ?_ ?_
-    · rw [hss', hwv, hA']; nlinarith
-    · rw [hss', hA']; nlinarith
-  have hback := Restated.awake_since_action facts S Sched hw (r := r_w - 1)
-    (t := M.a S.hc S.E.Δ r_w - 1)
-    (show (Restated.Vocabulary.Execution.Setup.a M S (r_w - 1)) ≤ M.a S.hc S.E.Δ r_w - 1 by
-      show M.a S.hc S.E.Δ (r_w - 1) ≤ _; rw [he] at hprev; linarith)
-    (show M.a S.hc S.E.Δ r_w - 1 < (Restated.Vocabulary.Execution.Setup.a M S (r_w - 1 + 1)) by
-      rw [hsucc]; show _ < M.a S.hc S.E.Δ r_w; linarith) hawk
-  refine hback t ?_ ?_
-  · show M.a S.hc S.E.Δ (r_w - 1) ≤ t
-    linarith
-  · rw [hss', hwv] at htb
-    nlinarith
-
-end
-
 section
 set_option autoImplicit false
 open Framework.StsMultisetLog
@@ -245,7 +102,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
     after that tick `v`'s confirmed output is a descendant of `B`. -/
 theorem preceq_get_confirmed_at_write (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -280,22 +137,26 @@ theorem preceq_get_confirmed_at_write (facts : Record.Facts M) (S : Setup V) (Sc
     {s : Slot} (hsl : (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) + 2 ≤ s)
     {B : Block V} (hBh : Restated.AncestorOfHonestHeadsFrom M S Sched x B s)
     {m : Nat} (hm : Restated.tickStepAt M x m (M.confirmation_time S.E s))
-    {v : V} (hvaw : v ∈ Sched.awakeThroughout (slotStart S.E.Δ s - S.E.Δ)
-      (M.confirmation_time S.E s))
+    {v : V} (hvaw2 : v ∈ Sched.awakeThroughout
+      (M.early S.E S.hc (M.round_of S.hc (s + 1)) .g2 - S.E.Δ) (M.confirmation_time S.E s))
     (hvh : Restated.HonestThrough M Sched x (m + 1) v)
     -- `hrun`: the node state `v`'s tick reads passes the grade-2 awake test of the round of
     -- `s + 1`.
     (hrun : M.awake_for_grade2 (Setup.alwaysAwake S) v
       (Record.wakeStage M Sched (M.confirmation_time S.E s) x[m] v) (M.round_of S.hc (s + 1))) :
     Block.Preceq B (M.get_confirmed (x[m + 1][v].st).st.core) := by
+  have hrecvAll : ∀ r' : Round, Restated.switchRound M S tE ≤ r' → Restated.NextRoundReceipts M S Sched x r' :=
+    fun r' hr' => Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr')
+  have hvaw := Restated.slotWindow_of_grade2Window facts S Sched hvaw2
   have hd := S.E.Δ_pos
   obtain ⟨hm1, -⟩ := Restated.tickStepAt_time facts x hm
   have hvh' : HonestThroughTime Sched (M.confirmation_time S.E s) v :=
     fun t ht => hvh t (by rw [hm1]; exact ht)
   have hspos : 0 < s := lt_of_lt_of_le Nat.zero_lt_two (le_trans (Nat.le_add_left 2 _) hsl)
   obtain ⟨r, n, T, hr, hTW, hJ, -, hs1, hT⟩ := Restated.exists_joint_anchor_headsBelow_atSlot facts S Sched x
-    tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw
-    hs hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ (le_trans (Nat.le_add_right _ 2) hsl)
+    tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom
+    hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ (le_trans (Nat.le_add_right _ 2) hsl)
   have hinv := (pHP% joint_toTop_hp) hJ
   have hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T :=
@@ -322,7 +183,7 @@ theorem preceq_get_confirmed_at_write (facts : Record.Facts M) (S : Setup V) (Sc
   have hmaj := Restated.majority_of_committeeSleepinessW facts S Sched hcsW (s := s)
     (slotStart_mono S (Nat.le_succ_of_le hsl))
   obtain ⟨w, hwmem⟩ : ((S.E.committee s) ∩ Restated.HonSlot M S Sched s).Nonempty := by
-    rw [← Finset.card_pos]; omega
+    rw [Finset.inter_eq_right.2 (Restated.HonSlot_subset_committee facts S Sched _), ← Finset.card_pos]; omega
   have hwH := (Finset.mem_inter.mp hwmem).2
   obtain ⟨mw, hmw⟩ := Restated.exists_tickStepAt facts x htd (facts.sch.vote_time_pos S hspos)
   obtain ⟨G, hG⟩ := (pCS% gfHeadFrom_nonempty_cs) facts S (x[mw][w].st) s
@@ -336,8 +197,8 @@ theorem preceq_get_confirmed_at_write (facts : Record.Facts M) (S : Setup V) (Sc
       Restated.AncestorOfHonestHeadsFrom M S Sched x X s := by
     rcases preceq_linear_Preceq hBw hTw with h | h
     · exact ⟨T.erase, h, preceq_eq_true_iff_Preceq.mp (Block.preceq_self _),
-        Restated.ancestorOfHonestHeadsFrom_of_headsBelow_i1 facts S Sched x tE hexec hmono htd tGAT gap hgst
-          hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+        Restated.ancestorOfHonestHeadsFrom_of_headsBelow_i1 (hrecvAll := hrecvAll) facts S Sched x tE hexec hmono htd tGAT gap hgst
+          hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
           hJswitch (r₀ := Restated.switchRound M S tE) le_rfl hTW₀ hJ₀ hs0 hT⟩
     · exact ⟨B, preceq_eq_true_iff_Preceq.mp (Block.preceq_self _), h, hBh⟩
   have hunder : Restated.DeliveredDescendantUnderFinalizedInPhase M S x tGAT
@@ -355,13 +216,13 @@ theorem preceq_get_confirmed_at_write (facts : Record.Facts M) (S : Setup V) (Sc
   have hAo : Restated.Vocabulary.Protocol.confAnchorWith M (M.gradeContract c) S.E S.hc
       (Restated.confStoreAt M S (x[m][v].st) s) ⇢ A := hAo'
   have hA := Restated.confAnchor_headsBelow_atSlot facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-    hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
-    hTW₀ hJ₀ hsl hm hvaw hvh' c hc A hAo
+    hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
+    hTW₀ hJ₀ hsl hm hvaw2 hvh' c hc A hAo
   have hpath := Restated.confAnchorChainInTree_atSlot facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
     hTW₀ hJ₀ hsl hm hvaw hvh' (hX s le_rfl) c hc A hAo
   exact preceq_trans_Preceq hBX (Restated.get_confirmed_descendant_after_confirmation_tick facts S Sched x tE
-    hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs
+    hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom
     hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ hsettle hsl hX hunder
     hunderS hm hvaw hvh hrun c hc A hAo hA hpath)
 
@@ -378,11 +239,12 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
     `HonestProposalHeadsAtOwnSlot` holds up to `tHi`, then for every slot `s` from round
     `(rW + 1)`'s third slot on whose confirmation instant is at or before `tHi`, every block `s`'s
     honest proposer sent by `s`'s vote instant is an ancestor of the confirmed output of every
-    validator honest through its read and awake throughout the vote window of its read's slot, at
+    validator honest through its read that ran, at or after `s`'s confirmation instant and at or
+    before its read, a confirmation while awake throughout that confirmation's grade-2 window, at
     every read from six delays after `s`'s proposal instant on. -/
 theorem confirmedIncluded_of_ownSlotVotes_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -419,6 +281,9 @@ theorem confirmedIncluded_of_ownSlotVotes_upTo (facts : Record.Facts M) (S : Set
       ((M.opening_slot S.hc (Restated.switchRound M S tE + 1))) tHi) :
     ∀ s : Slot, (M.opening_slot S.hc (Restated.switchRound M S tE + 1)) + 2 ≤ s →
       M.confirmation_time S.E s ≤ tHi → Restated.ConfirmedIncludedAtSlot M S Sched x s := by
+  have hrecvAll : ∀ r' : Round, Restated.switchRound M S tE ≤ r' → Restated.NextRoundReceipts M S Sched x r' :=
+    fun r' hr' => Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr')
   intro s hsl hct hprop i B hB hi v j hvj htj hva
   have hd := S.E.Δ_pos
   have hR3 := S.hc.R_ge_three
@@ -428,53 +293,20 @@ theorem confirmedIncluded_of_ownSlotVotes_upTo (facts : Record.Facts M) (S : Set
   have hs0 : (M.opening_slot S.hc (Restated.switchRound M S tE)) + 2 ≤ s :=
     le_trans (Nat.add_le_add_right hop 2) hsl
   have hBh : Restated.AncestorOfHonestHeadsFrom M S Sched x B s :=
-    Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 facts S Sched x tE hexec hmono htd tGAT gap hgst hlen
-      hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+    Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 (hrecvAll := hrecvAll) facts S Sched x tE hexec hmono htd tGAT gap hgst hlen
+      hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
       (r₀ := Restated.switchRound M S tE) le_rfl hTW₀ hJ₀ hadopt hs0
       (le_trans (Nat.le_add_right _ 2) hsl) hct hprop hB hi
-  have hdelay : confirmedInclusionDelay S = 6 * S.E.Δ := rfl
-  have hctc := (pCR% confirmation_time_closed_cr) facts S.E s
-  have hctj : M.confirmation_time S.E s ≤ (x[j].time : Int) := by
-    have hps : slotStart S.E.Δ s ≤ M.proposal_time S.E s :=
-      slotStart_le_of_le_slotOf S (facts.sch.Sts_proposal_time_nonneg S s)
-        (le_of_eq (facts.sch.slotOf_proposal_time S.E s).symm)
-    have h6 := facts.sch.slotStart_add_six_delta_eq_confirmation_time S.E s
-    rw [hdelay] at htj
+  -- step 2: the confirmation `v` ran at slot `s_w`, from the reader premise
+  obtain ⟨s_w, hlo, hwct, hwin⟩ := hva
+  have hsw : s ≤ s_w := by
+    by_contra hcon
+    have hI : ((s_w : Nat) : Int) + 1 ≤ ((s : Nat) : Int) := by
+      exact_mod_cast Nat.succ_le_of_lt (Nat.lt_of_not_le hcon)
+    have hm := mul_le_mul_of_nonneg_left hI (le_of_lt (by linarith : (0 : Int) < 4 * S.E.Δ))
+    rw [mul_add, mul_one] at hm
+    rw [(pCR% confirmation_time_closed_cr) facts, (pCR% confirmation_time_closed_cr) facts] at hlo
     linarith
-  have hj0 : (0 : Int) ≤ (x[j].time : Int) := Int.natCast_nonneg _
-  -- step 2: the write's slot `s_w`
-  have hss1 : slotStart S.E.Δ (s + 1) ≤ (x[j].time : Int) := by
-    have e : slotStart S.E.Δ (s + 1) = 4 * S.E.Δ * (s : Int) + 4 * S.E.Δ := by
-      rw [slotStart_closed]; push_cast; ring
-    rw [e]; linarith
-  have hs'1 : s + 1 ≤ S.E.slotOf (x[j].time : Int) := by
-    have h := slotOf_mono_sts S hss1
-    rwa [slotOf_slotStart] at h
-  obtain ⟨s_w, hsw, hsw1, hsw2, hwaw, hwct⟩ : ∃ s_w : Slot, s ≤ s_w ∧
-      s_w + 1 ≤ S.E.slotOf (x[j].time : Int) ∧ S.E.slotOf (x[j].time : Int) ≤ s_w + 2 ∧
-      v ∈ Sched.awakeThroughout (slotStart S.E.Δ s_w - S.E.Δ)
-        (M.confirmation_time S.E s_w) ∧
-      M.confirmation_time S.E s_w ≤ (x[j].time : Int) := by
-    rcases Nat.eq_or_lt_of_le hs'1 with heq | hlt
-    · have hs1 : 1 ≤ s := le_trans (Nat.le_add_left 1 _) (le_trans (Nat.le_succ _) hsl)
-      have hle1 : s + 1 ≤ S.E.slotOf (x[j].time : Int) := le_of_eq heq
-      have hle2 : S.E.slotOf (x[j].time : Int) ≤ s + 2 := by rw [← heq]; exact Nat.le_succ _
-      rw [← heq] at hva
-      exact ⟨s, le_rfl, hle1, hle2,
-        Restated.awakeThroughout_confirmation_of_activeAtW_next facts S Sched hs hs1 hva, hctj⟩
-    · obtain ⟨h2, hsw2, hR2⟩ := nat_sub_two_e _ _ _ hlt hR3
-      refine ⟨S.E.slotOf (x[j].time : Int) - 2, hsw2, le_trans (Nat.le_succ _) (le_of_eq h2),
-        le_of_eq h2.symm,
-        Restated.awakeThroughout_confirmation_of_activeAtW facts S Sched hva (le_of_eq h2) hR2, ?_⟩
-      have hst := slotStart_le_of_le_slotOf S hj0 (le_refl (S.E.slotOf (x[j].time : Int)))
-      rw [slotStart_closed] at hst
-      rw [(pCR% confirmation_time_closed_cr) facts]
-      have hcI : ((S.E.slotOf (x[j].time : Int) - 2 : Nat) : Int) + 2
-          = ((S.E.slotOf (x[j].time : Int) : Nat) : Int) := by exact_mod_cast h2
-      have e : 4 * S.E.Δ * ((S.E.slotOf (x[j].time : Int) - 2 : Nat) : Int) + 6 * S.E.Δ
-          = 4 * S.E.Δ * ((S.E.slotOf (x[j].time : Int) : Nat) : Int) - 2 * S.E.Δ := by
-        rw [← hcI]; ring
-      rw [e]; linarith
   -- step 3: the write at the tick at slot `s_w`'s confirmation instant
   have hcpos : 0 < M.confirmation_time S.E s_w := by
     rw [(pCR% confirmation_time_closed_cr) facts]
@@ -512,17 +344,16 @@ theorem confirmedIncluded_of_ownSlotVotes_upTo (facts : Record.Facts M) (S : Set
       rw [hτ]
       linarith
     · rw [hτ]
-      exact Restated.awakeThroughout_grade2_window_of_activeAtW facts S Sched hw hsw1 hsw2 hr1 hva
-        hwaw
+      exact hwin
     · rw [hτ]
       exact fun t ht => hvh t (by rw [hm1]; exact ht)
   have hwrite := Restated.preceq_get_confirmed_at_write facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
     hTW₀ hJ₀ hsettle (le_trans hsl hsw) (Restated.ancestorOfHonestHeadsFrom_mono facts S Sched x hsw hBh) hm
-    hwaw hvh hrun
+    hwin hvh hrun
   -- step 4: the output only extends from the write to the read
   have hext := Restated.confirmedOnlyExtendsAfterHealing_of_settle facts S Sched x tE hexec hmono htd hcatch tGAT
-    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hTW₀ hJ₀ hsettle
   have hsettleT : Restated.confirmedSettleTime M S tE ≤ (x[m + 1].time : Int) := by
     have e : Restated.confirmedSettleTime M S tE = (Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE + 1)) := rfl
@@ -546,12 +377,13 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
 /-- On the premises of `afterPhaseJointRound_of_premises` and `RecordsSettledAtSettleTick`, if
     `HonestProposalHeadsAtOwnSlot` holds at every `tHi`, then for every slot from round `(rW + 1)`'s
     third slot on, every block the slot's honest proposer sent by the slot's vote instant is an
-    ancestor of the confirmed output of every validator honest through its read and awake throughout
-    the vote window of its read's slot, at every read from six delays after the slot's proposal
+    ancestor of the confirmed output of every validator honest through its read that ran, at or
+    after the slot's confirmation instant and at or before its read, a confirmation while awake
+    throughout that confirmation's grade-2 window, at every read from six delays after the slot's proposal
     instant on. -/
 theorem confirmedIncluded_of_ownSlotVotes (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -587,7 +419,7 @@ theorem confirmedIncluded_of_ownSlotVotes (facts : Record.Facts M) (S : Setup V)
       ((M.opening_slot S.hc (Restated.switchRound M S tE + 1))) tHi) :
     Restated.ConfirmedIncludedFromSlot M S Sched x ((M.opening_slot S.hc (Restated.switchRound M S tE + 1)) + 2) :=
   fun s hsl => Restated.confirmedIncluded_of_ownSlotVotes_upTo facts S Sched x tE hexec hmono htd hcatch tGAT gap
-    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hTW₀ hJ₀ hsettle (hadopt (M.confirmation_time S.E s)) s hsl le_rfl
 
 end

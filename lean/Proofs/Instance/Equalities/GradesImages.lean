@@ -6,9 +6,9 @@ import Proofs.Instance.NoRaise.Routines
 import Proofs.Vocabulary.ModelVocabulary
 
 /-!
-# The grade members of `Model.specDraft` and of `Model.vocabulary` at the image of a store
+# The grade members of `Model.spec` and of `Model.vocabulary` at the image of a store
 
-Each `specDraft_<m>_eq` says that the member `m` of `Model.specDraft` at a store `st : OkStore V`
+Each `spec_<m>_eq` says that the member `m` of `Model.spec` at a store `st : OkStore V`
 equals the member `m` of `Model.vocabulary` at the grade view of the image,
 `st.val.toProof.toHealing.gradeView`. Each rests on a lemma about the spec's routine alone: on a
 store meeting `StoreOk` the routine answers, and its answer, mapped, is the value of the routine of
@@ -18,11 +18,11 @@ the same name in `DecoupledConsensusModel.Protocol`.
 set_option autoImplicit false
 set_option linter.unusedSectionVars false
 
-namespace SpecDraftRecord.GradesImages
+namespace SpecRecord.GradesImages
 
 open Spec
-open SpecDraftRecord.ForkChoiceGrades
-open SpecDraftRecord.NoRaise (Stamped DistinctRoots ParentClosed StoreOk)
+open SpecRecord.ForkChoiceGrades
+open SpecRecord.NoRaise (Stamped DistinctRoots ParentClosed StoreOk)
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V]
@@ -706,21 +706,21 @@ theorem gradeResultOfImage_readFrame (st : Store V)
   rw [readFrame_eq_frameOfImage st hinj hpar hF]
   simp only [frameOfImage, toProof_gradeResultOfImage, and_self]
 
-end SpecDraftRecord.GradesImages
+end SpecRecord.GradesImages
 
-namespace SpecDraftRecord.GradesImages
+namespace SpecRecord.GradesImages
 
 open Spec
-open SpecDraftRecord.ForkChoiceGrades
+open SpecRecord.ForkChoiceGrades
 open DecoupledConsensusModel.Sts.Record
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The member `rawInputs` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `rawInputs` of `Model.spec` at a store `st` of the instance is the member
     `rawInputs` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_rawInputs_eq (st : OkStore V) (eta r : Round) (t : Time) (v : V) :
-    (Model.specDraft (V := V)).rawInputs st eta r t v =
+theorem spec_rawInputs_eq (st : OkStore V) (eta r : Round) (t : Time) (v : V) :
+    (Model.spec (V := V)).rawInputs st eta r t v =
       (Model.vocabulary (V := V)).rawInputs st.val.toProof.toHealing.gradeView eta r t v := by
   show successOutcomes (Except.map (fun votes => votes.map Protocol.SGVote.toProofEmb)
     (Protocol.rawInputs st.val eta r t v)) =
@@ -728,22 +728,22 @@ theorem specDraft_rawInputs_eq (st : OkStore V) (eta r : Round) (t : Time) (v : 
   rw [rawInputs_eq st.property.1, vocabulary_rawInputs_toProof]
   rfl
 
-/-- The member `bodyReady` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `bodyReady` of `Model.spec` at a store `st` of the instance is the member
     `bodyReady` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_bodyReady_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V) (t : Time)
+theorem spec_bodyReady_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V) (t : Time)
     (u : DecoupledConsensusModel.Protocol.SGVote V) :
-    (Model.specDraft (V := V)).bodyReady st F t u =
+    (Model.spec (V := V)).bodyReady st F t u =
       (Model.vocabulary (V := V)).bodyReady st.val.toProof.toHealing.gradeView F t u := by
   show successOutcomes (Protocol.bodyReady st.val (st.val.blockOfImage F) t
     (Protocol.SGVote.toSpec u)) = pure (DecoupledConsensusModel.Protocol.bodyReady _ F t u)
   rw [bodyReady_eq st.property]
   rfl
 
-/-- The member `interpretedInputs` of `Model.specDraft` at a store `st` of the instance is the
+/-- The member `interpretedInputs` of `Model.spec` at a store `st` of the instance is the
     member `interpretedInputs` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_interpretedInputs_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
+theorem spec_interpretedInputs_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
     (eta r : Round) (t : Time) (v : V) :
-    (Model.specDraft (V := V)).interpretedInputs st F eta r t v =
+    (Model.spec (V := V)).interpretedInputs st F eta r t v =
       (Model.vocabulary (V := V)).interpretedInputs st.val.toProof.toHealing.gradeView F eta r t v := by
   show successOutcomes (Except.map (fun votes => votes.map Protocol.SGVote.toProofEmb)
     (Protocol.interpretedInputs st.val (st.val.blockOfImage F) eta r t v)) =
@@ -751,12 +751,12 @@ theorem specDraft_interpretedInputs_eq (st : OkStore V) (F : DecoupledConsensusM
   rw [interpretedInputs_eq st.property, vocabulary_interpretedInputs_toProof]
   rfl
 
-/-- The member `rawView` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `rawView` of `Model.spec` at a store `st` of the instance is the member
     `rawView` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_rawView_eq (st : OkStore V) (eta r : Round) (t : Time) (v : V) :
-    (Model.specDraft (V := V)).rawView st eta r t v =
+theorem spec_rawView_eq (st : OkStore V) (eta r : Round) (t : Time) (v : V) :
+    (Model.spec (V := V)).rawView st eta r t v =
       (Model.vocabulary (V := V)).rawView st.val.toProof.toHealing.gradeView eta r t v := by
-  have h1 : (Model.specDraft (V := V)).rawView st eta r t v =
+  have h1 : (Model.spec (V := V)).rawView st eta r t v =
       successOutcomes (Except.map (fun tokens => tokens.map Protocol.Token.toProofEmb)
         (Protocol.rawView st.val eta r t v)) := rfl
   have h2 : (Model.vocabulary (V := V)).rawView st.val.toProof.toHealing.gradeView eta r t v =
@@ -767,13 +767,13 @@ theorem specDraft_rawView_eq (st : OkStore V) (eta r : Round) (t : Time) (v : V)
   rw [vocabulary_rawInputs_toProof, image_token_map]
   rfl
 
-/-- The member `readyView` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `readyView` of `Model.spec` at a store `st` of the instance is the member
     `readyView` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_readyView_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
+theorem spec_readyView_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
     (eta r : Round) (t : Time) (v : V) :
-    (Model.specDraft (V := V)).readyView st F eta r t v =
+    (Model.spec (V := V)).readyView st F eta r t v =
       (Model.vocabulary (V := V)).readyView st.val.toProof.toHealing.gradeView F eta r t v := by
-  have h1 : (Model.specDraft (V := V)).readyView st F eta r t v =
+  have h1 : (Model.spec (V := V)).readyView st F eta r t v =
       successOutcomes (Except.map (fun tokens => tokens.map Protocol.Token.toProofEmb)
         (Protocol.readyView st.val (st.val.blockOfImage F) eta r t v)) := rfl
   have h2 : (Model.vocabulary (V := V)).readyView st.val.toProof.toHealing.gradeView F eta r t v =
@@ -784,11 +784,11 @@ theorem specDraft_readyView_eq (st : OkStore V) (F : DecoupledConsensusModel.Blo
   rw [vocabulary_interpretedInputs_toProof, image_token_map]
   rfl
 
-/-- The member `localCovers` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `localCovers` of `Model.spec` at a store `st` of the instance is the member
     `localCovers` of `Model.vocabulary` at the grade view of the image of `st`, at every key. -/
-theorem specDraft_localCovers_eq (st : OkStore V) (key : Option DecoupledConsensusModel.BlockId)
+theorem spec_localCovers_eq (st : OkStore V) (key : Option DecoupledConsensusModel.BlockId)
     (B : DecoupledConsensusModel.Block V) :
-    (Model.specDraft (V := V)).localCovers st key B =
+    (Model.spec (V := V)).localCovers st key B =
       (Model.vocabulary (V := V)).localCovers st.val.toProof.toHealing.gradeView key B := by
   obtain ⟨-, hT, hpar, -⟩ := st.property
   show successOutcomes (orVocabulary (Protocol.head_covers st.val.T (st.val.blockOfImage B)
@@ -805,34 +805,34 @@ theorem specDraft_localCovers_eq (st : OkStore V) (key : Option DecoupledConsens
     simp only [DecoupledConsensusModel.Protocol.localCovers, toProof_gv_T]
     rfl
 
-/-- The member `positive` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `positive` of `Model.spec` at a store `st` of the instance is the member
     `positive` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_positive_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
+theorem spec_positive_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
     (eta r : Round) (t_0 t_1 : Time) (v : V) (B : DecoupledConsensusModel.Block V) :
-    (Model.specDraft (V := V)).positive st F eta r t_0 t_1 v B =
+    (Model.spec (V := V)).positive st F eta r t_0 t_1 v B =
       (Model.vocabulary (V := V)).positive st.val.toProof.toHealing.gradeView F eta r t_0 t_1 v B := by
   show successOutcomes (Protocol.positive st.val (st.val.blockOfImage F) eta r t_0 t_1 v
     (st.val.blockOfImage B)) = pure (DecoupledConsensusModel.Protocol.positive _ F eta r t_0 t_1 v B)
   rw [positive_eq st.property]
   rfl
 
-/-- The member `opposing` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `opposing` of `Model.spec` at a store `st` of the instance is the member
     `opposing` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_opposing_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
+theorem spec_opposing_eq (st : OkStore V) (F : DecoupledConsensusModel.Block V)
     (eta r : Round) (t_0 t_1 : Time) (v : V) (B : DecoupledConsensusModel.Block V) :
-    (Model.specDraft (V := V)).opposing st F eta r t_0 t_1 v B =
+    (Model.spec (V := V)).opposing st F eta r t_0 t_1 v B =
       (Model.vocabulary (V := V)).opposing st.val.toProof.toHealing.gradeView F eta r t_0 t_1 v B := by
   show successOutcomes (Protocol.opposing st.val (st.val.blockOfImage F) eta r t_0 t_1 v
     (st.val.blockOfImage B)) = pure (DecoupledConsensusModel.Protocol.opposing _ F eta r t_0 t_1 v B)
   rw [opposing_eq st.property]
   rfl
 
-/-- The member `gradeBool` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `gradeBool` of `Model.spec` at a store `st` of the instance is the member
     `gradeBool` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_gradeBool_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V)
+theorem spec_gradeBool_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V)
     (F : DecoupledConsensusModel.Block V) (eta r : Round) (t_0 t_1 : Time)
     (B : DecoupledConsensusModel.Block V) :
-    (Model.specDraft (V := V)).gradeBool E st F eta r t_0 t_1 B =
+    (Model.spec (V := V)).gradeBool E st F eta r t_0 t_1 B =
       (Model.vocabulary (V := V)).gradeBool E st.val.toProof.toHealing.gradeView F eta r t_0 t_1 B := by
   show successOutcomes (Protocol.gradeBool (Provisional.toSpec E) st.val (st.val.blockOfImage F)
     eta r t_0 t_1 (st.val.blockOfImage B)) =
@@ -840,11 +840,11 @@ theorem specDraft_gradeBool_eq (E : DecoupledConsensusModel.Env V) (st : OkStore
   rw [gradeBool_eq st.property]
   rfl
 
-/-- The member `freezeRoot` of `Model.specDraft` at a store `st` of the instance is the member
+/-- The member `freezeRoot` of `Model.spec` at a store `st` of the instance is the member
     `freezeRoot` of `Model.vocabulary` at the grade view of the image of `st`. -/
-theorem specDraft_freezeRoot_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V)
+theorem spec_freezeRoot_eq (E : DecoupledConsensusModel.Env V) (st : OkStore V)
     (F : DecoupledConsensusModel.Block V) (eta r : Round) (t_0 t_1 : Time) :
-    (Model.specDraft (V := V)).freezeRoot E st F eta r t_0 t_1 =
+    (Model.spec (V := V)).freezeRoot E st F eta r t_0 t_1 =
       (Model.vocabulary (V := V)).freezeRoot E st.val.toProof.toHealing.gradeView F eta r t_0 t_1 := by
   show successOutcomes (Except.map (Option.map Block.toProof)
     (Protocol.freezeRoot (Provisional.toSpec E) st.val (st.val.blockOfImage F) eta r t_0 t_1)) =
@@ -852,9 +852,9 @@ theorem specDraft_freezeRoot_eq (E : DecoupledConsensusModel.Env V) (st : OkStor
   rw [freezeRoot_eq st.property]
   rfl
 
-end SpecDraftRecord.GradesImages
+end SpecRecord.GradesImages
 
-namespace SpecDraftRecord.GradesImages
+namespace SpecRecord.GradesImages
 
 open Spec
 open DecoupledConsensusModel.Sts.Record
@@ -882,4 +882,4 @@ theorem member_currentSGVote_of_deepest_clear (st : OkStore V)
   simp [hD', Option.value]
   rfl
 
-end SpecDraftRecord.GradesImages
+end SpecRecord.GradesImages

@@ -35,10 +35,11 @@ open DecoupledConsensusModel.Execution
 structure StableHandover (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (r : Nat) (P : Block V) : Prop where
   /-- Every round-`r` or round-`(r + 1)` attestation computed at that round's tick by a validator
-      awake throughout the round's attester window and honest through the step after the tick names
+      awake throughout the round's grade-2 window
+      (`attestersAt`) and honest through the step after the tick names
       a block `C` with `P ⪯ C`. -/
   covers : ∀ ρ : Nat, (ρ = r ∨ ρ = r + 1) → ∀ n : Nat, Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ)) →
-    ∀ u ∈ Restated.activeRoundW M S Sched ρ, Restated.HonestThrough M Sched x (n + 1) u →
+    ∀ u ∈ Restated.attestersAt M S Sched ρ, Restated.HonestThrough M Sched x (n + 1) u →
     ∀ C : NamedBlock V, C ∈ (x[n + 1][u].st).st.bodies →
     ∀ a ∈ Restated.actionAttestationFrom M (Setup.alwaysAwake S) (x[n][u].st) u ρ,
       a.confirmed = some C.root →

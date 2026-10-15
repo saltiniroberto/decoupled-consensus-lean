@@ -49,10 +49,10 @@ theorem carried_vote_envelope (facts : Record.Facts M) (S : Setup V) (Sched : Sc
     ∃ (j : Nat) (sm : SignedMsg V (NamedObject V)), j ≤ m ∧ sm ∈ x[j].sent ∧
       sm.msg = NamedObject.block D := by
   obtain ⟨i, him, hcase⟩ := Restated.block_sent_of_mem_tree facts S Sched x hne hD
-  rcases hcase with ⟨sm, hlbl, hmsg⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout, hst, hem⟩
+  rcases hcase with ⟨sm, hlbl, hmsg⟩ | ⟨τ, hlbl, haw, out₁, hout, hst, hem⟩
   · exact ⟨i, sm, le_of_lt him, (Restated.sent_of_deliver facts S Sched x hlbl).1, hmsg⟩
   · exact ⟨i + 1, ⟨v, NamedObject.block D⟩, Nat.succ_le_of_lt him,
-      Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd
+      Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw
         (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) v _ (τ : Int))
         hout hst hem, rfl⟩
 
@@ -80,7 +80,7 @@ theorem treeBlock_carried_ok (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     · simp [NamedBlock.gf_support_votes] at hu
     · simp at hu
   · obtain ⟨i, him, hcase⟩ := Restated.block_sent_of_mem_tree facts S Sched x hne hD
-    rcases hcase with ⟨sm, hlbl, hmsg⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout, -, hem⟩
+    rcases hcase with ⟨sm, hlbl, hmsg⟩ | ⟨τ, hlbl, haw, out₁, hout, -, hem⟩
     · obtain ⟨-, hsup, hcomm⟩ := (hexec.wire i v sm hlbl).1 D hmsg
       rw [Proofs.NamedWire.erase_goldfish_support, Proofs.NamedWire.erase_goldfish_votes]
       exact ⟨hsup, hcomm⟩

@@ -3,20 +3,20 @@ import Proofs.Instance.NoRaise.Routines
 import Model.Record.Wiring
 
 /-!
-# The `_nonempty` fields at `Model.specDraft`
+# The `_nonempty` fields at `Model.spec`
 
 A `_nonempty` field of the record's facts bundles says that a member has an outcome for every
-argument. This file proves those fields at `Model.specDraft`, each as
-`SpecDraftRecord.<Bundle>.specDraft_<field>`, mostly from the two clauses of `StoreOk` that every
+argument. This file proves those fields at `Model.spec`, each as
+`SpecRecord.<Bundle>.spec_<field>`, mostly from the two clauses of `StoreOk` that every
 store of the store type meets.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NonEmpty
+namespace SpecRecord.NonEmpty
 
 open DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 
 variable {V : Type}
 
@@ -32,30 +32,30 @@ theorem returns_of_ok {α : Type} {r : DC.DRE α} {a : α} (h : r = .ok a) :
     Returns (successOutcomes r) a :=
   (returns_successOutcomes r a).2 h
 
-end SpecDraftRecord.NonEmpty
+end SpecRecord.NonEmpty
 
 /-- `nonempty_of h` closes a goal `∃ x, m ⇢ x` where the member `m` unfolds to `successOutcomes r`,
     from `h : ∃ v, routine … = .ok v` whose left-hand side occurs in `r`. -/
 macro "nonempty_of " h:term : tactic =>
-  `(tactic| (apply Exists.intro; apply SpecDraftRecord.NonEmpty.returns_of_ok; rw [($h).choose_spec]; try rfl))
+  `(tactic| (apply Exists.intro; apply SpecRecord.NonEmpty.returns_of_ok; rw [($h).choose_spec]; try rfl))
 
-namespace SpecDraftRecord.StoreFacts
+namespace SpecRecord.StoreFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `resolved_nonempty` of `StoreFacts` at `Model.specDraft`: whether a Goldfish vote `u`
+/-- The field `resolved_nonempty` of `StoreFacts` at `Model.spec`: whether a Goldfish vote `u`
     is resolved on a tree `T` is always answered. -/
-theorem specDraft_resolved_nonempty : ∀ (T : Finset (Block V)) (u : GoldfishVote V),
-    ∃ b : Bool, (Model.specDraft (V := V)).resolved T u ⇢ b := by
+theorem spec_resolved_nonempty : ∀ (T : Finset (Block V)) (u : GoldfishVote V),
+    ∃ b : Bool, (Model.spec (V := V)).resolved T u ⇢ b := by
   intro T u
   nonempty_of orVocabulary_ok _ _
 
-/-- The field `tau_nonempty` of `StoreFacts` at `Model.specDraft`: every store of the store type has
+/-- The field `tau_nonempty` of `StoreFacts` at `Model.spec`: every store of the store type has
     a Goldfish-vote timestamp map. -/
-theorem specDraft_tau_nonempty : ∀ (st : (Model.specDraft (V := V)).S),
+theorem spec_tau_nonempty : ∀ (st : (Model.spec (V := V)).S),
     ∃ tm : TimestampMap (GoldfishVote V), st.tau ⇢ tm := by
   intro st
   classical
@@ -73,280 +73,280 @@ theorem specDraft_tau_nonempty : ∀ (st : (Model.specDraft (V := V)).S),
       rw [h]; exact Bool.false_ne_true
     rw [dif_neg h']
 
-end SpecDraftRecord.StoreFacts
+end SpecRecord.StoreFacts
 
-namespace SpecDraftRecord.ForkChoiceFacts
+namespace SpecRecord.ForkChoiceFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `targets_under_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: whether a Goldfish
+/-- The field `targets_under_nonempty` of `ForkChoiceFacts` at `Model.spec`: whether a Goldfish
     vote targets a descendant of `B` on a tree `T` is always answered. -/
-theorem specDraft_targets_under_nonempty :
+theorem spec_targets_under_nonempty :
     ∀ (T : Finset (Block V)) (B : Block V) (u : GoldfishVote V),
-      ∃ b, (Model.specDraft (V := V)).targets_under T B u ⇢ b := by
+      ∃ b, (Model.spec (V := V)).targets_under T B u ⇢ b := by
   intro T B u
   nonempty_of orVocabulary_ok _ _
 
-/-- The field `goldfish_score_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: the Goldfish
+/-- The field `goldfish_score_nonempty` of `ForkChoiceFacts` at `Model.spec`: the Goldfish
     score of a block on a tree is always answered. -/
-theorem specDraft_goldfish_score_nonempty :
+theorem spec_goldfish_score_nonempty :
     ∀ (E : Env V) (T : Finset (Block V)) (votes support_votes : Finset (GoldfishVote V))
       (s : Slot) (B : Block V),
-      ∃ g : ℕ, (Model.specDraft (V := V)).goldfish_score E T votes support_votes s B ⇢ g := by
+      ∃ g : ℕ, (Model.spec (V := V)).goldfish_score E T votes support_votes s B ⇢ g := by
   intro E T votes support_votes s B
   nonempty_of orVocabulary_ok _ _
 
-/-- The field `voter_filtered_block_tree_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: every
+/-- The field `voter_filtered_block_tree_nonempty` of `ForkChoiceFacts` at `Model.spec`: every
     store of the store type has a voter's filtered block tree at every slot. -/
-theorem specDraft_voter_filtered_block_tree_nonempty :
-    ∀ (E : Env V) (st : (Model.specDraft (V := V)).S) (s : Slot),
-      ∃ T : Finset (Block V), (Model.specDraft (V := V)).voter_filtered_block_tree E st s ⇢ T := by
+theorem spec_voter_filtered_block_tree_nonempty :
+    ∀ (E : Env V) (st : (Model.spec (V := V)).S) (s : Slot),
+      ∃ T : Finset (Block V), (Model.spec (V := V)).voter_filtered_block_tree E st s ⇢ T := by
   intro E st s
   nonempty_of NoRaise.voter_filtered_block_tree_ok _
-    (show SpecDraftRecord.NoRaise.Stamped (Spec.Store.ofImage st.val) from stamped st) s
+    (show SpecRecord.NoRaise.Stamped (Spec.Store.ofImage st.val) from stamped st) s
 
-/-- The field `voter_view_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: every store of the
+/-- The field `voter_view_nonempty` of `ForkChoiceFacts` at `Model.spec`: every store of the
     store type has a voter's view at every slot. -/
-theorem specDraft_voter_view_nonempty :
-    ∀ (E : Env V) (gst : (Model.specDraft (V := V)).GS) (s : Slot),
-      ∃ W : Finset (GoldfishVote V), (Model.specDraft (V := V)).voter_view E gst s ⇢ W := by
+theorem spec_voter_view_nonempty :
+    ∀ (E : Env V) (gst : (Model.spec (V := V)).GS) (s : Slot),
+      ∃ W : Finset (GoldfishVote V), (Model.spec (V := V)).voter_view E gst s ⇢ W := by
   intro E gst s
   nonempty_of NoRaise.voter_view_ok _ (stamped gst) s
 
-/-- The field `voter_support_view_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: every store
+/-- The field `voter_support_view_nonempty` of `ForkChoiceFacts` at `Model.spec`: every store
     of the store type has a voter's support view at every slot. -/
-theorem specDraft_voter_support_view_nonempty :
-    ∀ (E : Env V) (gst : (Model.specDraft (V := V)).GS) (s : Slot),
-      ∃ U : Finset (GoldfishVote V), (Model.specDraft (V := V)).voter_support_view E gst s ⇢ U := by
+theorem spec_voter_support_view_nonempty :
+    ∀ (E : Env V) (gst : (Model.spec (V := V)).GS) (s : Slot),
+      ∃ U : Finset (GoldfishVote V), (Model.spec (V := V)).voter_support_view E gst s ⇢ U := by
   intro E gst s
   nonempty_of NoRaise.voter_support_view_ok _ (roots gst) (stamped gst) s
 
-/-- The field `raw_supporters_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: the supporters of
+/-- The field `raw_supporters_nonempty` of `ForkChoiceFacts` at `Model.spec`: the supporters of
     a block on a tree are always answered. -/
-theorem specDraft_raw_supporters_nonempty :
+theorem spec_raw_supporters_nonempty :
     ∀ (T : Finset (Block V)) (votes support_votes : Finset (GoldfishVote V)) (s : Slot)
       (B : Block V), ∃ sup : Finset V,
-        (Model.specDraft (V := V)).raw_supporters T votes support_votes s B ⇢ sup := by
+        (Model.spec (V := V)).raw_supporters T votes support_votes s B ⇢ sup := by
   intro T votes support_votes s B
   nonempty_of orVocabulary_ok _ _
 
-/-- The field `proposer_support_view_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: every
+/-- The field `proposer_support_view_nonempty` of `ForkChoiceFacts` at `Model.spec`: every
     store of the store type has a proposer's support view at every slot. -/
-theorem specDraft_proposer_support_view_nonempty :
-    ∀ (gs : (Model.specDraft (V := V)).GS) (s : Slot),
-      ∃ L : List (GoldfishVote V), (Model.specDraft (V := V)).proposer_support_view gs s ⇢ L := by
+theorem spec_proposer_support_view_nonempty :
+    ∀ (gs : (Model.spec (V := V)).GS) (s : Slot),
+      ∃ L : List (GoldfishVote V), (Model.spec (V := V)).proposer_support_view gs s ⇢ L := by
   intro gs s
   nonempty_of NoRaise.proposer_support_view_ok (roots gs) s
 
-/-- The field `goldfish_eligible_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: whether a
+/-- The field `goldfish_eligible_nonempty` of `ForkChoiceFacts` at `Model.spec`: whether a
     block is eligible for the Goldfish walk is always answered. -/
-theorem specDraft_goldfish_eligible_nonempty :
-    ∀ (E : Env V) (σ : Block V → (Model.specDraft (V := V)).CS) (h_max : Height)
+theorem spec_goldfish_eligible_nonempty :
+    ∀ (E : Env V) (σ : Block V → (Model.spec (V := V)).CS) (h_max : Height)
       (T : Finset (Block V)) (cur : Slot) (votes support : Finset (GoldfishVote V)) (s : Slot)
       (B : Block V),
       ∃ b : Bool,
-        (Model.specDraft (V := V)).goldfish_eligible E σ h_max T cur votes support s B ⇢ b := by
+        (Model.spec (V := V)).goldfish_eligible E σ h_max T cur votes support s B ⇢ b := by
   intro E σ h_max T cur votes support s B
   nonempty_of orVocabulary_ok _ _
 
-/-- The field `voter_processed_block_tree_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: every
+/-- The field `voter_processed_block_tree_nonempty` of `ForkChoiceFacts` at `Model.spec`: every
     store of the store type has a voter's processed block tree at every slot. -/
-theorem specDraft_voter_processed_block_tree_nonempty :
-    ∀ (E : Env V) (gs : (Model.specDraft (V := V)).GS) (s : Slot),
-      ∃ P : Finset (Block V), (Model.specDraft (V := V)).voter_processed_block_tree E gs s ⇢ P := by
+theorem spec_voter_processed_block_tree_nonempty :
+    ∀ (E : Env V) (gs : (Model.spec (V := V)).GS) (s : Slot),
+      ∃ P : Finset (Block V), (Model.spec (V := V)).voter_processed_block_tree E gs s ⇢ P := by
   intro E gs s
   nonempty_of NoRaise.voter_processed_block_tree_ok _ (stamped gs) s
 
-/-- The field `ghost_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: the GHOST walk from `A` on
+/-- The field `ghost_nonempty` of `ForkChoiceFacts` at `Model.spec`: the GHOST walk from `A` on
     a tree always answers a block. -/
-theorem specDraft_ghost_nonempty :
+theorem spec_ghost_nonempty :
     ∀ (A : Block V) (tree : Finset (Block V)) (score : Block V → ℕ) (elig : Block V → Bool),
-      ∃ X : Block V, (Model.specDraft (V := V)).ghost A tree score elig ⇢ X := by
+      ∃ X : Block V, (Model.spec (V := V)).ghost A tree score elig ⇢ X := by
   intro A tree score elig
   nonempty_of NoRaise.ghost_ok (score := fun C => pure (score C.toProof))
     (eligible := fun C => pure (elig C.toProof)) (fun _ => ⟨_, rfl⟩) (fun _ => ⟨_, rfl⟩) _ _
 
-/-- The field `ghost_step_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: one GHOST step from
+/-- The field `ghost_step_nonempty` of `ForkChoiceFacts` at `Model.spec`: one GHOST step from
     `H` on a tree always answers. -/
-theorem specDraft_ghost_step_nonempty :
+theorem spec_ghost_step_nonempty :
     ∀ (tree : Finset (Block V)) (score : Block V → ℕ) (eligible : Block V → Bool)
       (H : Block V), ∃ o : Option (Block V),
-        (Model.specDraft (V := V)).ghost_step tree score eligible H ⇢ o := by
+        (Model.spec (V := V)).ghost_step tree score eligible H ⇢ o := by
   intro tree score eligible H
   nonempty_of NoRaise.ghost_step_ok (score := fun C => pure (score C.toProof))
     (eligible := fun C => pure (eligible C.toProof)) (fun _ => ⟨_, rfl⟩) (fun _ => ⟨_, rfl⟩) _ _
 
-end SpecDraftRecord.ForkChoiceFacts
+end SpecRecord.ForkChoiceFacts
 
-namespace SpecDraftRecord.GradesFacts
+namespace SpecRecord.GradesFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `positive_nonempty` of `GradesFacts` at `Model.specDraft`: whether a validator's vote
+/-- The field `positive_nonempty` of `GradesFacts` at `Model.spec`: whether a validator's vote
     is positive for `B` is always answered. -/
-theorem specDraft_positive_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (F : Block V) (η r : Round) (early late : Time)
+theorem spec_positive_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (F : Block V) (η r : Round) (early late : Time)
       (u : V) (B : Block V),
-      ∃ p : Bool, (Model.specDraft (V := V)).positive gv F η r early late u B ⇢ p := by
+      ∃ p : Bool, (Model.spec (V := V)).positive gv F η r early late u B ⇢ p := by
   intro gv F η r early late u B
   nonempty_of NoRaise.positive_ok (roots gv) (stamped gv) _ η r early late u _
 
-/-- The field `opposing_nonempty` of `GradesFacts` at `Model.specDraft`: whether a validator's vote
+/-- The field `opposing_nonempty` of `GradesFacts` at `Model.spec`: whether a validator's vote
     opposes `B` is always answered. -/
-theorem specDraft_opposing_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (F : Block V) (η r : Round) (early late : Time)
+theorem spec_opposing_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (F : Block V) (η r : Round) (early late : Time)
       (u : V) (B : Block V),
-      ∃ o : Bool, (Model.specDraft (V := V)).opposing gv F η r early late u B ⇢ o := by
+      ∃ o : Bool, (Model.spec (V := V)).opposing gv F η r early late u B ⇢ o := by
   intro gv F η r early late u B
   nonempty_of NoRaise.opposing_ok (roots gv) (stamped gv) _ η r early late u _
 
-/-- The field `rawView_nonempty` of `GradesFacts` at `Model.specDraft`: a validator's raw view of a
+/-- The field `rawView_nonempty` of `GradesFacts` at `Model.spec`: a validator's raw view of a
     round is always answered. -/
-theorem specDraft_rawView_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (η r : Round) (c : Time) (u : V),
+theorem spec_rawView_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (η r : Round) (c : Time) (u : V),
       ∃ X : Finset (DecoupledConsensusModel.Protocol.Token (Option BlockId)),
-        (Model.specDraft (V := V)).rawView gv η r c u ⇢ X := by
+        (Model.spec (V := V)).rawView gv η r c u ⇢ X := by
   intro gv η r c u
   nonempty_of NoRaise.rawView_ok (stamped gv) η r c u
 
-/-- The field `readyView_nonempty` of `GradesFacts` at `Model.specDraft`: a validator's ready view
+/-- The field `readyView_nonempty` of `GradesFacts` at `Model.spec`: a validator's ready view
     of a round is always answered. -/
-theorem specDraft_readyView_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (F : Block V) (η r : Round) (c : Time) (u : V),
+theorem spec_readyView_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (F : Block V) (η r : Round) (c : Time) (u : V),
       ∃ X : Finset (DecoupledConsensusModel.Protocol.Token (Option BlockId)),
-        (Model.specDraft (V := V)).readyView gv F η r c u ⇢ X := by
+        (Model.spec (V := V)).readyView gv F η r c u ⇢ X := by
   intro gv F η r c u
   nonempty_of (NoRaise.readyView_post (roots gv) (stamped gv) _ η r c u).imp fun _ h => h.1
 
-/-- The field `head_covers_nonempty` of `GradesFacts` at `Model.specDraft`: whether a head key
+/-- The field `head_covers_nonempty` of `GradesFacts` at `Model.spec`: whether a head key
     covers `B` on a tree is always answered. -/
-theorem specDraft_head_covers_nonempty :
+theorem spec_head_covers_nonempty :
     ∀ (T : Finset (Block V)) (B : Block V) (k : Option BlockId),
-      ∃ b : Bool, (Model.specDraft (V := V)).head_covers T B k ⇢ b := by
+      ∃ b : Bool, (Model.spec (V := V)).head_covers T B k ⇢ b := by
   intro T B k
   nonempty_of orVocabulary_ok _ _
 
-/-- The field `onPhaseTick_nonempty` of `GradesFacts` at `Model.specDraft`: the grade tick always
+/-- The field `onPhaseTick_nonempty` of `GradesFacts` at `Model.spec`: the grade tick always
     answers new saved grades. -/
-theorem specDraft_onPhaseTick_nonempty :
+theorem spec_onPhaseTick_nonempty :
     ∀ (E : Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig)
-      (st : (Model.specDraft (V := V)).HS) (t : Int) (c : (Model.specDraft (V := V)).Cache),
-      ∃ c' : (Model.specDraft (V := V)).Cache,
-        (Model.specDraft (V := V)).onPhaseTick E hc st t c ⇢ c' := by
+      (st : (Model.spec (V := V)).HS) (t : Int) (c : (Model.spec (V := V)).Cache),
+      ∃ c' : (Model.spec (V := V)).Cache,
+        (Model.spec (V := V)).onPhaseTick E hc st t c ⇢ c' := by
   intro E hc st t c
   nonempty_of NoRaise.update_grades_ok _ _ (st := { st.val with saved_grades := c })
     (roots st) (stamped st) t
 
-/-- The field `rawInputs_nonempty` of `GradesFacts` at `Model.specDraft`: a validator's raw SG
+/-- The field `rawInputs_nonempty` of `GradesFacts` at `Model.spec`: a validator's raw SG
     inputs of a round are always answered. -/
-theorem specDraft_rawInputs_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (η r : Round) (c : Time) (u : V),
+theorem spec_rawInputs_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (η r : Round) (c : Time) (u : V),
       ∃ Y : Finset (DecoupledConsensusModel.Protocol.SGVote V),
-        (Model.specDraft (V := V)).rawInputs gv η r c u ⇢ Y := by
+        (Model.spec (V := V)).rawInputs gv η r c u ⇢ Y := by
   intro gv η r c u
   nonempty_of NoRaise.rawInputs_ok (stamped gv) η r c u
 
-/-- The field `anchor_nonempty` of `GradesFacts` at `Model.specDraft`: the anchor of a grade-1
+/-- The field `anchor_nonempty` of `GradesFacts` at `Model.spec`: the anchor of a grade-1
     result is always answered. -/
-theorem specDraft_anchor_nonempty :
+theorem spec_anchor_nonempty :
     ∀ (E : Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig)
-      (st : (Model.specDraft (V := V)).HS) (r : Round) (g1 : Option (Option (Block V))),
-      ∃ a, (Model.specDraft (V := V)).anchor E hc st r g1 ⇢ a := by
+      (st : (Model.spec (V := V)).HS) (r : Round) (g1 : Option (Option (Block V))),
+      ∃ a, (Model.spec (V := V)).anchor E hc st r g1 ⇢ a := by
   intro E hc st r g1
   nonempty_of NoRaise.anchor_ok (Spec.Store.ofImage st.val) (fillResult_ne_pending _)
 
-/-- The field `grade2Block_nonempty` of `GradesFacts` at `Model.specDraft`: the grade-2 block of a
+/-- The field `grade2Block_nonempty` of `GradesFacts` at `Model.spec`: the grade-2 block of a
     round's grades is always answered. -/
-theorem specDraft_grade2Block_nonempty :
-    ∀ (st : (Model.specDraft (V := V)).HS) (frame : (Model.specDraft (V := V)).Frame),
-      ∃ o : Option (Block V), (Model.specDraft (V := V)).grade2Block st frame ⇢ o := by
+theorem spec_grade2Block_nonempty :
+    ∀ (st : (Model.spec (V := V)).HS) (frame : (Model.spec (V := V)).Frame),
+      ∃ o : Option (Block V), (Model.spec (V := V)).grade2Block st frame ⇢ o := by
   intro st frame
   have h := roundComputed_fillRound (st.val.roundGradesOfImage frame)
   nonempty_of NoRaise.grade2Block_ok (Spec.Store.ofImage st.val) h.2.2 h.2.1 h.1
 
-/-- The field `gradeBool_nonempty` of `GradesFacts` at `Model.specDraft`: whether a block passes the
+/-- The field `gradeBool_nonempty` of `GradesFacts` at `Model.spec`: whether a block passes the
     grade test is always answered. -/
-theorem specDraft_gradeBool_nonempty :
-    ∀ (E : Env V) (gv : (Model.specDraft (V := V)).GV) (F : Block V) (η r : Round)
+theorem spec_gradeBool_nonempty :
+    ∀ (E : Env V) (gv : (Model.spec (V := V)).GV) (F : Block V) (η r : Round)
       (early late : Time) (B : Block V),
-      ∃ b : Bool, (Model.specDraft (V := V)).gradeBool E gv F η r early late B ⇢ b := by
+      ∃ b : Bool, (Model.spec (V := V)).gradeBool E gv F η r early late B ⇢ b := by
   intro E gv F η r early late B
   nonempty_of NoRaise.gradeBool_ok _ (roots gv) (stamped gv) _ η r early late _
 
-/-- The field `bodyReady_nonempty` of `GradesFacts` at `Model.specDraft`: whether an SG vote is
+/-- The field `bodyReady_nonempty` of `GradesFacts` at `Model.spec`: whether an SG vote is
     ready is always answered. -/
-theorem specDraft_bodyReady_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (F : Block V) (c : Time)
+theorem spec_bodyReady_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (F : Block V) (c : Time)
       (u : DecoupledConsensusModel.Protocol.SGVote V),
-      ∃ b : Bool, (Model.specDraft (V := V)).bodyReady gv F c u ⇢ b := by
+      ∃ b : Bool, (Model.spec (V := V)).bodyReady gv F c u ⇢ b := by
   intro gv F c u
   nonempty_of (NoRaise.bodyReady_post (roots gv) (stamped gv).1 _ c _).imp fun _ h => h.1
 
-/-- The field `interpretedInputs_nonempty` of `GradesFacts` at `Model.specDraft`: a validator's
+/-- The field `interpretedInputs_nonempty` of `GradesFacts` at `Model.spec`: a validator's
     interpreted SG inputs of a round are always answered. -/
-theorem specDraft_interpretedInputs_nonempty :
-    ∀ (gv : (Model.specDraft (V := V)).GV) (F : Block V) (η r : Round) (c : Time) (u : V),
+theorem spec_interpretedInputs_nonempty :
+    ∀ (gv : (Model.spec (V := V)).GV) (F : Block V) (η r : Round) (c : Time) (u : V),
       ∃ Y : Finset (DecoupledConsensusModel.Protocol.SGVote V),
-        (Model.specDraft (V := V)).interpretedInputs gv F η r c u ⇢ Y := by
+        (Model.spec (V := V)).interpretedInputs gv F η r c u ⇢ Y := by
   intro gv F η r c u
   nonempty_of (NoRaise.interpretedInputs_post (roots gv) (stamped gv) _ η r c u).imp fun _ h => h.1
 
-/-- The field `freezeRoot_nonempty` of `GradesFacts` at `Model.specDraft`: the freeze root of a
+/-- The field `freezeRoot_nonempty` of `GradesFacts` at `Model.spec`: the freeze root of a
     round is always answered. -/
-theorem specDraft_freezeRoot_nonempty :
-    ∀ (E : Env V) (gv : (Model.specDraft (V := V)).GV) (F : Block V) (η r : Round)
+theorem spec_freezeRoot_nonempty :
+    ∀ (E : Env V) (gv : (Model.spec (V := V)).GV) (F : Block V) (η r : Round)
       (early late : Time),
-      ∃ fr : Option (Block V), (Model.specDraft (V := V)).freezeRoot E gv F η r early late ⇢ fr := by
+      ∃ fr : Option (Block V), (Model.spec (V := V)).freezeRoot E gv F η r early late ⇢ fr := by
   intro E gv F η r early late
   nonempty_of NoRaise.freezeRoot_ok _ (roots gv) (stamped gv) _ η r early late
 
-end SpecDraftRecord.GradesFacts
+end SpecRecord.GradesFacts
 
-namespace SpecDraftRecord.DutiesFacts
+namespace SpecRecord.DutiesFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `select_nonempty` of `DutiesFacts` at `Model.specDraft`: the attestations a proposal
+/-- The field `select_nonempty` of `DutiesFacts` at `Model.spec`: the attestations a proposal
     includes are always answered. -/
-theorem specDraft_select_nonempty :
+theorem spec_select_nonempty :
     ∀ (source : DecoupledConsensusModel.Protocol.ProposalRowSource)
-      (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.specDraft (V := V)).NS),
-      ∃ L : List (NamedAttestation V), (Model.specDraft (V := V)).select source hc st ⇢ L := by
+      (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.spec (V := V)).NS),
+      ∃ L : List (NamedAttestation V), (Model.spec (V := V)).select source hc st ⇢ L := by
   intro source hc st
   nonempty_of NoRaise.attestations_to_include_ok _ (roots st)
 
-/-- The field `carriedRows_nonempty` of `DutiesFacts` at `Model.specDraft`: the attestations the
+/-- The field `carriedRows_nonempty` of `DutiesFacts` at `Model.spec`: the attestations the
     store's blocks include in the window are always answered. -/
-theorem specDraft_carriedRows_nonempty :
-    ∀ (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.specDraft (V := V)).NS),
-      ∃ C : List (NamedAttestation V), (Model.specDraft (V := V)).carriedRows hc st ⇢ C := by
+theorem spec_carriedRows_nonempty :
+    ∀ (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.spec (V := V)).NS),
+      ∃ C : List (NamedAttestation V), (Model.spec (V := V)).carriedRows hc st ⇢ C := by
   intro hc st
   nonempty_of NoRaise.included_attestations_in_window_ok _ (roots st)
 
-/-- The field `orderedBodies_nonempty` of `DutiesFacts` at `Model.specDraft`: the store's blocks in
+/-- The field `orderedBodies_nonempty` of `DutiesFacts` at `Model.spec`: the store's blocks in
     order are always answered. -/
-theorem specDraft_orderedBodies_nonempty :
-    ∀ (st : (Model.specDraft (V := V)).NS),
-      ∃ O : List (NamedBlock V), (Model.specDraft (V := V)).orderedBodies st ⇢ O := by
+theorem spec_orderedBodies_nonempty :
+    ∀ (st : (Model.spec (V := V)).NS),
+      ∃ O : List (NamedBlock V), (Model.spec (V := V)).orderedBodies st ⇢ O := by
   intro st
   nonempty_of NoRaise.sorted_blocks_ok (roots st)
 
-end SpecDraftRecord.DutiesFacts
+end SpecRecord.DutiesFacts
 
 /-! ## The contract-taking fields -/
 
-namespace SpecDraftRecord.NonEmpty
+namespace SpecRecord.NonEmpty
 
-open Spec SpecDraftRecord.NoRaise
+open Spec SpecRecord.NoRaise
 
 variable {V : Type} [DecidableEq V]
 
@@ -423,45 +423,45 @@ theorem storeOk_attest {C : Config} {v : V} {st : Store V} {sh : SigningHistory}
   obtain ⟨p, rfl⟩ := attest_out h
   exact OkStore.admit_attestation C hs p.2
 
-end SpecDraftRecord.NonEmpty
+end SpecRecord.NonEmpty
 
-namespace SpecDraftRecord.ForkChoiceFacts
+namespace SpecRecord.ForkChoiceFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `get_sg_root_with_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: the SG root of
+/-- The field `get_sg_root_with_nonempty` of `ForkChoiceFacts` at `Model.spec`: the SG root of
     every round, under every contract, is answered. -/
-theorem specDraft_get_sg_root_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
+theorem spec_get_sg_root_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
     (E : Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig)
-    (st : (Model.specDraft (V := V)).HS) (r : Round),
-    ∃ R : Block V, (Model.specDraft (V := V)).get_sg_root_with contract E hc st r ⇢ R := by
+    (st : (Model.spec (V := V)).HS) (r : Round),
+    ∃ R : Block V, (Model.spec (V := V)).get_sg_root_with contract E hc st r ⇢ R := by
   intro contract E hc st r
   nonempty_of NoRaise.anchor_ok (alignedStore st.val contract r)
     (g1 := (Spec.Protocol.round_grades (alignedStore st.val contract r) r).g1)
     (NoRaise.round_grades_ne_pending (p := .g1) (alignedStore_computed st.val contract r).2.1)
 
-/-- The field `get_head_with_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: the head under
+/-- The field `get_head_with_nonempty` of `ForkChoiceFacts` at `Model.spec`: the head under
     every contract is answered. -/
-theorem specDraft_get_head_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
+theorem spec_get_head_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
     (E : Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig)
-    (st : (Model.specDraft (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot),
-    ∃ X : Block V, (Model.specDraft (V := V)).get_head_with contract E hc st votes support k ⇢ X := by
+    (st : (Model.spec (V := V)).HS) (votes support : Finset (GoldfishVote V)) (k : Slot),
+    ∃ X : Block V, (Model.spec (V := V)).get_head_with contract E hc st votes support k ⇢ X := by
   intro contract E hc st votes support k
   nonempty_of NoRaise.get_head_with_ok _
     (st := alignedStore st.val contract
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s))
     (roots st) (alignedStore_computed _ _ _).2.1 _ _ _
 
-/-- The field `get_head_in_tree_with_layer_nonempty` of `ForkChoiceFacts` at `Model.specDraft`: the
+/-- The field `get_head_in_tree_with_layer_nonempty` of `ForkChoiceFacts` at `Model.spec`: the
     head in every tree under every contract is answered. -/
-theorem specDraft_get_head_in_tree_with_layer_nonempty :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig)
-      (st : (Model.specDraft (V := V)).HS) (tree : Finset (Block V))
+theorem spec_get_head_in_tree_with_layer_nonempty :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : DecoupledConsensusModel.Protocol.HealConfig)
+      (st : (Model.spec (V := V)).HS) (tree : Finset (Block V))
       (votes support_votes : Finset (GoldfishVote V)) (k : Slot),
-      ∃ X : Block V, (Model.specDraft (V := V)).get_head_in_tree_with_layer contract E hc st tree
+      ∃ X : Block V, (Model.spec (V := V)).get_head_in_tree_with_layer contract E hc st tree
         votes support_votes k ⇢ X := by
   intro contract E hc st tree votes support_votes k
   nonempty_of NoRaise.get_head_in_tree_with_layer_ok _
@@ -469,56 +469,56 @@ theorem specDraft_get_head_in_tree_with_layer_nonempty :
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s))
     (roots st) (alignedStore_computed _ _ _).2.1 _ _ _ _
 
-end SpecDraftRecord.ForkChoiceFacts
+end SpecRecord.ForkChoiceFacts
 
-namespace SpecDraftRecord.GradesFacts
+namespace SpecRecord.GradesFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `read_nonempty` of `GradesFacts` at `Model.specDraft`: the grade read of every round,
+/-- The field `read_nonempty` of `GradesFacts` at `Model.spec`: the grade read of every round,
     under every contract, is answered. -/
-theorem specDraft_read_nonempty : ∀ (gc : (Model.specDraft (V := V)).Contract) (E : Env V)
-    (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS)
+theorem spec_read_nonempty : ∀ (gc : (Model.spec (V := V)).Contract) (E : Env V)
+    (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.spec (V := V)).HS)
     (r : Round), ∃ G, gc.read E hc st r ⇢ G := by
   intro gc E hc st r
   have h := alignedStore_computed st.val gc r
   nonempty_of NoRaise.round_grade_read_ok (st := alignedStore st.val gc r) h.2.2 h.2.1 h.1
 
-/-- The field `frameStableRoot_nonempty` of `GradesFacts` at `Model.specDraft`: the stable root of
+/-- The field `frameStableRoot_nonempty` of `GradesFacts` at `Model.spec`: the stable root of
     every round, from every cache, is answered. -/
-theorem specDraft_frameStableRoot_nonempty : ∀ (c : (Model.specDraft (V := V)).Cache) (E : Env V)
-    (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS)
-    (r : Round), ∃ x : Option (Block V), (Model.specDraft (V := V)).frameStableRoot c E hc st r ⇢ x := by
+theorem spec_frameStableRoot_nonempty : ∀ (c : (Model.spec (V := V)).Cache) (E : Env V)
+    (hc : DecoupledConsensusModel.Protocol.HealConfig) (st : (Model.spec (V := V)).HS)
+    (r : Round), ∃ x : Option (Block V), (Model.spec (V := V)).frameStableRoot c E hc st r ⇢ x := by
   intro c E hc st r
   nonempty_of NoRaise.round_stable_root_ok (st := alignedStore st.val c r)
     (alignedStore_computed st.val c r).2.2
 
-/-- The field `localCovers_nonempty` of `GradesFacts` at `Model.specDraft`: whether a key covers `B`
+/-- The field `localCovers_nonempty` of `GradesFacts` at `Model.spec`: whether a key covers `B`
     on a grade view is always answered. -/
-theorem specDraft_localCovers_nonempty : ∀ (gv : (Model.specDraft (V := V)).GV)
-    (k : Option BlockId) (B : Block V), ∃ b : Bool, (Model.specDraft (V := V)).localCovers gv k B ⇢ b := by
+theorem spec_localCovers_nonempty : ∀ (gv : (Model.spec (V := V)).GV)
+    (k : Option BlockId) (B : Block V), ∃ b : Bool, (Model.spec (V := V)).localCovers gv k B ⇢ b := by
   intro gv k B
   nonempty_of orVocabulary_ok _ _
 
-end SpecDraftRecord.GradesFacts
+end SpecRecord.GradesFacts
 
-namespace SpecDraftRecord.DutiesFacts
+namespace SpecRecord.DutiesFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The field `goldfish_vote_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the Goldfish vote
+/-- The field `goldfish_vote_with_nonempty` of `DutiesFacts` at `Model.spec`: the Goldfish vote
     duty under every contract answers a store of the store type. -/
-theorem specDraft_goldfish_vote_with_nonempty : ∀ (gc : (Model.specDraft (V := V)).Contract)
+theorem spec_goldfish_vote_with_nonempty : ∀ (gc : (Model.spec (V := V)).Contract)
     (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V)
-    (st : (Model.specDraft (V := V)).NS),
-    ∃ D : (Model.specDraft (V := V)).NS × Option (GoldfishVote V),
-      (Model.specDraft (V := V)).duties_goldfish_vote_with gc E hc nd st ⇢ D := by
+    (st : (Model.spec (V := V)).NS),
+    ∃ D : (Model.spec (V := V)).NS × Option (GoldfishVote V),
+      (Model.spec (V := V)).duties_goldfish_vote_with gc E hc nd st ⇢ D := by
   intro gc E hc nd st
   obtain ⟨out, hout⟩ := NoRaise.goldfish_vote_ok _ (Spec.Provisional.toSpec E)
     nd.val_index (st := alignedStore st.val gc
@@ -529,12 +529,12 @@ theorem specDraft_goldfish_vote_with_nonempty : ∀ (gc : (Model.specDraft (V :=
       (Member.firstSentGoldfishVote out.2).map Spec.GoldfishVote.toProof),
     (returns_preimageOutcomes _ _ _).2 (returns_of_ok (by rw [hout]; rfl))⟩
 
-/-- The field `round_action_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the attestation
+/-- The field `round_action_with_nonempty` of `DutiesFacts` at `Model.spec`: the attestation
     built under every contract is answered. -/
-theorem specDraft_round_action_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
+theorem spec_round_action_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
     (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V)
-    (st : (Model.specDraft (V := V)).HS) (record : (Model.specDraft (V := V)).NR),
-    ∃ A, (Model.specDraft (V := V)).round_action_with contract E hc nd st record ⇢ A := by
+    (st : (Model.spec (V := V)).HS) (record : (Model.spec (V := V)).NR),
+    ∃ A, (Model.spec (V := V)).round_action_with contract E hc nd st record ⇢ A := by
   intro contract E hc nd st record
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -542,13 +542,13 @@ theorem specDraft_round_action_with_nonempty : ∀ (contract : (Model.specDraft 
     (st := alignedStore st.val contract
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) nd.val_index (roots st) h.2.2 h.2.1 h.1 record
 
-/-- The field `with_attestation_input_nonempty` of `DutiesFacts` at `Model.specDraft`: the
+/-- The field `with_attestation_input_nonempty` of `DutiesFacts` at `Model.spec`: the
     attestation input under every contract is answered. -/
-theorem specDraft_with_attestation_input_nonempty :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig)
-      (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).HS),
+theorem spec_with_attestation_input_nonempty :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig)
+      (nd : Protocol.Node V) (st : (Model.spec (V := V)).HS),
       ∃ I : Protocol.AttestationInput V,
-        (Model.specDraft (V := V)).with_attestation_input contract E hc nd st id ⇢ I := by
+        (Model.spec (V := V)).with_attestation_input contract E hc nd st id ⇢ I := by
   intro contract E hc nd st
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -557,12 +557,12 @@ theorem specDraft_with_attestation_input_nonempty :
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) nd.val_index (roots st) h.2.2 h.2.1 h.1
 
 open scoped DC in
-/-- The field `attest_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the attestation duty
+/-- The field `attest_with_nonempty` of `DutiesFacts` at `Model.spec`: the attestation duty
     under every contract answers a store of the store type. -/
-theorem specDraft_attest_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
+theorem spec_attest_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
     (E : Env V) (hc : Protocol.HealConfig) (nd : Protocol.Node V)
-    (st : (Model.specDraft (V := V)).NS) (record : (Model.specDraft (V := V)).NR),
-    ∃ D, (Model.specDraft (V := V)).duties_attest_with contract E hc nd st record ⇢ D := by
+    (st : (Model.spec (V := V)).NS) (record : (Model.spec (V := V)).NR),
+    ∃ D, (Model.spec (V := V)).duties_attest_with contract E hc nd st record ⇢ D := by
   intro contract E hc nd st record
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -582,32 +582,32 @@ theorem specDraft_attest_with_nonempty : ∀ (contract : (Model.specDraft (V := 
           DC.DRE (Spec.Attestation V)) = .ok p.2 by rw [ha]; rfl]
       rfl))⟩
 
-/-- The field `grade2_block_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the grade-2 block
+/-- The field `grade2_block_with_nonempty` of `DutiesFacts` at `Model.spec`: the grade-2 block
     of every round, under every contract, is answered. -/
-theorem specDraft_grade2_block_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
-    (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round),
-    ∃ A2, (Model.specDraft (V := V)).grade2_block_with contract E hc st r ⇢ A2 := by
+theorem spec_grade2_block_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
+    (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round),
+    ∃ A2, (Model.spec (V := V)).grade2_block_with contract E hc st r ⇢ A2 := by
   intro contract E hc st r
   have h := alignedStore_computed st.val contract r
   nonempty_of NoRaise.grade2_block_with_ok (st := alignedStore st.val contract r) h.2.2 h.2.1 h.1
 
-/-- The field `get_sg_vote_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the SG vote of
+/-- The field `get_sg_vote_with_nonempty` of `DutiesFacts` at `Model.spec`: the SG vote of
     every round, under every contract, is answered. -/
-theorem specDraft_get_sg_vote_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
-    (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round)
+theorem spec_get_sg_vote_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
+    (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round)
     (A2 : Option (Block V)),
-    ∃ W, (Model.specDraft (V := V)).get_sg_vote_with contract E hc st r A2 ⇢ W := by
+    ∃ W, (Model.spec (V := V)).get_sg_vote_with contract E hc st r A2 ⇢ W := by
   intro contract E hc st r A2
   have h := alignedStore_computed st.val contract r
   nonempty_of NoRaise.get_sg_vote_with_ok (st := alignedStore st.val contract r) h.2.2 h.2.1 h.1
     (A2.map Spec.Block.toSpec)
 
-/-- The field `update_confirmation_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the
+/-- The field `update_confirmation_with_nonempty` of `DutiesFacts` at `Model.spec`: the
     confirmation update under every contract answers a store of the store type. -/
-theorem specDraft_update_confirmation_with_nonempty :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig)
-      (st : (Model.specDraft (V := V)).S) (s : Slot),
-      ∃ X, (Model.specDraft (V := V)).update_confirmation_with contract E hc st s ⇢ X := by
+theorem spec_update_confirmation_with_nonempty :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig)
+      (st : (Model.spec (V := V)).S) (s : Slot),
+      ∃ X, (Model.spec (V := V)).update_confirmation_with contract E hc st s ⇢ X := by
   intro contract E hc st s
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -618,13 +618,13 @@ theorem specDraft_update_confirmation_with_nonempty :
       (storeOk_update_confirmation hout (storeOk_with_saved_grades (Spec.Store.storeOk_ofImage st.property) _)) _⟩,
     (returns_preimageOutcomes _ _ _).2 (returns_of_ok (by rw [hout]; rfl))⟩
 
-/-- The field `with_proposal_input_nonempty` of `DutiesFacts` at `Model.specDraft`: the proposal
+/-- The field `with_proposal_input_nonempty` of `DutiesFacts` at `Model.spec`: the proposal
     input under every contract is answered. -/
-theorem specDraft_with_proposal_input_nonempty :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig)
-      (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).HS),
+theorem spec_with_proposal_input_nonempty :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V) (hc : Protocol.HealConfig)
+      (nd : Protocol.Node V) (st : (Model.spec (V := V)).HS),
       ∃ P : Protocol.ProposalInput V,
-        (Model.specDraft (V := V)).with_proposal_input contract E hc nd st id ⇢ P := by
+        (Model.spec (V := V)).with_proposal_input contract E hc nd st id ⇢ P := by
   intro contract E hc nd st
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -632,13 +632,13 @@ theorem specDraft_with_proposal_input_nonempty :
     (st := alignedStore st.val contract
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) (Member.externalOfNode nd) nd.val_index (roots st) h.2.1
 
-/-- The field `proposal_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the proposal under
+/-- The field `proposal_with_nonempty` of `DutiesFacts` at `Model.spec`: the proposal under
     every contract is answered. -/
-theorem specDraft_proposal_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
+theorem spec_proposal_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
     (source : Protocol.ProposalRowSource) (E : Env V) (hc : Protocol.HealConfig)
-    (nd : Protocol.Node V) (st : (Model.specDraft (V := V)).NS),
+    (nd : Protocol.Node V) (st : (Model.spec (V := V)).NS),
     ∃ o : Option (NamedBlock V),
-      (Model.specDraft (V := V)).proposal_with contract source E hc nd st ⇢ o := by
+      (Model.spec (V := V)).proposal_with contract source E hc nd st ⇢ o := by
   intro contract source E hc nd st
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -646,13 +646,13 @@ theorem specDraft_proposal_with_nonempty : ∀ (contract : (Model.specDraft (V :
     (st := alignedStore st.val contract
       ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)) (Member.externalOfNode nd) nd.val_index (roots st) h.2.1
 
-/-- The field `duties_update_confirmation_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the
+/-- The field `duties_update_confirmation_with_nonempty` of `DutiesFacts` at `Model.spec`: the
     named confirmation duty under every contract answers a store of the store type. -/
-theorem specDraft_duties_update_confirmation_with_nonempty :
-    ∀ (contract : (Model.specDraft (V := V)).Contract) (E : Env V)
-      (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).NS) (s : Slot),
-      ∃ st' : (Model.specDraft (V := V)).NS,
-        (Model.specDraft (V := V)).duties_update_confirmation_with contract E hc st s ⇢ st' := by
+theorem spec_duties_update_confirmation_with_nonempty :
+    ∀ (contract : (Model.spec (V := V)).Contract) (E : Env V)
+      (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).NS) (s : Slot),
+      ∃ st' : (Model.spec (V := V)).NS,
+        (Model.spec (V := V)).duties_update_confirmation_with contract E hc st s ⇢ st' := by
   intro contract E hc st s
   have h := alignedStore_computed st.val contract
     ((Spec.Config.toSpec E hc unreadHeightConfig).round_of st.val.s)
@@ -663,28 +663,28 @@ theorem specDraft_duties_update_confirmation_with_nonempty :
       (storeOk_update_confirmation hout (storeOk_with_saved_grades (Spec.Store.storeOk_ofImage st.property) _)) _⟩,
     (returns_preimageOutcomes _ _ _).2 (returns_of_ok (by rw [hout]; rfl))⟩
 
-/-- The field `fg_source_with_nonempty` of `DutiesFacts` at `Model.specDraft`: the finality-gadget
+/-- The field `fg_source_with_nonempty` of `DutiesFacts` at `Model.spec`: the finality-gadget
     source of every round, under every contract, is answered. -/
-theorem specDraft_fg_source_with_nonempty : ∀ (contract : (Model.specDraft (V := V)).Contract)
-    (E : Env V) (hc : Protocol.HealConfig) (st : (Model.specDraft (V := V)).HS) (r : Round)
+theorem spec_fg_source_with_nonempty : ∀ (contract : (Model.spec (V := V)).Contract)
+    (E : Env V) (hc : Protocol.HealConfig) (st : (Model.spec (V := V)).HS) (r : Round)
     (A2 : Option (Block V)),
-    ∃ F, (Model.specDraft (V := V)).fg_source_with contract E hc st r A2 ⇢ F := by
+    ∃ F, (Model.spec (V := V)).fg_source_with contract E hc st r A2 ⇢ F := by
   intro contract E hc st r A2
   nonempty_of NoRaise.fg_source_with_ok (st := alignedStore st.val contract r)
     (alignedStore_computed st.val contract r).1 (A2.map st.val.blockOfImage)
 
-end SpecDraftRecord.DutiesFacts
+end SpecRecord.DutiesFacts
 
-namespace SpecDraftRecord.NodeFacts
+namespace SpecRecord.NodeFacts
 
 open DecoupledConsensusModel DecoupledConsensusModel.Sts.Record DecoupledConsensusModel.Execution
-open SpecDraftRecord.NonEmpty
+open SpecRecord.NonEmpty
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
 /-- If no held named block other than a received block `B` has `B`'s root, then no block of the
     node's tree other than `B`'s spec form has it. -/
-theorem not_objectRootHeldByOther (n : (Model.specDraft (V := V)).N) (o : NamedObject V)
+theorem not_objectRootHeldByOther (n : (Model.spec (V := V)).N) (o : NamedObject V)
     (hroot : ∀ B : NamedBlock V, o = NamedObject.block B →
       ∀ C ∈ n.st.bodies, C.root = B.root → C = B) :
     ¬ objectRootHeldByOther n.val.st.T o := by
@@ -701,18 +701,18 @@ theorem not_objectRootHeldByOther (n : (Model.specDraft (V := V)).N) (o : NamedO
   | gfVote _ => exact id
   | attest _ => exact id
 
-/-- The field `process_nonempty` of `NodeFacts` at `Model.specDraft`: receiving an object, other
+/-- The field `process_nonempty` of `NodeFacts` at `Model.spec`: receiving an object, other
     than a block whose root another held block has, always gives a node state. -/
-theorem specDraft_process_nonempty : ∀ (S : Setup V) (n : (Model.specDraft (V := V)).N)
+theorem spec_process_nonempty : ∀ (S : Setup V) (n : (Model.spec (V := V)).N)
     (o : NamedObject V)
     -- if `o` is a block `B`, no block of `n`'s bodies has `B`'s root unless it is `B`
     (hroot : ∀ B : NamedBlock V, o = NamedObject.block B →
       ∀ C ∈ n.st.bodies, C.root = B.root → C = B),
-    ∃ n' : (Model.specDraft (V := V)).N, (Model.specDraft (V := V)).process S n o ⇢ n' := by
+    ∃ n' : (Model.spec (V := V)).N, (Model.spec (V := V)).process S n o ⇢ n' := by
   intro S n o hroot
   have h := OkStore.receipt_process S n.property (not_objectRootHeldByOther n o hroot)
   have hok : NoRaise.StoreOk (receiveNamedObject S n.val o).st := by
     cases o <;> exact h
   exact ⟨⟨receiveNamedObject S n.val o, hok⟩, (returns_pure _ _).2 rfl⟩
 
-end SpecDraftRecord.NodeFacts
+end SpecRecord.NodeFacts

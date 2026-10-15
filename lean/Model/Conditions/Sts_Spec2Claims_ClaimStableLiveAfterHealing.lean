@@ -7,6 +7,7 @@ import Model.Conditions.Sts_Spec2Claims_Claim13bd
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Sts_Spec2Claims_Claim13bf
 import Model.Conditions.Sts_Spec2Claims_ClaimConfirmedGrowsAfterHealing
+import Model.Conditions.Sts_Spec2Claims_ClaimConfirmedIncludedAfterHealing
 import Model.Record.Wiring
 
 /-!
@@ -57,8 +58,10 @@ open DecoupledConsensusModel.Execution
 /-- For every slot `s` with proposal instant at or after `tE` whose proposer is not held up to `s`'s
     vote instant: if the proposer is awake from `M.proposal_wake_start S s` to the proposal instant,
     it sends a block of slot `s` at that instant; and every block it sent by `s`'s vote instant is
-    an ancestor of the stable output of every validator honest through its read and awake throughout
-    the vote window of its read's slot, at every read from the proposal instant plus the stable
+    an ancestor of the stable output of every validator honest through its read that ran, at or
+    after the proposal instant plus the stable inclusion delay and at or before its read, a
+    confirmation while awake throughout that confirmation's grade-2 window
+    (`awakeThroughConfirmationWindow`), at every read from the proposal instant plus the stable
     inclusion delay on. -/
 def StableIncludedAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) : Prop :=
@@ -73,7 +76,8 @@ def StableIncludedAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Sched
       (x[i].time : Int) ≤ M.vote_time S.E s →
       ∀ (v : V) (j : Nat), Restated.HonestThrough M Sched x j v →
         M.proposal_time S.E s + Restated.stableInclusionDelay M S ≤ (x[j].time : Int) →
-        v ∈ activeAtW S Sched (S.E.slotOf (x[j].time : Int)) →
+        Restated.awakeThroughConfirmationWindow M S Sched
+          (M.proposal_time S.E s + Restated.stableInclusionDelay M S) (x[j].time : Int) v →
         Block.Preceq B (Restated.Read.stable M x[j][v].st)
 
 end
@@ -104,9 +108,10 @@ open DecoupledConsensusModel.Execution
 /-- For every instant `t ≥ tE` and every step `i` at `t`, some slot `s` proposed strictly after `t`,
     whose proposer is not held up to `s`'s vote instant, has a block that proposer sent by that vote
     instant which is a strict descendant of the stable output of every validator honest through step
-    `i`, and an ancestor of the stable output of every validator honest through its read and awake
-    throughout the vote window of its read's slot, at every read from `t` plus the stable growth
-    delay on. -/
+    `i`, and an ancestor of the stable output of every validator honest through its read that ran,
+    at or after `t` plus the stable growth delay and at or before its read, a confirmation while
+    awake throughout that confirmation's grade-2 window (`awakeThroughConfirmationWindow`), at every
+    read from `t` plus the stable growth delay on. -/
 def StableGrowsAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (gapP : Nat) : Prop :=
   ∀ t : Int, tE ≤ t →
@@ -120,7 +125,8 @@ def StableGrowsAfterHealing (M : Record.Model V) (S : Setup V) (Sched : Schedule
         Block.Prec (Restated.Read.stable M x[i][v].st) B) ∧
       (∀ (v : V) (j : Nat), Restated.HonestThrough M Sched x j v →
         t + Restated.stableGrowthDelay M S gapP ≤ (x[j].time : Int) →
-        v ∈ activeAtW S Sched (S.E.slotOf (x[j].time : Int)) →
+        Restated.awakeThroughConfirmationWindow M S Sched
+          (t + Restated.stableGrowthDelay M S gapP) (x[j].time : Int) v →
         Block.Preceq B (Restated.Read.stable M x[j][v].st))
 
 end
@@ -145,8 +151,6 @@ def claimStableLiveAfterHealingStatement (M : Record.Model V) (S : Setup V) (Sch
     Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x →
     Restated.SynchronyFromWake M S x →
     AwakeAtMultiples S Sched →
-    Restated.WakesAtActionInstants M S Sched →
-    Restated.SleepsAfterActionInstants M S Sched →
     Restated.CatchUpOnWake M S x →
     Restated.TimeDiverges M x →
     Restated.HonestCommittees M S Sched (Restated.interface M S Sched) →

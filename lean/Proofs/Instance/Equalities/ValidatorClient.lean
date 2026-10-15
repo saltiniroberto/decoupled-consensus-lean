@@ -12,7 +12,7 @@ routine. The image of a signing history `sh` as a signing record is `sh.toProof.
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 
@@ -138,4 +138,4 @@ theorem toProof_create_attestation (sh : SigningHistory) (v : V) (r : Round)
     Protocol.height_pair sh fields (Protocol.finality_pair sh h_j J h_F),
     Protocol.finality_pair sh h_j J h_F⟩) rfl
 
-end SpecDraftRecord
+end SpecRecord

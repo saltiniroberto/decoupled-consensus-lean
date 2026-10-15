@@ -391,7 +391,7 @@ theorem block_in_tree_of_holder_afterPhase (facts : Record.Facts M) (S : Setup V
   have hqi : Restated.HonestThrough M Sched x i v' := fun t' ht => hq t' (le_trans ht himt)
   have hiΔ : (x[i].time : Int) + S.E.Δ < t := by linarith only [himt, hdeadline]
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hem⟩
   · -- `B` was delivered to the holder at step `i`
     rcases hpay with hmsg | ⟨Bl, -, hcc⟩
     · obtain ⟨u, o⟩ := sm
@@ -422,7 +422,7 @@ theorem block_in_tree_of_holder_afterPhase (facts : Record.Facts M) (S : Setup V
       · exact Restated.block_in_tree_of_narrowedCommonView_afterPhase facts S Sched x hexec htd hmono hcv
           hawake hlen
           hbodyi hqT (by rw [hdt]; exact Int.add_one_le_of_lt hearly) hgap hmr hw hFst
-      · have hsend := Restated.block_honestSend_at_tick facts S Sched x hqi hlbl haw hdvd
+      · have hsend := Restated.block_honestSend_at_tick facts S Sched x hqi hlbl haw
           ⟨out₁, hout₁, hst₁, hemit⟩
         exact Restated.block_in_tree_of_honestSend_afterPhase facts S Sched x hexec hsync hmult htd hmono
           hunder hsend (le_trans hgst hlate) hlate (fun t' ht' => hcov t' (le_trans hlate ht'))

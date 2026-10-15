@@ -29,6 +29,7 @@ import Model.Conditions.Sts_Spec2Claims_Claim13bf
 import Model.Conditions.Sts_Spec2Claims_ClaimConfirmedAfterHealing
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bK_ConfirmedWake
 
 /-!
 # The joint invariant at the switch round, and agreement after healing
@@ -96,7 +97,6 @@ theorem afterPhaseJointSwitchRound_of_premises (facts : Record.Facts M) (S : Set
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -145,7 +145,7 @@ theorem afterPhaseJointSwitchRound_of_premises (facts : Record.Facts M) (S : Set
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hbase⟩ := Restated.afterPhaseInvariantOverActiveSetsJoint_at_switchRound facts S
-    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcv htd hcom hthird
+    Sched x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcv htd hcom hthird
     hawake hrec hsl hrs hcs hprev hclear hB'
   have hJswitch := Restated.justifiedAncestor_before_switchTick_of_justifiedHigh facts S Sched x tE hexec hmono
     htd tGAT gap hgst hlen' hsync hthird hawake hrs hmult hcv hcom hrec hprev hclear hnW hAW
@@ -171,7 +171,6 @@ theorem confirmedAgreeAfterHealing_of_joint (facts : Record.Facts M) (S : Setup 
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -191,7 +190,7 @@ theorem confirmedAgreeAfterHealing_of_joint (facts : Record.Facts M) (S : Setup 
         ≤ (x[n₁].time : Int) →
       n₁ ≤ n_W → Restated.HonestThrough M Sched x n₁ v →
       (M.derive_named S.E S.cfg T_D').h ≤ (x[n₁][v].st).st.core.h_j)
-    (hsettle : Restated.RecordsSettledAtActionTicks M S Sched x tE) :
+    (hsettle : Restated.RecordsSettledAtSettleTick M S Sched x tE) :
     Restated.ConfirmedAgreeAfterHealing M S Sched x tE := by
   have hlen' : tGAT + Restated.healingLengthη M S gap ≤ tE := Restated.healingLength_le_of_kit_l76 facts S hlen
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE gap hlen hgst
@@ -214,10 +213,10 @@ theorem confirmedAgreeAfterHealing_of_joint (facts : Record.Facts M) (S : Setup 
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird
+    x tGAT tE gap hgap hlen hgst hmono hexec hsync hmult hcatch hcv htd hcom hthird
     hawake hrec hsl hrs hcs hlow
   exact Restated.confirmedAgreeAfterHealing_of_settle facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen' hsync hthird hawake hrs hmult hcv hcs hcom hwakes hsleeps hrec hprev hclear hB' hnW hAW
+    hlen' hsync hthird hawake hrs hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle
 
 end

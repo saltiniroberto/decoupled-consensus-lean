@@ -75,7 +75,7 @@ theorem clock_ge_of_awake_of_multiple_near (facts : Record.Facts M) (S : Setup V
     have hmono := Restated.time_mono_int facts S Sched x hmn
     linarith
   exact Restated.clock_ge_of_tickStepAt_awake_sts facts S Sched x hn (Finset.mem_sdiff.2 ⟨hawt, hvh _ hle⟩)
-    hdvd (hneTick n hn hdvd (Finset.mem_sdiff.2 ⟨hawt, hvh _ hle⟩)) hnm
+    (hneTick n hn hdvd (Finset.mem_sdiff.2 ⟨hawt, hvh _ hle⟩)) hnm
 
 end
 

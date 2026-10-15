@@ -53,7 +53,7 @@ open DecoupledConsensusModel.Proofs.HealingSurface
 open DecoupledConsensusModel.Proofs.Optimistic
 
 /-- The facts about the run `rho` along the path `W` from the instant `lo` on, for the family `Hs`:
-    sorted, well-formed events in the horizon, ticks at public instants, timely broadcast, relay and
+    sorted, well-formed events in the horizon, timely broadcast, relay and
     handling of blocks, Goldfish votes and attestations, authentic signers, dependencies present at
     each delivery, and run blocks read through `Xb` free of root collisions and of slashable weight
     between their chains. -/
@@ -63,7 +63,6 @@ structure AdmissibleFieldsOn (M : Record.Model V) (S : Setup V) (rho : Record.Ru
   horizon_nonneg : 0 ≤ rho.horizon
   sorted : rho.events.Pairwise (fun e f => Record.Event.key e ≤ Record.Event.key f)
   in_horizon : ∀ e ∈ rho.events, 0 ≤ Record.Event.time e ∧ Record.Event.time e ≤ rho.horizon
-  tick_public : ∀ v t, Record.Event.tick v t ∈ rho.events → PublicTime S t
   tickIndexUnique : TickIndexUnique rho
   wire : ∀ (i : Nat) (v : V) (o : NamedObject V) (t : Int),
     rho.events[i]? = some (.deliver v o t) →

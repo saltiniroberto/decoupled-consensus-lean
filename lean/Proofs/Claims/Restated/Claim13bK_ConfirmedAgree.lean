@@ -137,7 +137,7 @@ theorem records_succ_eq_or_not_preceq (facts : Record.Facts M) (S : Setup V) (Sc
       rw [ht', facts.sch.confirmation_time_eq_support_cutoff_succ]
       exact facts.sch.support_cutoff_emod_delta S (s + 1)
     have haw' : v ∈ Sched.awake (t' : Int) \ Sched.adv (t' : Int) := by rw [ht']; exact haw
-    rcases Restated.st_succ_of_tick_awake facts S Sched x v hlbl haw' hdvd with
+    rcases Restated.st_succ_of_tick_awake facts S Sched x v hlbl haw' with
       ⟨out, hout, hst⟩ | ⟨-, hst⟩
     · rw [ht'] at hout
       by_cases hrun : M.awake_for_grade2 (Setup.alwaysAwake S) v
@@ -255,62 +255,5 @@ theorem get_confirmed_preceq_of_records_along (facts : Record.Facts M) (S : Setu
 
 end
 
-section
-set_option autoImplicit false
-open DecoupledConsensusModel.Execution
-local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
-open Framework.StsMultisetLog
-
-/-- Under its premises on the execution and the phase ending at `tE`, with the joint invariant at
-    the switch round for an anchor that is `T_W` or a descendant of it,
-    `RecordsSettledAtActionTicks` gives `ConfirmedAgreeAfterHealing S Sched x tE`: from the settle
-    instant on, any two validators honest through their reads, each awake throughout the vote window
-    of its read's slot, hold confirmed outputs on one chain. -/
-theorem confirmedAgreeAfterHealing_of_settle (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
-      3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
-      ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
-      (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
-      (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
-      Restated.NamedHeightRegimeRunOn M (Setup.alwaysAwake S)
-        ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
-        (Restated.runAllPath M S Sched x v N)
-        (fun t => Restated.runAllPath M S Sched x v N (Restated.strictEventIndex
-          ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V) t))
-        (notHeldAt Sched) Finset.univ Finset.univ
-        (Restated.roundAt M S tGAT + S.hc.η_SG + 2) blocked first i a ta Cfg T Tprev c0 →
-      a.round = r → Restated.BasePreviousRoundSGCompatibleWithAnchorAtRound M S Sched x v r N
-        (Restated.runAllPath M S Sched x v N) T) (hclear : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
-      ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
-      (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round) (n₀ : Nat),
-      (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
-      Restated.NamedHeightRegimeRunOn M (Setup.alwaysAwake S)
-        ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
-        (Restated.runAllPath M S Sched x v N)
-        (fun t => Restated.runAllPath M S Sched x v N (Restated.strictEventIndex
-          ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V) t))
-        (notHeldAt Sched) Finset.univ Finset.univ
-        (Restated.roundAt M S tGAT + S.hc.η_SG + 2) blocked first i a ta Cfg T Tprev c0 →
-      a.round = r → Restated.tickStepAt M x n₀ ((Restated.Vocabulary.Execution.Setup.a M S r)) →
-      Restated.BaseClearFGSourceCompatibleWithAnchorAtRound M S Sched x r n₀ T) (hB' : Restated.BaseJustifiedHighAtSwitchRoundW M S Sched x tGAT tE gap) {n_W : Nat} (hnW : Restated.tickStepAt M x n_W ((Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)))) {T_W : NamedBlock V} (hAW : Restated.AnchorAtRound M S Sched x tGAT tE (Restated.switchRound M S tE) T_W) (hJswitch : ∀ (v : V) (n₁ : Nat),
-      M.vote_time S.E ((M.opening_slot S.hc (Restated.switchRound M S tE)) + 1) - 1
-        ≤ (x[n₁].time : Int) →
-      n₁ ≤ n_W → Restated.HonestThrough M Sched x n₁ v →
-      Block.Preceq (x[n₁][v].st).st.core.J T_W.erase)
-    {n₀ : Nat} {T₀ : NamedBlock V} (hTW₀ : Block.Preceq T_W.erase T₀.erase)
-    (hJ₀ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (Restated.switchRound M S tE) n₀ n_W T₀)
-    (hsettle : Restated.RecordsSettledAtActionTicks M S Sched x tE) :
-    Restated.ConfirmedAgreeAfterHealing M S Sched x tE := by
-  intro v₁ v₂ i j hv₁ hv₂ hti htj ha₁ ha₂
-  have h₁ := (Restated.records_ancestorOfHonestHeads_of_settle_honestThrough facts S Sched x tE hexec hmono htd
-    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear
-    hB' hnW hAW hJswitch hTW₀ hJ₀ hsettle hv₁ hti ha₁).2
-  have h₂ := (Restated.records_ancestorOfHonestHeads_of_settle_honestThrough facts S Sched x tE hexec hmono htd
-    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear
-    hB' hnW hAW hJswitch hTW₀ hJ₀ hsettle hv₂ htj ha₂).2
-  exact compatible_iff_Compatible.mpr
-    (Restated.compatible_of_ancestorOfHonestHeadsFrom_after facts S Sched x htd hcs h₁ h₂)
-
-end
 
 end DecoupledConsensusModel.Sts.Restated

@@ -55,7 +55,11 @@ import Proofs.Claims.Spec2Claims.Claim13bModel_slotStart
 Theorems over a model `M : Record.Model V` with facts `facts : Record.Facts M`: the growth
 conclusion for one execution (`claimConfirmedGrowsAfterHealing_conclusion`), and
 `claimConfirmedGrowsAfterHealing_holds`, which proves
-`Restated.claimConfirmedGrowsAfterHealingStatement M S Sched`.
+`Restated.claimConfirmedGrowsAfterHealingStatement M S Sched`. The growth conclusion's last conjunct
+reads a validator that ran a confirmation while awake throughout its grade-2 window
+(`awakeThroughConfirmationWindow` from `t` plus the growth delay); it gives the inclusion clause's
+reader from slot `s`'s confirmation instant, since that instant is `6Δ` after slot `s`'s proposal
+instant, which is at most `gapP` periods after `t`.
 -/
 
 set_option autoImplicit false
@@ -90,8 +94,10 @@ open Framework.StsMultisetLog
     honest through its slot's vote instant and awake from `M.proposal_wake_start S s` to its
     proposal instant proposes, then from every time `t ≥ tE` and every step `i` at `t`, some block
     proposed after `t` by such a proposer is a strict descendant of the confirmed output of every
-    validator honest through step `i`, and an ancestor of the confirmed output of every honest
-    active validator at every step from `t` plus the growth delay on. -/
+    validator honest through step `i`, and an ancestor of the confirmed output of every validator
+    honest through its read that ran, at or after `t` plus the growth delay and at or before its
+    read, a confirmation while awake throughout that confirmation's grade-2 window, at every read
+    from `t` plus the growth delay on. -/
 theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched)
     (tGAT tE : Int) (gap gapP : Nat)
@@ -100,7 +106,6 @@ theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S :
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -117,12 +122,12 @@ theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S :
   obtain ⟨hinclAll, -⟩ := Restated.claimConfirmedIncludedAfterHealing_conclusion_of_adoption facts S Sched
     (by
       intro x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs
-        hcom hw hs hrec hprev hclear hB' n_W hnW T_W hAW hJswitch n₀ T₀ hTW₀ hJ₀ tHi
+        hcom hrec hprev hclear hB' n_W hnW T_W hAW hJswitch n₀ T₀ hTW₀ hJ₀ tHi
       exact Restated.honestProposalHeadsAtOwnSlot_afterPhase facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird
-        hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ tHi
+        hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ tHi
         )
     x tGAT tE gap hgap hlen hgst hmono hexec
-    hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs
+    hsync hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs
   have hd : (1 : Int) ≤ S.E.Δ := S.E.Δ_pos
   have hR : (3 : Int) ≤ (S.hc.R : Int) := by exact_mod_cast S.hc.R_ge_three
   have hper0 : (0 : Int) < (Restated.constants M S).period := (Restated.constants_holds facts S).period_pos
@@ -183,7 +188,7 @@ theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S :
   have hwin' : tGAT + 8 * (S.hc.R : Int) * S.E.Δ ≤ tE' := le_trans hwin8 (le_of_lt h12)
   have hsettle : Restated.RecordsSettledAtSettleTick M S Sched x tE' :=
     Restated.recordsSettledAtSettleTick_atStrongRound facts S Sched x tGAT tE gap hgap hgst hmono hexec hsync
-      hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
+      hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
       hopening hprev1
   have hle : Restated.confirmedSettleTime M S tE' ≤ tE := Restated.confirmedSettleTime_third_le facts S hc1 hcE
   have hthird' := third_of_later S Sched tE tE' htE' hthird
@@ -194,7 +199,7 @@ theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S :
   have hcs' := Restated.committeeSleepinessW_of_later facts S Sched tGAT tE tE' hmono hawake hcom hwin' hcs
   have hlen'' : tGAT + Restated.healingLengthη M S gap ≤ tE' := Restated.healingLength_le_of_kit_l76 facts S hlen'
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE' gap hgap hlen' hgst hmono hexec hsync
-    hmult hwakes hsleeps hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
+    hmult hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE' gap hlen' hgst
     hmono hexec hsync hmult hcv hcom hthird' hawake' hrec'
   have hclear := fun r (hrD' : Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r)
@@ -204,7 +209,7 @@ theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S :
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE' gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE' gap hgap hlen' hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom
+    x tGAT tE' gap hgap hlen' hgst hmono hexec hsync hmult hcatch hcv htd hcom
     hthird' hawake' hrec' hsl' hrs' hcs' hlow
   obtain ⟨n_b, hn_b⟩ := Restated.tick_field_at_succ facts S Sched x htd (Restated.switchRound M S tE')
   obtain ⟨-, hnb0⟩ := Restated.tickStepAt_time facts x hn_b
@@ -228,14 +233,20 @@ theorem claimConfirmedGrowsAfterHealing_conclusion (facts : Record.Facts M) (S :
       linarith
     have hlt : (x[i].time : Int) < M.proposal_time S.E s := by rw [hti]; exact hts
     exact (Restated.prec_get_confirmed_of_honestProposal facts S Sched x tE' hexec hmono htd hcatch tGAT gap
-      hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hwakes hsleeps hrec' hprev
+      hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hrec' hprev
       hclear hB' hnW hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase
       hsettle
       (Restated.slot_ge_of_le_phaseEnd facts S hle hsE) hhon hB hkv hn_b v hi hv hlt).1
   ·
     intro v j hv hj hact
     have hincl := (hinclAll s hsE hhon).2 k B hB hkv v j hv
-    exact hincl (by rw [hG] at hj; linarith) hact
+    have hconf : M.confirmation_time S.E s = M.proposal_time S.E s + 6 * S.E.Δ :=
+      (facts.sch.slot_instants_l55 S.E s).2.2.2.2.2
+    have hinc : confirmedInclusionDelay S = 6 * S.E.Δ := rfl
+    obtain ⟨s_w, hlo, hhi, haw⟩ := hact
+    refine hincl (by rw [hG] at hj; linarith) ⟨s_w, ?_, hhi, haw⟩
+    rw [hG] at hlo
+    linarith
 
 end
 
@@ -259,8 +270,6 @@ theorem claimConfirmedGrowsAfterHealing_holds_at (facts : Record.Facts M) (S : S
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -278,7 +287,7 @@ theorem claimConfirmedGrowsAfterHealing_holds_at (facts : Record.Facts M) (S : S
     htd hgst (tE := tE) (by have := Restated.delta_le_healingLengthη_add_gap_period facts S gap; linarith)
     hawake
   exact Restated.claimConfirmedGrowsAfterHealing_conclusion facts S Sched x tGAT tE gap gapP hgap hlen hgst hmono
-    hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hprop
+    hexec hsync hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hprop
 
 /-- For every setup `S` and schedule `Sched`,
     `Restated.claimConfirmedGrowsAfterHealingStatement M S Sched` holds. -/
@@ -287,10 +296,10 @@ theorem claimConfirmedGrowsAfterHealing_holds (facts : Record.Facts M) (S : Setu
   intro gap hgap
   refine ⟨Restated.healingLengthη M S gap + ((gap : Int) + 2) * (Restated.constants M S).period,
     le_of_lt (Restated.healingLengthDevice_pos facts S gap), ?_⟩
-  exact fun x tGAT tE gapP hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird
+  exact fun x tGAT tE gapP hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird
     hawake hrec hsl hrs hcs hprop =>
     Restated.claimConfirmedGrowsAfterHealing_holds_at facts S Sched gap hgap x tGAT tE gapP hlen
-      hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake hrec hsl hrs hcs
+      hgst hmono hexec hsync hmult hcatch htd hcom hthird hawake hrec hsl hrs hcs
       hprop
 
 end

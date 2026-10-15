@@ -131,7 +131,7 @@ theorem mem_sent_of_processes (facts : Record.Facts M) (S : Setup V) (Sched : Sc
   rcases hproc with ⟨idx, hidx, out, hout, hst, ho⟩ | ⟨idx, hidx⟩
   ·
     obtain ⟨k, hk, hmem, hcase⟩ := Restated.runAllPath_at_event facts S Sched x v n idx hidx
-    obtain ⟨τ, hlbl, hτ, haw, hdvd⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
+    obtain ⟨τ, hlbl, hτ, haw⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
     rcases hcase with ⟨t', he', -, -⟩ | ⟨t', he', hb, ha⟩ | ⟨o', t', he', -, -⟩
     · cases he'
     swap
@@ -146,7 +146,7 @@ theorem mem_sent_of_processes (facts : Record.Facts M) (S : Setup V) (Sched : Sc
       exact hout
     have hst' : x[k + 1][v₀].st = out.1 := by rw [← ha']; exact hst
     refine ⟨k + 1, hk, ⟨⟨v₀, o⟩, Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw'
-      hdvd (fun out₁ out₂ h₁ h₂ h12 =>
+      (fun out₁ out₂ h₁ h₂ h12 =>
         facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) v₀ _ _ out₁ out₂ h₁ h₂ h12)
       hout' hst' ho, rfl⟩, ?_⟩
     rw [(Restated.tickAllAwake_time facts S Sched x hlbl).2, hτ]

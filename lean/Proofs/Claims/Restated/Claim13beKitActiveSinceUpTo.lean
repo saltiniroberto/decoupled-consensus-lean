@@ -43,6 +43,7 @@ import Model.Conditions.Sts_Spec2Claims_Claim13bd
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13beRoute3_74UpToNotHeld
 
 /-!
 # The switch-round invariant, with synchrony up to the switch round
@@ -95,7 +96,6 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises_upTo (facts : Reco
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeBefore M S x
       (M.confirmation_time S.E ((M.opening_slot S.hc (Restated.switchRound M S tE)) + 2))) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -147,7 +147,7 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises_upTo (facts : Reco
   have hchain : Restated.BaseSGOneChainAtSwitchRound M S Sched x v tE N :=
     Restated.baseSGOneChainAtSwitchRound_of_premises_upTo facts S Sched x v hsync hmono hawake hgst hcv hexec
       hmult hthird hcom hlen' htd hN hreg harW hn₀ htop (hP v N hN)
-  have hgrade1 := Restated.grade1_at_switchRound_upTo facts S Sched x v hsync hmono hawake hgst hcv hexec hmult
+  have hgrade1 := Restated.grade1_at_switchRound_upTo_notHeld facts S Sched x v hsync hmono hawake hgst hcv hexec hmult
     hthird hcom hlen' htd hN hreg harW hn₀ hfin
     (fun heq => Restated.basePreviousRoundSGCompatibleWithAnchor_of_belowOpeningVotes_upTo facts S Sched x v
       hsync hmono hawake hgst hcv hexec hmult hthird hcom hlen' htd hN hreg heq (hP v N hN))
@@ -162,7 +162,10 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises_upTo (facts : Reco
       heads := Restated.headsBelow_of_regime_upTo facts S Sched x v hsync hmono hawake hgst hcv hexec hmult hthird
         hcom hlen' htd hN hreg harW
       fin := hfin
-      grade1 := fun w hw' p hp m hm B b hb hbt => hgrade1 w hw' p hp m hm B (hbt ▸ hb)
+      grade1 := fun w hw' p _hpg1 hp m hm B b hb hbt => hgrade1 w p hp
+        (fun h => (Finset.mem_sdiff.1 hw').2 (hmono _ _ hp h)) m hm B (hbt ▸ hb)
+      grade1Performers := fun w hw' m hm B b hb hbt => hgrade1 w .g1
+        (facts.gr.domain_le_action S _ .g1) (Finset.mem_sdiff.1 hw').2 m hm B (hbt ▸ hb)
       heightCeiling := Restated.heightCeiling_of_topHonestRow facts S Sched x hexec.toUnforgeability htop
       targetsTop := Restated.targetsTop_at_switchRound_upTo facts S Sched x v hsync hmono hawake hgst hcv hexec hmult
         hthird hcom hlen' htd hN hreg hn₀ }
@@ -178,10 +181,12 @@ theorem claim13beBaseOverActiveSetsSince_anchored_of_premises_upTo (facts : Reco
       heads := hTop.heads
       fin := hTop.fin
       grade1 := hTop.grade1
+      grade1Performers := hTop.grade1Performers
       heightCeiling := hTop.heightCeiling
       targetsTop := hTop.targetsTop
       targetsSince := Restated.targetsSince_at_switchRound_upTo facts S Sched x v hsync hmono hawake hgst hcv hexec
-        hmult hthird hcom hlen' htd hN hreg harW hn₀ (fun _ => hgrade1)
+        hmult hthird hcom hlen' htd hN hreg harW hn₀
+        (fun _ w hw' p hp m hm B hB => hgrade1 w p hp (fun h => (Finset.mem_sdiff.1 hw').2 (hmono _ _ hp h)) m hm B hB)
         (fun heq => hclear v N blocked first i a ta Cfg T Tprev c0 n₀ hN hreg heq hn₀) }
 
 end

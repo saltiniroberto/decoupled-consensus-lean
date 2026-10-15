@@ -98,9 +98,8 @@ private theorem confWalkWith_eligible_of_cone (facts : Record.Facts M)
     (E : Env V) (st : M.S) (s : Slot) (Hon : Finset V) {B : Block V} (A : Block V)
     (e : Finset (GoldfishVote V)) (sc : Block V → ℕ)
     (hsc : ∀ C, M.goldfish_score E st.T e e s C ⇢ sc C)
-    (hsup : Restated.Vocabulary.Proofs.Optimistic.ConeSupport M E st.T e e
+    (hsup : Restated.Vocabulary.Proofs.Optimistic.ConeSupportCount M E st.T e e
       (Restated.Vocabulary.Protocol.confLate M E st s) s Hon (fun X => Block.Preceq B X))
-    (hvalid : Protocol.VoteSetValid E s (Restated.Vocabulary.Protocol.confLate M E st s))
     (hpre : Block.Preceq A B)
     (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B →
       C ∈ Restated.Vocabulary.Protocol.confTree M st)
@@ -110,18 +109,18 @@ private theorem confWalkWith_eligible_of_cone (facts : Record.Facts M)
     Block.Preceq B W ∧
       decide (Restated.Vocabulary.Protocol.confCount M E st s < 2 * sc W) = true := by
   have hwalk : Block.Preceq B W :=
-    facts.fc.ghost_passes_cone E st.T (Restated.Vocabulary.Protocol.confTree M st) e e
-      (Restated.Vocabulary.Protocol.confLate M E st s) s Hon hsup.majority hsup.counted hsup.sub
-      hsup.no_equiv hsup.vote hvalid hpre hpath sc hsc W hW
+    facts.fc.ghost_passes_cone_count E st.T (Restated.Vocabulary.Protocol.confTree M st) e e
+      (Restated.Vocabulary.Protocol.confLate M E st s) s Hon hsup.count hsup.counted hsup.sub
+      hsup.no_equiv hsup.vote hpre hpath sc hsc W hW
   refine ⟨hwalk, ?_⟩
   rcases facts.fc.ghost_eligible A (Restated.Vocabulary.Protocol.confTree M st) sc
       (fun C => decide (Restated.Vocabulary.Protocol.confCount M E st s < 2 * sc C)) W hW with hA | hel
   · have hAB : A = B := Proofs.ModelProperties.Preceq_antisymm hpre (hA ▸ hwalk)
     rw [hA, hAB]
     simp only [decide_eq_true_eq, Restated.Vocabulary.Protocol.confCount]
-    exact facts.fc.ConeSupport_eligible E st.T e e (Restated.Vocabulary.Protocol.confLate M E st s)
-      s Hon (fun X => Block.Preceq B X) hsup.majority hsup.counted hsup.sub hsup.no_equiv
-      hsup.vote hvalid (fun X hX => preceq_eq_true_iff_Preceq.mpr hX) (sc B) (hsc B)
+    exact facts.fc.ConeSupport_eligible_count E st.T e e (Restated.Vocabulary.Protocol.confLate M E st s)
+      s Hon (fun X => Block.Preceq B X) hsup.count hsup.counted hsup.sub hsup.no_equiv
+      hsup.vote (fun X hX => preceq_eq_true_iff_Preceq.mpr hX) (sc B) (hsc B)
   · exact hel
 
 open scoped DC in
@@ -228,7 +227,8 @@ theorem walk_eligible_of_headsBelow_at_confirmation_tick (facts : Record.Facts M
     (hneTick : ∀ (n' : Nat) (t' : Int), Restated.tickStepAt M x n' t' → t' % S.E.Δ = 0 → v ∈ Sched.awake t' \ Sched.adv t' →
       t' ≤ M.confirmation_time S.E s →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out) :
+        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n'] v) t' ⇢ out)
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     ∀ e, Restated.Vocabulary.Protocol.confVotes M S.E (Restated.confStoreAt M S (x[m][v].st) s) s ⇢ e →
     ∀ sc : Block V → ℕ, (∀ C, M.goldfish_score S.E (Restated.confStoreAt M S (x[m][v].st) s).T
         e e s C ⇢ sc C) →
@@ -266,10 +266,9 @@ theorem walk_eligible_of_headsBelow_at_confirmation_tick (facts : Record.Facts M
     (hneTickVote mv hmv)
     (fun n hn => hneTick n _ hn (slotStart_emod_delta S s)
       (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched hwaw le_rfl (by rw [hsc]; linarith), hwh⟩)
-      (by rw [hct]; linarith)) e he
+      (by rw [hct]; linarith)) (Restated.voteSetValid_conf facts S Sched x m v s) hr1 e he
   exact confWalkWith_eligible_of_cone facts S.E (Restated.confStoreAt M S (x[m][v].st) s) s
-    (Restated.HonSlot M S Sched s) A e sc hscore hcone (Restated.voteSetValid_conf facts S Sched x m v s)
-    hAB hpath W hW
+    (Restated.HonSlot M S Sched s) A e sc hscore hcone hAB hpath W hW
 
 end
 
@@ -406,7 +405,7 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
     right after that tick `v`'s confirmed output is a descendant of `X`. -/
 theorem get_confirmed_descendant_after_confirmation_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x) (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x) (hcatch : Restated.CatchUpOnWake M S x) (tGAT : Int) (gap : Nat) (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE) (hsync : Restated.SynchronyFromWake M S x) (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight) (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
-      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
+      ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t) (hrsW : Restated.roundSleepinessW M S Sched tE) (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT) (hcs : Restated.committeeSleepinessW M S Sched tE) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap) (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
       (ta : Int) (Cfg T Tprev : NamedBlock V) (c0 : Round),
       (Restated.Vocabulary.Execution.Setup.a M S r) ≤ (x[N].time : Int) → (x[N].time : Int) ≤ tE →
@@ -527,7 +526,9 @@ theorem get_confirmed_descendant_after_confirmation_tick (facts : Record.Facts M
   have hwalk : Block.Preceq X W ∧
       decide (Restated.Vocabulary.Protocol.confCount M S.E (Restated.confStoreAt M S (x[m][v].st) s) s < 2 * sc W) = true := by
     rcases compatible_cases hAX with hAXp | hXA
-    · exact Restated.walk_eligible_of_headsBelow_at_confirmation_tick facts S Sched x hexec hsync hmult
+    · exact Restated.walk_eligible_of_headsBelow_at_confirmation_tick
+          (hr1 := Restated.one_le_round_of_of_opening_slot_le facts S (r := Restated.switchRound M S tE + 1)
+            (Nat.le_add_left 1 _) (le_trans (Nat.le_add_right _ 2) hslot)) facts S Sched x hexec hsync hmult
         htd hmono hgst hcv hawake' hthird' hcs' ht'len hunder
         hunderS hspos hslo hanchor le_rfl (hX s le_rfl) hm
         hvaw hvh' (M.gradeContract c) A hAo hAXp hpath
@@ -541,7 +542,9 @@ theorem get_confirmed_descendant_after_confirmation_tick (facts : Record.Facts M
           C ∈ Restated.Vocabulary.Protocol.confTree M (Restated.confStoreAt M S (x[m][v].st) s) :=
         fun C h1 h2 h3 => absurd (Block.preceq_antisymm (preceq_eq_true_iff_Preceq.mpr h3)
           (preceq_eq_true_iff_Preceq.mpr h1)) h2
-      obtain ⟨h1, h2⟩ := Restated.walk_eligible_of_headsBelow_at_confirmation_tick facts S Sched x hexec
+      obtain ⟨h1, h2⟩ := Restated.walk_eligible_of_headsBelow_at_confirmation_tick
+          (hr1 := Restated.one_le_round_of_of_opening_slot_le facts S (r := Restated.switchRound M S tE + 1)
+            (Nat.le_add_left 1 _) (le_trans (Nat.le_add_right _ 2) hslot)) facts S Sched x hexec
         hsync hmult htd hmono hgst hcv hawake' hthird' hcs' ht'len hunderA
         hunderAS hspos hslo hanchor le_rfl hA
         hm hvaw hvh' (M.gradeContract c) A hAo (preceq_eq_true_iff_Preceq.mp (Block.preceq_self A)) hpathA
@@ -550,7 +553,7 @@ theorem get_confirmed_descendant_after_confirmation_tick (facts : Record.Facts M
   obtain ⟨hXW, hel⟩ := hwalk
   -- step 3: the walk's result is the `live_confirmed` the tick writes
   have hJ1 := Restated.live_confirmed_ancestorOfHonestHeadsFrom_ofJoint facts S Sched x tE hexec hmono htd hcatch
-    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW
+    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW
     hAW hJswitch le_rfl hTW₀ hJ₀ hs0 hm hvaw hvh' hrun
   obtain ⟨D, hD⟩ := facts.dt.update_confirmation_with_nonempty (M.gradeContract c) S.E S.hc
     (Restated.confStoreAt M S (x[m][v].st) s) s
@@ -581,17 +584,17 @@ theorem get_confirmed_descendant_after_confirmation_tick (facts : Record.Facts M
   have hvm : Restated.HonestThrough M Sched x m v :=
     fun t ht => hvh t (le_trans ht (Restated.time_mono_int facts S Sched x (Nat.le_succ m)))
   have hrecm := Restated.records_ancestorOfHonestHeads_after_settleTick facts S Sched x tE hexec hmono htd hcatch
-    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW
+    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW
     hAW hJswitch hTW₀ hJ₀ hsettle hn_b v m hkm hvm
   have hrecm1 := Restated.records_ancestorOfHonestHeads_after_settleTick facts S Sched x tE hexec hmono htd
-    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear
+    hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear
     hB' hnW hAW hJswitch hTW₀ hJ₀ hsettle hn_b v (m + 1) (Nat.le_succ_of_le hkm) hvh
   have hk1 : (Restated.Vocabulary.Execution.Setup.a M S (Restated.switchRound M S tE)) ≤ (x[m + 1].time : Int) := by
     have := Restated.action_mono facts S (Nat.le_succ (Restated.switchRound M S tE))
     have := Restated.time_mono_int facts S Sched x (Nat.le_succ m)
     linarith
   have hF := Restated.finalized_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+    hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
     le_rfl hTW₀ hJ₀ hk1 hvh
   -- steps 4 and 5
   exact Restated.preceq_get_confirmed_after_confirmation_tick_of_inputs facts S Sched x htd hcs hm haw

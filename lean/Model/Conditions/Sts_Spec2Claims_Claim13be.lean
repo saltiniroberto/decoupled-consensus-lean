@@ -9,9 +9,8 @@ import Model.Record.Wiring
 /-!
 # Network, wake and sleepiness premises
 
-Honest sends, synchrony from wake, the instants at which validators wake and sleep, the active and
-attesting validators of a round, the sleepiness premises, and the common view at the start of a
-phase, stated over a model `M : Record.Model V`.
+Honest sends, synchrony from wake, the active and attesting validators of a round, the sleepiness
+premises, and the common view at the start of a phase, stated over a model `M : Record.Model V`.
 -/
 
 set_option autoImplicit false
@@ -61,31 +60,6 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- A validator awake at `t` and asleep at `t − 1` has `t` a round's action instant. -/
-def WakesAtActionInstants (M : Record.Model V) (S : Setup V) (Sched : Schedule V) : Prop :=
-  ∀ (t : Int) (v : V), v ∈ Sched.awake t → v ∉ Sched.awake (t - 1) →
-    ∃ r : Round, t = (M.a S.hc S.E.Δ r)
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
-/-- A validator awake at `t − 1` and asleep at `t` has `t` the instant after a round's action
-    instant. -/
-def SleepsAfterActionInstants (M : Record.Model V) (S : Setup V) (Sched : Schedule V) : Prop :=
-  ∀ (t : Int) (v : V), v ∈ Sched.awake (t - 1) → v ∉ Sched.awake t →
-    ∃ r : Round, t = (M.a S.hc S.E.Δ r) + 1
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
 /-- The validators awake throughout `wAttest S` before round `r`'s action instant. -/
 def activeRoundW (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (r : Nat) : Finset V :=
   Sched.awakeThroughout ((M.a S.hc S.E.Δ r) - wAttest S) ((M.a S.hc S.E.Δ r))
@@ -97,9 +71,16 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- The validators awake at round `r`'s action instant. -/
+/-- The validators the awake rule lets attest at round `r`: awake at every time from one delay before
+    round `r`'s grade-2 first cutoff to round `r`'s action instant. -/
 def attestersAt (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (r : Nat) : Finset V :=
-  Sched.awake ((M.a S.hc S.E.Δ r))
+  Sched.awakeThroughout (M.early S.E S.hc r .g2 - S.E.Δ) ((M.a S.hc S.E.Δ r))
+
+/-- The validators the awake rule lets vote at slot `s`: awake at every time from one delay before
+    the grade-1 first cutoff of `s`'s round (`11Δ` before that round's action instant) to `s`'s vote
+    instant, one delay after the slot's start. -/
+def votersAt (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (s : Slot) : Finset V :=
+  Sched.awakeThroughout ((M.a S.hc S.E.Δ (M.round_of S.hc s)) - 11 * S.E.Δ) (slotStart S.E.Δ s + S.E.Δ)
 
 end
 
@@ -108,7 +89,8 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- The validators awake at the action instant of some round of `[lo, hi]`. -/
+/-- The validators the awake rule lets attest at some round of `[lo, hi]` (the union of
+    `attestersAt` over those rounds). -/
 def attestersIn (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (lo hi : Nat) : Finset V :=
   (Finset.Icc lo hi).biUnion (Restated.attestersAt M S Sched)
 
@@ -139,12 +121,14 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
 /-- At every slot `s ≥ 1` starting at or after `anchor`, the members of slot `s − 1`'s committee in
-    `activeAtW` and outside the adversary at that slot's confirmation instant outnumber the rest of
-    the committee. -/
+    `activeAtW` and outside the adversary at that slot's confirmation instant outnumber the other
+    committee members that the awake rule lets vote at `s − 1` or that the adversary holds at its
+    confirmation instant. -/
 def committeeSleepinessW (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (anchor : Int) : Prop :=
   ∀ s : Slot, 1 ≤ s → anchor ≤ slotStart S.E.Δ s →
-    ((S.E.committee (s - 1)) \
-        (activeAtW S Sched (s - 1) \ Sched.adv (M.confirmation_time S.E (s - 1)))).card
+    ((S.E.committee (s - 1) ∩
+        (Restated.votersAt M S Sched (s - 1) ∪ Sched.adv (M.confirmation_time S.E (s - 1)))) \
+      (activeAtW S Sched (s - 1) \ Sched.adv (M.confirmation_time S.E (s - 1)))).card
       < ((activeAtW S Sched (s - 1) ∩ S.E.committee (s - 1)) \
           Sched.adv (M.confirmation_time S.E (s - 1))).card
 

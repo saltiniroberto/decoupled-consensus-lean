@@ -56,7 +56,7 @@ theorem time_le_of_mem_actionEvents (facts : Record.Facts M) (S : Setup V) (Sche
       rw [← hτ, h2]
       exact ⟨Int.natCast_nonneg _, le_refl _⟩
   | tick v₁ t' =>
-      obtain ⟨τ, hlbl, hτ, -, -⟩ := Restated.tickAllAwake_of_mem_actionEventsOf he
+      obtain ⟨τ, hlbl, hτ, -⟩ := Restated.tickAllAwake_of_mem_actionEventsOf he
       have h2 := (Restated.tickAllAwake_time facts S Sched x hlbl).2
       show 0 ≤ t' ∧ t' ≤ (x[k + 1].time : Int)
       rw [← hτ, h2]
@@ -96,26 +96,6 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- Every tick event of the run of the first `n` steps, with honest set `H`, is at a public instant. -/
-theorem tick_public_runAll_withHonest (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
-    (x : AtomicExec (Record.protocolOf M S) Sched) (v : V) (H : Finset V) (n : Nat) :
-    ∀ v₀ t, Record.Event.tick v₀ t ∈ ({ Restated.runAll M S Sched x v n with honest := H } : Record.Run V).events →
-      Execution.PublicTime (Setup.alwaysAwake S) t := by
-  intro v₀ t he
-  obtain ⟨k, -, hmem⟩ := Restated.exists_step_of_mem_runEvents facts S Sched x n he
-  obtain ⟨τ, -, hτ, -, hdvd⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
-  obtain ⟨j, hj⟩ := (emod_eq_zero_iff_publicTime S τ).1 hdvd
-  refine ⟨j, ?_⟩
-  rw [← hτ, hj]
-  rfl
-
-end
-
-section
-set_option autoImplicit false
-open Framework.StsMultisetLog
-open DecoupledConsensusModel.Execution
-
 /-- In the run of the first `n` steps, whatever honest set is declared, every validator awake at a
     public instant `t` with `0 < t ≤ x[n].time` and not in `Sched.adv t` has a tick event at `t`. -/
 theorem tickAtAwake_runAll_withHonest (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
@@ -134,10 +114,7 @@ theorem tickAtAwake_runAll_withHonest (facts : Record.Facts M) (S : Setup V) (Sc
   have hin : i < n := Nat.lt_of_lt_of_le hik hkn
   have haw' : v₀ ∈ Sched.awake (d : Int) \ Sched.adv (d : Int) := by
     rw [← hd]; exact Finset.mem_sdiff.2 ⟨haw, hadv⟩
-  have hdvd : (d : Int) % S.E.Δ = 0 :=
-    (emod_eq_zero_iff_publicTime S d).2 (by rw [← hd]; exact ⟨j, hj⟩)
-  have hcond : v₀ ∈ Sched.awake (d : Int) \ Sched.adv (d : Int) ∧ (d : Int) % S.E.Δ = 0 :=
-    ⟨haw', hdvd⟩
+  have hcond : v₀ ∈ Sched.awake (d : Int) \ Sched.adv (d : Int) := haw'
   have hev : (Record.Event.tick v₀ t : Record.Event V) ∈
       Record.actionEventsOf M S Sched v₀ (x[i].time : Int) (x.lbl i) := by
     rw [hlbl, hd]
@@ -185,7 +162,7 @@ theorem lbl_of_tick_mem_stepEvents (facts : Record.Facts M) (S : Setup V) (Sched
     (he : (Record.Event.tick v₀ t : Record.Event V) ∈ Restated.stepEvents M S Sched x k) :
     ∃ τ : Nat, x.lbl k = AtomicAction.tickAllAwake τ ∧ (τ : Int) = t := by
   obtain ⟨v₁, -, hmem⟩ := List.mem_flatMap.1 he
-  obtain ⟨τ, hlbl, hτ, -, -⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
+  obtain ⟨τ, hlbl, hτ, -⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
   exact ⟨τ, hlbl, hτ⟩
 
 end

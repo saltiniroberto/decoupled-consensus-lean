@@ -119,6 +119,8 @@ theorem committeeSleepinessW_of_phase (facts : Record.Facts M) (S : Setup V) (Sc
       refine Finset.ext (fun v => ?_)
       simp only [Finset.mem_sdiff, Restated.HonSlot, Finset.mem_inter]
       tauto
+    refine lt_of_le_of_lt (Finset.card_le_card
+      (Finset.sdiff_subset_sdiff Finset.inter_subset_left (subset_refl _))) ?_
     rw [hfold, heq, Finset.card_sdiff, Finset.inter_eq_left.mpr hsubH]
     have hle2 : (Restated.HonSlot M S Sched (s' - 1)).card ≤ (S.E.committee (s' - 1)).card :=
       Finset.card_le_card hsubH

@@ -13,7 +13,7 @@ has its lemma stated for every value of the others.
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 
@@ -239,4 +239,4 @@ theorem toProof_named_transition (E : DecoupledConsensusModel.Env V)
 
 end Transition
 
-end SpecDraftRecord
+end SpecRecord

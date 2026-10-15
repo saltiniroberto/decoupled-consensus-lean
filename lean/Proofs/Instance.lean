@@ -42,6 +42,6 @@ import Proofs.Instance.Facts.Assembly
 # The spec's instance of the record
 
 The maps between the spec's types and the record's, the equalities of the spec's routines with the
-record's members, the instance `Model.specDraft` of the record `Model V`, and the proofs of the
-record's facts at it, gathered in the bundle `Model.specDraft_facts`.
+record's members, the instance `Model.spec` of the record `Model V`, and the proofs of the
+record's facts at it, gathered in the bundle `Model.spec_facts`.
 -/

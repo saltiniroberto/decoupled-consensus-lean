@@ -395,7 +395,8 @@ theorem headsBelow_succ_ofCompatible (facts : Record.Facts M) (S : Setup V) (Sch
     (hneTick : ∀ v ∈ Restated.HonSlot M S Sched (s + 1), ∀ n : Nat,
       Restated.tickStepAt M x n (slotStart S.E.Δ s) →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] v) (slotStart S.E.Δ s) ⇢ out) :
+        M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] v) (slotStart S.E.Δ s) ⇢ out)
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     Restated.HeadsBelow M S Sched x B (s + 1) := by
   intro v mr hv hmr' G hG
   obtain ⟨m, hm⟩ := Restated.exists_tickStepAt facts x htd (facts.sch.vote_time_pos S hs)
@@ -444,7 +445,7 @@ theorem headsBelow_succ_ofCompatible (facts : Record.Facts M) (S : Setup V) (Sch
         obtain ⟨H, hH⟩ := gfHeadFrom_nonempty_cs facts S (x[m][q].st) s
         exact ⟨H, hH, hcone q hq H hH⟩)
       hcarried n hn T hT W hW U hU A hA (fun q hq => hviewPool q hq W hW) (hvalid W hW) hAB
-      (fun C h1 h2 h3 => hpath n hn A hA C h1 h2 h3 T hT) (hneTickVote m hm) (hneTick v hv) G hGh
+      (fun C h1 h2 h3 => hpath n hn A hA C h1 h2 h3 T hT) (hneTickVote m hm) (hneTick v hv) hr1 G hGh
   · exact preceq_trans_Preceq hBA
       (Restated.voteAnchor_preceq_gfHeadFrom facts S (x[mr][v].st) (s + 1) n hn A hA G hGn)
 
@@ -555,6 +556,7 @@ theorem headsBelow_range_afterPhase (facts : Record.Facts M) (S : Setup V) (Sche
     {B : Block V} (hunder : Restated.DeliveredDescendantUnderFinalizedInPhase M S x tGAT tR B)
     (hunderS : Restated.FinalizedPreceqAtStepsInPhase M S x tGAT tR B)
     {s₀ s₁ : Slot} (hs₀ : 0 < s₀) (hsE : tE ≤ slotStart S.E.Δ s₀)
+    (hr1 : 1 ≤ M.round_of S.hc s₀)
     (hsR : M.support_cutoff S.E s₁ ≤ tR)
     (hAB : ∀ s : Slot, s₀ ≤ s → s ≤ s₁ → Restated.ConeAnchorCompatible M S x B s)
     (hpath : ∀ s : Slot, s₀ ≤ s → s ≤ s₁ → Restated.ConeAnchorChainInTree M S x B s)
@@ -605,6 +607,7 @@ theorem headsBelow_range_afterPhase (facts : Record.Facts M) (S : Setup V) (Sche
                   have h2 := facts.sch.slotStart_add_six_delta_eq_confirmation_time S.E (s + 1)
                   linarith) hin)⟩)
           (by rw [hvt]; linarith))
+        (le_trans hr1 (facts.gr.round_of_mono_sts S.hc hles))
 
 end
 
@@ -734,8 +737,9 @@ theorem live_confirmed_compatible_at_action_afterPhase (facts : Record.Facts M) 
         exact hvh t (by rw [hct]; exact ht))
       have hw := (Finset.mem_sdiff.1 hv).1
       have h12 := twelve_delta_le_wAttest S
-      simp only [Restated.activeRoundW, Schedule.awakeThroughout, Finset.mem_inf,
+      simp only [Restated.activeRoundW, Restated.attestersAt, Schedule.awakeThroughout, Finset.mem_inf,
         Finset.mem_Icc] at hw ⊢
+      try rw [facts.gr.early_g2_eq S (r + 1)] at hw
       rw [facts.gr.early_g2_eq S (r + 1)]
       intro t ht
       exact hw t ⟨by linarith [ht.1], ht.2⟩)

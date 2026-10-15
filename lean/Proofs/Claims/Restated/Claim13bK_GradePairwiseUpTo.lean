@@ -18,6 +18,7 @@ import Model.Conditions.Sts_Interface
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bW_ReceiptBefore
 
 /-!
 # Graded blocks of an action, with synchrony up to the next action instant
@@ -51,7 +52,7 @@ theorem sgGraded_preceqFreshSG_or_preceq_anchor_upTo (facts : Record.Facts M) (S
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hmono : Sched.MonotoneCorruption) (htd : Restated.TimeDiverges M x)
-    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    {r : Round} (hsync : Restated.SynchronyFromWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) (hcatchB : Restated.CatchUpOnWakeBefore M S x ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hmult : AwakeAtMultiples S Sched)
     (tGAT : Int) (gap : Nat)
     (hgst : S.E.t_GST ≤ tGAT) (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
@@ -82,6 +83,10 @@ theorem sgGraded_preceqFreshSG_or_preceq_anchor_upTo (facts : Record.Facts M) (S
     (hneAtt : ∀ v ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
     Restated.PreceqFreshSG M S Sched x r n B ∨ Block.Preceq B T.erase := by
+  have hrecvR : Restated.NextRoundReceipts M S Sched x r :=
+    Restated.nextRoundReceipts_of_before facts S Sched x hsync hcatchB
+      (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen hr)
+      (by have := Restated.early_g1_le_action_rb facts S (r + 1); have := S.E.Δ_pos; linarith)
   rcases Restated.sgGraded_preceq_graded_or_fgRoot facts S Sched x hn' v hnr hg hB with
     ⟨p, m, G, hm, hG, hBG⟩ | hfg
   · obtain ⟨b, hb⟩ := facts.gr.gradeBool_nonempty S.E (M.gradeView (M.toHealing (x[m][v].st).st.core))
@@ -90,7 +95,7 @@ theorem sgGraded_preceqFreshSG_or_preceq_anchor_upTo (facts : Record.Facts M) (S
     have hbt := hG b hb
     subst hbt
     obtain ⟨v_1, hv_1, a, har, hai, has, C, hC, hac, hGC⟩ :=
-      Restated.graded_preceq_freshSG_of_premises_upTo facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
+      Restated.graded_preceq_freshSG_of_premises_upTo (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
         hlen hcv hthird hphase hrsW hcs hr hinv hv (facts.gr.domain_le_action S (r + 1) p) hm G hb
         hneTick hneAtt
     exact Or.inl ⟨v_1, hv_1, a, har, hai, has, C, hC, hac, preceq_trans_Preceq hBG hGC⟩

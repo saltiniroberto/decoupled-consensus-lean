@@ -28,6 +28,7 @@ import Proofs.Claims.Spec2Claims.Claim13bK_ConfirmedStrongRoundSettle
 import Proofs.Claims.Spec2Claims.Claim13bModel_Preceq
 import Proofs.Claims.Spec2Claims.Claim13bK_ConfirmedRecordUpTo
 import Proofs.Claims.Spec2Claims.ClaimAsyncK_HandoverCoversUpTo
+import Proofs.Claims.Restated.Claim13bW_ReceiptBefore
 
 /-!
 # The hand-over from a healed execution
@@ -72,9 +73,8 @@ theorem settledPremisesAtEarlierEnd_of_healed_upTo (facts : Record.Facts M) (S :
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     {sEnd : Slot}
-    (hsync : Restated.SynchronyFromWakeBefore M S x (max tE ((Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (sEnd - 2)) + 1)))))
+    (hsync : Restated.SynchronyFromWakeBefore M S x (max tE ((Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (sEnd - 2)) + 1))))) (hcatchB : Restated.CatchUpOnWakeBefore M S x (max tE ((Restated.Vocabulary.Execution.Setup.a M S ((M.round_of S.hc (sEnd - 2)) + 1)))))
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hthird : ∀ t : Int, t ≤ tE →
@@ -149,8 +149,8 @@ theorem settledPremisesAtEarlierEnd_of_healed_upTo (facts : Record.Facts M) (S :
     le_trans hlen₁ (le_of_lt h12)
   have hwin' : tGAT + 8 * (S.hc.R : Int) * S.E.Δ ≤ tE' := le_trans hwin8 (le_of_lt h12)
   have hsettle : Restated.RecordsSettledAtSettleTickTo M S Sched x tE' sEnd :=
-    Restated.recordsSettledAtSettleTick_atStrongRound_upTo facts S Sched x tGAT tE gap hgap hgst hmono hexec hsync
-      hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
+    Restated.recordsSettledAtSettleTick_atStrongRound_upTo (hcatchB := hcatchB) facts S Sched x tGAT tE gap hgap hgst hmono hexec hsync
+      hmult hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
       hopening hprev1
   exact ⟨tE', htE', hlen', third_of_later S Sched tE tE' htE' hthird,
     awake_of_later Sched tGAT tE tE' htE' hawake,
@@ -180,7 +180,6 @@ theorem stableHandover_of_healed_upTo (facts : Record.Facts M) (S : Setup V) (Sc
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWakeOutside M S x b₀ b₁) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWakeOutside M S x b₀ b₁) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x) (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     (hthird : ∀ t : Int, t ≤ tAwakeEnd →
@@ -199,6 +198,7 @@ theorem stableHandover_of_healed_upTo (facts : Record.Facts M) (S : Setup V) (Sc
     (hP : Block.Preceq P (M.get_stable (x[T][v].st).st.core)) :
     Restated.StableHandover M S Sched x (r + 1) P := by
   have hs0 : Restated.SynchronyFromWakeBefore M S x b₀ := Restated.synchronyFromWakeBefore_of_outside facts hsync
+  have hc0 : Restated.CatchUpOnWakeBefore M S x b₀ := Restated.catchUpOnWakeBefore_of_outside S hcatch
   have hd := S.E.Δ_pos
   have hR : (3 : Int) ≤ (S.hc.R : Int) := by exact_mod_cast S.hc.R_ge_three
   have hb : (Restated.Vocabulary.Execution.Setup.a M S (r + 2)) + S.E.Δ ≤ b₀ := hb₀
@@ -212,24 +212,26 @@ theorem stableHandover_of_healed_upTo (facts : Record.Facts M) (S : Setup V) (Sc
   have hRs : (M.round_of S.hc ((M.opening_slot S.hc (r + 2)) + 1 - 2)) = r + 1 :=
     Restated.round_of_opening_succ_add_one_sub_two facts S.hc (r + 1)
   obtain ⟨tE', htE', hlen', hthird', hawake', hrec', hsl', hrs', hcs', hsettle⟩ :=
-    Restated.settledPremisesAtEarlierEnd_of_healed_upTo facts S Sched gap hgap x tGAT tAwakeEnd hlen hgst hmono
+    Restated.settledPremisesAtEarlierEnd_of_healed_upTo
+      (hcatchB := Restated.CatchUpOnWakeBefore.mono (by rw [hRs]; exact max_le (by linarith) (by linarith)) hc0)
+      facts S Sched gap hgap x tGAT tAwakeEnd hlen hgst hmono
       hexec (sEnd := (M.opening_slot S.hc (r + 2)) + 1)
       (Restated.SynchronyFromWakeBefore.mono (by rw [hRs]; exact max_le (by linarith) (by linarith)) hs0)
-      hmult hwakes hsleeps hcv htd hcom hthird hawake hrec hsl hrs hcs
+      hmult hcv htd hcom hthird hawake hrec hsl hrs hcs
   have hT' : Restated.confirmedSettleTime M S tE' ≤ (x[T].time : Int) :=
     le_trans (Restated.confirmedSettleTime_mono facts S htE') hT
   have hTr' : (x[T].time : Int) ≤ (M.a S.hc S.E.Δ (r + 1)) :=
     le_trans hTr (Restated.action_mono facts S (Nat.le_succ r))
   have hE' : tE' ≤ b₀ := by linarith
   exact
-    { covers := Restated.stableHandover_covers_of_settleTick_upTo facts S Sched x tGAT tE' gap hgap hlen' hgst
-        hmono hexec hs0 hmult hwakes hsleeps hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
+    { covers := Restated.stableHandover_covers_of_settleTick_upTo (hcatchB := hc0) facts S Sched x tGAT tE' gap hgap hlen' hgst
+        hmono hexec hs0 hmult hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
         hsettle r T hT' hTr v hvT hva P hP (Nat.le_succ _) (max_le hE' hb)
-      entries := Restated.stableHandover_entries_of_settleTick_upTo facts S Sched x tGAT tE' gap hgap hlen' hgst
-        hmono hexec hs0 hmult hwakes hsleeps hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
+      entries := Restated.stableHandover_entries_of_settleTick_upTo (hcatchB := hc0) facts S Sched x tGAT tE' gap hgap hlen' hgst
+        hmono hexec hs0 hmult hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
         hsettle (r + 1) T hT' hTr' v hvT hva P hP le_rfl (max_le hE' hb)
-      roots := Restated.stableHandover_roots_of_settleTick_upTo facts S Sched x tGAT tE' gap hgap hlen' hgst
-        hmono hexec hs0 hmult hwakes hsleeps hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
+      roots := Restated.stableHandover_roots_of_settleTick_upTo (hcatchB := hc0) facts S Sched x tGAT tE' gap hgap hlen' hgst
+        hmono hexec hs0 hmult hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
         hsettle (r + 1) T hT' hTr' v hvT hva P hP le_rfl (max_le hE' (by linarith)) }
 
 end

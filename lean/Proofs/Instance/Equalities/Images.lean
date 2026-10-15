@@ -12,7 +12,7 @@ through the store's tree (`Store.contractOfImage`, `Store.ofImage`).
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 open Spec
 
@@ -26,11 +26,11 @@ theorem DistinctRoots.injOn_toProof {T : Finset (Block V)} (hT : DistinctRoots T
   have := congrArg DecoupledConsensusModel.Block.root h
   simpa only [Block.toProof_root, BlockId.toProof_inj] using this
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise
 
 namespace Spec
 
-open SpecDraftRecord.NoRaise (ParentClosed DistinctRoots)
+open SpecRecord.NoRaise (ParentClosed DistinctRoots)
 
 variable {V : Type} [DecidableEq V]
 
@@ -442,7 +442,7 @@ theorem contractOfImage_of_inTree (st : Store V)
 /-- `contractOfImage_of_inTree` on a tree whose blocks have distinct roots. -/
 theorem contractOfImage_of_distinctRoots (st : Store V) (hT : DistinctRoots st.T)
     {c : SavedGrades V} (h : ContractInTree st.T c) : st.contractOfImage c = c :=
-  st.contractOfImage_of_inTree (SpecDraftRecord.NoRaise.DistinctRoots.injOn_toProof hT) h
+  st.contractOfImage_of_inTree (SpecRecord.NoRaise.DistinctRoots.injOn_toProof hT) h
 
 /-- The grades of round `ρ` of `st.contractOfImage c` are the grades of round `ρ` of `c`, read
     through the tree. -/
@@ -524,24 +524,24 @@ theorem ofImage_latest_stable (st : Store V) :
 theorem ofImage_eq_self (st : Store V) (hT : DistinctRoots st.T) (hF : st.F ∈ st.T)
     (hJ : st.J ∈ st.T) (hl : st.live_confirmed ∈ st.T) (hc : st.latest_confirmed ∈ st.T)
     (hs : st.latest_stable ∈ st.T) : Store.ofImage st = st := by
-  have hinj := SpecDraftRecord.NoRaise.DistinctRoots.injOn_toProof hT
+  have hinj := SpecRecord.NoRaise.DistinctRoots.injOn_toProof hT
   simp [Store.ofImage, st.blockOfImage_toProof_of_injOn hinj hF,
     st.blockOfImage_toProof_of_injOn hinj hJ, st.blockOfImage_toProof_of_injOn hinj hl,
     st.blockOfImage_toProof_of_injOn hinj hc, st.blockOfImage_toProof_of_injOn hinj hs]
 
 /-- If `StoreOk st`, then `(Store.ofImage st).F = st.F`. -/
-theorem ofImage_F_of_storeOk {st : Store V} (h : SpecDraftRecord.NoRaise.StoreOk st) :
+theorem ofImage_F_of_storeOk {st : Store V} (h : SpecRecord.NoRaise.StoreOk st) :
     (Store.ofImage st).F = st.F :=
   st.blockOfImage_toProof_of_injOn
-    (SpecDraftRecord.NoRaise.DistinctRoots.injOn_toProof h.2.1) h.2.2.2
+    (SpecRecord.NoRaise.DistinctRoots.injOn_toProof h.2.1) h.2.2.2
 
 /-- If `StoreOk st`, then `StoreOk (Store.ofImage st)`. -/
-theorem storeOk_ofImage {st : Store V} (h : SpecDraftRecord.NoRaise.StoreOk st) :
-    SpecDraftRecord.NoRaise.StoreOk (Store.ofImage st) := by
+theorem storeOk_ofImage {st : Store V} (h : SpecRecord.NoRaise.StoreOk st) :
+    SpecRecord.NoRaise.StoreOk (Store.ofImage st) := by
   obtain ⟨h1, h2, h3, h4⟩ := h
   refine ⟨h1, h2, h3, ?_⟩
   show st.blockOfImage st.F.toProof ∈ st.T
-  rw [st.blockOfImage_toProof_of_injOn (SpecDraftRecord.NoRaise.DistinctRoots.injOn_toProof h2) h4]
+  rw [st.blockOfImage_toProof_of_injOn (SpecRecord.NoRaise.DistinctRoots.injOn_toProof h2) h4]
   exact h4
 
 /-- The fgroot of `Store.ofImage st` is the block standing for the image of the fgroot of `st`. -/

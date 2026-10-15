@@ -173,7 +173,6 @@ theorem admissibleFieldsOn_of_eqUpToHorizon_i1b (facts : Record.Facts M) (S : Se
       horizon_nonneg := hf.horizon_nonneg
       sorted := hf.sorted
       in_horizon := hf.in_horizon
-      tick_public := hf.tick_public
       tickIndexUnique := hf.tickIndexUnique
       wire := hf.wire
       onePath := hf.onePath
@@ -1434,7 +1433,6 @@ theorem honestProposal_ancestorOfHonestHeadsFrom_i1b (facts : Record.Facts M) (S
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1483,14 +1481,15 @@ theorem honestProposal_ancestorOfHonestHeadsFrom_i1b (facts : Record.Facts M) (S
     (hct : M.confirmation_time S.E s ≤ tHi)
     (hprop : HonestThroughTime Sched (M.vote_time S.E s) (S.E.proposer s))
     {i : Nat} {B : Block V} (hB : Restated.proposedBlockAtStep M S x i s B)
-    (hi : (x[i].time : Int) ≤ M.vote_time S.E s) :
+    (hi : (x[i].time : Int) ≤ M.vote_time S.E s)
+    (hrecvAll : ∀ r' : Round, Restated.switchRound M S tE ≤ r' → Restated.NextRoundReceipts M S Sched x r') :
     Restated.AncestorOfHonestHeadsFrom M S Sched x B s := by
   have hadopt := Restated.honestProposalHeadsAtOwnSlot_fromSwitch_i1b facts S Sched x hsync hmono hphaseHi hgst
     hcv hexec hmult hthirdHi hcom hrecHi hlen hrec
   have hs₀ : (M.opening_slot S.hc (Restated.switchRound M S tE)) ≤ s :=
     (facts.gr.opening_slot_mono S hr₀).trans ((Nat.le_add_right _ 2).trans hs0)
-  exact Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 facts S Sched x tE hexec hmono htd tGAT gap hgst hlen
-    hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch hr₀
+  exact Restated.honestProposal_ancestorOfHonestHeadsFrom_i1 (hrecvAll := hrecvAll) facts S Sched x tE hexec hmono htd tGAT gap hgst hlen
+    hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀ hadopt hs0 hs₀ hct hprop hB hi
 
 end

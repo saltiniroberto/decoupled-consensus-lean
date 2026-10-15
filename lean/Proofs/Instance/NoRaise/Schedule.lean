@@ -11,7 +11,7 @@ window starts, the openings of consecutive rounds, and how the round changes ove
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 open Spec
 
@@ -128,4 +128,21 @@ theorem round_step {t : Time} (h0 : 0 ≤ t - C.Δ) (hm : C.Δ ∣ t) :
       time_omega
     exact Or.inr ⟨hr, by rw [hr]; exact heq⟩
 
-end SpecDraftRecord.NoRaise
+/-- For a time `t` with `t − 1 ≥ 0`, the round at `t` is the round at `t − 1`, or it is the next
+    round and `t` is its opening. -/
+theorem round_step_one {t : Time} (h0 : 0 ≤ t - 1) :
+    roundAt C t = roundAt C (t - 1) ∨
+      (roundAt C t = roundAt C (t - 1) + 1 ∧ t = C.opening (roundAt C t)) := by
+  have hΔ : (0 : Int) < C.Δ := C.Δ_pos
+  obtain ⟨h1, h2⟩ := opening_le_self C h0
+  by_cases hlt : (t : Int) < C.opening (roundAt C (t - 1) + 1)
+  · exact Or.inl (round_eq_of_bounds C (by time_omega) (by time_omega) hlt)
+  · have heq : t = C.opening (roundAt C (t - 1) + 1) := by time_omega
+    have hL : (12 : Int) * C.Δ ≤ 4 * C.Δ * C.R := roundLength_ge C
+    have hr : roundAt C t = roundAt C (t - 1) + 1 := by
+      refine round_eq_of_bounds C (by time_omega) heq.ge ?_
+      rw [opening_succ C (roundAt C (t - 1) + 1)]
+      time_omega
+    exact Or.inr ⟨hr, by rw [hr]; exact heq⟩
+
+end SpecRecord.NoRaise

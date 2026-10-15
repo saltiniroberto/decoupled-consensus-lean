@@ -656,7 +656,6 @@ theorem confirmedNew_at_of_joint (facts : Record.Facts M) (S : Setup V) (Sched :
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     {att : V → NamedAttestation V} (hatt : Restated.ActionAttestationsOf M S Sched x r n' att)
     (hQ : Restated.ConfirmedCompatibleFreshSGOverHonRound M S Sched x r n n')
@@ -674,7 +673,8 @@ theorem confirmedNew_at_of_joint (facts : Record.Facts M) (S : Setup V) (Sched :
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
     ∀ hs ∈ Restated.actionHealingStore M S (x[n'][v].st) (r + 1),
       Block.compatible hs.live_confirmed (Restated.newAnchor M S Sched x r n' att T).erase = true := by
@@ -693,8 +693,8 @@ theorem confirmedNew_at_of_joint (facts : Record.Facts M) (S : Setup V) (Sched :
   have hold : ∀ v' ∈ Restated.HonRound M S Sched (r + 1),
       ∀ hs' ∈ Restated.actionHealingStore M S (x[n'][v'].st) (r + 1),
       Block.compatible hs'.live_confirmed T.erase = true :=
-    fun v' hv' => Restated.confirmedOld_at_honRound facts (hcross := hcross) (hjust := hjust) S Sched x
-      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hn' hv'
+    fun v' hv' => Restated.confirmedOld_at_honRound (hrecvR := hrecvR) facts (hcross := hcross) (hjust := hjust) S Sched x
+      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hv'
       hneTickVote hneTickSlot (hneTick v' hv') hneAtt
   have hroot : ∀ v' ∈ Restated.HonRound M S Sched (r + 1), Block.Preceq
       (Restated.Vocabulary.Protocol.confRoot M (Restated.confStoreAt M S (x[n'][v'].st) ((M.opening_slot S.hc (r + 1))))) T.erase :=
@@ -763,7 +763,7 @@ theorem confirmedNew_at_of_joint (facts : Record.Facts M) (S : Setup V) (Sched :
       have hbt := hG b hb
       subst hbt
       obtain ⟨v_1, hv_1, a, har, hai, has, C, hC, hac, hGC⟩ :=
-        Restated.graded_preceq_freshSG_of_premises facts (hcross := hcross) S Sched x tE hexec hmono
+        Restated.graded_preceq_freshSG_of_premises (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono
           htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hqH
           (facts.gr.domain_le_action S (r + 1) .g2) hm₂ G hb hneTick hneAtt
       exact compatible_of_preceq_of_preceq (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _))
@@ -822,7 +822,8 @@ theorem gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound (facts :
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ v₁ ∈ Restated.HonRound M S Sched (r + 1), ∀ v₂ ∈ Restated.HonRound M S Sched (r + 1),
     ∀ m₁ ∈ Restated.Vocabulary.Execution.NamedActionReads.actionReadFrom M (Setup.alwaysAwake S)
         (x[n'][v₁].st) (r + 1),
@@ -838,7 +839,7 @@ theorem gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound (facts :
       ∀ g, M.frameGradeRead m.cache S.E S.hc (M.toHealing m.st.core) (r + 1) ⇢ g →
       ∀ B : Block V, SGGraded g B →
       Restated.PreceqFreshSG M S Sched x r n B ∨ Block.Preceq B T.erase := fun v hv m hm g hg B hB =>
-    Restated.sgGraded_preceqFreshSG_or_preceq_anchor facts (hcross := hcross) S Sched x tE hexec hmono
+    Restated.sgGraded_preceqFreshSG_or_preceq_anchor (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono
       htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hJ hv hm hg hB hneTick
       hneAtt
   have hany : ∀ v ∈ Restated.HonRound M S Sched (r + 1),
@@ -904,7 +905,6 @@ theorem gradePairwise_at_of_confirmedSafe (facts : Record.Facts M) (S : Setup V)
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hw : Restated.WakesAtActionInstants M S Sched)
     {n' : Nat} (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
     (hJ : ∀ v ∈ honestThroughSet Sched ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))),
       ∀ hs ∈ Restated.actionHealingStore M S (x[n'][v].st) (r + 1), Block.Preceq hs.J T.erase)
@@ -923,7 +923,8 @@ theorem gradePairwise_at_of_confirmedSafe (facts : Record.Facts M) (S : Setup V)
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ v₁ ∈ Restated.HonRound M S Sched (r + 1), ∀ v₂ ∈ Restated.HonRound M S Sched (r + 1),
     ∀ m₁ ∈ Restated.Vocabulary.Execution.NamedActionReads.actionReadFrom M (Setup.alwaysAwake S)
         (x[n'][v₁].st) (r + 1),
@@ -932,10 +933,10 @@ theorem gradePairwise_at_of_confirmedSafe (facts : Record.Facts M) (S : Setup V)
     ∀ g₁, M.frameGradeRead m₁.cache S.E S.hc (M.toHealing m₁.st.core) (r + 1) ⇢ g₁ →
     ∀ g₂, M.frameGradeRead m₂.cache S.E S.hc (M.toHealing m₂.st.core) (r + 1) ⇢ g₂ →
       Restated.GradePairwise M (M.toHealing m₁.st.core) (M.toHealing m₂.st.core) g₁ g₂ :=
-  Restated.gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound facts (hcross := hcross) S Sched
+  Restated.gradePairwise_ofConfirmedCompatibleFreshSGOverHonRound_honRound (hrecvR := hrecvR) facts (hcross := hcross) S Sched
     x tE hexec hmono htd hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hJ
-    (fun _ hv => Restated.confirmedOld_at_honRound facts (hcross := hcross) (hjust := hjust) S Sched x
-      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hw hn' hv
+    (fun _ hv => Restated.confirmedOld_at_honRound (hrecvR := hrecvR) facts (hcross := hcross) (hjust := hjust) S Sched x
+      tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hv
       hneTickVote hneTickSlot (hneTick _ hv) hneAtt)
     hQ hneTick hneAtt
 
@@ -979,7 +980,8 @@ theorem gradeDescendant_at_of_confirmedSafe (facts : Record.Facts M) (S : Setup 
       ∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched t' x[n''] v) t' ⇢ out)
     (hneAtt : ∀ v_1 ∈ Restated.HonRound M S Sched r, ∃ out : M.N × List (NamedObject V),
-      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out) :
+      M.tick (Setup.alwaysAwake S) v_1 (Record.wakeStage M Sched (Restated.Vocabulary.Execution.Setup.a M S r) x[n] v_1) (Restated.Vocabulary.Execution.Setup.a M S r) ⇢ out)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
     ∀ p : Protocol.Phase, M.domain S.E S.hc (r + 1) p ≤ (Restated.Vocabulary.Execution.Setup.a M S (r + 1)) →
     ∀ m : Nat, Restated.stepBeforeInstant M x m (M.domain S.E S.hc (r + 1) p) →
@@ -989,7 +991,7 @@ theorem gradeDescendant_at_of_confirmedSafe (facts : Record.Facts M) (S : Setup 
           (M.late S.E S.hc (r + 1) p) B ⇢ true →
       Block.Preceq T.erase B → B ≠ T.erase →
       Block.compatible B (Restated.newAnchor M S Sched x r n' att T).erase = true :=
-  Restated.gradeDescendant_ofConfirmedFreshSG facts (hcross := hcross) S Sched x tE hexec hmono htd
+  Restated.gradeDescendant_ofConfirmedFreshSG (hrecvR := hrecvR) facts (hcross := hcross) S Sched x tE hexec hmono htd
     hsync hmult tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hinv hn' hatt
     (Restated.confirmedCompatibleFreshSG_of_overHonRound facts S Sched x hn' hQ) hneTick hneAtt
 

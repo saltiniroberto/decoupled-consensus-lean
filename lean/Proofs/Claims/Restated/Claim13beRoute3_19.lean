@@ -44,7 +44,7 @@ theorem time_phase_of_mem_stepEvents (facts : Record.Facts M) (S : Setup V) (Sch
       show t' = ((x[k].time + 1 : Nat) : Int)
       rw [← hτ, ht]
   | tick v₁ t' =>
-      obtain ⟨τ, hlbl, hτ, -, -⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
+      obtain ⟨τ, hlbl, hτ, -⟩ := Restated.tickAllAwake_of_mem_actionEventsOf hmem
       have ht := (Restated.tickAllAwake_time facts S Sched x hlbl).1
       refine Or.inl ⟨⟨τ, hlbl⟩, rfl, ?_⟩
       show t' = ((x[k].time + 1 : Nat) : Int)

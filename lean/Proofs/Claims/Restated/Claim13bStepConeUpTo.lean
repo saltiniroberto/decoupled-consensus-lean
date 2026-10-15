@@ -277,7 +277,7 @@ theorem fresh_vote_in_pool_upTo (facts : Record.Facts M) (S : Setup V) (Sched : 
     have hqv : q ∈ Sched.awake (M.vote_time S.E s) \ Sched.adv (M.vote_time S.E s) :=
       Finset.mem_sdiff.2 ⟨hqaw, hqh _ (by rw [hvt]; rw [hsc] at hmr; linarith)⟩
     refine Restated.mem_sent_diff_of_tick facts S Sched x hlbl_m (by rw [ht']; exact hqv)
-      (by rw [ht']; exact facts.sch.vote_time_emod_delta S s) ?_ (by rw [ht']; exact hneTickVote)
+      ?_ (by rw [ht']; exact hneTickVote)
     rw [ht']
     have hvf : Restated.gfVoteFrom M S (Record.wakeStage M Sched (M.vote_time S.E s) x[m] q) q s =
         Restated.gfVoteFrom M S (x[m][q].st) q s := by
@@ -425,9 +425,11 @@ theorem coneSupport_at_slot_upTo (facts : Record.Facts M) (S : Setup V) (Sched :
       M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched (M.vote_time S.E s) x[m] q) (M.vote_time S.E s) ⇢ out)
     (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (slotStart S.E.Δ s) →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out) :
+        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out)
+    (hvalid : Protocol.VoteSetValid S.E ((Restated.voteStoreAt M S (x[mr][w].st) (s + 1)).s - 1) W)
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     ∀ U, Restated.voteSupportViewOf M S.E (Restated.voteStoreAt M S (x[mr][w].st) (s + 1)) ⇢ U →
-      Restated.Vocabulary.Proofs.Optimistic.ConeSupport M S.E
+      Restated.Vocabulary.Proofs.Optimistic.ConeSupportCount M S.E
         (Restated.voteStoreAt M S (x[mr][w].st) (s + 1)).T W U W
         ((Restated.voteStoreAt M S (x[mr][w].st) (s + 1)).s - 1) (Restated.HonSlot M S Sched s)
         (fun X => Block.Preceq B X) := by
@@ -440,6 +442,7 @@ theorem coneSupport_at_slot_upTo (facts : Record.Facts M) (S : Setup V) (Sched :
   have hsc : (Restated.voteStoreAt M S (x[mr][w].st) (s + 1)).s - 1 = s := by
     simp only [Restated.voteStoreAt_slot facts S (x[mr][w].st) (s + 1), Nat.add_sub_cancel]
   rw [hsc]
+  rw [hsc] at hvalid
   have hW' : M.voter_view S.E
       (M.toHealing (Restated.voteStoreAt M S (x[mr][w].st) (s + 1))).toFG.toSG.toGoldfishStore
       (s + 1) ⇢ W := by
@@ -453,8 +456,11 @@ theorem coneSupport_at_slot_upTo (facts : Record.Facts M) (S : Setup V) (Sched :
     simp only [Restated.voteSupportViewOf, Restated.voteStoreAt_slot facts S (x[mr][w].st) (s + 1)]
       at h
     exact h
-  refine Restated.Vocabulary.Proofs.Optimistic.coneSupport_of_named_votes facts
-    (Restated.majority_of_committeeSleepinessW facts S Sched hcs hanchor) (Finset.Subset.refl _)
+  refine Restated.Vocabulary.Proofs.Optimistic.coneSupportCount_of_named_votes facts
+    (Restated.votersCount_lt_of_committeeSleepinessW facts S Sched hcs hanchor
+      (fun u hu => ⟨(hvalid u hu).2,
+        Restated.voteView_valIndex_mem_votersAt_or_adv facts S Sched x hexec hmono hmrc hr1 W hW u hu⟩))
+    (Finset.Subset.refl _)
     (facts.fc.voter_support_view_subset S.E _ (s + 1) (by rw [hgT]; exact hcarried) U hU' W hW')
     ?_ ?_
   · intro q _ hqH
@@ -529,7 +535,8 @@ theorem gf_hop_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) 
       M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched (M.vote_time S.E s) x[m] q) (M.vote_time S.E s) ⇢ out)
     (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (slotStart S.E.Δ s) →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out) :
+        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out)
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     ∀ H, M.get_head_in_tree_with (M.gradeContract n.cache) S.E S.hc
         (Restated.voteStoreAt M S (x[mr][w].st) (s + 1)) T W U
         ((Restated.voteStoreAt M S (x[mr][w].st) (s + 1)).s - 1) ⇢ H →
@@ -537,8 +544,8 @@ theorem gf_hop_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) 
   Restated.head_preceq_of_cone facts (M.gradeContract n.cache)
     S.E S.hc (Restated.voteStoreAt M S (x[mr][w].st) (s + 1)) T hT W hW U hU A hA
     (Restated.coneSupport_at_slot_upTo facts S Sched x hexec hsync htd hmono hcs hs hanchor
-      hgst hm hmr hmrc hawT hwh hheads hcarried W hW hviewPool hneTickVote hneTick U hU)
-    hvalid hAB hpath
+      hgst hm hmr hmrc hawT hwh hheads hcarried W hW hviewPool hneTickVote hneTick hvalid hr1 U hU)
+    hAB hpath
 
 end
 
@@ -584,15 +591,20 @@ theorem coneSupport_at_confirmation_upTo (facts : Record.Facts M) (S : Setup V) 
       M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched (M.vote_time S.E s) x[m] q) (M.vote_time S.E s) ⇢ out)
     (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (slotStart S.E.Δ s) →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out) :
+        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out)
+    (hvalid : Protocol.VoteSetValid S.E s
+      (Restated.Vocabulary.Protocol.confLate M S.E (Restated.confStoreAt M S (x[mr][w].st) s) s))
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     ∀ e, Restated.Vocabulary.Protocol.confVotes M S.E (Restated.confStoreAt M S (x[mr][w].st) s) s ⇢ e →
-      Restated.Vocabulary.Proofs.Optimistic.ConeSupport M S.E
+      Restated.Vocabulary.Proofs.Optimistic.ConeSupportCount M S.E
         (Restated.confStoreAt M S (x[mr][w].st) s).T e e
         (Restated.Vocabulary.Protocol.confLate M S.E (Restated.confStoreAt M S (x[mr][w].st) s) s)
         s (Restated.HonSlot M S Sched s) (fun X => Block.Preceq B X) := by
   intro e he
-  refine Restated.Vocabulary.Proofs.Optimistic.coneSupport_of_named_votes facts
-    (Restated.majority_of_committeeSleepinessW facts S Sched hcs hanchor)
+  refine Restated.Vocabulary.Proofs.Optimistic.coneSupportCount_of_named_votes facts
+    (Restated.votersCount_lt_of_committeeSleepinessW facts S Sched hcs hanchor
+      (fun u hu => ⟨(hvalid u hu).2,
+        Restated.confLate_valIndex_mem_votersAt_or_adv facts S Sched x hexec hmono hmrc hr1 u hu⟩))
     (Restated.confVotes_subset_confLate facts S.E _ s e he) (Finset.Subset.refl _) ?_ ?_
   · intro q _ hqH
     refine Restated.no_equiv_of_subset_pool facts S Sched x hexec
@@ -681,7 +693,8 @@ theorem confirmed_hop_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Sched
       M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched (M.vote_time S.E s) x[m] q) (M.vote_time S.E s) ⇢ out)
     (hneTick : ∀ n : Nat, Restated.tickStepAt M x n (slotStart S.E.Δ s) →
       ∃ out : M.N × List (NamedObject V),
-        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out) :
+        M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (slotStart S.E.Δ s) x[n] w) (slotStart S.E.Δ s) ⇢ out)
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     ∀ e, Restated.Vocabulary.Protocol.confVotes M S.E (Restated.confStoreAt M S (x[mr][w].st) s) s ⇢ e →
       ∀ sc : Block V → ℕ, (∀ C, M.goldfish_score S.E (Restated.confStoreAt M S (x[mr][w].st) s).T
           e e s C ⇢ sc C) →
@@ -691,12 +704,12 @@ theorem confirmed_hop_upTo (facts : Record.Facts M) (S : Setup V) (Sched : Sched
         Block.Preceq B X := by
   intro e he sc hsc X hX
   have hsup := Restated.coneSupport_at_confirmation_upTo facts S Sched x hexec hsync htd hmono
-    hcs hs hanchor hgst hm hmr hmrc hawT hwh hheads hneTickVote hneTick e he
-  exact facts.fc.ghost_passes_cone S.E (Restated.confStoreAt M S (x[mr][w].st) s).T
+    hcs hs hanchor hgst hm hmr hmrc hawT hwh hheads hneTickVote hneTick hvalid hr1 e he
+  exact facts.fc.ghost_passes_cone_count S.E (Restated.confStoreAt M S (x[mr][w].st) s).T
     (Restated.Vocabulary.Protocol.confTree M (Restated.confStoreAt M S (x[mr][w].st) s)) e e
     (Restated.Vocabulary.Protocol.confLate M S.E (Restated.confStoreAt M S (x[mr][w].st) s) s) s
     (Restated.HonSlot M S Sched s)
-    hsup.majority hsup.counted hsup.sub hsup.no_equiv hsup.vote hvalid hAB hpath sc hsc X hX
+    hsup.count hsup.counted hsup.sub hsup.no_equiv hsup.vote hAB hpath sc hsc X hX
 
 end
 
@@ -741,7 +754,7 @@ private theorem live_confirmed_after_confirmation_tick_cases (facts : Record.Fac
     rw [ht', hct]
     exact facts.sch.support_cutoff_emod_delta S (s + 1)
   have haw' : w ∈ Sched.awake (t' : Int) \ Sched.adv (t' : Int) := by rw [ht']; exact haw
-  rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' hdvd with
+  rcases Restated.st_succ_of_tick_awake facts S Sched x w hlbl haw' with
     ⟨out₁, hout, hst⟩ | ⟨hno, -⟩
   · rw [hst]
     rw [ht', hct] at hout
@@ -814,7 +827,8 @@ theorem live_confirmed_cases_of_cone_upTo (facts : Record.Facts M) (S : Setup V)
     (hneTickConf : ∃ out : M.N × List (NamedObject V),
       M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (M.confirmation_time S.E s) x[n] w) (M.confirmation_time S.E s) ⇢ out)
     (hrun : M.awake_for_grade2 (Setup.alwaysAwake S) w
-      (Record.wakeStage M Sched (M.confirmation_time S.E s) x[n] w) (M.round_of S.hc (s + 1))) :
+      (Record.wakeStage M Sched (M.confirmation_time S.E s) x[n] w) (M.round_of S.hc (s + 1)))
+    (hr1 : 1 ≤ M.round_of S.hc s) :
     Block.Preceq B (x[n + 1][w].st).st.core.live_confirmed ∨
       (x[n + 1][w].st).st.core.live_confirmed
         = Restated.Vocabulary.Protocol.confRoot M (Restated.confStoreAt M S (x[n][w].st) s) := by
@@ -850,7 +864,7 @@ theorem live_confirmed_cases_of_cone_upTo (facts : Record.Facts M) (S : Setup V)
     (Finset.mem_sdiff.2 ⟨haw, hwh _ (le_refl _)⟩) hneTickConf hrun c hc A hA e he sc hsc W hW
   have hhop := Restated.confirmed_hop_upTo facts S Sched x hexec hsync htd hmono hcs hs hanchor
     hgst hm hmr hmrc hawT (hwh _ (by rw [hct]; linarith)) hheads (M.gradeContract c) hvalid A hA
-    hAB hpath hneTickVote hneTick e he sc hsc W hW
+    hAB hpath hneTickVote hneTick hr1 e he sc hsc W hW
   rcases hlc with hl | hl
   · exact Or.inl (by rw [hl]; exact hhop)
   · exact Or.inr hl

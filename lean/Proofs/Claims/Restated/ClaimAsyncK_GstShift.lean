@@ -43,7 +43,6 @@ theorem reaction_setupWithGST (facts : Record.Facts M) (S : Setup V) (g : Int) (
   | tick =>
     simp only [Record.reactionsOf]
     rw [alwaysAwake_setupWithGST, facts.nd.namedNodeTick_setupWithGST]
-    rfl
   | recv m =>
     simp only [Record.reactionsOf]
     rw [alwaysAwake_setupWithGST, facts.nd.namedNodeProcess_setupWithGST]
@@ -192,13 +191,29 @@ theorem tr_sleepiness (facts : Record.Facts M) (S : Setup V) (g : Int) (hg : 0 �
     fun s => committee_eq_of_committees_eq (E := (setupWithGST S g hg).E) (E' := S.E) rfl s
   have hct : ∀ s : Slot, M.confirmation_time (setupWithGST S g hg).E s
       = M.confirmation_time S.E s := fun s => facts.sch.confirmation_time_eq_of_delta_eq (E := (setupWithGST S g hg).E) (E' := S.E) rfl s
+  have hvt : ∀ s : Slot, DecoupledConsensusModel.Sts.votersAt (setupWithGST S g hg) Sched s =
+      DecoupledConsensusModel.Sts.votersAt S Sched s := fun s => by
+    simp only [DecoupledConsensusModel.Sts.votersAt, opening, Protocol.proposal_time, setupWithGST, Env.t]
+  have hvtR : ∀ s : Slot, Restated.votersAt M (setupWithGST S g hg) Sched s =
+      Restated.votersAt M S Sched s := fun s => rfl
+  have hat : Restated.attestersAt M (setupWithGST S g hg) Sched = Restated.attestersAt M S Sched := by
+    funext r
+    unfold Restated.attestersAt
+    rw [facts.gr.early_g2_eq, facts.gr.early_g2_eq]
+    rfl
+  have hai : ∀ lo hi : Nat, Restated.attestersIn M (setupWithGST S g hg) Sched lo hi
+      = Restated.attestersIn M S Sched lo hi := fun lo hi => by
+    unfold Restated.attestersIn; rw [hat]
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
+  · unfold sleepinessW at h1 ⊢
+    simp only [hvt]
+    exact h1
   · unfold Restated.roundSleepinessW at h2 ⊢
-    simp only [hop]
+    simp only [hop, hai]
     exact h2
   · unfold Restated.committeeSleepinessW at h3 ⊢
-    simp only [hcm, hct]
+    simp only [hcm, hct, hvtR]
     exact h3
 
 end
@@ -285,6 +300,15 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 open DecoupledConsensusModel.Protocol
+
+/-- If every honest send reaches a validator that wakes after it and stays awake through
+    `max t_w g + S.E.Δ` before that deadline, the moved execution satisfies `CatchUpOnWake` at the
+    setup with GST `g`. -/
+theorem tr_CatchUpBy (facts : Record.Facts M) (S : Setup V) (g : Int) (hg : 0 ≤ g) (Sched : Schedule V)
+    (x : AtomicExec (Record.protocolOf M S) Sched)
+    (h : Restated.CatchUpOnWakeBy M S x (fun t => max t g + S.E.Δ)) :
+    Restated.CatchUpOnWake M (setupWithGST S g hg)
+      (Restated.toGST M S g hg (Restated.protocol_setupWithGST facts S g hg) x) := h
 
 /-- Catch-up on wake outside `[b₀, b₁)` gives catch-up before `max t b₁ + S.E.Δ`. -/
 theorem catchUpBy_of_outside (facts : Record.Facts M) (S : Setup V) {Sched : Schedule V}

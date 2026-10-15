@@ -12,7 +12,7 @@ environment `E`, so their lemmas hold for every `hc` and `cfg`.
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 
@@ -92,4 +92,4 @@ theorem toProof_participates (votes : Finset (GoldfishVote V)) (v : V) :
 
 end Votes
 
-end SpecDraftRecord
+end SpecRecord

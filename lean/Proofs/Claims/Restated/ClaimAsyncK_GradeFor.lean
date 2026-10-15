@@ -89,33 +89,33 @@ local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact Tru
     `r + 1` to `r + η_SG + 1`, at the last step before round `ρ`'s phase-`p` instant, and with
     `raw u` an outcome of `u`'s raw view at the late cutoff for every validator `u`: the validators
     with a non-empty `raw u`, other than the members of
-    `activeRoundWThroughNextCountedAt S Sched r ρ` that the adversary does not hold at the opening
+    `activeRoundWThroughNext S Sched r` that the adversary does not hold at the opening
     of round `ρ + 1`, weigh less than those members. -/
 theorem hhalf_of_fixedRoundSleepinessCountedW (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (htd : Restated.TimeDiverges M x) (hmono : Sched.MonotoneCorruption) {r : Nat}
     (hfix : Restated.fixedRoundSleepinessCountedW M S Sched r) {ρ : Nat} (hρ₁ : r + 1 ≤ ρ)
-    (hρ₂ : ρ ≤ r + S.hc.η_SG + 1) {m : Nat} {w : V} {p : Protocol.Phase}
+    (hρ₂ : ρ ≤ r + S.hc.η_SG + 1) (hη : S.hc.η_SG ≤ r) {m : Nat} {w : V} {p : Protocol.Phase}
     (hm : Restated.stepBeforeInstant M x m (M.domain S.E S.hc ρ p))
     (raw : V → Finset (Protocol.Token (Option BlockId)))
     (hraw : ∀ u, M.rawView (M.gradeView (M.toHealing (x[m][w].st).st.core)) S.hc.η_SG ρ
       (M.late S.E S.hc ρ p) u ⇢ raw u) :
     S.E.electorate.weightOf
         ((Finset.univ.filter (fun v_1 => (raw v_1).Nonempty))
-          \ (Restated.activeRoundWThroughNextCountedAt M S Sched r ρ \
+          \ (Restated.activeRoundWThroughNext M S Sched r \
               Sched.adv (M.opening S.E S.hc (ρ + 1))))
       < S.E.electorate.weightOf
-          (Restated.activeRoundWThroughNextCountedAt M S Sched r ρ \
+          (Restated.activeRoundWThroughNext M S Sched r \
             Sched.adv (M.opening S.E S.hc (ρ + 1))) := by
   classical
   have hbound := hfix ρ hρ₁ hρ₂
   have hcover : (Finset.univ.filter (fun v_1 => (raw v_1).Nonempty))
-          \ (Restated.activeRoundWThroughNextCountedAt M S Sched r ρ \
+          \ (Restated.activeRoundWThroughNext M S Sched r \
               Sched.adv (M.opening S.E S.hc (ρ + 1)))
       ⊆ Sched.adv (M.opening S.E S.hc (ρ + 1)) ∪
           (Restated.attestersIn M S Sched (ρ - S.hc.η_SG) (ρ - 1) \
-            (Restated.activeRoundWThroughNextCountedAt M S Sched r ρ \
+            (Restated.activeRoundWThroughNext M S Sched r \
               Sched.adv (M.opening S.E S.hc (ρ + 1)))) := by
     intro v hv
     obtain ⟨hvhold, hvH⟩ := Finset.mem_sdiff.1 hv
@@ -132,9 +132,13 @@ theorem hhalf_of_fixedRoundSleepinessCountedW (facts : Record.Facts M) (S : Setu
     have hukround : u.round = k := Restated.sgVotesRoundIndexed_sts facts S Sched x m w k u huk
     have hu' : u ∈ (M.gradeView (M.toHealing (x[m][w].st).st.core)).sg_votes u.round := by
       rw [hukround]; exact huk
-    obtain ⟨-, -, hawk, -⟩ := Restated.token_of_honest_sender facts S Sched x hexec hvm hu' huidx
-    rw [hukround] at hawk
     have hlo : ρ - S.hc.η_SG ≤ k := facts.fc.mem_latest_window_ge hkw
+    have hρη : 1 ≤ ρ - S.hc.η_SG :=
+      Nat.le_sub_of_add_le (le_trans (by rw [Nat.add_comm]; exact Nat.add_le_add_right hη 1) hρ₁)
+    have hk1 : 1 ≤ k := le_trans hρη hlo
+    have hawk := Restated.sender_mem_attestersAt_of_sgVote facts S Sched x hexec hvm hu' huidx
+      (by rw [hukround]; exact Restated.early_g2_sub_delta_nonneg_rr facts S hk1)
+    rw [hukround] at hawk
     have hhi : k < ρ := facts.fc.mem_latest_window_lt hkw
     simp only [Restated.attestersIn, Finset.mem_biUnion, Finset.mem_Icc]
     exact ⟨k, ⟨hlo, Nat.le_sub_one_of_lt hhi⟩, hawk⟩
@@ -148,14 +152,14 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
-/-- For `ρ ≥ 1`, every member of `activeRoundWThroughNextCountedAt S Sched r ρ` that the adversary
+/-- For `ρ ≥ 1`, every member of `activeRoundWThroughNext S Sched r` that the adversary
     does not hold at the opening of round `ρ + 1` is honest through the last step before round `ρ`'s
     phase-`p` instant. -/
 theorem honestThrough_of_mem_countedAt (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (htd : Restated.TimeDiverges M x)
     (hmono : Sched.MonotoneCorruption) {r ρ : Nat} (hρ : 1 ≤ ρ) {m : Nat}
     {p : Protocol.Phase} (hm : Restated.stepBeforeInstant M x m (M.domain S.E S.hc ρ p)) {v : V}
-    (hv : v ∈ Restated.activeRoundWThroughNextCountedAt M S Sched r ρ \
+    (hv : v ∈ Restated.activeRoundWThroughNext M S Sched r \
       Sched.adv (M.opening S.E S.hc (ρ + 1))) :
     Restated.HonestThrough M Sched x m v :=
   Restated.honestThrough_of_not_adv_opening_succ facts S Sched x htd hmono hρ hm (Finset.mem_sdiff.1 hv).2
@@ -288,7 +292,7 @@ theorem gradeBool_base_of_tokens (facts : Record.Facts M) (S : Setup V) (Sched :
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (htd : Restated.TimeDiverges M x) (hmono : Sched.MonotoneCorruption) {tE : Int}
     (hrs : Restated.roundSleepinessW M S Sched tE) {r : Nat}
-    (htE : tE ≤ M.opening S.E S.hc (r + 1)) {m : Nat} {w : V} {p : Protocol.Phase}
+    (htE : tE ≤ M.opening S.E S.hc (r + 1)) (hη : S.hc.η_SG ≤ r) {m : Nat} {w : V} {p : Protocol.Phase}
     (hm : Restated.stepBeforeInstant M x m (M.domain S.E S.hc (r + 1) p)) {P : Block V}
     (Re : V → Finset (Protocol.Token (Option BlockId)))
     (hRe : ∀ u, M.readyView (M.gradeView (M.toHealing (x[m][w].st).st.core))
@@ -318,7 +322,7 @@ theorem gradeBool_base_of_tokens (facts : Record.Facts M) (S : Setup V) (Sched :
       (Restated.honestThrough_of_mem_freshAttestersW facts hv_1) (hRe v_1) (hready v_1 hv_1)
       (hWl v_1) (hcover v_1 hv_1)
   have hw := fun raw hraw => Restated.hhalf_of_roundSleepinessW facts S Sched x hexec htd
-    hmono hrs htE (v_0 := w) (facts.gr.domain_le_action S (r + 1) p) hm raw hraw
+    hmono hrs htE hη (v_0 := w) (facts.gr.domain_le_action S (r + 1) p) hm raw hraw
   have hposf : ∀ u, M.positive (M.gradeView (M.toHealing (x[m][w].st).st.core))
       (x[m][w].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) p)
       (M.late S.E S.hc (r + 1) p) u P ⇢

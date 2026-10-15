@@ -16,7 +16,7 @@ hold for every store and block.
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 

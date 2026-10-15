@@ -172,14 +172,14 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 open DecoupledConsensusModel.Protocol
 
-/-- After a `tickAllAwake τ` step, either `v` is awake and not adversarial at `τ`, `τ` is a whole
-    multiple of `S.E.Δ`, and `v`'s next node state is that of some outcome of the tick from
+/-- After a `tickAllAwake τ` step, either `v` is awake and not adversarial at `τ`, and `v`'s next
+    node state is that of some outcome of the tick from
     `Record.wakeStage M Sched τ x[k] v`, `v`'s node state after its wake; or `v`'s next node state
     is that node state unchanged. -/
 theorem st_succ_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) {k τ : Nat} (v : V)
     (hl : x.lbl k = AtomicAction.tickAllAwake τ) :
-    (v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧ (τ : Int) % S.E.Δ = 0 ∧
+    (v ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧
         ∃ out₁, M.tick (Setup.alwaysAwake S) v (Record.wakeStage M Sched (τ : Int) x[k] v) (τ : Int) ⇢ out₁ ∧
           x[k + 1][v].st = out₁.1) ∨
       x[k + 1][v].st = Record.wakeStage M Sched (τ : Int) x[k] v := by
@@ -193,20 +193,14 @@ theorem st_succ_of_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched τ x[k] w' tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react hv]
     have htk := htick v hv
-    by_cases hp : (τ : Int) % S.E.Δ = 0
-    · rcases htk with htk | ⟨-, htk⟩
-      · rw [Restated.reaction_tick_of_emod facts S v ((w' v).state) hp] at htk
-        obtain ⟨out₁, hout, hres⟩ := htk
-        refine Or.inl ⟨hv, hp, out₁, ?_, ?_⟩
-        · rw [← hwst]; exact hout
-        · rw [hx1, hres]
-      · refine Or.inr ?_
-        rw [hx1, htk, hwst]
+    rcases htk with htk | ⟨-, htk⟩
+    · rw [Restated.reaction_tick facts S v ((w' v).state)] at htk
+      obtain ⟨out₁, hout, hres⟩ := htk
+      refine Or.inl ⟨hv, out₁, ?_, ?_⟩
+      · rw [← hwst]; exact hout
+      · rw [hx1, hres]
     · refine Or.inr ?_
-      rcases htk with htk | ⟨-, htk⟩
-      · rw [Restated.reaction_tick_of_not_emod facts S v ((w' v).state) hp] at htk
-        rw [hx1, Set.mem_singleton_iff.mp htk, hwst]
-      · rw [hx1, htk, hwst]
+      rw [hx1, htk, hwst]
   · refine Or.inr ?_
     have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched τ x[k] w' tk)[v] := by rw [hc]
     rw [h2, tickAllAwakeUpdate_getElem_st_of_not_react hv]
@@ -269,7 +263,7 @@ open DecoupledConsensusModel.Protocol
 /-- If a validator's store records an object after one step that it did not record before, then
     either that step delivered to it a message whose payload is that object or a block carrying it,
     the payload not recorded before the step and recorded after, or that step is a tick of that
-    validator at a whole multiple of `S.E.Δ` whose outcome sent the object or a block carrying it. -/
+    validator whose outcome sent the object or a block carrying it. -/
 theorem flip_step_cases (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) {i : Nat}
     {w : V} {o : NamedObject V}
@@ -281,7 +275,7 @@ theorem flip_step_cases (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
         (m.msg = o ∨ ∃ B : NamedBlock V, m.msg = NamedObject.block B ∧
           Restated.CarriedCall M (Setup.alwaysAwake S) (x[i][w].st).st B o)) ∨
       (∃ τ : Nat, x.lbl i = AtomicAction.tickAllAwake τ ∧
-        w ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧ (τ : Int) % S.E.Δ = 0 ∧
+        w ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧
         ∃ out₁, M.tick (Setup.alwaysAwake S) w (Record.wakeStage M Sched (τ : Int) x[i] w) (τ : Int) ⇢ out₁ ∧
           x[i + 1][w].st = out₁.1 ∧
           (o ∈ out₁.2 ∨
@@ -298,13 +292,13 @@ theorem flip_step_cases (facts : Record.Facts M) (S : Setup V) (Sched : Schedule
       rw [Restated.getElem_succ_of_forward facts S Sched x hl, h0] at h1
       exact absurd h1 (by simp)
   | tickAllAwake τ =>
-      rcases Restated.st_succ_of_tick facts S Sched x w hl with ⟨haw, hdvd, out₁, hout, hst⟩ | hst
+      rcases Restated.st_succ_of_tick facts S Sched x w hl with ⟨haw, out₁, hout, hst⟩ | hst
       · have hkey :=
           (Restated.addsOnlyCarried_node_tick facts (Setup.alwaysAwake S) w
             (Record.wakeStage M Sched (τ : Int) x[i] w) (τ : Int) out₁ hout).2 o
         rw [processed_setClock' facts, Record.wakeStage_st facts] at hkey
         rw [hst] at h1
-        exact Or.inr ⟨τ, rfl, haw, hdvd, out₁, hout, hst, hkey h0 h1⟩
+        exact Or.inr ⟨τ, rfl, haw, out₁, hout, hst, hkey h0 h1⟩
       · rw [hst, Record.wakeStage_st facts, h0] at h1
         exact absurd h1 (by simp)
   | deliver p m =>

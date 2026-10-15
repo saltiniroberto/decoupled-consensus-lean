@@ -13,7 +13,7 @@ set_option autoImplicit false
 
 open DC (DRE)
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 /-! ## `DRE` -/
 
@@ -154,4 +154,4 @@ theorem DREB.broadcast_ok {V : Type} (m : Spec.NamedObject V)
     (l : List (Spec.NamedObject V)) :
     ∃ q, (Spec.broadcast m).run l = .ok q := ⟨((), l ++ [m]), rfl⟩
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise

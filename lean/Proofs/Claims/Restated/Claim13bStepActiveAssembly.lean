@@ -40,6 +40,8 @@ import Model.Conditions.Sts_Interface
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bK_FinBeforeTickRule
+import Proofs.Claims.Restated.Claim13bW_CeilingRule
 
 /-!
 # The clauses of the invariant at the next round
@@ -121,14 +123,15 @@ theorem anchor_preceq_new_of_hypotheses_overActiveSets (facts : Record.Facts M) 
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched)
+    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepFinalizedCrossingUnderAnchor M S Sched x r n'' T)
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
-    (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) :
+    (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
       Block.Preceq T.erase (Restated.newAnchor M S Sched x r n' att T).erase := by
   intro att hatt
@@ -136,18 +139,18 @@ theorem anchor_preceq_new_of_hypotheses_overActiveSets (facts : Record.Facts M) 
   refine Restated.old_preceq_new facts S Sched x hexec hn' hatt hinv.inPlay hinv.anchorEntry ?_
   refine Restated.newAnchor_compatible_old_ofSpec facts S Sched x hexec hn' hatt
     (fun q hq => ?_) (fun q hq => ?_)
-  · exact Restated.confirmedOld_at_honRound facts S Sched x tE hexec hmono htd hsync hmult hcom
-      tGAT gap hgst hlen hcv hthird hphase hrsW hcs hctx.1 hctx.2 hcross hjust hw hn'
+  · exact Restated.confirmedOld_at_honRound (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom
+      tGAT gap hgst hlen hcv hthird hphase hrsW hcs hctx.1 hctx.2 hcross hjust hn'
       (Restated.freshAttestersW_subset_honRound facts S Sched x (le_of_eq (Restated.tickStepAt_time facts x hn').1.symm) hq)
       (by intro s _ _ m hm q hq; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hm (facts.sch.vote_time_emod_delta S _) (Finset.mem_sdiff.2 ⟨Restated.awake_of_mem_HonSlot facts S Sched _ hq, fun h => ((Restated.mem_HonSlot facts).mp hq).2.2 (hmono _ _ (facts.sch.Protocol_vote_time_le_confirmation_time S.E s) h)⟩))
       (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›)
       (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›)
-      (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched (show v ∈ Sched.awakeThroughout (M.a S.hc S.E.Δ _ - wAttest S) (M.a S.hc S.E.Δ _) from (Finset.mem_sdiff.1 hv).1) (by linarith [twelve_delta_le_wAttest S, S.E.Δ_pos]) (le_refl _), (Finset.mem_sdiff.1 hv).2⟩))
+      (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨Restated.awake_action_of_mem_honRound facts hv, (Finset.mem_sdiff.1 hv).2⟩))
   · exact Restated.frameG2Old_of_gradeOld facts S Sched x r n' T hn'
-      (Restated.gradeOld_of_premisesOnly facts S Sched x tE hexec hmono htd hsync hmult tGAT gap
+      (Restated.gradeOld_of_premisesOnly (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult tGAT gap
         hgst hlen hcv hthird hphase hrsW hcs hctx.1 hctx.2 hcross
         (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›)
-        (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched (show v ∈ Sched.awakeThroughout (M.a S.hc S.E.Δ _ - wAttest S) (M.a S.hc S.E.Δ _) from (Finset.mem_sdiff.1 hv).1) (by linarith [twelve_delta_le_wAttest S, S.E.Δ_pos]) (le_refl _), (Finset.mem_sdiff.1 hv).2⟩))) q
+        (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨Restated.awake_action_of_mem_honRound facts hv, (Finset.mem_sdiff.1 hv).2⟩))) q
       (Restated.freshAttestersW_subset_honRound facts S Sched x (le_of_eq (Restated.tickStepAt_time facts x hn').1.symm) hq)
 
 end
@@ -175,7 +178,7 @@ theorem grade1_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Fac
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched)
+    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -183,6 +186,7 @@ theorem grade1_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Fac
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r)
     (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
@@ -194,17 +198,17 @@ theorem grade1_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Fac
           (M.late S.E S.hc (r + 1) p) B ⇢ true →
       Block.compatible B (Restated.newAnchor M S Sched x r n' att T).erase = true := fun att hatt =>
   Restated.grade1_field_at_new_anchor_overActiveSets facts S Sched x
-    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn'
+    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn'
         att hatt)
     (Restated.gradeOld_of_premises facts S Sched x tE hexec hmono htd tGAT gap hgst hlen hsync
       hthird hphase hrsW hctx.1 hctx.2
       (Restated.freshSGHeadsAtLate_of_premises facts S Sched x tE hexec hmono htd hsync hmult
         tGAT gap hgst hlen hcv hthird hphase hrsW hcs hctx.1 hctx.2 hcross
         (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›)
-        (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched (show v ∈ Sched.awakeThroughout (M.a S.hc S.E.Δ _ - wAttest S) (M.a S.hc S.E.Δ _) from (Finset.mem_sdiff.1 hv).1) (by linarith [twelve_delta_le_wAttest S, S.E.Δ_pos]) (le_refl _), (Finset.mem_sdiff.1 hv).2⟩)))
-      (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched (Restated.hawT_of_honRound_succ facts S Sched hv (Restated.action_mono facts S (Nat.le_succ _))) (le_refl _) (le_refl _), Restated.hwh_of_honRound_succ facts S Sched hmono hv⟩))
-      (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨mem_awake_of_awakeThroughout Sched (show v ∈ Sched.awakeThroughout (M.a S.hc S.E.Δ _ - wAttest S) (M.a S.hc S.E.Δ _) from (Finset.mem_sdiff.1 hv).1) (by linarith [twelve_delta_le_wAttest S, S.E.Δ_pos]) (le_refl _), (Finset.mem_sdiff.1 hv).2⟩)))
+        (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨Restated.awake_action_of_mem_honRound facts hv, (Finset.mem_sdiff.1 hv).2⟩)))
+      hrecvR
+      (by intro v hv; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono hctx.2.tick (Restated.action_emod_delta facts S _) (Finset.mem_sdiff.2 ⟨Restated.awake_action_of_mem_honRound facts hv, (Finset.mem_sdiff.1 hv).2⟩)))
     (hf.gradeDescendant att hatt)
 
 end
@@ -230,7 +234,7 @@ theorem frameG1New_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Se
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched)
+    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -238,7 +242,8 @@ theorem frameG1New_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Se
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
       ∀ f ∈ Restated.actionFrame M S (x[n'][v].st) (r + 1), ∀ root : Block V,
@@ -246,8 +251,8 @@ theorem frameG1New_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Se
       Block.compatible root (Restated.newAnchor M S Sched x r n' att T).erase = true := fun att hatt =>
   Restated.frameG1_compatible_of_grade1 facts S Sched x r n'
     (Restated.newAnchor M S Sched x r n' att T) hn'
-    (Restated.grade1_field_of_hypotheses_overActiveSets_ofFieldsAt facts S Sched x tE hexec hmono htd
-      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+    (Restated.grade1_field_of_hypotheses_overActiveSets_ofFieldsAt (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
       att hatt)
 
 end
@@ -273,7 +278,7 @@ theorem frameG2New_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Se
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched)) (hw : Restated.WakesAtActionInstants M S Sched)
+    (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -281,7 +286,8 @@ theorem frameG2New_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Se
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ v ∈ Restated.HonRound M S Sched (r + 1),
       ∀ f ∈ Restated.actionFrame M S (x[n'][v].st) (r + 1), ∀ root : Block V,
@@ -289,8 +295,8 @@ theorem frameG2New_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Se
       Block.compatible root (Restated.newAnchor M S Sched x r n' att T).erase = true := fun att hatt =>
   Restated.frameG2Old_of_gradeOld facts S Sched x r n'
     (Restated.newAnchor M S Sched x r n' att T) hn'
-    (Restated.grade1_field_of_hypotheses_overActiveSets_ofFieldsAt facts S Sched x tE hexec hmono htd
-      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+    (Restated.grade1_field_of_hypotheses_overActiveSets_ofFieldsAt (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
       att hatt)
 
 end
@@ -402,7 +408,6 @@ theorem fin_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Facts 
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -410,24 +415,25 @@ theorem fin_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Facts 
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ (v : V) (n₁ : Nat), n₁ ≤ n' + 1 → Restated.HonestThrough M Sched x n₁ v →
       Block.Preceq (x[n₁][v].st).st.core.F (Restated.newAnchor M S Sched x r n' att T).erase := by
   intro att hatt
-  refine Restated.fin_field_at_succ_top_ofRoundSleepinessW facts S Sched x hexec hmono (tE := Restated.switchOpening M S tE)
+  refine Restated.fin_field_at_succ_top_rule facts S Sched x hexec hmono (tE := Restated.switchOpening M S tE)
     (Restated.roundSleepinessW_switchOpening_of_phase facts S Sched tGAT tE gap hgst hlen hmono hthird hphase hrsW)
-    hw hs hctx.2.tick hn' hatt
+     hctx.2.tick hn' hatt
     (Restated.switchOpening_le_opening facts S (le_trans hctx.1 (Nat.le_succ r))) hctx.2.inPlay
-    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn'
+    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn'
         att hatt)
     (fun q hq => hf.confirmedNew att hatt q
-      (Restated.mem_honRound_of_mem_freshAttesters_ofWakes facts S Sched x hw hn' hq))
-    (fun q hq => Restated.frameG2New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+      hq)
+    (fun q hq => Restated.frameG2New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt q
-      (Restated.mem_honRound_of_mem_freshAttesters_ofWakes facts S Sched x hw hn' hq))
+      hq)
     (P := fun w m => Restated.HonestThrough M Sched x m w)
     (fun _ _ h => h)
     (fun _ _ _ hm h t ht => h t (le_trans ht (Restated.time_mono_int facts S Sched x hm)))
@@ -458,7 +464,6 @@ theorem fgFinalized_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : S
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -466,14 +471,15 @@ theorem fgFinalized_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : S
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ v ∈ honestThroughSet Sched ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))),
       ∀ hs ∈ Restated.actionHealingStore M S (x[n'][v].st) (r + 1),
       Block.Preceq hs.F (Restated.newAnchor M S Sched x r n' att T).erase := fun att hatt =>
   Restated.actionHealingStore_F_preceq_of_fin facts S Sched x hn'
-    (Restated.fin_field_of_hypotheses_overActiveSets_ofFieldsAt facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hs hctx hcross hjust hn' hf
+    (Restated.fin_field_of_hypotheses_overActiveSets_ofFieldsAt (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt)
 
 end
@@ -535,7 +541,6 @@ theorem sg_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Facts M
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -543,7 +548,8 @@ theorem sg_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Facts M
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ v ∈ Restated.HonRound M S Sched (r + 1), ∀ a : NamedAttestation V,
       a.round = r + 1 → a.val_index = v →
@@ -552,18 +558,18 @@ theorem sg_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record.Facts M
       Block.compatible C.erase (Restated.newAnchor M S Sched x r n' att T).erase = true :=
   fun att hatt =>
   Restated.sg_field_at_new_anchor_overActiveSets_ofFrameOverHonRound facts S Sched x hexec hmono hn' hatt
-    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn'
+    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn'
         att hatt)
     (hf.confirmedNew att hatt)
-    (Restated.frameG1New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+    (Restated.frameG1New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt)
-    (Restated.frameG2New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+    (Restated.frameG2New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt)
-    (Restated.fgFinalized_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hs hctx hcross hjust hn' hf
+    (Restated.fgFinalized_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt)
     (Restated.fgJustified_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono tGAT gap hgst
         hlen hthird hphase hrsW hctx hjust hn')
@@ -592,7 +598,6 @@ theorem sgPairwise_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -600,7 +605,8 @@ theorem sgPairwise_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ v₁ ∈ Restated.HonRound M S Sched (r + 1), ∀ v₂ ∈ Restated.HonRound M S Sched (r + 1),
       ∀ a₁ a₂ : NamedAttestation V,
       a₁.round = r + 1 → a₁.val_index = v₁ →
@@ -620,11 +626,11 @@ theorem sgPairwise_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
   have hatt : Restated.ActionAttestationsOf M S Sched x r n' att := fun q _ =>
     Classical.choose_spec
       (actionAttestationFrom_nonempty_asm facts (Setup.alwaysAwake S) (x[n'][q].st) q (r + 1))
-  have hold := Restated.anchor_preceq_new_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn'
+  have hold := Restated.anchor_preceq_new_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn'
       att hatt
-  have hF := Restated.fgFinalized_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hs hctx hcross hjust hn' hf
+  have hF := Restated.fgFinalized_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
       att hatt
   have fgJ := Restated.fgJustified_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono
       tGAT gap hgst hlen hthird hphase hrsW hctx hjust hn'
@@ -635,11 +641,11 @@ theorem sgPairwise_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
       Block.Preceq (M.get_fg_root hs.toFG) (Restated.newAnchor M S Sched x r n' att T).erase :=
     fun v hv hs' hhs => hfg0 v (hsub hv) hs' hhs (hF v (hsub hv) hs' hhs)
       (fgJ v (hsub hv) hs' hhs)
-  have hg1 := Restated.frameG1New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+  have hg1 := Restated.frameG1New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
       att hatt
-  have hg2 := Restated.frameG2New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+  have hg2 := Restated.frameG2New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+      tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
       att hatt
   have hwalk : ∀ v ∈ Restated.HonRound M S Sched (r + 1),
       ∀ m ∈ Restated.Vocabulary.Execution.NamedActionReads.actionReadFrom M (Setup.alwaysAwake S)
@@ -715,7 +721,6 @@ open DecoupledConsensusModel.Execution
 theorem heightCeiling_field_of_hypotheses_overActiveSets (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (tE : Int)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1)))) :
@@ -726,7 +731,7 @@ theorem heightCeiling_field_of_hypotheses_overActiveSets (facts : Record.Facts M
       (⟨v, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n₁].sent →
       a.height_pair = NamedHeightPair.vote h' entry tmo →
       h' ≤ (M.derive_named S.E S.cfg (Restated.newAnchor M S Sched x r n' att T)).h := fun _ hatt =>
-  Restated.heightCeiling_field_at_succ_of_fresh facts S Sched x hexec hw hs hctx.2.tick hn' hatt T
+  Restated.heightCeiling_field_at_succ_rule facts S Sched x hexec hctx.2.tick hn' hatt T
     hctx.2.heightCeiling
 
 end
@@ -755,7 +760,6 @@ theorem targetsTop_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' : Nat} {T : NamedBlock V}
     (hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T)
     (hcross : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
@@ -763,7 +767,8 @@ theorem targetsTop_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ (w : V) (n₁ : Nat) (a : NamedAttestation V) (entry : BlockId) (tmo : Bool),
       n₁ ≤ n' + 1 → Restated.HonestThrough M Sched x n₁ w → a.val_index = w →
@@ -773,17 +778,17 @@ theorem targetsTop_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Record
       ∀ C : NamedBlock V, Restated.blockInLog M S Sched x C → C.root = entry →
       Block.Preceq C.erase (Restated.newAnchor M S Sched x r n' att T).erase := by
   intro att hatt
-  refine Restated.targetsTop_field_at_succ_ofWakes facts S Sched x hexec hw hs hctx.2.tick hn' hatt
+  refine Restated.targetsTop_field_at_succ_rule facts S Sched x hexec hctx.2.tick hn' hatt
     hctx.2.inPlay
-    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn'
+    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn'
         att hatt)
     (fun q hq => hf.confirmedNew att hatt q
-      (Restated.mem_honRound_of_mem_freshAttesters_ofWakes facts S Sched x hw hn' hq))
-    (fun q hq => Restated.frameG2New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+      hq)
+    (fun q hq => Restated.frameG2New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt q
-      (Restated.mem_honRound_of_mem_freshAttesters_ofWakes facts S Sched x hw hn' hq))
+      hq)
     (P := fun w m => Restated.HonestThrough M Sched x m w)
     (fun _ _ h => h)
     (fun _ _ _ hm h t ht => h t (le_trans ht (Restated.time_mono_int facts S Sched x hm)))

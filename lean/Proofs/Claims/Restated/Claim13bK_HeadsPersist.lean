@@ -58,6 +58,7 @@ import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Conditions.Vocabulary_Protocol_Grades_Main
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13bK_HeadsPersist
+import Proofs.Claims.Restated.Claim13bInvariantGrade1RuleFacts
 
 /-!
 # Persistence of the honest heads across rounds
@@ -180,6 +181,7 @@ private theorem joint_toTop_hp {S : Setup V} {Sched : Schedule V}
     heads := h.heads
     fin := h.fin
     grade1 := h.grade1
+    grade1Performers := h.grade1Performers
     heightCeiling := h.heightCeiling
     targetsTop := h.targetsTop }
 
@@ -280,7 +282,7 @@ theorem compatible_of_headsBelow_after (facts : Record.Facts M) (S : Setup V) (S
     Block.compatible A B = true := by
   have hmaj := Restated.majority_of_committeeSleepinessW facts S Sched hcs' (s := s) ht'
   obtain ⟨w₀, hw₀⟩ : ((S.E.committee s) ∩ Restated.HonSlot M S Sched s).Nonempty := by
-    rw [← Finset.card_pos]; omega
+    rw [Finset.inter_eq_right.2 (Restated.HonSlot_subset_committee facts S Sched _), ← Finset.card_pos]; omega
   obtain ⟨m₀, hm₀⟩ := Restated.exists_tickStepAt facts x htd (facts.sch.vote_time_pos S hs)
   exact Restated.compatible_of_headsBelow_common facts S Sched x hA hB (Finset.mem_inter.mp hw₀).2 hm₀
 
@@ -310,7 +312,6 @@ theorem coneAnchorCompatible_roundSlots_above (facts : Record.Facts M) (S : Setu
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r + 1)
     (hJ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (r + 1) n n_W T)
@@ -332,7 +333,8 @@ theorem coneAnchorCompatible_roundSlots_above (facts : Record.Facts M) (S : Setu
       a.round = r + 1 → a.val_index = v_1 →
       (⟨v_1, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n + 1].sent →
       ∀ C : NamedBlock V, C ∈ (x[n + 1][v_1].st).st.bodies → a.confirmed = some C.root →
-      Block.compatible C.erase Y = true) :
+      Block.compatible C.erase Y = true)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x (r + 1)) :
     ∀ s : Slot, (M.opening_slot S.hc (r + 1)) ≤ s → s ≤ (M.opening_slot S.hc (r + 1 + 1)) →
       Restated.ConeAnchorCompatible M S x Y s := by
   have hinv := joint_toTop_hp hJ
@@ -362,22 +364,24 @@ theorem coneAnchorCompatible_roundSlots_above (facts : Record.Facts M) (S : Setu
       rw [hsj]; exact facts.gr.round_of_opening_slot_add S.hc (r + 1) hjR
     rw [hround] at hm hB
     have hv' : v ∈ Restated.HonSlot M S Sched ((M.opening_slot S.hc (r + 1)) + j) := by rw [← hsj]; exact hv
-    have hvH := Restated.mem_honRound_of_mem_honSlot_later facts S Sched hmono hw hs hj1 hjR hv'
+    have hvP : v ∈ Restated.grade1PerformersW M S Sched (r + 1) :=
+      Finset.mem_sdiff.2
+        (Restated.awakeThroughout_grade1_window_of_mem_honSlot facts S Sched hmono hjR hv')
     obtain ⟨b, hb⟩ := facts.gr.gradeBool_nonempty S.E (M.gradeView (M.toHealing (x[m][v].st).st.core))
       (x[m][v].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) .g1)
       (M.late S.E S.hc (r + 1) .g1) B
     obtain ⟨v_2, hv_2, a, ha, hai, hsent, G, hG, hconf, hBG⟩ :=
-      hJ.gradedUnderPrevSG n_prev hnp v hvH .g1 (facts.gr.domain_le_action S (r + 1) .g1) m hm B
+      hJ.gradedUnderPrevSGPerformers n_prev hnp v hvP m hm B
         b hb (hB b hb)
-    have hBT := hinv.grade1 v hvH .g1 (facts.gr.domain_le_action S (r + 1) .g1) m hm B b hb (hB b hb)
+    have hBT := hinv.grade1Performers v hvP m hm B b hb (hB b hb)
     rcases compatible_cases hBT with hBT | hTB
     · exact compatible_of_preceq_c2b
         (preceq_trans_Preceq hpre (preceq_trans_Preceq hBT hTY))
     · exact Protocol.compatible_of_preceq_of_compatible (preceq_trans_Preceq hpre hBG)
         (hGY v_2 hv_2 a ha hai hsent G hG hconf (preceq_trans_Preceq hTB hBG))
   · have hsj' : s + 1 = (M.opening_slot S.hc (r + 1 + 1)) + j := by rw [hosucc]; exact hsj
-    exact Restated.voteGradeOneCompatible_of_gradedCompatible facts S Sched x hmono hw (r := r + 1) (D := Y)
-      (Restated.graded_compatible_of_sgCompatible facts S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
+    exact Restated.voteGradeOneCompatible_of_gradedCompatible_rule facts S Sched x hmono (r := r + 1) (D := Y)
+      (Restated.graded_compatible_of_sgCompatible (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult tGAT gap hgst
         hlen hcv hthird hphase hrsW hcs hr hinv hcross (preceq_eq_true_iff_Preceq.mp (Block.preceq_self Y)) hCY
         )
       (j := j) (by omega) hsj'
@@ -441,7 +445,7 @@ theorem headsBelow_roundRange_above (facts : Record.Facts M) (S : Setup V) (Sche
     push_cast at e2
     rw [e2] at e1; linarith
   have hopos : 0 < (M.opening_slot S.hc (r + 1)) := facts.gr.opening_slot_pos S (Nat.succ_pos r)
-  exact Restated.headsBelow_range_afterPhase facts S Sched x hexec hsync hmult htd hmono hgst hcv
+  exact Restated.headsBelow_range_afterPhase (hr1 := Restated.one_le_round_of_of_opening_slot_le facts S (r := r + 1) (Nat.le_add_left 1 r) hs0) facts S Sched x hexec hsync hmult htd hmono hgst hcv
     (fun t h1 h2 => hphase t h1 (le_trans h2 ht'E))
     (fun t h => hthird t (le_trans h ht'E)) hcs' ht'len hunder hunderS
     (s₀ := s₀) (s₁ := (M.opening_slot S.hc (r + 1 + 1)))
@@ -560,7 +564,8 @@ theorem roundSG_compatible_of_parts (facts : Record.Facts M) (S : Setup V) (Sche
       Block.compatible G.erase Y = true)
     (hLY : ∀ q ∈ Restated.HonRound M S Sched (r + 1),
       ∀ hs ∈ Restated.actionHealingStore M S (x[n][q].st) (r + 1),
-        Block.compatible hs.live_confirmed Y = true) :
+        Block.compatible hs.live_confirmed Y = true)
+    (hmono : Sched.MonotoneCorruption) :
     ∀ v_1 ∈ Restated.HonRound M S Sched (r + 1), ∀ a : NamedAttestation V,
       a.round = r + 1 → a.val_index = v_1 →
       (⟨v_1, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n + 1].sent →
@@ -593,7 +598,7 @@ theorem roundSG_compatible_of_parts (facts : Record.Facts M) (S : Setup V) (Sche
       (x[m][v_1].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) .g1)
       (M.late S.E S.hc (r + 1) .g1) B
     obtain ⟨v_2, hv_2, a₂, ha₂, hav₂, hsent₂, G₀, hG₀, hconf₂, hBG⟩ :=
-      hJ.gradedUnderPrevSG n_prev hnp v_1 hv_1 .g1 (facts.gr.domain_le_action S (r + 1) .g1) m hm B
+      hJ.gradedUnderPrevSGPerformers n_prev hnp v_1 (Restated.mem_grade1PerformersW_of_honRound facts S Sched hmono hv_1) m hm B
         b hb (hB b hb)
     exact Protocol.compatible_of_preceq_of_compatible
       (preceq_trans_Preceq hpre (preceq_trans_Preceq hrootB hBG))
@@ -605,7 +610,7 @@ theorem roundSG_compatible_of_parts (facts : Record.Facts M) (S : Setup V) (Sche
       (x[m][v_1].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) .g2)
       (M.late S.E S.hc (r + 1) .g2) B
     obtain ⟨v_2, hv_2, a₂, ha₂, hav₂, hsent₂, G₀, hG₀, hconf₂, hBG⟩ :=
-      hJ.gradedUnderPrevSG n_prev hnp v_1 hv_1 .g2 (facts.gr.domain_le_action S (r + 1) .g2) m hm B
+      hJ.gradedUnderPrevSG n_prev hnp v_1 hv_1 .g2 (by decide) (facts.gr.domain_le_action S (r + 1) .g2) m hm B
         b hb (hB b hb)
     exact Protocol.compatible_of_preceq_of_compatible
       (preceq_trans_Preceq hpre (preceq_trans_Preceq hrootB hBG))
@@ -641,7 +646,6 @@ theorem prevSG_headsBelow_roundRange (facts : Record.Facts M) (S : Setup V) (Sch
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r + 1)
     (hJ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (r + 1) n n_W T)
@@ -657,7 +661,8 @@ theorem prevSG_headsBelow_roundRange (facts : Record.Facts M) (S : Setup V) (Sch
     (ha₂ : a₂.round = r) (hav₂ : a₂.val_index = v_2)
     (hsent₂ : (⟨v_2, NamedObject.attest a₂⟩ : SignedMsg V (NamedObject V)) ∈ x[n_prev + 1].sent)
     {G₀ : NamedBlock V} (hG₀ : G₀ ∈ (x[n_prev + 1][v_2].st).st.bodies)
-    (hconf₂ : a₂.confirmed = some G₀.root) (hTG : Block.Preceq T.erase G₀.erase) :
+    (hconf₂ : a₂.confirmed = some G₀.root) (hTG : Block.Preceq T.erase G₀.erase)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x (r + 1)) :
     ∀ s : Slot, (M.opening_slot S.hc (r + 1)) ≤ s → s ≤ (M.opening_slot S.hc (r + 1 + 1)) + 1 →
       Restated.HeadsBelow M S Sched x G₀.erase s := by
   have hinv := joint_toTop_hp hJ
@@ -684,9 +689,9 @@ theorem prevSG_headsBelow_roundRange (facts : Record.Facts M) (S : Setup V) (Sch
         Block.compatible hs.live_confirmed G₀.erase = true :=
     fun q hq hs hhs => Protocol.compatible_comm
       (hJ.prevConfirmed n_prev hnp q hq v_2 hv_2 a₂ ha₂ hav₂ hsent₂ G₀ hG₀ hconf₂ hs hhs)
-  have hCY := Restated.roundSG_compatible_of_parts facts S Sched x hexec hJ hnp hFJ hTG hGall hLY
-  have hAB := Restated.coneAnchorCompatible_roundSlots_above facts S Sched x tE hexec hmono htd hsync hmult
-    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hTG
+  have hCY := Restated.roundSG_compatible_of_parts (hmono := hmono) facts S Sched x hexec hJ hnp hFJ hTG hGall hLY
+  have hAB := Restated.coneAnchorCompatible_roundSlots_above (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult
+    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hTG
     (fun v_3 hv_3 a₃ ha₃ hav₃ hsent₃ G hG hconf₃ _ =>
       hGall v_3 hv_3 a₃ ha₃ hav₃ hsent₃ G hG hconf₃) hCY
   obtain ⟨hnp1, -⟩ := Restated.tickStepAt_time facts x hnp
@@ -740,7 +745,6 @@ theorem confirmed_headsBelow_roundRange (facts : Record.Facts M) (S : Setup V) (
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r + 1)
     (hJ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (r + 1) n n_W T)
@@ -759,7 +763,8 @@ theorem confirmed_headsBelow_roundRange (facts : Record.Facts M) (S : Setup V) (
     (hel : el H₁ = true)
     (hsv : M.HS) (hhsv : hsv ∈ Restated.actionHealingStore M S (x[n][v_1].st) (r + 1))
     (hlc : hsv.live_confirmed = H₁)
-    (hTH : Block.Preceq T.erase H₁) :
+    (hTH : Block.Preceq T.erase H₁)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x (r + 1)) :
     ∀ s : Slot, (M.opening_slot S.hc (r + 1)) + 1 ≤ s → s ≤ (M.opening_slot S.hc (r + 1 + 1)) + 1 →
       Restated.HeadsBelow M S Sched x H₁ s := by
   have hinv := joint_toTop_hp hJ
@@ -796,9 +801,9 @@ theorem confirmed_headsBelow_roundRange (facts : Record.Facts M) (S : Setup V) (
       (hhon q hq) (Restated.honRound_awakeThroughout_confirmation facts S Sched (r + 1) hv_1) (hhon v_1 hv_1)
       helq hH' hel' hel (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›) (by intros; exact Restated.tick_outcome_of_tickStepAt facts S Sched x hexec.idealization.root_injective hexec.honestRootsNew hmono ‹_› ‹_› ‹_›)
   have hLY := Restated.liveConfirmed_compatible_of_eligible facts S Sched x hn hFJ hTH hEl
-  have hCY := Restated.roundSG_compatible_of_parts facts S Sched x hexec hJ hnp hFJ hTH hGall hLY
-  have hAB := Restated.coneAnchorCompatible_roundSlots_above facts S Sched x tE hexec hmono htd hsync hmult
-    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hTH
+  have hCY := Restated.roundSG_compatible_of_parts (hmono := hmono) facts S Sched x hexec hJ hnp hFJ hTH hGall hLY
+  have hAB := Restated.coneAnchorCompatible_roundSlots_above (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult
+    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hTH
     (fun v_2 hv_2 a₂ ha₂ hav₂ hsent₂ G hG hconf₂ _ =>
       hGall v_2 hv_2 a₂ ha₂ hav₂ hsent₂ G hG hconf₂) hCY
   have hpath : ∀ s : Slot, (M.opening_slot S.hc (r + 1)) ≤ s → s ≤ (M.opening_slot S.hc (r + 1 + 1)) →
@@ -857,7 +862,6 @@ theorem roundSG_preceq_anchor_or_headsBelow (facts : Record.Facts M) (S : Setup 
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r + 1)
     (hJ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (r + 1) n n_W T)
@@ -868,7 +872,8 @@ theorem roundSG_preceq_anchor_or_headsBelow (facts : Record.Facts M) (S : Setup 
       M.vote_time S.E ((M.opening_slot S.hc (r + 1)) + 1) - 1 ≤ (x[n₁].time : Int) →
       n₁ ≤ n' + 1 → Restated.HonestThrough M Sched x n₁ v →
       Block.Preceq (x[n₁][v].st).st.core.J T.erase)
-    {n_prev : Nat} (hnp : Restated.tickStepAt M x n_prev ((Restated.Vocabulary.Execution.Setup.a M S r))) :
+    {n_prev : Nat} (hnp : Restated.tickStepAt M x n_prev ((Restated.Vocabulary.Execution.Setup.a M S r)))
+    (hrecvR : Restated.NextRoundReceipts M S Sched x (r + 1)) :
     ∀ v_1 ∈ Restated.HonRound M S Sched (r + 1), ∀ a : NamedAttestation V,
       a.round = r + 1 → a.val_index = v_1 →
       (⟨v_1, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n + 1].sent →
@@ -907,9 +912,9 @@ theorem roundSG_preceq_anchor_or_headsBelow (facts : Record.Facts M) (S : Setup 
         ((M.opening_slot S.hc (r + 1)))
       rw [heq] at hL
       refine Or.inr (fun s h0 h1 => Restated.headsBelow_mono facts S Sched x hL ?_)
-      exact Restated.confirmed_headsBelow_roundRange facts S Sched x tE hexec hmono htd hsync hmult hcom
+      exact Restated.confirmed_headsBelow_roundRange (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom
         tGAT gap
-        hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hv_1 el hel' (hel el hel')
+        hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hv_1 el hel' (hel el hel')
         _ hhs heq (preceq_trans_Preceq hTC hL) s h0 h1
     · rw [heq] at hL
       exact Or.inl (preceq_trans_Preceq hL (facts.fc.fgRoot_preceq_ofJustifiedBranch
@@ -923,12 +928,12 @@ theorem roundSG_preceq_anchor_or_headsBelow (facts : Record.Facts M) (S : Setup 
       (x[m][v_1].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) .g1)
       (M.late S.E S.hc (r + 1) .g1) B
     obtain ⟨v_2, hv_2, a₂, ha₂, hav₂, hsent₂, G₀, hG₀, hconf₂, hBG⟩ :=
-      hJ.gradedUnderPrevSG n_prev hnp v_1 hv_1 .g1 (facts.gr.domain_le_action S (r + 1) .g1) m hm B
+      hJ.gradedUnderPrevSGPerformers n_prev hnp v_1 (Restated.mem_grade1PerformersW_of_honRound facts S Sched hmono hv_1) m hm B
         b hb (hB b hb)
     have hCG := preceq_trans_Preceq hpre (preceq_trans_Preceq hrootB hBG)
     refine Or.inr (fun s h0 h1 => Restated.headsBelow_mono facts S Sched x hCG ?_)
-    exact Restated.prevSG_headsBelow_roundRange facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
-      hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hv_2 ha₂ hav₂ hsent₂ hG₀
+    exact Restated.prevSG_headsBelow_roundRange (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
+      hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hv_2 ha₂ hav₂ hsent₂ hG₀
       hconf₂ (preceq_trans_Preceq hTC hCG) s (le_trans (Nat.le_succ _) h0) h1
   · rw [← hCeq] at hpre
     obtain ⟨m, B, hm, hB, hrootB⟩ :=
@@ -937,12 +942,12 @@ theorem roundSG_preceq_anchor_or_headsBelow (facts : Record.Facts M) (S : Setup 
       (x[m][v_1].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) .g2)
       (M.late S.E S.hc (r + 1) .g2) B
     obtain ⟨v_2, hv_2, a₂, ha₂, hav₂, hsent₂, G₀, hG₀, hconf₂, hBG⟩ :=
-      hJ.gradedUnderPrevSG n_prev hnp v_1 hv_1 .g2 (facts.gr.domain_le_action S (r + 1) .g2) m hm B
+      hJ.gradedUnderPrevSG n_prev hnp v_1 hv_1 .g2 (by decide) (facts.gr.domain_le_action S (r + 1) .g2) m hm B
         b hb (hB b hb)
     have hCG := preceq_trans_Preceq hpre (preceq_trans_Preceq hrootB hBG)
     refine Or.inr (fun s h0 h1 => Restated.headsBelow_mono facts S Sched x hCG ?_)
-    exact Restated.prevSG_headsBelow_roundRange facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
-      hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hv_2 ha₂ hav₂ hsent₂ hG₀
+    exact Restated.prevSG_headsBelow_roundRange (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
+      hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hv_2 ha₂ hav₂ hsent₂ hG₀
       hconf₂ (preceq_trans_Preceq hTC hCG) s (le_trans (Nat.le_succ _) h0) h1
   · rw [← hCeq] at hfg
     refine Or.inl ?_
@@ -1020,6 +1025,7 @@ theorem eligible_compatible_of_heads_round (facts : Record.Facts M) (S : Setup V
       (Restated.finalizedPreceqAtSteps_anchor facts S Sched x hn' hfin tGAT) hTY)
     (lt_of_lt_of_le hopos hs0) hslo
     (le_trans ht's (slotStart_mono S (Nat.le_succ_of_le hs0))) hsR hY hm hqaw hqh hel' hel
+    (Restated.one_le_round_of_of_opening_slot_le facts S (r := r + 1) (Nat.le_add_left 1 r) hs0)
 
 end
 
@@ -1047,7 +1053,6 @@ theorem headsBelow_roundStep (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r + 1)
     (hJ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (r + 1) n n_W T)
@@ -1062,7 +1067,8 @@ theorem headsBelow_roundStep (facts : Record.Facts M) (S : Setup V) (Sched : Sch
     {B : Block V} (hTB : Block.Preceq T.erase B)
     {s : Slot} (hs0 : (M.opening_slot S.hc (r + 1)) + 1 ≤ s)
     (hs1 : s ≤ (M.opening_slot S.hc (r + 1 + 1)) + 1)
-    (hbase : Restated.HeadsBelow M S Sched x B s) :
+    (hbase : Restated.HeadsBelow M S Sched x B s)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x (r + 1)) :
     ∀ s' : Slot, s ≤ s' → s' ≤ (M.opening_slot S.hc (r + 1 + 1)) + 1 →
       Restated.HeadsBelow M S Sched x B s' := by
   have hinv := joint_toTop_hp hJ
@@ -1087,8 +1093,8 @@ theorem headsBelow_roundStep (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       ∀ G : NamedBlock V, G ∈ (x[n_prev + 1][v_2].st).st.bodies → a.confirmed = some G.root →
       Block.Preceq T.erase G.erase → Block.compatible G.erase B = true :=
     fun v_2 hv_2 a ha hav hsent G hG hconf hTG => hcommon _
-      (Restated.prevSG_headsBelow_roundRange facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
-        hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hv_2 ha hav hsent hG hconf
+      (Restated.prevSG_headsBelow_roundRange (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
+        hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hv_2 ha hav hsent hG hconf
         hTG s hs0' hs1)
   have hCY : ∀ v_1 ∈ Restated.HonRound M S Sched (r + 1), ∀ a : NamedAttestation V,
       a.round = r + 1 → a.val_index = v_1 →
@@ -1096,16 +1102,16 @@ theorem headsBelow_roundStep (facts : Record.Facts M) (S : Setup V) (Sched : Sch
       ∀ C : NamedBlock V, C ∈ (x[n + 1][v_1].st).st.bodies → a.confirmed = some C.root →
       Block.compatible C.erase B = true := by
     intro v_1 hv_1 a ha hav hsent C hC hconf
-    rcases Restated.roundSG_preceq_anchor_or_headsBelow facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT
-        gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp v_1 hv_1 a ha hav
+    rcases Restated.roundSG_preceq_anchor_or_headsBelow (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT
+        gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp v_1 hv_1 a ha hav
         hsent C hC hconf with hCT | hCh
     · exact compatible_of_preceq_c2b (preceq_trans_Preceq hCT hTB)
     · exact hcommon _ (hCh s hs0 hs1)
-  have hAB := Restated.coneAnchorCompatible_roundSlots_above facts S Sched x tE hexec hmono htd hsync hmult
-    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hTB hGY hCY
+  have hAB := Restated.coneAnchorCompatible_roundSlots_above (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult
+    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hTB hGY hCY
   have hmaj := Restated.majority_of_committeeSleepinessW facts S Sched hcs' (s := s) ht's1
   obtain ⟨w, hw₀⟩ : ((S.E.committee s) ∩ Restated.HonSlot M S Sched s).Nonempty := by
-    rw [← Finset.card_pos]; omega
+    rw [Finset.inter_eq_right.2 (Restated.HonSlot_subset_committee facts S Sched _), ← Finset.card_pos]; omega
   have hwH := (Finset.mem_inter.mp hw₀).2
   obtain ⟨mw, hmw⟩ := Restated.exists_tickStepAt facts x htd (facts.sch.vote_time_pos S hspos)
   obtain ⟨-, hmw0⟩ := Restated.tickStepAt_time facts x hmw
@@ -1162,7 +1168,6 @@ theorem headsBelow_succ_of_eligible_round (facts : Record.Facts M) (S : Setup V)
     (hphase : ∀ t : Int, tGAT ≤ t → t ≤ tE →
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r + 1)
     (hJ : Restated.AfterPhaseInvariantOverActiveSetsJoint M S Sched x (r + 1) n n_W T)
@@ -1183,7 +1188,8 @@ theorem headsBelow_succ_of_eligible_round (facts : Record.Facts M) (S : Setup V)
     {H : Block V} (el : Block V → Bool)
     (hel' : Restated.Vocabulary.Protocol.confEligible M S.E (x[m][q].st).st.core s ⇢ el)
     (hel : el H = true)
-    (hTH : Block.Preceq T.erase H) :
+    (hTH : Block.Preceq T.erase H)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x (r + 1)) :
     Restated.HeadsBelow M S Sched x H (s + 1) := by
   have hinv := joint_toTop_hp hJ
   have hd := S.E.Δ_pos
@@ -1200,8 +1206,8 @@ theorem headsBelow_succ_of_eligible_round (facts : Record.Facts M) (S : Setup V)
       ∀ G : NamedBlock V, G ∈ (x[n_prev + 1][v_2].st).st.bodies → a.confirmed = some G.root →
       Block.Preceq T.erase G.erase → Block.compatible G.erase H = true :=
     fun v_2 hv_2 a ha hav hsent G hG hconf hTG => hcount _ hTG
-      (Restated.prevSG_headsBelow_roundRange facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
-        hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hv_2 ha hav hsent hG hconf
+      (Restated.prevSG_headsBelow_roundRange (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
+        hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hv_2 ha hav hsent hG hconf
         hTG s hs0' (Nat.le_succ_of_le hs1))
   have hCY : ∀ v_1 ∈ Restated.HonRound M S Sched (r + 1), ∀ a : NamedAttestation V,
       a.round = r + 1 → a.val_index = v_1 →
@@ -1210,15 +1216,15 @@ theorem headsBelow_succ_of_eligible_round (facts : Record.Facts M) (S : Setup V)
       Block.compatible C.erase H = true := by
     intro v_1 hv_1 a ha hav hsent C hC hconf
     have hsg := hinv.sg v_1 hv_1 a ha hav hsent C hC hconf
-    rcases Restated.roundSG_preceq_anchor_or_headsBelow facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT
-        gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp v_1 hv_1 a ha hav
+    rcases Restated.roundSG_preceq_anchor_or_headsBelow (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT
+        gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp v_1 hv_1 a ha hav
         hsent C hC hconf with hCT | hCh
     · exact compatible_of_preceq_c2b (preceq_trans_Preceq hCT hTH)
     · rcases compatible_cases hsg with hCT | hTC
       · exact compatible_of_preceq_c2b (preceq_trans_Preceq hCT hTH)
       · exact hcount _ hTC (hCh s hs0 (Nat.le_succ_of_le hs1))
-  have hAB := Restated.coneAnchorCompatible_roundSlots_above facts S Sched x tE hexec hmono htd hsync hmult
-    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hTH hGY hCY
+  have hAB := Restated.coneAnchorCompatible_roundSlots_above (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd hsync hmult
+    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hTH hGY hCY
   have hopen := Restated.tGAT_add_two_rounds_le_opening facts S tGAT tE gap hgst hlen hr
   have hslo : tGAT ≤ slotStart S.E.Δ s := by
     have := slotStart_mono S hs0'
@@ -1365,7 +1371,6 @@ theorem headsBelow_persist_rounds (facts : Record.Facts M) (S : Setup V) (Sched 
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1424,8 +1429,10 @@ theorem headsBelow_persist_rounds (facts : Record.Facts M) (S : Setup V) (Sched 
       fun n'' h => Restated.stepFinalizedCrossingUnderAnchor_of_afterSwitch facts S Sched x hr hnW hJ.toAfterPhaseInvariantOverActiveSetsSince
         (Restated.justified_preceq_anchor_ofJoint facts S Sched x tE hexec hmono htd tGAT gap hgst hlen hsync
           hthird hphase hrsW hmult hcv hcom hrec hprev hclear hB' hnW hAW hr hTW hJ h)
-    exact Restated.headsBelow_roundStep facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen
-      hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hTB hs0 hs1 hbase s' h0 h1
+    exact Restated.headsBelow_roundStep (hrecvR := Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+        (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen
+          (by first | assumption | exact le_trans hr (Nat.le_succ _) | exact le_trans hr (Nat.le_add_right _ _) | exact Nat.le_succ_of_le hr | omega))) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst hlen
+      hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hTB hs0 hs1 hbase s' h0 h1
   | succ k ih =>
     intro r n T hr hTW hJ hTB s hs0 hs1 hbase s' h0 h1
     obtain ⟨n', hn'⟩ := Restated.tick_field_at_succ facts S Sched x htd (r + 1)
@@ -1438,13 +1445,15 @@ theorem headsBelow_persist_rounds (facts : Record.Facts M) (S : Setup V) (Sched 
       fun n'' h => Restated.stepFinalizedCrossingUnderAnchor_of_afterSwitch facts S Sched x hr hnW hJ.toAfterPhaseInvariantOverActiveSetsSince
         (Restated.justified_preceq_anchor_ofJoint facts S Sched x tE hexec hmono htd tGAT gap hgst hlen hsync
           hthird hphase hrsW hmult hcv hcom hrec hprev hclear hB' hnW hAW hr hTW hJ h)
-    have hstep := Restated.headsBelow_roundStep facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
-      hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hTB hs0 hs1 hbase
+    have hstep := Restated.headsBelow_roundStep (hrecvR := Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+        (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen
+          (by first | assumption | exact le_trans hr (Nat.le_succ _) | exact le_trans hr (Nat.le_add_right _ _) | exact Nat.le_succ_of_le hr | omega))) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT gap hgst
+      hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hTB hs0 hs1 hbase
     by_cases hle : s' ≤ (M.opening_slot S.hc (r + 1 + 1)) + 1
     · exact hstep s' h0 hle
     have hlt : (M.opening_slot S.hc (r + 1 + 1)) + 1 + 1 ≤ s' := Nat.lt_of_not_le hle
     obtain ⟨n_1, T_1, hJ1, hW1, h2⟩ := Restated.exists_anchor_chain_secondSlot facts S Sched x tE hexec hmono htd
-      hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear
+      hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear
       hB' hnW hAW hJswitch hr hTW hJ 1
     have hT1 : Restated.HeadsBelow M S Sched x T_1.erase ((M.opening_slot S.hc (r + 1 + 1)) + 1) :=
       h2 (Nat.succ_pos 0)
@@ -1461,7 +1470,7 @@ theorem headsBelow_persist_rounds (facts : Record.Facts M) (S : Setup V) (Sched 
       exact ih (r + 1) n_1 T_1 hr2 hW1 hJ1 hT1B _ le_rfl (Nat.succ_le_succ
         (by rw [facts.gr.opening_slot_succ S.hc (r + 1 + 1)]; exact Nat.le_add_right _ _)) hB2 s' (Nat.le_of_succ_le hlt) h1
     · have hanc := Restated.anchor_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap
-        hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+        hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
         hJswitch hr2 hW1 hJ1
       exact Restated.headsBelow_mono facts S Sched x hBT1 (hanc s' hlt)
 
@@ -1493,7 +1502,6 @@ theorem ancestorOfHonestHeadsFrom_of_compatible_anchor (facts : Record.Facts M) 
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1546,11 +1554,11 @@ theorem ancestorOfHonestHeadsFrom_of_compatible_anchor (facts : Record.Facts M) 
     have h2 : (M.opening_slot S.hc (r₀ + 1)) + 2 ≤ s' := Nat.succ_le_of_lt (lt_of_le_of_lt hs0 hlt)
     exact Restated.headsBelow_mono facts S Sched x hBT
       (Restated.anchor_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-        hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+        hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
         hr hTW hJ s' h2)
   · intro s' hs'
     exact Restated.headsBelow_persist_rounds facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync
-      hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch s' r₀ n T
+      hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch s' r₀ n T
       hr hTW hJ hTB s hs0 hs1 hB s' hs' (Nat.le_succ_of_le (facts.gr.le_opening_slot_far S.hc r₀ s'))
 
 end
@@ -1581,7 +1589,6 @@ theorem prevSG_ancestorOfHonestHeadsFrom (facts : Record.Facts M) (S : Setup V) 
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1635,14 +1642,16 @@ theorem prevSG_ancestorOfHonestHeadsFrom (facts : Record.Facts M) (S : Setup V) 
     fun n'' h => Restated.stepFinalizedCrossingUnderAnchor_of_afterSwitch facts S Sched x hr hnW hJ.toAfterPhaseInvariantOverActiveSetsSince
       (Restated.justified_preceq_anchor_ofJoint facts S Sched x tE hexec hmono htd tGAT gap hgst hlen hsync
         hthird hphase hrsW hmult hcv hcom hrec hprev hclear hB' hnW hAW hr hTW hJ h)
-  have hrange := Restated.prevSG_headsBelow_roundRange facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT
-    gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hv_2 ha₂ hav₂ hsent₂
+  have hrange := Restated.prevSG_headsBelow_roundRange (hrecvR := Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+        (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen
+          (by first | assumption | exact le_trans hr (Nat.le_succ _) | exact le_trans hr (Nat.le_add_right _ _) | exact Nat.le_succ_of_le hr | omega))) facts S Sched x tE hexec hmono htd hsync hmult hcom tGAT
+    gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hv_2 ha₂ hav₂ hsent₂
     hG₀ hconf₂ hTG
   have hle2 : (M.opening_slot S.hc (r + 1)) + 1 ≤ (M.opening_slot S.hc (r + 1 + 1)) + 1 := by
     rw [facts.gr.opening_slot_succ S.hc (r + 1)]
     exact Nat.succ_le_succ (Nat.le_add_right _ _)
   have hfrom := Restated.ancestorOfHonestHeadsFrom_of_compatible_anchor facts S Sched x tE hexec hmono htd hcatch
-    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB'
+    tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB'
     hnW hAW hJswitch hr hTW hJ (s := (M.opening_slot S.hc (r + 1)) + 1) le_rfl hle2
     (Protocol.compatible_comm (compatible_of_preceq_c2b hTG))
     (hrange _ (Nat.le_succ _) hle2)
@@ -1680,7 +1689,6 @@ theorem graded_ancestorOfHonestHeadsFrom (facts : Record.Facts M) (S : Setup V) 
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1727,20 +1735,32 @@ theorem graded_ancestorOfHonestHeadsFrom (facts : Record.Facts M) (S : Setup V) 
       (x[m][v].st).st.core.F S.hc.η_SG (r + 1) (M.early S.E S.hc (r + 1) p)
       (M.late S.E S.hc (r + 1) p) B ⇢ true) :
     Restated.AncestorOfHonestHeadsFrom M S Sched x B ((M.opening_slot S.hc (r + 1)) + 2) := by
-  have hBT := (joint_toTop_hp hJ).grade1 v hv p hp m hm B true hB rfl
+  have hpv : v ∈ Restated.grade1PerformersW M S Sched (r + 1) :=
+    Restated.mem_grade1PerformersW_of_honRound facts S Sched hmono hv
+  have hBT : Block.compatible B T.erase = true := by
+    by_cases hpg : p = Protocol.Phase.g1
+    · subst hpg; exact (joint_toTop_hp hJ).grade1Performers v hpv m hm B true hB rfl
+    · exact (joint_toTop_hp hJ).grade1 v hv p hpg hp m hm B true hB rfl
   rcases compatible_cases hBT with hBT | hTB
   · exact Restated.ancestorOfHonestHeadsFrom_of_preceq facts S Sched x hBT
       (Restated.anchor_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-        hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+        hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
         hr hTW hJ)
   · obtain ⟨n_prev, hnp0⟩ := hJ.prevTick
     have hnp : Restated.tickStepAt M x n_prev ((Restated.Vocabulary.Execution.Setup.a M S r)) := hnp0
-    obtain ⟨v_2, hv_2, a₂, ha₂, hav₂, hsent₂, G₀, hG₀, hconf₂, hBG⟩ :=
-      hJ.gradedUnderPrevSG n_prev hnp v hv p hp m hm B true hB rfl
+    have hGr : ∃ v_1 ∈ Restated.HonRound M S Sched (r + 1 - 1), ∃ a : NamedAttestation V,
+        a.round = r + 1 - 1 ∧ a.val_index = v_1 ∧
+        (⟨v_1, NamedObject.attest a⟩ : SignedMsg V (NamedObject V)) ∈ x[n_prev + 1].sent ∧
+        ∃ C : NamedBlock V, C ∈ (x[n_prev + 1][v_1].st).st.bodies ∧ a.confirmed = some C.root ∧
+          Block.Preceq B C.erase := by
+      by_cases hpg : p = Protocol.Phase.g1
+      · subst hpg; exact hJ.gradedUnderPrevSGPerformers n_prev hnp v hpv m hm B true hB rfl
+      · exact hJ.gradedUnderPrevSG n_prev hnp v hv p hpg hp m hm B true hB rfl
+    obtain ⟨v_2, hv_2, a₂, ha₂, hav₂, hsent₂, G₀, hG₀, hconf₂, hBG⟩ := hGr
     exact Restated.ancestorOfHonestHeadsFrom_of_preceq facts S Sched x hBG
       (Restated.ancestorOfHonestHeadsFrom_mono facts S Sched x (Nat.le_add_right _ _)
         (Restated.prevSG_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-          hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch
+          hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch
           hr hTW hJ hnp hv_2 ha₂ hav₂ hsent₂ hG₀ hconf₂ (preceq_trans_Preceq hTB hBG)))
 
 end
@@ -1770,7 +1790,6 @@ theorem eligibleDescendantOfAnchorPersists_ofJoint (facts : Record.Facts M) (S :
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1820,11 +1839,13 @@ theorem eligibleDescendantOfAnchorPersists_ofJoint (facts : Record.Facts M) (S :
     fun n'' h => Restated.stepFinalizedCrossingUnderAnchor_of_afterSwitch facts S Sched x hr hnW hJ.toAfterPhaseInvariantOverActiveSetsSince
       (Restated.justified_preceq_anchor_ofJoint facts S Sched x tE hexec hmono htd tGAT gap hgst hlen hsync
         hthird hphase hrsW hmult hcv hcom hrec hprev hclear hB' hnW hAW hr hTW hJ h)
-  have hsucc := Restated.headsBelow_succ_of_eligible_round facts S Sched x tE hexec hmono htd hsync hmult hcom
-    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hw hs hr hJ hn' hcross hJT hnp hs0 hs1 hm hvaw
+  have hsucc := Restated.headsBelow_succ_of_eligible_round (hrecvR := Restated.nextRoundReceipts_of_catchUp facts S Sched x hsync hcatch
+        (Restated.gst_le_action_of_switchRound_le facts S tGAT tE gap hgst hlen
+          (by first | assumption | exact le_trans hr (Nat.le_succ _) | exact le_trans hr (Nat.le_add_right _ _) | exact Nat.le_succ_of_le hr | omega))) facts S Sched x tE hexec hmono htd hsync hmult hcom
+    tGAT gap hgst hlen hcv hthird hphase hrsW hcs hr hJ hn' hcross hJT hnp hs0 hs1 hm hvaw
     hvh el hel' hel hTH
   exact Restated.ancestorOfHonestHeadsFrom_of_compatible_anchor facts S Sched x tE hexec hmono htd hcatch tGAT
-    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+    gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
     hJswitch hr hTW hJ (Nat.le_succ_of_le hs0) (Nat.succ_le_succ hs1)
     (Protocol.compatible_comm (compatible_of_preceq_c2b hTH)) hsucc
 
@@ -1856,7 +1877,6 @@ theorem live_confirmed_ancestorOfHonestHeadsFrom_ofJoint (facts : Record.Facts M
     (hmult : AwakeAtMultiples S Sched) (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     (hrec : Restated.strongOpeningsRecurFrom M S Sched tGAT tE gap)
     (hprev : ∀ r : Round, Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r → r ≤ Restated.switchRound M S tE →
       ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -1904,10 +1924,10 @@ theorem live_confirmed_ancestorOfHonestHeadsFrom_ofJoint (facts : Record.Facts M
       (Record.wakeStage M Sched (M.confirmation_time S.E s) x[m] v) (M.round_of S.hc (s + 1))) :
     Restated.AncestorOfHonestHeadsFrom M S Sched x (x[m + 1][v].st).st.core.live_confirmed (s + 1) :=
   Restated.live_confirmed_ancestorOfHonestHeadsFrom facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen
-    hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch hr₀
+    hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch hr₀
     hTW₀ hJ₀
     (Restated.eligibleDescendantOfAnchorPersists_ofJoint facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst
-      hlen hsync hthird hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW
+      hlen hsync hthird hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW
       hJswitch)
     hs0 hm hvaw hvh hrun
 

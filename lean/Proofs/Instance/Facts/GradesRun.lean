@@ -3,15 +3,15 @@ import Proofs.Instance.Facts.HandlersRun
 import Proofs.Instance.Facts.Schedule
 
 /-!
-# The run facts of the grades family at `Model.specDraft`
+# The run facts of the grades family at `Model.spec`
 
-Proofs of the fields of `GradesRunFacts` at `Model.specDraft` not proved elsewhere, and the bundle
-`Model.specDraft_runFacts_grades`. Along every path of a run, every result of a validator's saved
+Proofs of the fields of `GradesRunFacts` at `Model.spec` not proved elsewhere, and the bundle
+`Model.spec_runFacts_grades`. Along every path of a run, every result of a validator's saved
 grades is a block of its tree that comes from the initial frame or from the validator's own earlier
 capture, clipped to its current finalized block.
 -/
 
-namespace SpecDraftRecord.GradesRunFacts
+namespace SpecRecord.GradesRunFacts
 
 open Spec
 open scoped DC
@@ -196,27 +196,27 @@ theorem freezeRoot_mem {P : Provisional V} {st : Store V} {F : Block V} {eta r :
   have hD : Block.deepest? A = some D := Except.ok.inj h
   exact NodeFacts.filterM_ok_subset _ _ _ hA (GradesFacts.draft_deepest?_mem hD)
 
-end SpecDraftRecord.GradesRunFacts
+end SpecRecord.GradesRunFacts
 
 /-! ## The tick and the receipt, on the saved grades -/
 
-namespace SpecDraftRecord.GradesRunFacts
+namespace SpecRecord.GradesRunFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- The saved grades a tick of `Model.specDraftBase` writes are those of the answer `st0` of
+/-- The saved grades a tick of `Model.specBase` writes are those of the answer `st0` of
     `update_grades` on the node's store at `t`, clipped at the finalized block of the tick's final
     store. -/
 theorem tick_saved {S : Setup V} {v : V} {n : Spec.NodeState V} {t : Time}
     {out : Spec.NodeState V × List (NamedObject V)}
-    (hout : (Model.specDraftBase (V := V)).tick S v n t ⇢ out) :
+    (hout : (Model.specBase (V := V)).tick S v n t ⇢ out) :
     ∃ st0 : Spec.Store V,
       Spec.Protocol.update_grades (Setup.toSpec S).C (Setup.toSpec S).P n.st t =
         .ok st0 ∧
@@ -255,7 +255,7 @@ theorem reach_T_subset {C : Spec.Config} {P : Spec.Provisional V} {τ : Time}
   | refl => exact subset_refl _
   | tail _ hs ih => exact fun X hX => (HandlersRunFacts.keepsBlocks_step hs X (ih hX)).1
 
-/-- The member `freezeRoot` of `Model.specDraft` on the grade view of `st₀` has, as its one outcome,
+/-- The member `freezeRoot` of `Model.spec` on the grade view of `st₀` has, as its one outcome,
     the image of the block `graded_block` answers on `st₀` for round `r` and phase `p`. -/
 theorem freezeRoot_outcome (S : Setup V) (st₀ : OkStore V) (g : Spec.SavedGrades V)
     (r : Round) (p : DecoupledConsensusModel.Protocol.Phase)
@@ -267,22 +267,22 @@ theorem freezeRoot_outcome (S : Setup V) (st₀ : OkStore V) (g : Spec.SavedGrad
     (hx : Spec.Protocol.graded_block (Setup.toSpec S).C (Setup.toSpec S).P
       { st₀.val with saved_grades := g } r e l = .ok x)
     (fr : Option (DecoupledConsensusModel.Block V))
-    (hfr : (Model.specDraft (V := V)).freezeRoot S.E
-      ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing st₀))
+    (hfr : (Model.spec (V := V)).freezeRoot S.E
+      ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing st₀))
       st₀.val.F.toProof S.hc.η_SG r
-      ((Model.specDraft (V := V)).early S.E S.hc r p)
-      ((Model.specDraft (V := V)).late S.E S.hc r p) ⇢ fr) :
+      ((Model.spec (V := V)).early S.E S.hc r p)
+      ((Model.spec (V := V)).late S.E S.hc r p) ⇢ fr) :
     fr = x.map Spec.Block.toProof := by
   subst he hl
   have hx' : Spec.Protocol.freezeRoot (Spec.Provisional.toSpec S.E)
       (Member.gradeView st₀.val) st₀.val.F S.hc.η_SG r
-      ((Model.specDraft (V := V)).early S.E S.hc r p)
-      ((Model.specDraft (V := V)).late S.E S.hc r p) = .ok x := hx
+      ((Model.spec (V := V)).early S.E S.hc r p)
+      ((Model.spec (V := V)).late S.E S.hc r p) = .ok x := hx
   have h1 : Except.map (Option.map Spec.Block.toProof)
       (Spec.Protocol.freezeRoot (Spec.Provisional.toSpec S.E)
         (Member.gradeView st₀.val) ((Member.gradeView st₀.val).blockOfImage st₀.val.F.toProof)
-        S.hc.η_SG r ((Model.specDraft (V := V)).early S.E S.hc r p)
-        ((Model.specDraft (V := V)).late S.E S.hc r p)) = .ok fr :=
+        S.hc.η_SG r ((Model.spec (V := V)).early S.E S.hc r p)
+        ((Model.spec (V := V)).late S.E S.hc r p)) = .ok fr :=
     (returns_successOutcomes _ _).mp hfr
   rw [Spec.Store.blockOfImage_toProof_of_injOn (Member.gradeView st₀.val)
     st₀.property.2.1.injOn_toProof st₀.property.2.2.2, hx'] at h1
@@ -293,20 +293,20 @@ theorem freezeRoot_outcome (S : Setup V) (st₀ : OkStore V) (g : Spec.SavedGrad
 /-- `Origin S rho W i v r p root F`: either `r` is round `0` and `root` is empty, or some event `j`
     before event `i` is `v`'s tick at `domain r p`, and `root` is every outcome of the frozen root
     `v`'s store in `W j` computes for round `r` and phase `p`, clipped to `F`. -/
-def Origin (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.specDraft (V := V)).N)
+def Origin (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.spec (V := V)).N)
     (i : Nat) (v : V) (r : Round) (p : DecoupledConsensusModel.Protocol.Phase)
     (root : Option (DecoupledConsensusModel.Block V)) (F : DecoupledConsensusModel.Block V) : Prop :=
   (r = 0 ∧ root = none) ∨ ∃ (j : Nat) (t : Time),
-    j < i ∧ rho.events[j]? = some (.tick v t) ∧ t = (Model.specDraft (V := V)).domain S.E S.hc r p ∧
-    ∀ fr : Option (DecoupledConsensusModel.Block V), (Model.specDraft (V := V)).freezeRoot S.E
-      ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (W j v).st.core))
+    j < i ∧ rho.events[j]? = some (.tick v t) ∧ t = (Model.spec (V := V)).domain S.E S.hc r p ∧
+    ∀ fr : Option (DecoupledConsensusModel.Block V), (Model.spec (V := V)).freezeRoot S.E
+      ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (W j v).st.core))
       (W j v).st.core.F S.hc.η_SG r
-      ((Model.specDraft (V := V)).early S.E S.hc r p)
-      ((Model.specDraft (V := V)).late S.E S.hc r p) ⇢ fr →
-    root = fr.map (fun B => (Model.specDraft (V := V)).clipGrade B F)
+      ((Model.spec (V := V)).early S.E S.hc r p)
+      ((Model.spec (V := V)).late S.E S.hc r p) ⇢ fr →
+    root = fr.map (fun B => (Model.spec (V := V)).clipGrade B F)
 
 /-- `Origin` holds at every later event index. -/
-theorem origin_mono {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.specDraft (V := V)).N}
+theorem origin_mono {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.spec (V := V)).N}
     {i k : Nat} {v : V} {r : Round} {p : DecoupledConsensusModel.Protocol.Phase}
     {root : Option (DecoupledConsensusModel.Block V)} {F : DecoupledConsensusModel.Block V}
     (h : Origin S rho W i v r p root F) (hik : i ≤ k) : Origin S rho W k v r p root F := by
@@ -316,19 +316,19 @@ theorem origin_mono {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model
 
 /-- Clipping at `F` then at a descendant `G` of `F` is clipping at `G`. -/
 theorem clipGrade_after (B F G : DecoupledConsensusModel.Block V) (hFG : Block.Preceq F G) :
-    (Model.specDraft (V := V)).clipGrade ((Model.specDraft (V := V)).clipGrade B F) G =
-      (Model.specDraft (V := V)).clipGrade B G := by
+    (Model.spec (V := V)).clipGrade ((Model.spec (V := V)).clipGrade B F) G =
+      (Model.spec (V := V)).clipGrade B G := by
   rw [GradesFacts.eq_clipGrade]
   exact (priv% Proofs.Vocabulary.Protocol.Grades.CacheProvenance
     DecoupledConsensusModel.Proofs.NamedCacheProvenance.clip_after_advance) B F G hFG
 
 /-- An origin read against `F` gives the origin of the result clipped at a descendant `G` of `F`,
     read against `G`. -/
-theorem origin_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.specDraft (V := V)).N}
+theorem origin_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.spec (V := V)).N}
     {i : Nat} {v : V} {r : Round} {p : DecoupledConsensusModel.Protocol.Phase}
     {root : Option (DecoupledConsensusModel.Block V)} {F G : DecoupledConsensusModel.Block V}
     (h : Origin S rho W i v r p root F) (hFG : Block.Preceq F G) :
-    Origin S rho W i v r p (root.map (fun B => (Model.specDraft (V := V)).clipGrade B G)) G := by
+    Origin S rho W i v r p (root.map (fun B => (Model.spec (V := V)).clipGrade B G)) G := by
   rcases h with ⟨hr, rfl⟩ | ⟨j, t, hj, he, ht, hr⟩
   · exact Or.inl ⟨hr, rfl⟩
   · refine Or.inr ⟨j, t, hj, he, ht, fun fr hfr => ?_⟩
@@ -339,7 +339,7 @@ theorem origin_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model
 
 /-- `Good S rho W k v T F`: the claim on a saved result that its block, if any, is a block of `T`,
     and that its image has the origin `Origin` at index `k`, read against `F`. -/
-def Good (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.specDraft (V := V)).N) (k : Nat)
+def Good (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.spec (V := V)).N) (k : Nat)
     (v : V) (T : Finset (Spec.Block V)) (F : DecoupledConsensusModel.Block V) :
     Round → DecoupledConsensusModel.Protocol.Phase → Option (Spec.Block V) → Prop :=
   fun r p G => (∀ g, G = some g → g ∈ T) ∧
@@ -347,15 +347,15 @@ def Good (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.specDraft 
 
 /-- `Pre S rho W k v T F`: the claim on a saved result that its block, if any, is a block of `T`,
     and that its image clipped at `F` has the origin `Origin` at index `k`, read against `F`. -/
-def Pre (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.specDraft (V := V)).N) (k : Nat)
+def Pre (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.spec (V := V)).N) (k : Nat)
     (v : V) (T : Finset (Spec.Block V)) (F : DecoupledConsensusModel.Block V) :
     Round → DecoupledConsensusModel.Protocol.Phase → Option (Spec.Block V) → Prop :=
   fun r p G => (∀ g, G = some g → g ∈ T) ∧
     Origin S rho W k v r p ((G.map Spec.Block.toProof).map
-      (fun B => (Model.specDraft (V := V)).clipGrade B F)) F
+      (fun B => (Model.spec (V := V)).clipGrade B F)) F
 
 /-- `Good` gives `Pre` at the same `F`. -/
-theorem pre_of_good {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.specDraft (V := V)).N}
+theorem pre_of_good {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.spec (V := V)).N}
     {k : Nat} {v : V} {T : Finset (Spec.Block V)} {F : DecoupledConsensusModel.Block V}
     {r : Round} {p : DecoupledConsensusModel.Protocol.Phase} {G : Option (Spec.Block V)}
     (h : Good S rho W k v T F r p G) : Pre S rho W k v T F r p G :=
@@ -364,7 +364,7 @@ theorem pre_of_good {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model
 /-- Saved grades satisfying `Pre` at `T₀` and `F₀`, clipped at the finalized block of a store `st₁`
     whose tree holds `T₀` and whose finalized block's image descends from `F₀`, satisfy `Good` at
     `st₁`'s tree and finalized block. -/
-theorem claim_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.specDraft (V := V)).N}
+theorem claim_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.spec (V := V)).N}
     {k : Nat} {v : V} {T₀ : Finset (Spec.Block V)} {F₀ : DecoupledConsensusModel.Block V}
     {c : Spec.SavedGrades V} {st₁ : Spec.Store V}
     (h : CacheClaim c (Pre S rho W k v T₀ F₀)) (hsub : T₀ ⊆ st₁.T) (hok : StoreOk st₁)
@@ -378,7 +378,7 @@ theorem claim_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.
   have hpar := hok.2.2.1
   have himg : (G.map (fun g => Spec.Protocol.deepest_compatible_ancestor g st₁.F)).map
       Spec.Block.toProof = (G.map Spec.Block.toProof).map
-        (fun B => (Model.specDraft (V := V)).clipGrade B st₁.F.toProof) := by
+        (fun B => (Model.spec (V := V)).clipGrade B st₁.F.toProof) := by
     cases G with
     | none => rfl
     | some g =>
@@ -395,14 +395,14 @@ theorem claim_clip {S : Setup V} {rho : Record.Run V} {W : Nat → V → (Model.
       exact dca_mem st₁.T hpar st₁.F g₀ (hsub (hT g₀ rfl))
   · rw [himg]
     have h2 := origin_clip hO hF
-    rwa [Option.map_map, show ((fun B => (Model.specDraft (V := V)).clipGrade B st₁.F.toProof) ∘
-      (fun B => (Model.specDraft (V := V)).clipGrade B F₀)) =
-        (fun B => (Model.specDraft (V := V)).clipGrade B st₁.F.toProof) from
+    rwa [Option.map_map, show ((fun B => (Model.spec (V := V)).clipGrade B st₁.F.toProof) ∘
+      (fun B => (Model.spec (V := V)).clipGrade B F₀)) =
+        (fun B => (Model.spec (V := V)).clipGrade B st₁.F.toProof) from
           funext (fun B => clipGrade_after B F₀ st₁.F.toProof hF)] at h2
 
 /-- `RunClaim S rho W i v`: every result of `v`'s saved grades in the world `W i` satisfies `Good`
     at index `i`, `v`'s tree and the image of `v`'s finalized block. -/
-def RunClaim (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.specDraft (V := V)).N)
+def RunClaim (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.spec (V := V)).N)
     (i : Nat) (v : V) : Prop :=
   CacheClaim (W i v).val.st.saved_grades
     (Good S rho W i v (W i v).val.st.T (W i v).val.st.F.toProof)
@@ -410,10 +410,10 @@ def RunClaim (S : Setup V) (rho : Record.Run V) (W : Nat → V → (Model.specDr
 /-- Folding the event at index `k` from `w` leads to `w'` exactly when there is no event at `k` and
     `w' = w`, or there is one and `w'` is a world it can lead to from `w`. -/
 theorem path_step {S : Setup V} {l : List (Record.Event V)} {k : Nat}
-    {w w' : V → (Model.specDraft (V := V)).N}
-    (h : w' ∈ ((l.drop k).take 1).foldlM (worldStepOf (Model.specDraft (V := V)) S) w) :
+    {w w' : V → (Model.spec (V := V)).N}
+    (h : w' ∈ ((l.drop k).take 1).foldlM (worldStepOf (Model.spec (V := V)) S) w) :
     (l[k]? = none ∧ w' = w) ∨
-      ∃ e, l[k]? = some e ∧ w' ∈ worldStepOf (Model.specDraft (V := V)) S w e := by
+      ∃ e, l[k]? = some e ∧ w' ∈ worldStepOf (Model.spec (V := V)) S w e := by
   cases hd : l.drop k with
   | nil =>
     rw [hd] at h
@@ -436,8 +436,8 @@ theorem path_step {S : Setup V} {l : List (Record.Event V)} {k : Nat}
 
 /-- `RunClaim` holds at the initial world. -/
 theorem runClaim_init (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N)
-    (h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u) (v : V) :
+    (W : Nat → V → (Model.spec (V := V)).N)
+    (h0 : W 0 = fun u => (Model.spec (V := V)).initial S u) (v : V) :
     RunClaim S rho W 0 v := by
   unfold RunClaim
   rw [h0]
@@ -453,7 +453,7 @@ theorem runClaim_init (S : Setup V) (rho : Record.Run V)
 
 /-- A validator whose store an event leaves unchanged keeps `RunClaim` at the next index. -/
 theorem runClaim_same {S : Setup V} {rho : Record.Run V}
-    {W : Nat → V → (Model.specDraft (V := V)).N} {i : Nat} {v : V}
+    {W : Nat → V → (Model.spec (V := V)).N} {i : Nat} {v : V}
     (hst : (W (i + 1) v).val.st = (W i v).val.st) (h : RunClaim S rho W i v) :
     RunClaim S rho W (i + 1) v := by
   unfold RunClaim at h ⊢
@@ -462,13 +462,13 @@ theorem runClaim_same {S : Setup V} {rho : Record.Run V}
 
 /-- `v`'s receipt of an object keeps `RunClaim`. -/
 theorem runClaim_process {S : Setup V} {rho : Record.Run V}
-    {W : Nat → V → (Model.specDraft (V := V)).N} {i : Nat} {v : V} {o : NamedObject V}
-    {n' : (Model.specDraft (V := V)).N}
-    (hn' : (Model.specDraft (V := V)).process S (W i v) o ⇢ n') (hv : W (i + 1) v = n')
+    {W : Nat → V → (Model.spec (V := V)).N} {i : Nat} {v : V} {o : NamedObject V}
+    {n' : (Model.spec (V := V)).N}
+    (hn' : (Model.spec (V := V)).process S (W i v) o ⇢ n') (hv : W (i + 1) v = n')
     (h : RunClaim S rho W i v) : RunClaim S rho W (i + 1) v := by
   unfold RunClaim at h ⊢
   rw [hv]
-  have hF := NodeFacts.specDraft_node_process_F S (W i v) o n' hn'
+  have hF := NodeFacts.spec_node_process_F S (W i v) o n' hn'
   have he : n'.val = receiveNamedObject S (W i v).val o :=
     (NodeFacts.process_returns_iff S (W i v).val n'.val o).mp hn'
   have hk := NodeFacts.keeps_receipt_process S (W i v).val.st o
@@ -490,9 +490,9 @@ theorem runClaim_process {S : Setup V} {rho : Record.Run V}
 
 /-- `v`'s tick at `t`, the event at index `i`, keeps `RunClaim`. -/
 theorem runClaim_tick {S : Setup V} {rho : Record.Run V}
-    {W : Nat → V → (Model.specDraft (V := V)).N} {i : Nat} {v : V} {t : Time}
-    {out : (Model.specDraft (V := V)).N × List (NamedObject V)}
-    (hout : (Model.specDraft (V := V)).tick S v (W i v) t ⇢ out) (hv : W (i + 1) v = out.1)
+    {W : Nat → V → (Model.spec (V := V)).N} {i : Nat} {v : V} {t : Time}
+    {out : (Model.spec (V := V)).N × List (NamedObject V)}
+    (hout : (Model.spec (V := V)).tick S v (W i v) t ⇢ out) (hv : W (i + 1) v = out.1)
     (he : rho.events[i]? = some (.tick v t)) (h : RunClaim S rho W i v) :
     RunClaim S rho W (i + 1) v := by
   unfold RunClaim at h ⊢
@@ -508,30 +508,30 @@ theorem runClaim_tick {S : Setup V} {rho : Record.Run V}
     refine ⟨fun g' hg' => ?_, Or.inr ⟨i, t, Nat.lt_succ_self i, he, ht, fun fr hfr => ?_⟩⟩
     · subst hg'
       exact freezeRoot_mem hx
-    · have hfr' : (Model.specDraft (V := V)).freezeRoot S.E
-          ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing
+    · have hfr' : (Model.spec (V := V)).freezeRoot S.E
+          ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing
             (⟨(W i v).val.st, (W i v).property⟩ : OkStore V)))
           (W i v).val.st.F.toProof S.hc.η_SG r
-          ((Model.specDraft (V := V)).early S.E S.hc r p)
-          ((Model.specDraft (V := V)).late S.E S.hc r p) ⇢ fr := hfr
+          ((Model.spec (V := V)).early S.E S.hc r p)
+          ((Model.spec (V := V)).late S.E S.hc r p) ⇢ fr := hfr
       rw [freezeRoot_outcome S ⟨(W i v).val.st, (W i v).property⟩ g r p x e l hE hL hx fr hfr'])
   have hc3 : CacheClaim st0.saved_grades
       (Good S rho W (i + 1) v (W i v).val.st.T (W i v).val.st.F.toProof) := by
     rw [hc₂]
     exact claim_clip hcl subset_rfl (W i v).property (Proofs.ModelProperties.Preceq_self _)
   have hT : (W i v).val.st.T ⊆ out.1.val.st.T :=
-    reach_T_subset (HandlersRunFacts.specDraft_tick_reach S v (W i v) t out hout)
-  have hF := NodeFacts.specDraft_node_tick_F S v (W i v) t out hout
+    reach_T_subset (HandlersRunFacts.spec_tick_reach S v (W i v) t out hout)
+  have hF := NodeFacts.spec_node_tick_F S v (W i v) t out hout
   rw [hsg]
   exact claim_clip (cacheClaim_mono hc3 (fun r p G hG => pre_of_good hG)) hT out.1.property hF
 
 /-- Along every path `W` of a run from the initial world, `RunClaim` holds at every index the path
     reaches, for every validator. -/
 theorem runClaim_path (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N)
-    (h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u) :
+    (W : Nat → V → (Model.spec (V := V)).N)
+    (h0 : W 0 = fun u => (Model.spec (V := V)).initial S u) :
     ∀ i : Nat, (∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-        (worldStepOf (Model.specDraft (V := V)) S) (W k)) →
+        (worldStepOf (Model.spec (V := V)) S) (W k)) →
       ∀ v, RunClaim S rho W i v := by
   intro i
   induction i with
@@ -549,7 +549,7 @@ theorem runClaim_path (S : Setup V) (rho : Record.Run V)
         by_cases hu : v = u
         · subst hu
           rw [Function.update_self]
-          exact HandlersRunFacts.specDraft_wake_st _
+          exact HandlersRunFacts.spec_wake_st _
         · rw [Function.update_of_ne hu]
       | tick u t =>
         simp only [worldStepOf, Set.mem_setOf_eq] at hW
@@ -573,11 +573,11 @@ theorem runClaim_path (S : Setup V) (rho : Record.Run V)
 /-- A world a fold of the first `i` events of `l` reaches from `w₀` lies on a path from `w₀`, each
     world one step from the one before. -/
 theorem path_of_fold (S : Setup V) :
-    ∀ (l : List (Record.Event V)) (i : Nat) (w₀ w₁ : V → (Model.specDraft (V := V)).N),
-      w₁ ∈ (l.take i).foldlM (worldStepOf (Model.specDraft (V := V)) S) w₀ →
-      ∃ W : Nat → V → (Model.specDraft (V := V)).N, W 0 = w₀ ∧ W i = w₁ ∧
+    ∀ (l : List (Record.Event V)) (i : Nat) (w₀ w₁ : V → (Model.spec (V := V)).N),
+      w₁ ∈ (l.take i).foldlM (worldStepOf (Model.spec (V := V)) S) w₀ →
+      ∃ W : Nat → V → (Model.spec (V := V)).N, W 0 = w₀ ∧ W i = w₁ ∧
         ∀ k < i, W (k + 1) ∈ ((l.drop k).take 1).foldlM
-          (worldStepOf (Model.specDraft (V := V)) S) (W k) := by
+          (worldStepOf (Model.spec (V := V)) S) (W k) := by
   intro l
   induction l with
   | nil =>
@@ -609,11 +609,11 @@ theorem path_of_fold (S : Setup V) :
 /-- On a path from the initial world, the world at index `k` is one the first `k` events of the run
     can lead to. -/
 theorem path_stateBefore (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N)
-    (h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u) (i : Nat)
+    (W : Nat → V → (Model.spec (V := V)).N)
+    (h0 : W 0 = fun u => (Model.spec (V := V)).initial S u) (i : Nat)
     (hstep : ∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W k)) :
-    ∀ k ≤ i, W k ∈ stateBeforeOf (Model.specDraft (V := V)) S rho k := by
+      (worldStepOf (Model.spec (V := V)) S) (W k)) :
+    ∀ k ≤ i, W k ∈ stateBeforeOf (Model.spec (V := V)) S rho k := by
   intro k
   induction k with
   | zero =>
@@ -630,11 +630,11 @@ theorem path_stateBefore (S : Setup V) (rho : Record.Run V)
 /-- On a path, the world at index `m` is one the events `j` to `m - 1` lead to from the world at
     index `j`. -/
 theorem path_segment (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N) (i : Nat)
+    (W : Nat → V → (Model.spec (V := V)).N) (i : Nat)
     (hstep : ∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W k)) (j : Nat) :
+      (worldStepOf (Model.spec (V := V)) S) (W k)) (j : Nat) :
     ∀ m, j ≤ m → m ≤ i → W m ∈ ((rho.events.drop j).take (m - j)).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W j) := by
+      (worldStepOf (Model.spec (V := V)) S) (W j) := by
   intro m hjm
   induction m, hjm using Nat.le_induction with
   | base =>
@@ -652,14 +652,14 @@ theorem path_segment (S : Setup V) (rho : Record.Run V)
 /-- A completed result the record reads from a validator's saved grades on a path is the image of a
     saved result satisfying `Good` at its round and phase. -/
 theorem origin_of_path (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N)
-    (h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u) (i : Nat)
+    (W : Nat → V → (Model.spec (V := V)).N)
+    (h0 : W 0 = fun u => (Model.spec (V := V)).initial S u) (i : Nat)
     (hstep : ∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W k))
+      (worldStepOf (Model.spec (V := V)) S) (W k))
     (v : V) (r : Round) (p : DecoupledConsensusModel.Protocol.Phase)
     (root : Option (DecoupledConsensusModel.Block V))
-    (h : (Model.specDraft (V := V)).phaseResult
-      ((Model.specDraft (V := V)).cacheAtRound (W i v).cache r) p = some root) :
+    (h : (Model.spec (V := V)).phaseResult
+      ((Model.spec (V := V)).cacheAtRound (W i v).cache r) p = some root) :
     Origin S rho W i v r p root (W i v).val.st.F.toProof := by
   have hc := runClaim_path S rho W h0 i hstep v
   have h' : (res (Spec.Protocol.saved_round_grades (W i v).val.st.saved_grades r)
@@ -672,56 +672,56 @@ theorem origin_of_path (S : Setup V) (rho : Record.Run V)
     subst e
     exact (cacheClaim_lookup hc r p G hG).2
 
-/-- The field `completed_phase_origin_along` of `GradesRunFacts` at `Model.specDraft`: on every path
+/-- The field `completed_phase_origin_along` of `GradesRunFacts` at `Model.spec`: on every path
     `W` of `rho`, a completed result `root` for round `r` and phase `p` in `v`'s cache at `W i` is
     empty at round 0, or is every outcome of the frozen root `v`'s store computed at an earlier tick
     of `v` at `domain r p`, clipped to `v`'s finalized block in `W i`. -/
-theorem specDraft_completed_phase_origin_along : ∀ (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N),
-    (∀ i : Nat, W i ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i ∧
+theorem spec_completed_phase_origin_along : ∀ (S : Setup V) (rho : Record.Run V)
+    (W : Nat → V → (Model.spec (V := V)).N),
+    (∀ i : Nat, W i ∈ stateBeforeOf (Model.spec (V := V)) S rho i ∧
       W (i + 1) ∈ ((rho.events.drop i).take (i + 1 - i)).foldlM
-        (worldStepOf (Model.specDraft (V := V)) S) (W i)) →
+        (worldStepOf (Model.spec (V := V)) S) (W i)) →
     ∀ (i : Nat) (v : V) (r : Round) (p : DecoupledConsensusModel.Protocol.Phase)
       (root : Option (DecoupledConsensusModel.Block V)),
-    (Model.specDraft (V := V)).phaseResult
-      ((Model.specDraft (V := V)).cacheAtRound (W i v).cache r) p = some root →
+    (Model.spec (V := V)).phaseResult
+      ((Model.spec (V := V)).cacheAtRound (W i v).cache r) p = some root →
     (r = 0 ∧ root = none) ∨ ∃ (j : Nat) (t : Time),
-      j < i ∧ rho.events[j]? = some (.tick v t) ∧ t = (Model.specDraft (V := V)).domain S.E S.hc r p ∧
-      ∀ fr : Option (DecoupledConsensusModel.Block V), (Model.specDraft (V := V)).freezeRoot S.E
-        ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (W j v).st.core))
+      j < i ∧ rho.events[j]? = some (.tick v t) ∧ t = (Model.spec (V := V)).domain S.E S.hc r p ∧
+      ∀ fr : Option (DecoupledConsensusModel.Block V), (Model.spec (V := V)).freezeRoot S.E
+        ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (W j v).st.core))
         (W j v).st.core.F S.hc.η_SG r
-        ((Model.specDraft (V := V)).early S.E S.hc r p)
-        ((Model.specDraft (V := V)).late S.E S.hc r p) ⇢ fr →
-      root = fr.map (fun B => (Model.specDraft (V := V)).clipGrade B (W i v).st.core.F) := by
+        ((Model.spec (V := V)).early S.E S.hc r p)
+        ((Model.spec (V := V)).late S.E S.hc r p) ⇢ fr →
+      root = fr.map (fun B => (Model.spec (V := V)).clipGrade B (W i v).st.core.F) := by
   intro S rho W hW i v r p root h
-  have h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u := (hW 0).1
+  have h0 : W 0 = fun u => (Model.spec (V := V)).initial S u := (hW 0).1
   have hstep : ∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W k) := fun k _ => by
+      (worldStepOf (Model.spec (V := V)) S) (W k) := fun k _ => by
     have := (hW k).2
     rwa [Nat.add_sub_cancel_left] at this
   exact origin_of_path S rho W h0 i hstep v r p root h
 
-/-- The field `completed_phase_origin` of `GradesRunFacts` at `Model.specDraft`: a completed result
+/-- The field `completed_phase_origin` of `GradesRunFacts` at `Model.spec`: a completed result
     `root` for round `r` and phase `p` in `v`'s cache in a world `w₁` before event `i` is empty at
     round 0, or is every outcome of the frozen root `v`'s store computed, in a world before an
     earlier tick `j` of `v` at `domain r p` that leads to `w₁`, clipped to `v`'s finalized block in
     `w₁`. -/
-theorem specDraft_completed_phase_origin : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat) (v : V)
+theorem spec_completed_phase_origin : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat) (v : V)
     (r : Round) (p : DecoupledConsensusModel.Protocol.Phase)
     (root : Option (DecoupledConsensusModel.Block V)),
-    ∀ w₁ ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i,
-    (Model.specDraft (V := V)).phaseResult
-      ((Model.specDraft (V := V)).cacheAtRound (w₁ v).cache r) p = some root →
+    ∀ w₁ ∈ stateBeforeOf (Model.spec (V := V)) S rho i,
+    (Model.spec (V := V)).phaseResult
+      ((Model.spec (V := V)).cacheAtRound (w₁ v).cache r) p = some root →
     (r = 0 ∧ root = none) ∨ ∃ (j : Nat) (t : Time),
-      j < i ∧ rho.events[j]? = some (.tick v t) ∧ t = (Model.specDraft (V := V)).domain S.E S.hc r p ∧
-      ∃ w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho j,
-      w₁ ∈ ((rho.events.drop j).take (i - j)).foldlM (worldStepOf (Model.specDraft (V := V)) S) w ∧
-      ∀ fr : Option (DecoupledConsensusModel.Block V), (Model.specDraft (V := V)).freezeRoot S.E
-        ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (w v).st.core))
+      j < i ∧ rho.events[j]? = some (.tick v t) ∧ t = (Model.spec (V := V)).domain S.E S.hc r p ∧
+      ∃ w ∈ stateBeforeOf (Model.spec (V := V)) S rho j,
+      w₁ ∈ ((rho.events.drop j).take (i - j)).foldlM (worldStepOf (Model.spec (V := V)) S) w ∧
+      ∀ fr : Option (DecoupledConsensusModel.Block V), (Model.spec (V := V)).freezeRoot S.E
+        ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (w v).st.core))
         (w v).st.core.F S.hc.η_SG r
-        ((Model.specDraft (V := V)).early S.E S.hc r p)
-        ((Model.specDraft (V := V)).late S.E S.hc r p) ⇢ fr →
-      root = fr.map (fun B => (Model.specDraft (V := V)).clipGrade B (w₁ v).st.core.F) := by
+        ((Model.spec (V := V)).early S.E S.hc r p)
+        ((Model.spec (V := V)).late S.E S.hc r p) ⇢ fr →
+      root = fr.map (fun B => (Model.spec (V := V)).clipGrade B (w₁ v).st.core.F) := by
   intro S rho i v r p root w₁ hw₁ h
   obtain ⟨W, h0, hi, hstep⟩ := path_of_fold S rho.events i _ w₁ hw₁
   subst hi
@@ -730,11 +730,11 @@ theorem specDraft_completed_phase_origin : ∀ (S : Setup V) (rho : Record.Run V
   · exact Or.inr ⟨j, t, hj, he, ht, W j, path_stateBefore S rho W h0 i hstep j hj.le,
       path_segment S rho W i hstep j i hj.le le_rfl, hr⟩
 
-end SpecDraftRecord.GradesRunFacts
+end SpecRecord.GradesRunFacts
 
 /-! ## The results the grades update keeps -/
 
-namespace SpecDraftRecord.GradesRunFacts
+namespace SpecRecord.GradesRunFacts
 
 open Spec
 open scoped DC
@@ -828,17 +828,17 @@ theorem contractInTree_of_claim {T : Finset (Block V)} {c : SavedGrades V}
   · exact key _ _ h.1 g (by simpa using hg) hG
   · exact key _ _ h.2 g (by simpa using hg) hG
 
-end SpecDraftRecord.GradesRunFacts
+end SpecRecord.GradesRunFacts
 
 /-! ## The field `frame_phase_prepared_eq_of_outcomes` -/
 
-namespace SpecDraftRecord.GradesRunFacts
+namespace SpecRecord.GradesRunFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -846,14 +846,14 @@ variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 /-- In every world a list of events leads to from the initial world, every block of every
     validator's saved grades is a block of its tree. -/
 theorem memClaim_of_fold (S : Setup V) (es : List (Record.Event V))
-    (w : V → (Model.specDraft (V := V)).N)
-    (hw : w ∈ es.foldlM (worldStepOf (Model.specDraft (V := V)) S)
-      (fun u => (Model.specDraft (V := V)).initial S u)) (v : V) :
+    (w : V → (Model.spec (V := V)).N)
+    (hw : w ∈ es.foldlM (worldStepOf (Model.spec (V := V)) S)
+      (fun u => (Model.spec (V := V)).initial S u)) (v : V) :
     CacheClaim (w v).val.st.saved_grades
       (fun _ _ G => ∀ g, G = some g → g ∈ (w v).val.st.T) := by
   let rho : Record.Run V := ⟨∅, 0, es⟩
-  have hw' : w ∈ (rho.events.take es.length).foldlM (worldStepOf (Model.specDraft (V := V)) S)
-      (fun u => (Model.specDraft (V := V)).initial S u) := by
+  have hw' : w ∈ (rho.events.take es.length).foldlM (worldStepOf (Model.spec (V := V)) S)
+      (fun u => (Model.spec (V := V)).initial S u) := by
     rw [show rho.events.take es.length = es from List.take_length]
     exact hw
   obtain ⟨W, h0, hn, hstep⟩ := path_of_fold S rho.events es.length _ w hw'
@@ -882,27 +882,27 @@ theorem memClaim_update_grades {C : Spec.Config} {P : Spec.Provisional V}
     cases hg
     exact dca_mem _ hok.2.2.1 _ _ (hG g₀ rfl)
 
-/-- The field `frame_phase_prepared_eq_of_outcomes` of `GradesRunFacts` at `Model.specDraft`: if the
+/-- The field `frame_phase_prepared_eq_of_outcomes` of `GradesRunFacts` at `Model.spec`: if the
     frame `v`'s node state reads for round `r` has the result `root` at phase `p`, then every
     outcome of the phase tick at `u`, in round `r`, reads the same result. -/
-theorem specDraft_frame_phase_prepared_eq_of_outcomes : ∀ (S : Setup V) (rho : Record.Run V)
+theorem spec_frame_phase_prepared_eq_of_outcomes : ∀ (S : Setup V) (rho : Record.Run V)
     (v : V) (r : Round) (p : DecoupledConsensusModel.Protocol.Phase) (u : Time)
-    (_hround : (Model.specDraft (V := V)).round_of S.hc (S.E.slotOf u) = r)
-    (root : Option (DecoupledConsensusModel.Block V)) (w : V → (Model.specDraft (V := V)).N)
+    (_hround : (Model.spec (V := V)).round_of S.hc (S.E.slotOf u) = r)
+    (root : Option (DecoupledConsensusModel.Block V)) (w : V → (Model.spec (V := V)).N)
     (_hw : w ∈ (rho.events.filter (fun e => decide (e.time < u))).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (fun x => (Model.specDraft (V := V)).initial S x))
-    (_hbase : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).readFrame (w v).cache
-      ((Model.specDraft (V := V)).toHealing (w v).st.core) r) p = some root)
-    (c : (Model.specDraft (V := V)).Cache)
-    (_hc : (Model.specDraft (V := V)).onPhaseTick S.E S.hc (w v).st.core.toHealing u (w v).cache ⇢ c),
-    (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).readFrame c
-      ((Model.specDraft (V := V)).toHealing
-        ((Model.specDraft (V := V)).ns_setClock S.E (w v).st u).core) r) p = some root := by
+      (worldStepOf (Model.spec (V := V)) S) (fun x => (Model.spec (V := V)).initial S x))
+    (_hbase : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).readFrame (w v).cache
+      ((Model.spec (V := V)).toHealing (w v).st.core) r) p = some root)
+    (c : (Model.spec (V := V)).Cache)
+    (_hc : (Model.spec (V := V)).onPhaseTick S.E S.hc (w v).st.core.toHealing u (w v).cache ⇢ c),
+    (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).readFrame c
+      ((Model.spec (V := V)).toHealing
+        ((Model.spec (V := V)).ns_setClock S.E (w v).st u).core) r) p = some root := by
   intro S rho v r p u hround root w hw hbase c hc
   have hok : StoreOk (w v).val.st := (w v).property
   have hmem := memClaim_of_fold S _ w hw v
-  have hL : (Model.specDraft (V := V)).phaseResult ((Model.specDraft (V := V)).readFrame
-      (w v).cache ((Model.specDraft (V := V)).toHealing (w v).st.core) r) p =
+  have hL : (Model.spec (V := V)).phaseResult ((Model.spec (V := V)).readFrame
+      (w v).cache ((Model.spec (V := V)).toHealing (w v).st.core) r) p =
       (Spec.Protocol.make_result_compatible_with (w v).val.st.F
         (res (Spec.Protocol.saved_round_grades (w v).val.st.saved_grades r) p)).toProof := by
     show (Spec.Protocol.phaseResult (Spec.Protocol.round_grades
@@ -946,11 +946,11 @@ theorem specDraft_frame_phase_prepared_eq_of_outcomes : ∀ (S : Setup V) (rho :
   rw [hR, hkept', mrc_idem]
   exact hbase
 
-end SpecDraftRecord.GradesRunFacts
+end SpecRecord.GradesRunFacts
 
 /-! ## The grade-2 block a duty reads -/
 
-namespace SpecDraftRecord.GradesRunFacts
+namespace SpecRecord.GradesRunFacts
 
 open Spec
 open scoped DC
@@ -1016,7 +1016,7 @@ theorem round_g2_of_contract {X : Store V} {c : SavedGrades V} {r : Round} (hrou
     {G : Block V}
     (h : (Protocol.round_grades
       { Store.ofImage X with
-        saved_grades := SpecDraftRecord.fill (Protocol.advance_to_round (X.contractOfImage c) r) }
+        saved_grades := SpecRecord.fill (Protocol.advance_to_round (X.contractOfImage c) r) }
       r).g2 = .computed (some G)) :
     ∃ g, c.current.g2 = .computed (some g) ∧
       DecoupledConsensusModel.Block.Preceq G.toProof g.toProof := by
@@ -1024,7 +1024,7 @@ theorem round_g2_of_contract {X : Store V} {c : SavedGrades V} {r : Round} (hrou
   have hadv : Protocol.advance_to_round (X.contractOfImage c) c.round = X.contractOfImage c := by
     unfold Protocol.advance_to_round
     exact if_pos rfl
-  have hsrg : Protocol.saved_round_grades (SpecDraftRecord.fill (X.contractOfImage c)) c.round =
+  have hsrg : Protocol.saved_round_grades (SpecRecord.fill (X.contractOfImage c)) c.round =
       fillRound (X.roundGradesOfImage c.current) := by
     unfold Protocol.saved_round_grades
     exact (if_pos rfl).trans rfl
@@ -1032,7 +1032,7 @@ theorem round_g2_of_contract {X : Store V} {c : SavedGrades V} {r : Round} (hrou
       (fillResult (X.resultOfImage c.current.g2)) = .computed (some G) := by
     rw [← h]
     show _ = (Protocol.make_round_grades_compatible_with _
-      (Protocol.saved_round_grades (SpecDraftRecord.fill (Protocol.advance_to_round (X.contractOfImage c)
+      (Protocol.saved_round_grades (SpecRecord.fill (Protocol.advance_to_round (X.contractOfImage c)
         c.round)) c.round)).g2
     rw [hadv, hsrg]
     rfl
@@ -1050,17 +1050,17 @@ theorem round_g2_of_contract {X : Store V} {c : SavedGrades V} {r : Round} (hrou
     rw [Store.toProof_blockOfImage] at h1
     exact DecoupledConsensusModel.Proofs.ModelProperties.preceq_eq_true_iff_Preceq.mp h1
 
-end SpecDraftRecord.GradesRunFacts
+end SpecRecord.GradesRunFacts
 
 /-! ## The fields `q2_capture_at_action_read` and `q2_capture_at_action_read_along` -/
 
-namespace SpecDraftRecord.GradesRunFacts
+namespace SpecRecord.GradesRunFacts
 
 open DecoupledConsensusModel
 open DecoupledConsensusModel.Sts
 open DecoupledConsensusModel.Sts.Record
 open DecoupledConsensusModel.Execution
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
@@ -1068,33 +1068,33 @@ variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 /-- On a path of the run, the grade-2 block a duty reads at round `r`'s action instant is an
     ancestor of, or equal to, a G2 root `v` froze at its own earlier tick at `domain r .g2`. -/
 theorem q2_of_path (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N)
-    (h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u) (i : Nat)
+    (W : Nat → V → (Model.spec (V := V)).N)
+    (h0 : W 0 = fun u => (Model.spec (V := V)).initial S u) (i : Nat)
     (hstep : ∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W k))
-    (v : V) (r : Round) (q : DecoupledConsensusModel.Block V) (c : (Model.specDraft (V := V)).Cache)
-    (hc : (Model.specDraft (V := V)).onPhaseTick S.E S.hc (W i v).st.core.toHealing
-      ((Model.specDraft (V := V)).a S.hc S.E.Δ r) (W i v).cache ⇢ c)
-    (st : (Model.specDraft (V := V)).NS)
-    (hq : (Model.specDraft (V := V)).grade2_block_with
-      ((Model.specDraft (V := V)).gradeContract
-        ((Model.specDraft (V := V)).mkNode st (W i v).record c).cache) S.E S.hc
-      ((Model.specDraft (V := V)).toHealing
-        ((Model.specDraft (V := V)).mkNode st (W i v).record c).st.core) r ⇢ some q) :
+      (worldStepOf (Model.spec (V := V)) S) (W k))
+    (v : V) (r : Round) (q : DecoupledConsensusModel.Block V) (c : (Model.spec (V := V)).Cache)
+    (hc : (Model.spec (V := V)).onPhaseTick S.E S.hc (W i v).st.core.toHealing
+      ((Model.spec (V := V)).a S.hc S.E.Δ r) (W i v).cache ⇢ c)
+    (st : (Model.spec (V := V)).NS)
+    (hq : (Model.spec (V := V)).grade2_block_with
+      ((Model.spec (V := V)).gradeContract
+        ((Model.spec (V := V)).mkNode st (W i v).record c).cache) S.E S.hc
+      ((Model.spec (V := V)).toHealing
+        ((Model.spec (V := V)).mkNode st (W i v).record c).st.core) r ⇢ some q) :
     ∃ (j : Nat) (raw : DecoupledConsensusModel.Block V),
       j < i ∧
-      rho.events[j]? = some (.tick v ((Model.specDraft (V := V)).domain S.E S.hc r .g2)) ∧
-      (∀ fr : Option (DecoupledConsensusModel.Block V), (Model.specDraft (V := V)).freezeRoot S.E
-        ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (W j v).st.core))
+      rho.events[j]? = some (.tick v ((Model.spec (V := V)).domain S.E S.hc r .g2)) ∧
+      (∀ fr : Option (DecoupledConsensusModel.Block V), (Model.spec (V := V)).freezeRoot S.E
+        ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (W j v).st.core))
         (W j v).st.core.F S.hc.η_SG r
-        ((Model.specDraft (V := V)).early S.E S.hc r .g2)
-        ((Model.specDraft (V := V)).late S.E S.hc r .g2) ⇢ fr → fr = some raw) ∧
+        ((Model.spec (V := V)).early S.E S.hc r .g2)
+        ((Model.spec (V := V)).late S.E S.hc r .g2) ⇢ fr → fr = some raw) ∧
       Block.Preceq q raw := by
   obtain ⟨S', hS', rfl, hρ⟩ := GradesFacts.sd_onPhaseTick_ok hc
   have hra : (Spec.Config.toSpec S.E S.hc unreadHeightConfig).round_of
       ((Spec.Config.toSpec S.E S.hc unreadHeightConfig).slotOf
-        ((Model.specDraft (V := V)).a S.hc S.E.Δ r)) = r :=
-    hρ.trans (ScheduleFacts.specDraft_round_of_slotOf_a S r)
+        ((Model.spec (V := V)).a S.hc S.E.Δ r)) = r :=
+    hρ.trans (ScheduleFacts.spec_round_of_slotOf_a S r)
   have hcr : S'.saved_grades.round = r := (NoRaise.update_grades_results hS').1.trans hra
   have hq' : Returns (Member.grade2_block_with S'.saved_grades S.E S.hc
       { st.val with saved_grades := S'.saved_grades } r) (some q) := hq
@@ -1116,7 +1116,7 @@ theorem q2_of_path (S : Setup V) (rho : Record.Run V)
       (Spec.Protocol.advance_to_round (W i v).val.st.saved_grades
         ((Spec.Config.toSpec S.E S.hc unreadHeightConfig).round_of
           ((Spec.Config.toSpec S.E S.hc unreadHeightConfig).slotOf
-            ((Model.specDraft (V := V)).a S.hc S.E.Δ r)))) r) .g2 ≠ .pending := by
+            ((Model.spec (V := V)).a S.hc S.E.Δ r)))) r) .g2 ≠ .pending := by
     unfold Spec.Protocol.saved_round_grades
     rw [if_pos (by rw [NoRaise.advance_to_round_round, hra])]
     exact hc1
@@ -1129,8 +1129,8 @@ theorem q2_of_path (S : Setup V) (rho : Record.Run V)
     exact e
   rw [hsrg'] at hkept'
   obtain ⟨g₅, hg₅, rfl⟩ := mrc_some hkept'.symm
-  have hph : (Model.specDraft (V := V)).phaseResult
-      ((Model.specDraft (V := V)).cacheAtRound (W i v).cache r) .g2 = some (some g₅.toProof) := by
+  have hph : (Model.spec (V := V)).phaseResult
+      ((Model.spec (V := V)).cacheAtRound (W i v).cache r) .g2 = some (some g₅.toProof) := by
     show (res (Spec.Protocol.saved_round_grades (W i v).val.st.saved_grades r)
       .g2).toProof = _
     rw [hg₅]
@@ -1139,25 +1139,25 @@ theorem q2_of_path (S : Setup V) (rho : Record.Run V)
   · cases hnone
   subst ht
   obtain ⟨Gf, hGf⟩ := NoRaise.freezeRoot_ok (Spec.Provisional.toSpec S.E)
-    ((Model.specDraft (V := V)).gradeView
-      ((Model.specDraft (V := V)).toHealing (W j v).st.core)).property.2.1
-    ((Model.specDraft (V := V)).gradeView
-      ((Model.specDraft (V := V)).toHealing (W j v).st.core)).property.1
-    (((Model.specDraft (V := V)).gradeView
-      ((Model.specDraft (V := V)).toHealing (W j v).st.core)).val.blockOfImage (W j v).st.core.F)
-    S.hc.η_SG r ((Model.specDraft (V := V)).early S.E S.hc r .g2)
-    ((Model.specDraft (V := V)).late S.E S.hc r .g2)
-  have hfr0 : (Model.specDraft (V := V)).freezeRoot S.E
-      ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (W j v).st.core))
+    ((Model.spec (V := V)).gradeView
+      ((Model.spec (V := V)).toHealing (W j v).st.core)).property.2.1
+    ((Model.spec (V := V)).gradeView
+      ((Model.spec (V := V)).toHealing (W j v).st.core)).property.1
+    (((Model.spec (V := V)).gradeView
+      ((Model.spec (V := V)).toHealing (W j v).st.core)).val.blockOfImage (W j v).st.core.F)
+    S.hc.η_SG r ((Model.spec (V := V)).early S.E S.hc r .g2)
+    ((Model.spec (V := V)).late S.E S.hc r .g2)
+  have hfr0 : (Model.spec (V := V)).freezeRoot S.E
+      ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (W j v).st.core))
       (W j v).st.core.F S.hc.η_SG r
-      ((Model.specDraft (V := V)).early S.E S.hc r .g2)
-      ((Model.specDraft (V := V)).late S.E S.hc r .g2) ⇢ Gf.map Spec.Block.toProof :=
+      ((Model.spec (V := V)).early S.E S.hc r .g2)
+      ((Model.spec (V := V)).late S.E S.hc r .g2) ⇢ Gf.map Spec.Block.toProof :=
     (returns_successOutcomes _ _).mpr (by rw [hGf]; rfl)
   have hroot := hr _ hfr0
   cases Gf with
   | none => cases hroot
   | some raw' =>
-    have hclip : g₅.toProof = (Model.specDraft (V := V)).clipGrade raw'.toProof
+    have hclip : g₅.toProof = (Model.spec (V := V)).clipGrade raw'.toProof
         (W i v).st.core.F := Option.some.inj hroot
     refine ⟨j, raw'.toProof, hj, he, fun fr hfr => ?_, ?_⟩
     · have e := (returns_successOutcomes _ _).mp hfr
@@ -1172,78 +1172,78 @@ theorem q2_of_path (S : Setup V) (rho : Record.Run V)
           (Spec.Block.toProof_preceq_of_ancestorEq _ _ (dca_ancestorEq _ _))
       have h3 : Block.Preceq g₅.toProof raw'.toProof := by
         rw [hclip]
-        exact GradesFacts.specDraft_q10_clip_preceq _ _
+        exact GradesFacts.spec_q10_clip_preceq _ _
       exact Proofs.ModelProperties.Preceq_trans h1
         (Proofs.ModelProperties.Preceq_trans hGg₄ (Proofs.ModelProperties.Preceq_trans h2 h3))
 
-/-- The field `q2_capture_at_action_read_along` of `GradesRunFacts` at `Model.specDraft`: on every
+/-- The field `q2_capture_at_action_read_along` of `GradesRunFacts` at `Model.spec`: on every
     path `W` of `rho`, if the grade-2 block read after the phase tick at round `r`'s action instant
     can be `some q`, then some event `j` before event `i` is `v`'s tick at `domain r .g2`, every
     outcome of the G2 root frozen from `v`'s store in `W j` is `some raw`, and `q` is an ancestor of
     `raw`. -/
-theorem specDraft_q2_capture_at_action_read_along : ∀ (S : Setup V) (rho : Record.Run V)
-    (W : Nat → V → (Model.specDraft (V := V)).N),
-    (∀ i : Nat, W i ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i ∧
+theorem spec_q2_capture_at_action_read_along : ∀ (S : Setup V) (rho : Record.Run V)
+    (W : Nat → V → (Model.spec (V := V)).N),
+    (∀ i : Nat, W i ∈ stateBeforeOf (Model.spec (V := V)) S rho i ∧
       W (i + 1) ∈ ((rho.events.drop i).take (i + 1 - i)).foldlM
-        (worldStepOf (Model.specDraft (V := V)) S) (W i)) →
+        (worldStepOf (Model.spec (V := V)) S) (W i)) →
     ∀ (i : Nat) (v : V) (r : Round) (q : DecoupledConsensusModel.Block V),
-    ∀ (c : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick S.E S.hc
-      (W i v).st.core.toHealing ((Model.specDraft (V := V)).a S.hc S.E.Δ r) (W i v).cache ⇢ c →
-    ∀ (st : (Model.specDraft (V := V)).NS), (Model.specDraft (V := V)).duties_update_confirmation_with
-      ((Model.specDraft (V := V)).gradeContract c) S.E S.hc
-      ((Model.specDraft (V := V)).ns_setClock S.E (W i v).st ((Model.specDraft (V := V)).a S.hc S.E.Δ r))
-      (S.E.slotOf ((Model.specDraft (V := V)).a S.hc S.E.Δ r) - 1) ⇢ st →
-    (Model.specDraft (V := V)).grade2_block_with
-      ((Model.specDraft (V := V)).gradeContract
-        ((Model.specDraft (V := V)).mkNode st (W i v).record c).cache) S.E S.hc
-      ((Model.specDraft (V := V)).toHealing
-        ((Model.specDraft (V := V)).mkNode st (W i v).record c).st.core) r ⇢ some q →
+    ∀ (c : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick S.E S.hc
+      (W i v).st.core.toHealing ((Model.spec (V := V)).a S.hc S.E.Δ r) (W i v).cache ⇢ c →
+    ∀ (st : (Model.spec (V := V)).NS), (Model.spec (V := V)).duties_update_confirmation_with
+      ((Model.spec (V := V)).gradeContract c) S.E S.hc
+      ((Model.spec (V := V)).ns_setClock S.E (W i v).st ((Model.spec (V := V)).a S.hc S.E.Δ r))
+      (S.E.slotOf ((Model.spec (V := V)).a S.hc S.E.Δ r) - 1) ⇢ st →
+    (Model.spec (V := V)).grade2_block_with
+      ((Model.spec (V := V)).gradeContract
+        ((Model.spec (V := V)).mkNode st (W i v).record c).cache) S.E S.hc
+      ((Model.spec (V := V)).toHealing
+        ((Model.spec (V := V)).mkNode st (W i v).record c).st.core) r ⇢ some q →
     ∃ (j : Nat) (raw : DecoupledConsensusModel.Block V),
       j < i ∧
-      rho.events[j]? = some (.tick v ((Model.specDraft (V := V)).domain S.E S.hc r .g2)) ∧
-      (∀ fr : Option (DecoupledConsensusModel.Block V), (Model.specDraft (V := V)).freezeRoot S.E
-        ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (W j v).st.core))
+      rho.events[j]? = some (.tick v ((Model.spec (V := V)).domain S.E S.hc r .g2)) ∧
+      (∀ fr : Option (DecoupledConsensusModel.Block V), (Model.spec (V := V)).freezeRoot S.E
+        ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (W j v).st.core))
         (W j v).st.core.F S.hc.η_SG r
-        ((Model.specDraft (V := V)).early S.E S.hc r .g2)
-        ((Model.specDraft (V := V)).late S.E S.hc r .g2) ⇢ fr → fr = some raw) ∧
+        ((Model.spec (V := V)).early S.E S.hc r .g2)
+        ((Model.spec (V := V)).late S.E S.hc r .g2) ⇢ fr → fr = some raw) ∧
       Block.Preceq q raw := by
   intro S rho W hW i v r q c hc st _ hq
-  have h0 : W 0 = fun u => (Model.specDraft (V := V)).initial S u := (hW 0).1
+  have h0 : W 0 = fun u => (Model.spec (V := V)).initial S u := (hW 0).1
   have hstep : ∀ k < i, W (k + 1) ∈ ((rho.events.drop k).take 1).foldlM
-      (worldStepOf (Model.specDraft (V := V)) S) (W k) := fun k _ => by
+      (worldStepOf (Model.spec (V := V)) S) (W k) := fun k _ => by
     have := (hW k).2
     rwa [Nat.add_sub_cancel_left] at this
   exact q2_of_path S rho W h0 i hstep v r q c hc st hq
 
-/-- The field `q2_capture_at_action_read` of `GradesRunFacts` at `Model.specDraft`: for a world `w₁`
+/-- The field `q2_capture_at_action_read` of `GradesRunFacts` at `Model.spec`: for a world `w₁`
     before event `i`, if the grade-2 block read after the phase tick at round `r`'s action instant
     can be `q`, then some event `j` before event `i` is `v`'s tick at `domain r .g2`, and in some
     world before event `j` that leads to `w₁` every outcome of the G2 root frozen from `v`'s store
     is `some raw`, with `q` an ancestor of `raw`. -/
-theorem specDraft_q2_capture_at_action_read : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat)
+theorem spec_q2_capture_at_action_read : ∀ (S : Setup V) (rho : Record.Run V) (i : Nat)
     (v : V) (r : Round) (q : DecoupledConsensusModel.Block V),
-    ∀ w₁ ∈ stateBeforeOf (Model.specDraft (V := V)) S rho i,
-    ∀ (c : (Model.specDraft (V := V)).Cache), (Model.specDraft (V := V)).onPhaseTick S.E S.hc
-      (w₁ v).st.core.toHealing ((Model.specDraft (V := V)).a S.hc S.E.Δ r) (w₁ v).cache ⇢ c →
-    ∀ (st : (Model.specDraft (V := V)).NS), (Model.specDraft (V := V)).duties_update_confirmation_with
-      ((Model.specDraft (V := V)).gradeContract c) S.E S.hc
-      ((Model.specDraft (V := V)).ns_setClock S.E (w₁ v).st ((Model.specDraft (V := V)).a S.hc S.E.Δ r))
-      (S.E.slotOf ((Model.specDraft (V := V)).a S.hc S.E.Δ r) - 1) ⇢ st →
-    (Model.specDraft (V := V)).grade2_block_with
-      ((Model.specDraft (V := V)).gradeContract
-        ((Model.specDraft (V := V)).mkNode st (w₁ v).record c).cache) S.E S.hc
-      ((Model.specDraft (V := V)).toHealing
-        ((Model.specDraft (V := V)).mkNode st (w₁ v).record c).st.core) r ⇢ some q →
+    ∀ w₁ ∈ stateBeforeOf (Model.spec (V := V)) S rho i,
+    ∀ (c : (Model.spec (V := V)).Cache), (Model.spec (V := V)).onPhaseTick S.E S.hc
+      (w₁ v).st.core.toHealing ((Model.spec (V := V)).a S.hc S.E.Δ r) (w₁ v).cache ⇢ c →
+    ∀ (st : (Model.spec (V := V)).NS), (Model.spec (V := V)).duties_update_confirmation_with
+      ((Model.spec (V := V)).gradeContract c) S.E S.hc
+      ((Model.spec (V := V)).ns_setClock S.E (w₁ v).st ((Model.spec (V := V)).a S.hc S.E.Δ r))
+      (S.E.slotOf ((Model.spec (V := V)).a S.hc S.E.Δ r) - 1) ⇢ st →
+    (Model.spec (V := V)).grade2_block_with
+      ((Model.spec (V := V)).gradeContract
+        ((Model.spec (V := V)).mkNode st (w₁ v).record c).cache) S.E S.hc
+      ((Model.spec (V := V)).toHealing
+        ((Model.spec (V := V)).mkNode st (w₁ v).record c).st.core) r ⇢ some q →
     ∃ (j : Nat) (raw : DecoupledConsensusModel.Block V),
       j < i ∧
-      rho.events[j]? = some (.tick v ((Model.specDraft (V := V)).domain S.E S.hc r .g2)) ∧
-      ∃ w ∈ stateBeforeOf (Model.specDraft (V := V)) S rho j,
-      w₁ ∈ ((rho.events.drop j).take (i - j)).foldlM (worldStepOf (Model.specDraft (V := V)) S) w ∧
-      (∀ fr : Option (DecoupledConsensusModel.Block V), (Model.specDraft (V := V)).freezeRoot S.E
-        ((Model.specDraft (V := V)).gradeView ((Model.specDraft (V := V)).toHealing (w v).st.core))
+      rho.events[j]? = some (.tick v ((Model.spec (V := V)).domain S.E S.hc r .g2)) ∧
+      ∃ w ∈ stateBeforeOf (Model.spec (V := V)) S rho j,
+      w₁ ∈ ((rho.events.drop j).take (i - j)).foldlM (worldStepOf (Model.spec (V := V)) S) w ∧
+      (∀ fr : Option (DecoupledConsensusModel.Block V), (Model.spec (V := V)).freezeRoot S.E
+        ((Model.spec (V := V)).gradeView ((Model.spec (V := V)).toHealing (w v).st.core))
         (w v).st.core.F S.hc.η_SG r
-        ((Model.specDraft (V := V)).early S.E S.hc r .g2)
-        ((Model.specDraft (V := V)).late S.E S.hc r .g2) ⇢ fr → fr = some raw) ∧
+        ((Model.spec (V := V)).early S.E S.hc r .g2)
+        ((Model.spec (V := V)).late S.E S.hc r .g2) ⇢ fr → fr = some raw) ∧
       Block.Preceq q raw := by
   intro S rho i v r q w₁ hw₁ c hc st _ hq
   obtain ⟨W, h0, hi, hstep⟩ := path_of_fold S rho.events i _ w₁ hw₁
@@ -1252,7 +1252,7 @@ theorem specDraft_q2_capture_at_action_read : ∀ (S : Setup V) (rho : Record.Ru
   exact ⟨j, raw, hj, he, W j, path_stateBefore S rho W h0 i hstep j hj.le,
     path_segment S rho W i hstep j i hj.le le_rfl, hfr, hqr⟩
 
-end SpecDraftRecord.GradesRunFacts
+end SpecRecord.GradesRunFacts
 
 /-! ## The bundle -/
 
@@ -1260,16 +1260,16 @@ namespace DecoupledConsensusModel.Sts.Record
 
 variable {V : Type} [DecidableEq V] [Fintype V] [Inhabited V]
 
-/-- Every field of `GradesRunFacts` holds at `Model.specDraft`. -/
-theorem Model.specDraft_runFacts_grades : GradesRunFacts (Model.specDraft (V := V)) where
-  completed_phase_origin := SpecDraftRecord.GradesRunFacts.specDraft_completed_phase_origin
-  phaseResult_initial_some := SpecDraftRecord.GradesRunFacts.specDraft_phaseResult_initial_some
-  q2_capture_at_action_read := SpecDraftRecord.GradesRunFacts.specDraft_q2_capture_at_action_read
+/-- Every field of `GradesRunFacts` holds at `Model.spec`. -/
+theorem Model.spec_runFacts_grades : GradesRunFacts (Model.spec (V := V)) where
+  completed_phase_origin := SpecRecord.GradesRunFacts.spec_completed_phase_origin
+  phaseResult_initial_some := SpecRecord.GradesRunFacts.spec_phaseResult_initial_some
+  q2_capture_at_action_read := SpecRecord.GradesRunFacts.spec_q2_capture_at_action_read
   frame_phase_prepared_eq_of_outcomes :=
-    SpecDraftRecord.GradesRunFacts.specDraft_frame_phase_prepared_eq_of_outcomes
+    SpecRecord.GradesRunFacts.spec_frame_phase_prepared_eq_of_outcomes
   completed_phase_origin_along :=
-    SpecDraftRecord.GradesRunFacts.specDraft_completed_phase_origin_along
+    SpecRecord.GradesRunFacts.spec_completed_phase_origin_along
   q2_capture_at_action_read_along :=
-    SpecDraftRecord.GradesRunFacts.specDraft_q2_capture_at_action_read_along
+    SpecRecord.GradesRunFacts.spec_q2_capture_at_action_read_along
 
 end DecoupledConsensusModel.Sts.Record

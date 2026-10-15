@@ -15,7 +15,7 @@ is mapped by its named image (`toProofNamed`), which keeps the root of a timeout
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 
@@ -161,4 +161,4 @@ theorem toProof_proposalRows (parent : Block V) (rows : List (Attestation V)) :
   simp only [DecoupledConsensusModel.Protocol.NamedProposalRows.proposalRows,
     Protocol.proposal_attestations, hex, toProof_capPerSigner]
 
-end SpecDraftRecord
+end SpecRecord

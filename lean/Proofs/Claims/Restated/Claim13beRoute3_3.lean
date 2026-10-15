@@ -94,7 +94,7 @@ private theorem tick_step_st_cases_blocks (facts : Record.Facts M) (S : Setup V)
   · have hx1 : x[k + 1][v].st = (tk v).state := by
       have h2 : x[k + 1][v] = (tickAllAwakeUpdate Sched t x[k] w tk)[v] := by rw [hc]
       rw [h2, tickAllAwakeUpdate_getElem_react haw]
-    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨-, out, hout, hres⟩ | ⟨-, hres⟩
+    rcases Record.protocolOf_step_tick M S (htick v haw) with ⟨out, hout, hres⟩ | ⟨-, hres⟩
     · have hwS : (w v).state = Record.wakeStage M Sched (t : Int) x[k] v :=
         Record.wakeStage_of_TickAllAwakeWake M S Sched (hwake v)
       exact Or.inl ⟨(w v).state, out, hwst,
@@ -273,15 +273,14 @@ open DecoupledConsensusModel.Execution
 
 /-- A named block other than genesis among `q`'s bodies after `m` steps entered at some step
     `i < m`, which is either a delivery to `q` of a message whose payload is that block, or `q`'s
-    own tick at a time `τ` that is a whole multiple of `S.E.Δ`, at which `q` is awake and not
-    adversarial, whose outcome taken at step `i` sends the block. -/
+    own tick at a time `τ` at which `q` is awake and not adversarial, whose outcome taken at step `i` sends the block. -/
 theorem block_sent_of_mem_tree (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) {m : Nat} {q : V} {B : NamedBlock V}
     (hne : B ≠ NamedBlock.genesis) (hB : B ∈ (x[m][q].st).st.bodies) :
     ∃ i : Nat, i < m ∧
       ((∃ sm : SignedMsg V (NamedObject V), x.lbl i = AtomicAction.deliver q sm ∧
           sm.msg = NamedObject.block B) ∨
         (∃ τ : Nat, x.lbl i = AtomicAction.tickAllAwake τ ∧
-          q ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧ (τ : Int) % S.E.Δ = 0 ∧
+          q ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int) ∧
           ∃ out₁, M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched (τ : Int) x[i] q) (τ : Int) ⇢ out₁ ∧
             x[i + 1][q].st = out₁.1 ∧ NamedObject.block B ∈ out₁.2)) := by
   have h0 : Restated.Vocabulary.Execution.Object.processed M (x[0][q].st).st
@@ -298,12 +297,12 @@ theorem block_sent_of_mem_tree (facts : Record.Facts M) (S : Setup V) (Sched : S
     Restated.exists_flip_of_processed facts S Sched x q (NamedObject.block B) h0 hm
   refine ⟨i, him, ?_⟩
   rcases Restated.flip_step_cases facts S Sched x hf0 hf1 with
-    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, hdvd, out₁, hout₁, hst, hem⟩
+    ⟨sm, hlbl, -, -, hpay⟩ | ⟨τ, hlbl, haw, out₁, hout₁, hst, hem⟩
   · rcases hpay with hmsg | ⟨Bl, -, hcc⟩
     · exact Or.inl ⟨sm, hlbl, hmsg⟩
     · exact hcc.elim
   · rcases hem with hmem | ⟨Bl, -, hcc⟩
-    · exact Or.inr ⟨τ, hlbl, haw, hdvd, out₁, hout₁, hst, hmem⟩
+    · exact Or.inr ⟨τ, hlbl, haw, out₁, hout₁, hst, hmem⟩
     · exact hcc.elim
 
 end
@@ -419,19 +418,18 @@ set_option autoImplicit false
 open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 
-/-- If step `i` is the tick of `τ`, `q` is awake and not adversarial at `τ`, `τ` is a whole multiple
-    of the delay, the outcome of `q`'s tick taken at step `i` sends the named block `B`, and the
+/-- If step `i` is the tick of `τ`, `q` is awake and not adversarial at `τ`, the outcome of `q`'s tick taken at step `i` sends the named block `B`, and the
     adversary has held `q` at no time up to step `i`, then step `i` is an honest send of `⟨q, B⟩`. -/
 theorem block_honestSend_at_tick (facts : Record.Facts M) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched) {i : Nat} {q : V} {B : NamedBlock V} {τ : Nat}
     (hqh : Restated.HonestThrough M Sched x i q)
     (hlbl : x.lbl i = AtomicAction.tickAllAwake τ)
-    (haw : q ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int)) (hdvd : (τ : Int) % S.E.Δ = 0)
+    (haw : q ∈ Sched.awake (τ : Int) \ Sched.adv (τ : Int))
     (hemit : ∃ out₁, M.tick (Setup.alwaysAwake S) q (Record.wakeStage M Sched (τ : Int) x[i] q) (τ : Int) ⇢ out₁ ∧
       x[i + 1][q].st = out₁.1 ∧ NamedObject.block B ∈ out₁.2) :
     Restated.HonestSendAt M S x i (⟨q, NamedObject.block B⟩ : SignedMsg V (NamedObject V)) := by
   obtain ⟨out₁, hout, hst, hmem⟩ := hemit
   exact And.intro
-    (Restated.mem_sent_diff_of_tick_of_state facts S Sched x hlbl haw hdvd
+    (Restated.mem_sent_diff_of_tick_of_state facts S Sched x hlbl haw
       (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) q
         (Record.wakeStage M Sched (τ : Int) x[i] q) (τ : Int))
       hout hst hmem)

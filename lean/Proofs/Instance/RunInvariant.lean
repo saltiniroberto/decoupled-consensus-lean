@@ -5,15 +5,15 @@ import Proofs.Instance.Equalities.Images
 # The run invariant of a store
 
 The predicates `ChainStatesInTree`, `OffTreeInitial`, `RunStoreInv` and `ConfirmedInTree` on a spec
-store, read by `Model.specDraft`.
+store, read by `Model.spec`.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.SubtypeEqualities
+namespace SpecRecord.SubtypeEqualities
 
 open Spec
-open SpecDraftRecord.NoRaise
+open SpecRecord.NoRaise
 open scoped DC
 
 variable {V : Type} [DecidableEq V]
@@ -32,9 +32,9 @@ def OffTreeInitial (st : Store V) : Prop :=
 def RunStoreInv (st : Store V) : Prop :=
   st.J ∈ st.T ∧ ChainStatesInTree st ∧ OffTreeInitial st
 
-end SpecDraftRecord.SubtypeEqualities
+end SpecRecord.SubtypeEqualities
 
-namespace SpecDraftRecord.HandlersRunFacts
+namespace SpecRecord.HandlersRunFacts
 
 variable {V : Type} [DecidableEq V]
 
@@ -42,4 +42,4 @@ variable {V : Type} [DecidableEq V]
 def ConfirmedInTree (st : Spec.Store V) : Prop :=
   st.live_confirmed ∈ st.T ∧ st.latest_confirmed ∈ st.T ∧ st.latest_stable ∈ st.T
 
-end SpecDraftRecord.HandlersRunFacts
+end SpecRecord.HandlersRunFacts

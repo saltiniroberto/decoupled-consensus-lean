@@ -29,14 +29,15 @@ open Framework.StsMultisetLog
 open DecoupledConsensusModel.Execution
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
-/-- At the tick step at `S.a ρ`, every validator awake at every instant of round `ρ`'s attester
-    window and honest through the step after the tick computes only round-`ρ` attestations that name
+/-- At the tick step at `S.a ρ`, every validator awake at every instant of round `ρ`'s grade-2
+    window (`attestersAt`) and honest through the step after the tick computes only round-`ρ`
+    attestations that name
     `P` or a descendant of `P`, and whose height pair, when it is a vote, is bound to a root whose
     blocks on the wire are ancestors or descendants of `P`. -/
 def RoundAttestsAll (M : Record.Model V) (S : Setup V) (Sched : Schedule V) (x : AtomicExec (Record.protocolOf M S) Sched)
     (P : Block V) (ρ : Nat) : Prop :=
   ∀ n : Nat, Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S ρ)) →
-    ∀ u ∈ Restated.activeRoundW M S Sched ρ, Restated.HonestThrough M Sched x (n + 1) u →
+    ∀ u ∈ Restated.attestersAt M S Sched ρ, Restated.HonestThrough M Sched x (n + 1) u →
     ∀ a ∈ Restated.actionAttestationFrom M (Setup.alwaysAwake S) (x[n][u].st) u ρ,
       (∀ C : NamedBlock V, C ∈ (x[n + 1][u].st).st.bodies →
           a.confirmed = some C.root →

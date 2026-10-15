@@ -55,6 +55,30 @@ theorem Vocabulary.Proofs.Optimistic.coneSupport_of_named_votes (facts : Record.
     obtain ⟨X, htgt, hXslot, hmem, hfind⟩ := hvote x hx hxH
     exact ⟨⟨x, s, X.root⟩, hmem, rfl, rfl, X, hfind, hXslot, htgt⟩
 
+/-- If the voters of `late` at slot `s` are fewer than twice the honest members of slot `s`'s
+    committee, `support ⊆ votes ⊆ late`, no honest member equivocates in `votes`, and every honest
+    member cast a vote in `support` for a block of `T` satisfying `tgt` with slot at most `s`, then
+    `ConeSupportCount` holds. -/
+theorem Vocabulary.Proofs.Optimistic.coneSupportCount_of_named_votes (facts : Record.Facts M)
+    {E : Env V} {T : Finset (Block V)}
+    {votes support late : Finset (GoldfishVote V)} {s : Slot} {Hon : Finset V}
+    {tgt : Block V → Prop}
+    (hcount : M.voters_count E late s < 2 * ((E.committee s) ∩ Hon).card)
+    (hsub : votes ⊆ late) (hss : support ⊆ votes)
+    (hne : ∀ x ∈ E.committee s, x ∈ Hon → M.equivocates votes x = false)
+    (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ X : Block V, tgt X ∧
+      X.slot ≤ s ∧ (⟨x, s, X.root⟩ : GoldfishVote V) ∈ support ∧
+      Block.find? T X.root = some X) :
+    Restated.Vocabulary.Proofs.Optimistic.ConeSupportCount M E T votes support late s Hon tgt where
+  count := hcount
+  counted := hsub
+  sub := hss
+  no_equiv := hne
+  vote := by
+    intro x hx hxH
+    obtain ⟨X, htgt, hXslot, hmem, hfind⟩ := hvote x hx hxH
+    exact ⟨⟨x, s, X.root⟩, hmem, rfl, rfl, X, hfind, hXslot, htgt⟩
+
 end
 
 section

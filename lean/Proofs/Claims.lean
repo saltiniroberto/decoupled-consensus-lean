@@ -117,7 +117,6 @@ import Proofs.Claims.Restated.Claim13bK_ProposalVotesPivot
 import Proofs.Claims.Restated.Claim13bK_ProposalVotesScores
 import Proofs.Claims.Restated.Claim13bK_ProposalVotesTreeFacts
 import Proofs.Claims.Restated.Claim13bK_ProposalVotesWalk
-import Proofs.Claims.Restated.Claim13bK_StableReaders
 import Proofs.Claims.Restated.Claim13bK_StableRecord
 import Proofs.Claims.Restated.Claim13bK_StableRootFor
 import Proofs.Claims.Restated.Claim13bK_WindowProposalSent

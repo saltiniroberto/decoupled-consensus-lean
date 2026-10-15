@@ -95,7 +95,6 @@ theorem claimConfirmedIncludedAfterHealing_conclusion_of_adoption (facts : Recor
     (hgst : S.E.t_GST ≤ tGAT) (hmono : Sched.MonotoneCorruption)
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x) (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched) (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (hcv : Restated.CommonViewOfFinalizedDescendantsAt M S Sched x tGAT)
     (htd : Restated.TimeDiverges M x)
@@ -168,7 +167,7 @@ theorem claimConfirmedIncludedAfterHealing_conclusion_of_adoption (facts : Recor
   have hwin' : tGAT + 8 * (S.hc.R : Int) * S.E.Δ ≤ tE' := le_trans hwin8 (le_of_lt h12)
   have hsettle : Restated.RecordsSettledAtSettleTick M S Sched x tE' :=
     Restated.recordsSettledAtSettleTick_atStrongRound facts S Sched x tGAT tE gap hgap hgst hmono hexec hsync
-      hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
+      hmult hcatch hcv htd hcom hthird hawake hrec hsl hrs hcs hc2 hlen₁ hcE
       hopening hprev1
   have hle : Restated.confirmedSettleTime M S tE' ≤ tE := Restated.confirmedSettleTime_third_le facts S hc1 hcE
   have hthird' := third_of_later S Sched tE tE' htE' hthird
@@ -179,7 +178,7 @@ theorem claimConfirmedIncludedAfterHealing_conclusion_of_adoption (facts : Recor
   have hcs' := Restated.committeeSleepinessW_of_later facts S Sched tGAT tE tE' hmono hawake hcom hwin' hcs
   have hlen'' : tGAT + Restated.healingLengthη M S gap ≤ tE' := Restated.healingLength_le_of_kit_l76 facts S hlen'
   have hlow := Restated.hlow_of_premises_l85f facts S Sched x tGAT tE' gap hgap hlen' hgst hmono hexec hsync
-    hmult hwakes hsleeps hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
+    hmult hcv htd hcom hthird' hawake' hrec' hsl' hrs' hcs'
   have hprev := Restated.basePreviousRoundSGCompatibleWithAnchor_atRound facts S Sched x tGAT tE' gap hlen' hgst
     hmono hexec hsync hmult hcv hcom hthird' hawake' hrec'
   have hclear := fun r (hrD' : Restated.rebasedDeadlineRoundW M S tGAT gap ≤ r)
@@ -189,16 +188,16 @@ theorem claimConfirmedIncludedAfterHealing_conclusion_of_adoption (facts : Recor
       ((Restated.deadlineRoundW_le_rebased facts S tGAT gap).trans hrD') hrW
   have hB' := Restated.baseJustifiedHighAtSwitchRoundW_of_hlow facts S Sched x tGAT tE' gap hlow
   obtain ⟨n_W, T_W, hnW, hAW, hJswitch, hbase⟩ := Restated.afterPhaseJointSwitchRound_of_premises facts S Sched
-    x tGAT tE' gap hgap hlen' hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom
+    x tGAT tE' gap hgap hlen' hgst hmono hexec hsync hmult hcatch hcv htd hcom
     hthird' hawake' hrec' hsl' hrs' hcs' hlow
   have hadopt := hadoptP x tE' hexec hmono htd hcatch tGAT gap hgst hlen'' hsync hthird' hawake'
-    hrs' hmult hcv hcs' hcom hwakes hsleeps hrec' hprev hclear hB' hnW hAW hJswitch
+    hrs' hmult hcv hcs' hcom hrec' hprev hclear hB' hnW hAW hJswitch
     (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase
   have hincl := Restated.confirmedIncluded_of_ownSlotVotes facts S Sched x tE' hexec hmono htd hcatch tGAT gap
-    hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hwakes hsleeps hrec' hprev hclear
+    hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hrec' hprev hclear
     hB' hnW hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle hadopt
   have hext := Restated.confirmedOnlyExtendsAfterHealing_of_settle facts S Sched x tE' hexec hmono htd hcatch
-    tGAT gap hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hwakes hsleeps hrec'
+    tGAT gap hgst hlen'' hsync hthird' hawake' hrs' hmult hcv hcs' hcom hrec'
     hprev hclear hB' hnW hAW hJswitch (preceq_eq_true_iff_Preceq.mp (Block.preceq_self _)) hbase hsettle
   refine ⟨fun s hsE hhon => ⟨?_, ?_⟩,
     Restated.confirmedOnlyExtendsAfterHealing_of_settle_le facts S Sched x hle hext⟩
@@ -230,8 +229,6 @@ theorem claimConfirmedIncludedAfterHealing_of_adoption_at (facts : Record.Facts 
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -249,7 +246,7 @@ theorem claimConfirmedIncludedAfterHealing_of_adoption_at (facts : Record.Facts 
     htd hgst (tE := tE) (by have := Restated.delta_le_healingLengthη_add_gap_period facts S gap; linarith)
     hawake
   exact Restated.claimConfirmedIncludedAfterHealing_conclusion_of_adoption facts S Sched hadoptP x tGAT tE gap
-    hgap hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch hcv htd hcom hthird hawake hrec
+    hgap hlen hgst hmono hexec hsync hmult hcatch hcv htd hcom hthird hawake hrec
     hsl hrs hcs
 
 /-- Under `HonestProposalHeadsAtOwnSlotAfterPhase M S Sched`,
@@ -265,10 +262,10 @@ theorem claimConfirmedIncludedAfterHealing_of_adoption (facts : Record.Facts M) 
   intro gap hgap
   refine ⟨Restated.healingLengthη M S gap + ((gap : Int) + 2) * (Restated.constants M S).period,
     le_of_lt (Restated.healingLengthDevice_pos facts S gap), ?_⟩
-  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake
+  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird hawake
     hrec hsl hrs hcs =>
     Restated.claimConfirmedIncludedAfterHealing_of_adoption_at facts S Sched hadoptP gap hgap x tGAT
-      tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake hrec hsl hrs
+      tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird hawake hrec hsl hrs
       hcs
 
 end
@@ -292,8 +289,6 @@ theorem claimConfirmedIncludedAfterHealing_holds_at (facts : Record.Facts M) (S 
     (hexec : Restated.ExecutionValid M S Sched (Restated.interface M S Sched) x)
     (hsync : Restated.SynchronyFromWake M S x)
     (hmult : AwakeAtMultiples S Sched)
-    (hwakes : Restated.WakesAtActionInstants M S Sched)
-    (hsleeps : Restated.SleepsAfterActionInstants M S Sched)
     (hcatch : Restated.CatchUpOnWake M S x)
     (htd : Restated.TimeDiverges M x)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
@@ -310,11 +305,11 @@ theorem claimConfirmedIncludedAfterHealing_holds_at (facts : Record.Facts M) (S 
   Restated.claimConfirmedIncludedAfterHealing_of_adoption_at facts S Sched
     (by
       intro x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird hphase hrsW hmult hcv hcs
-        hcom hw hs hrec hprev hclear hB' n_W hnW T_W hAW hJswitch n₀ T₀ hTW₀ hJ₀ tHi
+        hcom hrec hprev hclear hB' n_W hnW T_W hAW hJswitch n₀ T₀ hTW₀ hJ₀ tHi
       exact Restated.honestProposalHeadsAtOwnSlot_afterPhase facts S Sched x tE hexec hmono htd hcatch tGAT gap hgst hlen hsync hthird
-        hphase hrsW hmult hcv hcs hcom hw hs hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ tHi
+        hphase hrsW hmult hcv hcs hcom hrec hprev hclear hB' hnW hAW hJswitch hTW₀ hJ₀ tHi
         )
-    gap hgap x tGAT tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird
+    gap hgap x tGAT tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird
     hawake hrec hsl hrs hcs
 
 /-- For every setup `S` and schedule `Sched`,
@@ -324,10 +319,10 @@ theorem claimConfirmedIncludedAfterHealing_holds (facts : Record.Facts M) (S : S
   intro gap hgap
   refine ⟨Restated.healingLengthη M S gap + ((gap : Int) + 2) * (Restated.constants M S).period,
     le_of_lt (Restated.healingLengthDevice_pos facts S gap), ?_⟩
-  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake
+  exact fun x tGAT tE hlen hgst hmono hexec hsync hmult hcatch htd hcom hthird hawake
     hrec hsl hrs hcs =>
     Restated.claimConfirmedIncludedAfterHealing_holds_at facts S Sched gap hgap x tGAT tE hlen hgst
-      hmono hexec hsync hmult hwakes hsleeps hcatch htd hcom hthird hawake hrec hsl hrs hcs
+      hmono hexec hsync hmult hcatch htd hcom hthird hawake hrec hsl hrs hcs
 
 end
 

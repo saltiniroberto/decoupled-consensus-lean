@@ -56,6 +56,7 @@ import Model.Conditions.Vocabulary_Protocol_Handlers_StoreRoots
 import Model.Conditions.Vocabulary_Protocol_ValidatorClient_TickRecord
 import Model.Record.Wiring
 import Proofs.Claims.Spec2Claims.Claim13beRoute3_83
+import Proofs.Claims.Restated.Claim13beRoute3_74NotHeld
 
 /-!
 # Anchors from the deadline round to the switch round
@@ -240,17 +241,17 @@ theorem targetsSince_atRound (facts : Record.Facts M)
   obtain ⟨-, -, hloOpen, -⟩ := Restated.roundAt_bounds_l71 facts S hgst
   have hlo := hreg.lo_le_opening_l71 facts hf hloOpen
   have hTlog : Restated.blockInLog M S Sched x T := Restated.inPlay_at_switchRound_of_regime facts S Sched x v hmono hreg
-  obtain ⟨k, hkn', τ, hlbl, haw, hdvd, out, hout, hst, hmemout⟩ :=
+  obtain ⟨k, hkn', τ, hlbl, haw, out, hout, hst, hmemout⟩ :=
     Restated.tick_of_honest_signed_upTo_taken facts S Sched x b.val_index (NamedObject.attest b)
       (x[n'].time : Int) hv' hvalid.toUnforgeability (by rw [author_attest]) n' le_rfl hsent
   have hkN : k < N := by omega
   have hsentk : (⟨b.val_index, NamedObject.attest b⟩ : SignedMsg V (NamedObject V)) ∈ x[k + 1].sent :=
-    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd
+    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw
       (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) b.val_index _ (τ : Int)) hout hst hmemout
   have hP : Restated.Vocabulary.Execution.NamedRun.OnePath M (Setup.alwaysAwake S)
       ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
       (Restated.runAllPath M S Sched x v N) := Restated.OnePath_runAllPath facts S Sched x v N
-  have hemit := Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hdvd hout hst
+  have hemit := Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hout hst
     hmemout
   obtain ⟨-, hτ0⟩ := Restated.Vocabulary.Proofs.Optimistic.emits_attest_shape facts (Setup.alwaysAwake S)
     _ hP hemit
@@ -802,6 +803,7 @@ private theorem anchorAlong_preceq_of_le₈₃ {gap : Nat}
     through its send, at a height at most `T`'s, names a block on `T`'s chain. -/
 private theorem targetsSince_of_anchorAlong₈₃ {gap : Nat}
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
+    (htd : Restated.TimeDiverges M x)
     (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
     {r : Round} (hrD : Restated.deadlineRoundW M S tGAT gap ≤ r) (hrW : r ≤ Restated.switchRound M S tE)
     (hprev : ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -847,11 +849,12 @@ private theorem targetsSince_of_anchorAlong₈₃ {gap : Nat}
   have hP := Restated.OnePath_runAllPath facts S Sched x v N
   have hfin := Restated.fin_atRound_of_regime facts S Sched x v hsync hmono hawake hgst hcv hvalid hawm hthird
     hcom hNlo hNhi hreg hn₀ htop
-  have hg1 := Restated.grade1_atRound facts S Sched x v hsync hmono hawake hgst hcv hvalid hawm hthird hcom hNlo
+  have hg1 := Restated.grade1_atRound_notHeld facts S Sched x v hsync hmono hawake hgst hcv hvalid hawm hthird hcom htd hNlo
     hNhi hreg harW hn₀ hfin (fun heq => hprev v N blocked first i a ta Cfg T Tprev c0 hNlo hNhi hreg
       heq)
   exact Restated.targetsSince_atRound facts S Sched x v hsync hmono hawake hgst hcv hvalid hawm hthird hcom hlen
-    hrD hrW hNlo hNhi hreg harW hn₀ (fun _ => hg1)
+    hrD hrW hNlo hNhi hreg harW hn₀
+    (fun _ v hv p hdom m hm B hB => hg1 v p hdom (fun h => (Finset.mem_sdiff.1 hv).2 (hmono _ _ hdom h)) m hm B hB)
     (fun heq => hclear v N blocked first i a ta Cfg T Tprev c0 n₀ hNlo hNhi hreg heq hn₀)
 
 end
@@ -950,6 +953,7 @@ theorem targetsSince_of_anchorAtRound (facts : Record.Facts M)
     (hthird : ∀ t : Int, t ≤ tE →
       3 * S.E.electorate.weightOf (Sched.adv t) < S.E.electorate.totalWeight)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
+    (htd : Restated.TimeDiverges M x)
     (hlen : tGAT + Restated.healingLengthη M S gap ≤ tE)
     {r : Round} (hrD : Restated.deadlineRoundW M S tGAT gap ≤ r) (hrW : r ≤ Restated.switchRound M S tE)
     (hprev : ∀ (v : V) (N : Nat) (blocked : Height) (first i : Nat) (a : NamedAttestation V)
@@ -988,7 +992,7 @@ theorem targetsSince_of_anchorAtRound (facts : Record.Facts M)
         ∀ C : NamedBlock V, Restated.blockInLog M S Sched x C → C.root = entry →
         Block.Preceq C.erase T.erase :=
   targetsSince_of_anchorAlong₈₃ facts S Sched x hsync hmono hawake hgst hcv hvalid hawm hthird
-    hcom hlen hrD hrW hprev hclear hA
+    hcom htd hlen hrD hrW hprev hclear hA
 
 end
 
@@ -1069,14 +1073,14 @@ theorem honestVotes_onAnchorChain_since_deadlineRound (facts : Record.Facts M)
   have hrDW : Restated.deadlineRoundW M S tGAT gap ≤ Restated.switchRound M S tE :=
     Restated.deadlineRoundW_le_switchRound facts S tGAT tE gap (Restated.runAll M S Sched x b.val_index 0) hgst hlen
   have hthr : HonestThroughTime Sched (x[n'].time : Int) b.val_index := hv'
-  obtain ⟨k, hkn', τ, hlbl, haw, hdvd, out, hout, hst, hmemout⟩ :=
+  obtain ⟨k, hkn', τ, hlbl, haw, out, hout, hst, hmemout⟩ :=
     Restated.tick_of_honest_signed_upTo_taken facts S Sched x b.val_index (NamedObject.attest b)
       (x[n'].time : Int) hthr hunf (by rw [author_attest]) n' le_rfl hsent
   have hsentk : (⟨b.val_index, NamedObject.attest b⟩ : SignedMsg V (NamedObject V)) ∈ x[k + 1].sent :=
-    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw hdvd
+    Restated.mem_sent_of_tick_of_state facts S Sched x hlbl haw
       (facts.nd.tick_send_eq_of_state (Setup.alwaysAwake S) b.val_index _ (τ : Int)) hout hst hmemout
   obtain ⟨Wr, hWr, hemits⟩ :=
-    Restated.emits_runAll_of_tick facts S Sched x b.val_index hkn' hlbl haw hdvd hout hmemout
+    Restated.emits_runAll_of_tick facts S Sched x b.val_index hkn' hlbl haw hout hmemout
   obtain ⟨-, hτ0⟩ :=
     Restated.Vocabulary.Proofs.Optimistic.emits_attest_shape facts (Setup.alwaysAwake S) Wr hWr hemits
   have hτ : (τ : Int) = (Restated.Vocabulary.Execution.Setup.a M S b.round) := hτ0
@@ -1118,7 +1122,7 @@ theorem honestVotes_onAnchorChain_since_deadlineRound (facts : Record.Facts M)
       exact Restated.honestRow_le_topHonestRow facts S Sched x hunf (n₀ := k)
         ⟨b.val_index, k + 1, b, entry, tmo, le_rfl, hkhon, rfl, hsentk, hpair⟩
     have hCρ := targetsSince_of_anchorAlong₈₃ facts S Sched x hsync hmono hawake hgst hcv hvalid hawm
-      hthird hcom hlen hρD hρW (hprev _ hρD hρW) (hclear _ hρD hρW) hAρ k hk b.val_index (k + 1) b h'
+      hthird hcom htd hlen hρD hρW (hprev _ hρD hρW) (hclear _ hρD hρW) hAρ k hk b.val_index (k + 1) b h'
       entry tmo le_rfl hkhon rfl hsentk hnot hpair hh'ρ C hC hCroot
     exact preceq_trans_Preceq hCρ
       (anchorAlong_preceq_of_le₈₃ facts S Sched x hsync hmono hawake hgst hcv hvalid hawm hthird

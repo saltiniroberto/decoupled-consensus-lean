@@ -3,13 +3,13 @@ import Proofs.Instance.Members.Base
 /-!
 # The members of the duties, the tick and the node
 
-The definitions of the namespace `SpecDraftRecord.Member` that fill the duty, tick and node members
+The definitions of the namespace `SpecRecord.Member` that fill the duty, tick and node members
 of the record `Model V` with the spec's routines, one definition per member, named as the member.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.Member
+namespace SpecRecord.Member
 
 open scoped DC
 
@@ -429,4 +429,4 @@ def store_with_cache (st : Spec.Store V) (c : Spec.SavedGrades V) :
     Spec.Store V :=
   { st with saved_grades := c }
 
-end SpecDraftRecord.Member
+end SpecRecord.Member

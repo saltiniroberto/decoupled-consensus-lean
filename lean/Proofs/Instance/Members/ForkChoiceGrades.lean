@@ -3,7 +3,7 @@ import Proofs.Instance.Members.Base
 /-!
 # The members of the fork-choice and grades families
 
-The definitions of the namespace `SpecDraftRecord.Member` that fill the fork-choice and grades
+The definitions of the namespace `SpecRecord.Member` that fill the fork-choice and grades
 members of the record `Model V` with the spec's readers and routines, one definition per member,
 named as the member. It also holds the embeddings that map sets of blocks, Goldfish votes and tokens
 into the spec's types.
@@ -11,7 +11,7 @@ into the spec's types.
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 open scoped DC
@@ -771,4 +771,4 @@ def grade2Block (st : Store V) (fr : RoundGrades V) :
 
 end Member
 
-end SpecDraftRecord
+end SpecRecord

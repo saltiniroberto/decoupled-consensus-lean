@@ -15,7 +15,7 @@ a store returns the same store with its saved grades `fill c`.
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord
+namespace SpecRecord
 
 open Spec
 open scoped Spec DC
@@ -659,4 +659,4 @@ theorem duties_goldfish_vote_with_returns_of_ok (c : SavedGrades V)
 
 end Member
 
-end SpecDraftRecord
+end SpecRecord

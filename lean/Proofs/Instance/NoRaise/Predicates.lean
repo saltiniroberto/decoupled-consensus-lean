@@ -5,12 +5,12 @@ import Spec.Node
 
 Predicates over the spec's types: `DistinctRoots`, `Stamped` and `GradesDue`, under which the
 no-raise lemmas are stated, and `ParentClosed` and `StoreOk`, which define the store and node types
-of `Model.specDraft`.
+of `Model.spec`.
 -/
 
 set_option autoImplicit false
 
-namespace SpecDraftRecord.NoRaise
+namespace SpecRecord.NoRaise
 
 open Spec
 
@@ -37,11 +37,11 @@ def ParentClosed (T : Finset (Block V)) : Prop :=
 def StoreOk (st : Store V) : Prop :=
   Stamped st ∧ DistinctRoots st.T ∧ ParentClosed st.T ∧ st.F ∈ st.T
 
-/-- The store's clock is a non-negative multiple of `C.Δ`, the saved grades are aligned to the
-    clock's round, and every grade result a duty of that round may read is computed, as far as the
-    node's wake value requires. -/
+/-- The store's clock is non-negative, the saved grades are aligned to the clock's round, and every
+    grade result a duty of that round may read is computed, as far as the node's wake value
+    requires. -/
 def GradesDue (C : Config) (n : NodeState V) : Prop :=
-  n.st.t % C.Δ = 0 ∧ 0 ≤ n.st.t ∧
+  0 ≤ n.st.t ∧
   n.st.saved_grades.round = C.round_of (C.slotOf n.st.t) ∧
   ∀ a, n.awakeSince = some a →
     let c := n.st.saved_grades
@@ -52,4 +52,4 @@ def GradesDue (C : Config) (n : NodeState V) : Prop :=
     (a ≤ grade2_window_start C (c.round + 1) → C.opening (c.round + 1) - C.Δ ≤ n.st.t →
       c.next.g2 ≠ .pending)
 
-end SpecDraftRecord.NoRaise
+end SpecRecord.NoRaise

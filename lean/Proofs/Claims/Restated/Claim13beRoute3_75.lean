@@ -304,7 +304,7 @@ theorem targetsTop_atRound (facts : Record.Facts M)
   have hTheight : (M.derive_named S.E S.cfg T).h = blocked + 1 := hTheight'
   have hTlog : Restated.blockInLog M S Sched x T :=
     Restated.inPlay_at_switchRound_of_regime facts S Sched x v hmono hreg
-  obtain ⟨k, hkn', τ, hlbl, haw, hdvd, out, hout, hst, hmemout⟩ :=
+  obtain ⟨k, hkn', τ, hlbl, haw, out, hout, hst, hmemout⟩ :=
     Restated.tick_of_honest_signed_upTo_taken facts S Sched x b.val_index (NamedObject.attest b)
       (x[n'].time : Int) hv' hvalid.toUnforgeability (by rw [author_attest]) n' le_rfl hsent
   have hkN : k < N := by omega
@@ -315,7 +315,7 @@ theorem targetsTop_atRound (facts : Record.Facts M)
       ({ Restated.runAll M S Sched x v N with honest := notHeldAt Sched (x[N].time : Int) } : Record.Run V)
       (Restated.runAllPath M S Sched x v N)
       b.val_index (Object.attest b) (τ : Int) :=
-    Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hdvd hout hst hmemout
+    Restated.emits_runAllPath_of_tick facts S Sched x v hkN hlbl haw hout hst hmemout
   have hτ : (τ : Int) = (Restated.Vocabulary.Execution.Setup.a M S b.round) :=
     (Restated.Vocabulary.Proofs.Optimistic.emits_attest_shape facts (Setup.alwaysAwake S) _ hP hemit).2
   have hb : b.val_index ∈ notHeldAt Sched (τ : Int) := by

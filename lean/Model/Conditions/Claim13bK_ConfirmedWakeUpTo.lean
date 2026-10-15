@@ -31,13 +31,14 @@ open Framework.StsMultisetLog
 local macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| exact True.intro)
 
 /-- For every round `r` after the switch round, every tick step `n` at round `r`'s action time, and
-    every member `v` of `HonRound` for round `r`, if `r` is the round after the switch round, then
-    `v`'s `latest_stable` and `latest_confirmed` after `n + 1` steps are ancestors of every honest
-    head from slot `slot(S.a r) + 2` to slot `sEnd`. -/
+    every validator `v` not held by the adversary at that time, if `r` is the round after the switch
+    round, then `v`'s `latest_stable` and `latest_confirmed` after `n + 1` steps are ancestors of
+    every honest head from slot `slot(S.a r) + 2` to slot `sEnd`. -/
 def RecordsSettledAtSettleTickTo (M : Record.Model V) (S : Setup V) (Sched : Schedule V)
     (x : AtomicExec (Record.protocolOf M S) Sched) (tE : Int) (sEnd : Slot) : Prop :=
   ∀ (r : Round) (n : Nat) (v : V), Restated.switchRound M S tE + 1 ≤ r →
-    Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S r)) → v ∈ Restated.HonRound M S Sched r →
+    Restated.tickStepAt M x n ((Restated.Vocabulary.Execution.Setup.a M S r)) →
+    v ∉ Sched.adv ((Restated.Vocabulary.Execution.Setup.a M S r)) →
     r = Restated.switchRound M S tE + 1 →
     Restated.RecordsAncestorOfHonestHeadsTo M S Sched x v (n + 1) sEnd
 

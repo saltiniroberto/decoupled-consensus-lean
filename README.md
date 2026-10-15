@@ -37,7 +37,7 @@ a git submodule. It handles what is not the protocol: delivery, who is asleep, w
 
 The library `EndResults` states nine theorems for the spec itself, in the Lean namespace
 `EndResults`. Each applies a theorem proved over an arbitrary model of the record to the spec's
-model `Model.specDraft` and its facts `Model.specDraft_facts`
+model `Model.spec` and its facts `Model.spec_facts`
 (`lean/Proofs/Instance/Facts/Assembly.lean`). The file
 [`lean/EndResults.lean`](lean/EndResults.lean) holds `EndResults.constants_holds` and, for each of
 the other eight, its explicit form `…_holds_explicit`, which states the claim over every phase at
@@ -63,7 +63,12 @@ its hypotheses come before the colon, so that `tHeal` is chosen for each executi
 
 Each theorem's statement gives its full hypotheses. Every one of them depends only on the axioms `propext`, `Classical.choice` and `Quot.sound`.
 
-All nine assume nothing beyond their statements' own premises.
+All nine assume nothing beyond their statements' own premises. None of them assumes that
+validators wake only at a round's action instant or fall asleep only right after one: the spec's
+wake rule lets a validator perform a duty of a round only if it has been awake, without
+interruption, since one delay before the first cutoff of the grade results that duty reads. The
+spec's node placed under the transition-system framework (`lean/Sts.lean`) runs the node's tick at
+every reading of the validator's clock.
 [`lean/Spec/doc/PROVING.md`](lean/Spec/doc/PROVING.md) says how they are proved.
 
 ## Building

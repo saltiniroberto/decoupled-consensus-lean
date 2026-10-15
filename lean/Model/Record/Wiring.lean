@@ -208,18 +208,16 @@ variable {V : Type} [DecidableEq V] [Fintype V]
 /-! ## The wiring, over the record -/
 
 /-- The reactions validator `p`, holding node state `n`, may have to the event `e` at the clock
-    reading `t`. At a tick whose reading is a whole multiple of `S.E.Δ`, one reaction per successful
-    outcome of `M.tick`; at any other tick, the reaction that does nothing; on a delivery, one per
+    reading `t`. At a tick, at every reading, one reaction per successful outcome of `M.tick`; on a
+    delivery, one per
     successful outcome of `M.process` on the delivered object; on a wake, the reaction with node
     state `M.wake n` that sends nothing. -/
 def reactionsOf (M : Model V) (S : Setup V) (p : V) (n : M.N) (t : Int)
     (e : Event V (NamedObject V) Empty) : Set (NodeStepResult M.N (NamedObject V)) :=
   match e with
   | .tick =>
-      if t % S.E.Δ = 0 then
-        { res | ∃ out, M.tick (Setup.alwaysAwake S) p n t ⇢ out ∧
-            res = { state := out.1, send := (out.2 : Multiset (NamedObject V)) } }
-      else { { state := n, send := 0 } }
+      { res | ∃ out, M.tick (Setup.alwaysAwake S) p n t ⇢ out ∧
+          res = { state := out.1, send := (out.2 : Multiset (NamedObject V)) } }
   | .recv m =>
       { res | ∃ n', M.process (Setup.alwaysAwake S) n m.msg ⇢ n' ∧
           res = { state := n', send := relayedObjects m.msg } }
@@ -288,36 +286,27 @@ theorem wakeStage_of_TickAllAwakeWake (M : Model V) (S : Setup V) (Sched : Sched
     have he' : v ∉ (Sched.awake (t : Int) \ Sched.adv (t : Int)) \ Sched.awake ((t : Int) - 1) := he
     rw [if_neg he', hw]
 
-/-- After validator `p`'s reaction to a tick at reading `r` in `protocolOf M S`, either `r` is a
-    whole multiple of `S.E.Δ` and the node state is the first component of an answer of `M.tick`
-    from `n` at `r`, or the node state is `n` and either `r` is not a whole multiple of `S.E.Δ` or
-    `M.tick` from `n` at `r` returns nothing. -/
+/-- After validator `p`'s reaction to a tick at reading `r` in `protocolOf M S`, either the node
+    state is the first component of an answer of `M.tick` from `n` at `r`, or `M.tick` from `n` at
+    `r` returns nothing and the node state is `n`. -/
 theorem protocolOf_step_tick (M : Model V) (S : Setup V) {p : V} {r : Nat}
     {view : View V (NamedObject V)} {n : M.N} {res : NodeStepResult M.N (NamedObject V)}
     (h : (protocolOf M S).step p r view n .tick res) :
-    ((r : Int) % S.E.Δ = 0 ∧
-      ∃ out : M.N × List (NamedObject V),
+    (∃ out : M.N × List (NamedObject V),
         M.tick (Setup.alwaysAwake S) p n (r : Int) ⇢ out ∧ res.state = out.1) ∨
-    ((¬ (r : Int) % S.E.Δ = 0 ∨
-        ∀ out : M.N × List (NamedObject V), ¬ M.tick (Setup.alwaysAwake S) p n (r : Int) ⇢ out) ∧
+    ((∀ out : M.N × List (NamedObject V), ¬ M.tick (Setup.alwaysAwake S) p n (r : Int) ⇢ out) ∧
       res.state = n) := by
-  by_cases hp : (r : Int) % S.E.Δ = 0
-  · rcases h with h | ⟨hempty, h⟩
-    · simp only [reactionsOf, if_pos hp, Set.mem_setOf_eq] at h
-      obtain ⟨out, hout, hres⟩ := h
-      exact Or.inl ⟨hp, out, hout, by rw [hres]⟩
-    · refine Or.inr ⟨Or.inr fun out hout => ?_, by rw [h]⟩
-      have hmem : ({ state := out.1, send := (out.2 : Multiset (NamedObject V)) } :
-          NodeStepResult M.N (NamedObject V)) ∈ reactionsOf M S p n (r : Int) .tick := by
-        simp only [reactionsOf, if_pos hp, Set.mem_setOf_eq]
-        exact ⟨out, hout, rfl⟩
-      rw [hempty] at hmem
-      exact hmem
-  · refine Or.inr ⟨Or.inl hp, ?_⟩
-    rcases h with h | ⟨-, h⟩
-    · simp only [reactionsOf, if_neg hp, Set.mem_singleton_iff] at h
-      rw [h]
-    · rw [h]
+  rcases h with h | ⟨hempty, h⟩
+  · simp only [reactionsOf, Set.mem_setOf_eq] at h
+    obtain ⟨out, hout, hres⟩ := h
+    exact Or.inl ⟨out, hout, by rw [hres]⟩
+  · refine Or.inr ⟨fun out hout => ?_, by rw [h]⟩
+    have hmem : ({ state := out.1, send := (out.2 : Multiset (NamedObject V)) } :
+        NodeStepResult M.N (NamedObject V)) ∈ reactionsOf M S p n (r : Int) .tick := by
+      simp only [reactionsOf, Set.mem_setOf_eq]
+      exact ⟨out, hout, rfl⟩
+    rw [hempty] at hmem
+    exact hmem
 
 /-- After validator `p`'s reaction to the delivery of `m` in `protocolOf M S`, the node state is an
     answer of `M.process` on `n` and `m.msg`, or that receipt returns nothing and the node state is
@@ -441,11 +430,11 @@ theorem st_succ_cases (M : Model V) (S : Setup V) (Sched : Schedule V)
         have htk := protocolOf_step_tick M S (htick v hv)
         rcases wake_state M S Sched (hwake v) with hwst | hwst
         · rw [hwst] at htk
-          rcases htk with ⟨-, out, hout, hst⟩ | ⟨-, hst⟩
+          rcases htk with ⟨out, hout, hst⟩ | ⟨-, hst⟩
           · exact Or.inr (Or.inr (Or.inl ⟨(t : Int), out, Or.inr hout, by rw [hx1, hst]⟩))
           · exact Or.inr (Or.inl (by rw [hx1, hst]))
         · rw [hwst] at htk
-          rcases htk with ⟨-, out, hout, hst⟩ | ⟨-, hst⟩
+          rcases htk with ⟨out, hout, hst⟩ | ⟨-, hst⟩
           · exact Or.inr (Or.inr (Or.inl ⟨(t : Int), out, Or.inl hout, by rw [hx1, hst]⟩))
           · exact Or.inl (by rw [hx1, hst])
       · refine Or.inl ?_
@@ -514,13 +503,13 @@ theorem tickAllAwake_time (M : Model V) (S : Setup V) (Sched : Schedule V)
 
 /-- The events validator `v`'s run records for one sts action at real time `now`. At
     `tickAllAwake t`: the wake event when `M.wakeEvents` and `v` is in `entrants Sched t`, then the
-    tick event when `v` is awake and not adversarial at `t` and `t` is a whole multiple of `S.E.Δ`.
+    tick event when `v` is awake and not adversarial at `t`.
     At a delivery to `v`: the delivery event. Nothing otherwise. -/
-def actionEventsOf (M : Model V) (S : Setup V) (Sched : Schedule V) (v : V) (now : Int) :
+def actionEventsOf (M : Model V) (_S : Setup V) (Sched : Schedule V) (v : V) (now : Int) :
     AtomicAction V (NamedObject V) Empty → List (Record.Event V)
   | .tickAllAwake t =>
       (if M.wakeEvents = true ∧ v ∈ entrants Sched t then [Record.Event.wake v (t : Int)] else []) ++
-      (if v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧ (t : Int) % S.E.Δ = 0
+      (if v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int)
         then [Record.Event.tick v (t : Int)] else [])
   | .deliver p m => if p = v then [Record.Event.deliver v m.msg now] else []
   | .custom _ ev => ev.elim
@@ -664,8 +653,8 @@ theorem fold_actionEventsOf (M : Model V) (S : Setup V) (Sched : Schedule V)
       rw [List.foldlM_append, Set.bind_def]
       obtain ⟨w₁, hw₁, hw₁v⟩ :=
         fold_wakePartOf M (Setup.alwaysAwake S) Sched hwe t x[i] v w hw
-      suffices h : ∃ w'' ∈ (if v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
-          (t : Int) % S.E.Δ = 0 then [Record.Event.tick v (t : Int)] else []).foldlM
+      suffices h : ∃ w'' ∈ (if v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int)
+          then [Record.Event.tick v (t : Int)] else []).foldlM
             (worldStepOf M (Setup.alwaysAwake S)) w₁, w'' v = x[i + 1][v].st by
         obtain ⟨w'', h1, h2⟩ := h
         exact ⟨w'', Set.mem_biUnion hw₁ h1, h2⟩
@@ -678,28 +667,13 @@ theorem fold_actionEventsOf (M : Model V) (S : Setup V) (Sched : Schedule V)
             (Finset.mem_sdiff.1 hv).2]
         have htk := protocolOf_step_tick M S (htick v hv)
         rw [hwst] at htk
-        by_cases hp : (t : Int) % S.E.Δ = 0
-        · have hcond : v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
-              (t : Int) % S.E.Δ = 0 := ⟨hv, hp⟩
-          simp only [if_pos hcond, List.foldlM_cons, List.foldlM_nil, bind_pure]
-          rcases htk with ⟨-, out, hout, hst⟩ | ⟨hno, hst⟩
-          · refine ⟨Function.update w₁ v out.1, Or.inl ⟨out, hout, rfl⟩, ?_⟩
-            rw [Function.update_self, hx1, hst]
-          · have hno' : ∀ out : M.N × List (NamedObject V),
-                ¬ M.tick (Setup.alwaysAwake S) v (w₁ v) (t : Int) ⇢ out :=
-              hno.resolve_left (fun h => h hp)
-            refine ⟨w₁, Or.inr ⟨hno', rfl⟩, ?_⟩
-            rw [hx1, hst]
-        · have hne : ¬ (v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
-              (t : Int) % S.E.Δ = 0) := fun h => hp h.2
-          simp only [if_neg hne, List.foldlM_nil]
-          refine ⟨w₁, Set.mem_singleton w₁, ?_⟩
-          rcases htk with ⟨h, -⟩ | ⟨-, hst⟩
-          · exact absurd h hp
-          · rw [hx1, hst]
-      · have hne : ¬ (v ∈ Sched.awake (t : Int) \ Sched.adv (t : Int) ∧
-            (t : Int) % S.E.Δ = 0) := fun h => hv h.1
-        have hent : v ∉ entrants Sched t := fun h => by
+        simp only [if_pos hv, List.foldlM_cons, List.foldlM_nil, bind_pure]
+        rcases htk with ⟨out, hout, hst⟩ | ⟨hno, hst⟩
+        · refine ⟨Function.update w₁ v out.1, Or.inl ⟨out, hout, rfl⟩, ?_⟩
+          rw [Function.update_self, hx1, hst]
+        · refine ⟨w₁, Or.inr ⟨hno, rfl⟩, ?_⟩
+          rw [hx1, hst]
+      · have hent : v ∉ entrants Sched t := fun h => by
           have h' : v ∈ (Sched.awake (t : Int) \ Sched.adv (t : Int)) \
               Sched.awake ((t : Int) - 1) := h
           exact hv (Finset.mem_sdiff.1 h').1
@@ -712,7 +686,7 @@ theorem fold_actionEventsOf (M : Model V) (S : Setup V) (Sched : Schedule V)
               by_contra hn; exact hv (Finset.mem_sdiff.2 ⟨haw, hn⟩)
             exact (tickAllAwakeUpdate_getElem_adv hadv).1
           · rw [tickAllAwakeUpdate_getElem_asleep haw]
-        simp only [if_neg hne, List.foldlM_nil]
+        simp only [if_neg hv, List.foldlM_nil]
         exact ⟨w₁, Set.mem_singleton w₁, by rw [hw₁v, hx1]⟩
   | deliver p m =>
       by_cases hp : p = v

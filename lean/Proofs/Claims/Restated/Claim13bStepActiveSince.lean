@@ -19,6 +19,7 @@ import Model.Conditions.Sts_Interface
 import Model.Conditions.Sts_Spec2Claims_Claim13be
 import Model.Conditions.Vocabulary_Model_Execution_Setup
 import Model.Record.Wiring
+import Proofs.Claims.Restated.Claim13bStepFinRule
 
 /-!
 # The target clause since the switch round
@@ -58,6 +59,7 @@ theorem AfterPhaseInvariantOverActiveSetsSince.toTop {S : Setup V} {Sched : Sche
     heads := h.heads
     fin := h.fin
     grade1 := h.grade1
+    grade1Performers := h.grade1Performers
     heightCeiling := h.heightCeiling
     targetsTop := h.targetsTop }
 
@@ -89,7 +91,6 @@ theorem targetsSince_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Reco
       ∀ v : V, v ∉ Sched.adv t → v ∈ Sched.awake t)
     (hrsW : Restated.roundSleepinessW M S Sched tE) (hcs : Restated.committeeSleepinessW M S Sched tE)
     (hcom : Restated.HonestCommittees M S Sched (Restated.interface M S Sched))
-    (hw : Restated.WakesAtActionInstants M S Sched) (hs : Restated.SleepsAfterActionInstants M S Sched)
     {r : Round} {n n' n_W : Nat} {T : NamedBlock V}
     (hr : Restated.switchRound M S tE ≤ r)
     (hinv : Restated.AfterPhaseInvariantOverActiveSetsSince M S Sched x r n n_W T)
@@ -98,7 +99,8 @@ theorem targetsSince_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Reco
     (hjust : ∀ n'' : Nat, Restated.tickStepAt M x n'' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))) →
       Restated.StepJustifiedRootUnderAnchor M S Sched x r n n'' T)
     (hn' : Restated.tickStepAt M x n' ((Restated.Vocabulary.Execution.Setup.a M S (r + 1))))
-    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T) :
+    (hf : Restated.StepFieldsAt M S Sched x tE r n n' T)
+    (hrecvR : Restated.NextRoundReceipts M S Sched x r) :
     ∀ att : V → NamedAttestation V, Restated.ActionAttestationsOf M S Sched x r n' att →
     ∀ (w : V) (n₁ : Nat) (a : NamedAttestation V) (h' : Height) (entry : BlockId) (tmo : Bool),
       n₁ ≤ n' + 1 → Restated.HonestThrough M Sched x n₁ w → a.val_index = w →
@@ -110,17 +112,17 @@ theorem targetsSince_field_of_hypotheses_overActiveSets_ofFieldsAt (facts : Reco
       Block.Preceq C.erase (Restated.newAnchor M S Sched x r n' att T).erase := by
   intro att hatt
   have hctx : Restated.AnchoredRoundOverActiveSets M S Sched x tE r n T := ⟨hr, hinv.toTop⟩
-  exact Restated.targetsSince_field_at_succ_ofWakes facts S Sched x hexec hw hs hinv.tick hn' hatt
+  exact Restated.targetsSince_field_at_succ_rule facts S Sched x hexec hinv.tick hn' hatt
     hinv.inPlay
-    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn'
+    (Restated.anchor_preceq_new_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn'
         att hatt)
     (fun q hq => hf.confirmedNew att hatt q
-      (Restated.mem_honRound_of_mem_freshAttesters_ofWakes facts S Sched x hw hn' hq))
-    (fun q hq => Restated.frameG2New_of_hypotheses_overActiveSets facts S Sched x tE hexec hmono htd
-        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hw hctx hcross hjust hn' hf
+      hq)
+    (fun q hq => Restated.frameG2New_of_hypotheses_overActiveSets (hrecvR := hrecvR) facts S Sched x tE hexec hmono htd
+        tGAT gap hgst hlen hsync hmult hcv hthird hphase hrsW hcs hcom hctx hcross hjust hn' hf
         att hatt q
-      (Restated.mem_honRound_of_mem_freshAttesters_ofWakes facts S Sched x hw hn' hq))
+      hq)
     hinv.heightCeiling hinv.targetsSince
 
 end

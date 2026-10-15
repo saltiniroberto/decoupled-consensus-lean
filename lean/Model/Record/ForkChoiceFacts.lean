@@ -57,6 +57,29 @@ structure ForkChoiceFacts (M : Model V) : Prop where
       by an outcome of `M.goldfish_score` and admitting a block whose score is more than half of the
       late voters, is a descendant of `B`. -/
   ghost_passes_cone : ∀ (E : Env V) (T tree : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) {A B : Block V} (hmaj : (E.committee s).card < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → M.equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hvalid : Protocol.VoteSetValid E s late) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (score : Block V → ℕ) (hscore : ∀ C, M.goldfish_score E T votes support s C ⇢ score C) (X : Block V) (hX : M.ghost A tree score (fun C => decide (M.voters_count E late s < 2 * score C)) ⇢ X), Block.Preceq B X
+  /-- If the late voters of slot `k` are fewer than twice the committee members in `Hon`, no
+      committee member in `Hon` equivocates in `votes`, every committee member in `Hon` has a
+      slot-`k` vote in `support` whose head resolves in `T` to a descendant of `B`, `A` is an
+      ancestor of `B`, and every block strictly after `A` on the way to `B` is in `tree`, then every
+      outcome of `M.goldfish_fork_choice` started from `A` over `tree` is a descendant of `B`. -/
+  goldfish_passes_cone_count : ∀ (E : Env V) (σ : Block V → M.CS) (h_max : Height) (T tree : Finset (Block V)) (cur : Slot) (votes support : Finset (GoldfishVote V)) (k : Slot) (Hon : Finset V) {A B : Block V} (hcount : M.voters_count E votes k < 2 * ((E.committee k) ∩ Hon).card) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee k, x ∈ Hon → M.equivocates votes x = false) (hvote : ∀ x ∈ E.committee k, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = k ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (X : Block V) (hX : M.goldfish_fork_choice E σ h_max T cur A tree votes support k ⇢ X), Block.Preceq B X
+  /-- If the voters of `late` at slot `s` are fewer than twice the committee members in `Hon`,
+      `votes ⊆ late`, no committee member in `Hon` equivocates in `votes`, every committee member in
+      `Hon` has a slot-`s` vote in `support` whose head resolves in `T` to a descendant of `B`, `A`
+      is an ancestor of `B`, and every block strictly after `A` on the way to `B` is in `tree`, then
+      every outcome of the walk `M.ghost` from `A` over `tree`, scored by an outcome of
+      `M.goldfish_score` and admitting a block whose score is more than half of the late voters, is
+      a descendant of `B`. -/
+  ghost_passes_cone_count : ∀ (E : Env V) (T tree : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) {A B : Block V} (hcount : M.voters_count E late s < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → M.equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ Block.Preceq B X) (hAB : Block.Preceq A B) (hpath : ∀ C : Block V, Block.Preceq A C → C ≠ A → Block.Preceq C B → C ∈ tree) (score : Block V → ℕ) (hscore : ∀ C, M.goldfish_score E T votes support s C ⇢ score C) (X : Block V) (hX : M.ghost A tree score (fun C => decide (M.voters_count E late s < 2 * score C)) ⇢ X), Block.Preceq B X
+  /-- If the voters of `late` at slot `s` are fewer than twice the committee members in `Hon`,
+      `votes ⊆ late`, no committee member in `Hon` equivocates in `votes`, every committee member in
+      `Hon` has a slot-`s` vote in `support` whose head resolves in `T` to a block `tgt` admits, and
+      `C` is an ancestor of every block `tgt` admits, then the late voters of slot `s` are fewer than
+      twice every outcome of `C`'s Goldfish score. -/
+  ConeSupport_eligible_count : ∀ (E : Env V) (T : Finset (Block V)) (votes support late : Finset (GoldfishVote V)) (s : Slot) (Hon : Finset V) (tgt : Block V → Prop) {C : Block V} (hcount : M.voters_count E late s < 2 * ((E.committee s) ∩ Hon).card) (hcounted : votes ⊆ late) (hsub : support ⊆ votes) (hno : ∀ x ∈ E.committee s, x ∈ Hon → M.equivocates votes x = false) (hvote : ∀ x ∈ E.committee s, x ∈ Hon → ∃ u ∈ support, u.val_index = x ∧ u.slot = s ∧ ∃ X : Block V, Block.find? T u.head = some X ∧ X.slot ≤ u.slot ∧ tgt X) (hC : ∀ X : Block V, tgt X → Block.preceq C X = true) (g : ℕ) (hg : M.goldfish_score E T votes support s C ⇢ g), M.voters_count E late s < 2 * g
+  /-- If every vote of `votes` names a member of `X`, the voter count `M.voters_count E votes s` is
+      at most the size of `X`. -/
+  voters_count_le_card_of_valIndex : ∀ (E : Env V) (votes : Finset (GoldfishVote V)) (s : Slot) (X : Finset V) (h : ∀ u ∈ votes, u.val_index ∈ X), M.voters_count E votes s ≤ X.card
   /-- Two blocks that pass the strict-majority test at two views that see each other's counted votes
       are ancestor-comparable. -/
   eligible_compatible : ∀ {E : Env V} {Tv Tw : Finset (Block V)}
