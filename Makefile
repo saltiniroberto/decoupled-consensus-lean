@@ -1,4 +1,4 @@
-.PHONY: help check dev spec sorry sorries nodecide orphans build cache extract submodules
+.PHONY: help check dev spec proofs sorry sorries nodecide orphans build cache extract submodules
 
 # `native_decide` is never acceptable: it moves a claim off the kernel and onto the compiler,
 # which no amount of later work discharges. Every target refuses it.
@@ -9,25 +9,26 @@ NEVER_RE := (^|[^`[:alnum:]_])native_decide([^`[:alnum:]_]|$$)
 # each pattern requires the token not to be preceded by one.
 WIP_RE := (^|[^`[:alnum:]_])(sorry|admit)([^`[:alnum:]_]|$$)
 
-# Excludes deps/, another project's sources and not ours to police, and latex-specs/, a
-# local-only checkout of the old papers.
-SCAN := --include=*.lean . --exclude-dir=deps --exclude-dir=.lake --exclude-dir=latex-specs
+# Excludes deps/, another project's sources and not ours to police, and scratch/, where
+# gitignored probes may live.
+SCAN := --include=*.lean lean --exclude-dir=.lake --exclude-dir=scratch
+
+# The proofs compile with up to 3.5 GB of memory per module; these caps keep a full build of
+# the five libraries at about two compiles at a time.
+CAPPED := LEAN_NUM_THREADS=2 nice -n 10
 
 help:
-	@echo 'The two targets that matter:'
-	@echo
-	@echo 'make dev        - working target: native_decide check, count the outstanding'
-	@echo '                  sorry/admit, then build. Allows sorry.'
-	@echo 'make check      - strict target: the same, except that any sorry/admit fails it.'
-	@echo '                  Nothing may be outstanding. Use before committing a proof.'
-	@echo
-	@echo 'make spec       - build the Spec lib alone: green even while Sts.lean is behind'
-	@echo '                  a spec change. Runs the native_decide check too.'
+	@echo 'make check      - strict target: native_decide and sorry/admit checks, then build the'
+	@echo '                  spec and its sts node (the default targets). Nothing may be outstanding.'
+	@echo 'make dev        - the same, but counts the outstanding sorry/admit instead of failing.'
+	@echo 'make spec       - build the Spec library alone.'
+	@echo 'make proofs     - build all five libraries (Spec, Sts, Model, Proofs, EndResults), capped:'
+	@echo '                  about 40 minutes, up to 3.5 GB per compile.'
 	@echo
 	@echo 'make cache      - fetch prebuilt Mathlib artefacts (do this before a first build)'
 	@echo 'make sorries    - list every outstanding sorry/admit, without failing'
-	@echo 'make orphans    - find .lean files in a srcDir that no lean_lib glob claims'
-	@echo 'make build      - build this project'
+	@echo 'make orphans    - find .lean files under lean/ that no lean_lib glob claims'
+	@echo 'make build      - build the default targets (Spec, Sts)'
 	@echo 'make extract    - render the spec into a paper-shaped PDF (extract/out/dc.pdf)'
 	@echo 'make submodules - report the pinned revision of each submodule'
 
@@ -38,9 +39,7 @@ check: nodecide orphans sorry build
 # outstanding count reported instead.
 dev: nodecide orphans sorries build
 
-# The spec alone: what to run while a spec change has left Sts.lean red and what the
-# wiring should now say has not been settled. A `sorry` under lean/Spec/ still fails
-# it -- the spec never carries one.
+# The spec alone. A `sorry` under lean/Spec/ fails it: the spec never carries one.
 spec: nodecide orphans
 	@if grep -rnE '$(WIP_RE)' --include=*.lean lean/Spec; then \
 		echo 'FAIL: sorry/admit under lean/Spec'; exit 1; \
@@ -49,19 +48,21 @@ spec: nodecide orphans
 	fi
 	lake build Spec
 
-# A .lean file in a source directory that no lean_lib glob claims is always a mistake: Lake
-# never reads it, so it can be stale or outright broken while every other target stays green.
-# That has happened -- an editor tab left open on a path two layout moves out of date was
-# saved and recreated a whole stale directory, invisible to the build.
-#
-# The one srcDir is `lean`, holding Spec and Sts.
+# Every library, with the caps above.
+proofs: nodecide orphans sorry
+	$(CAPPED) lake build Spec Sts Model Proofs EndResults
+
+# A .lean file under lean/ that no lean_lib glob claims is always a mistake: Lake never reads
+# it, so it can be stale or broken while every other target stays green.
 orphans:
 	@bad=`find lean -name '*.lean' \
-	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' \
-	    ! -path 'lean/Sts.lean'`; \
+	    ! -path 'lean/Spec.lean' ! -path 'lean/Spec/*' ! -path 'lean/Sts.lean' \
+	    ! -path 'lean/Model.lean' ! -path 'lean/Model/*' \
+	    ! -path 'lean/Proofs.lean' ! -path 'lean/Proofs/*' ! -path 'lean/EndResults.lean' \
+	    ! -path 'lean/EndResults/*'`; \
 	if [ -n "$$bad" ]; then \
 		echo "$$bad"; \
-		echo 'FAIL: .lean in a srcDir claimed by no lean_lib glob in lakefile.toml'; \
+		echo 'FAIL: .lean under lean/ claimed by no lean_lib glob in lakefile.toml'; \
 		exit 1; \
 	else \
 		echo 'no orphaned .lean files'; \

@@ -5,15 +5,14 @@ import Spec.Defs.FinsetM
 # Failure: one `Error`, and `DRE`
 
 **This file is not a specification.** It holds no protocol content — nothing here renders a
-definition or a figure of the protocol. It is the failure vocabulary the whole rendering shares,
-kept out of the figure files so that each of those states what the protocol says and nothing
-else.
+routine of the protocol. It is the failure vocabulary the routines of `Spec` share, kept out of
+the routine files so that each of those states what the protocol does and nothing else.
 
-The protocol has no failures. Its state map is defined on every accepted block and its routines
-run at the instants the schedule names, so every raise below is a rendering artifact: it marks
-a place where this Lean cannot see what the protocol's prose knows. The theorem worth having is
-therefore that **nothing ever raises** on a store that keeps the coherence invariant, and that
-belongs to `Analysis/`.
+The protocol has no failures. A routine of `Spec` raises where its Lean cannot see a fact its
+caller ensures: `blockWithRoot` raises when two blocks of a tree share a root, a grade result
+read with `let G ← result` raises when the result is still pending, and `let y ← x` raises when
+the option `x` is `none`. The theorem worth having is therefore that **nothing ever raises** on
+the stores a run reaches, and that does not belong to the spec.
 
 ## Why one payload-free value
 
@@ -23,12 +22,13 @@ belongs to `Analysis/`.
   that it never fires;
 * it keeps every signature short and every `do` block in a single error type, which is what
   `Monad (Except ε)` requires, `ε` being fixed across a bind;
-* **`Finset.filterM` and `Finset.imageM` could not be used over it otherwise.** Those folds
-  need their combining operation commutative, and the failure-failure case needs the two
+* **`Finset.filterM` could not be used over it otherwise.** That fold
+  needs its combining operation commutative, and the failure-failure case needs the two
   failures to be *equal* — which is `Subsingleton Error`. Give `Error` a payload and
   `Std.Commutative` becomes false, not merely unproved, because the result would then depend
-  on which failure the traversal met first. `Store.viable` and `Store.updateFinality` are
-  the consumers — a raw-`Option` read would answer silently where these raise.
+  on which failure the traversal met first. The routines of `Spec` that filter a set by a test
+  that can raise (`beforeCutoff` of `lean/Spec/Objects.lean`, and routines of the files under
+  `lean/Spec/Protocol/`) are the consumers.
 
 `DRE α` is `Except Error α` — a *deterministic* result or exception, named as the
 deterministic partner of `Nondet.lean`'s `NDRE`. (A bare `Result` would silently shadow
@@ -39,36 +39,36 @@ set_option autoImplicit false
 
 namespace DC
 
-/-- The one failure of this rendering, thrown by every routine that can fail and carrying
-    nothing. `Σ.σ[B]` raises it when the map does not record `B`; anything added later raises
-    the same value. See the module header for why it has no payload.
+/-- The one failure of `Spec`, thrown by every routine that can fail and carrying nothing.
+    The module header lists where it is raised, and says why it has no payload.
 
-    Timing is deliberately not a failure. In this protocol nothing tests its own instant:
-    `on_tick` dispatches on the clock it was handed, and every routine it calls runs because
-    the tick said so. -/
+    Timing is deliberately not a failure. No routine tests its own instant: `tick`
+    (`lean/Spec/Node.lean`) tests the instant it was handed against the schedule, and every
+    routine it calls runs because that test passed. -/
 inductive Error where
   /-- The failure. -/
   | error
 
-/-- Any two failures are the same failure. An `instance`, not a `theorem`, because `Spec/`
+/-- Any two failures are the same failure. An `instance`, not a `theorem`, because `lean/Spec/`
     holds no theorems — and it is what the two instances below cannot exist without. -/
 instance : Subsingleton Error := ⟨fun e e' => by cases e; cases e'; rfl⟩
 
 /-- `DRE α` is an `α` or the failure: the result type of every routine that can
     raise, so no signature repeats the error type.
 
-    **`abbrev`, not `def`** — measured 2026-08-21. It has to be reducible: instance synthesis
+    **`abbrev`, not `def`**. It has to be reducible: instance synthesis
     does not unfold a plain `def`, so with one the `Monad` and `MonadExcept` instances are
     not found, `do` and `←` fail, and even `throw .error` cannot resolve its constructor. As
     an `abbrev` everything applies through it — `do`, `throw`, `←`, and `Except.toOption` and
     friends — while signatures and `#check` output read `DRE α`. -/
 abbrev DRE (α : Type) := Except Error α
 
-/-- The pure extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis discharged
-    from a dependent `if _ : x ≠ ⊥` branch by the instants' own tactic. The raising lift
-    below — `let y ← x` behind a plain `≠ ⊥` test — covers the monadic bodies; this is
+/-- The pure extraction from an option: `x.value`, its `x ≠ ⊥` hypothesis (`⊥` is `none`)
+    discharged by `solve_by_elim` from the facts of an enclosing `if x ≠ none then`; the
+    notation at the head of `lean/Spec/Objects.lean` makes that `if` hand its condition to
+    its branches. The raising lift below, `let y ← x`, covers the monadic bodies; this is
     the *pure* bodies' extraction, where no lift can fire. The extraction must sit
-    inside the dependent `if`'s then-branch — a do join point does not carry the
+    inside the `if`'s then-branch — a do join point does not carry the
     hypothesis into the continuation (measured). The trap it carries: dot notation
     resolves fields in the type's own namespace only, hence the `_root_.` (a
     `DC.Option.value` is invisible to `x.value`). -/
@@ -104,8 +104,8 @@ instance {α : Type} [DecidableEq α] :
     block, `let y ← x` with `x : Option α` binds the value and raises on `⊥` — total, the
     one failure. A `MonadLift`, not a `Coe`, because `←` resolves through lifts; the
     chain into `NDRE` composes through `Nondet.lean`'s `Except` lift. This is the
-    subtree's extraction spelling wherever the body raises: where absence is a normal
-    branch, a plain `if x ≠ ⊥` decides the branch and the bind behind it cannot raise.
+    extraction spelling wherever the body raises: where absence is a normal
+    branch, a plain `if x ≠ none` decides the branch and the bind behind it cannot raise.
     The accepted cost: the extraction's safety
     is not checked at the site — dropping the test leaves compiling code that raises
     where a rule meant to fall through. -/

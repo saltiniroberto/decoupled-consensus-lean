@@ -1,6 +1,6 @@
 name = "decoupled-consensus-lean"
 version = "0.1.0"
-defaultTargets = ["Spec"]
+defaultTargets = ["Spec", "Sts"]
 
 # The STS framework, as a git submodule at `deps/lean-sts` and a path require. A submodule
 # rather than a git require so that the revision this project builds against is recorded in
@@ -9,8 +9,8 @@ defaultTargets = ["Spec"]
 #
 # The flavour used is `StsMultisetLog` (`import StsMultisetLog.Spec.Protocol`); the package
 # declares four others, and nothing is shared between them, so importing one does not build
-# the rest. Nothing imports it yet: the sts wiring that will consume the duties is future
-# work, and the DutyResult/`outcomes` boundary is shaped for it.
+# the rest. `lean/Sts.lean` imports it (the spec's node placed under its `Protocol`), and so
+# does the vocabulary model's execution under `lean/Model/Sts/`.
 [[require]]
 name = "sts-framework"
 path = "deps/lean-sts"
@@ -23,19 +23,63 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.32.2"
 
-# This project's sources. `srcDir` is `lean` and the module root is `Spec`, so a module
-# `Spec.Defs.Model` is the file `lean/Spec/Defs/Model.lean`. Lake derives a
-# module's path from its name and nothing else — measured, not assumed — so every directory
-# under `srcDir` repeats a module component.
+# The specification. `srcDir` is `lean` and the module root is `Spec`, so `Spec.Store` is
+# `lean/Spec/Store.lean`; the Lean namespaces are `Spec` and `Spec.Protocol`. `lean/Spec/Defs/`
+# is the spec's notation layer (namespace `DC`).
 [[lean_lib]]
 name = "Spec"
 srcDir = "lean"
 globs = ["Spec", "Spec.+"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
-# The boundary to the sts framework: the specification above placed under
-# `StsMultisetLog`'s `Protocol`. Root `Sts`, same `srcDir`. Nothing in `Spec` imports it, and
-# the extractor does not read it, so no line of it reaches the document.
+# The spec's node placed under the sts framework's `Protocol`. Nothing in `Spec` imports it.
 [[lean_lib]]
 name = "Sts"
 srcDir = "lean"
 globs = ["Sts"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# The definitions the proofs are stated against: the vocabulary model, a second model of the
+# protocol, under `lean/Model/Vocabulary/` (and its statement library under `Statements/`), the
+# record `Model V` with its facts bundles and wiring (`lean/Model/Record/`), the conditions the
+# restated claims are stated with (`lean/Model/Conditions/`), and the vocabulary model's execution
+# placed under the sts framework's `Protocol` (`lean/Model/Sts/`). `srcDir` is `lean` and the
+# module root is `Model`, so `Model.Record.Facts` is `lean/Model/Record/Facts.lean`. Files are
+# placed by what they mostly are, so many pages here import pages of `Proofs` (some proof pages
+# declare definitions that statements use); Lake resolves modules across the two libraries. Not a
+# default target: `lake build Model`.
+#
+# `leanOptions`, here, in `Proofs` and in `EndResults`: `relaxedAutoImplicit = false` forbids an
+# identifier other than a single letter silently becoming an auto-bound implicit;
+# `maxSynthPendingDepth = 3` is the setting the vocabulary model's code elaborates under;
+# `pp.unicode.fun` changes printing only. Most pages also set `autoImplicit false` per file.
+[[lean_lib]]
+name = "Model"
+srcDir = "lean"
+globs = ["Model", "Model.+"]
+leanOptions = { pp.unicode.fun = true, relaxedAutoImplicit = false, maxSynthPendingDepth = 3 }
+
+# Every proof: the proofs about the vocabulary model under `lean/Proofs/Vocabulary/` (under
+# `Internal/` its internal vocabulary library, and the vocabulary model as an instance of the
+# record), the claims (`lean/Proofs/Claims/`) and the spec's instance of the record
+# (`lean/Proofs/Instance/`); the end results are the library `EndResults`. `srcDir` is
+# `lean` and the module root is `Proofs`. Not a default target: `lake build Proofs`.
+[[lean_lib]]
+name = "Proofs"
+srcDir = "lean"
+globs = ["Proofs", "Proofs.+"]
+leanOptions = { pp.unicode.fun = true, relaxedAutoImplicit = false, maxSynthPendingDepth = 3 }
+
+# The end results (Roberto, 2026-10-15: "I would like the file with the endresults to be more
+# clearly identifiable"): the nine top-level theorems of the claims applied to the spec's instance
+# of the record, `Model.specDraft_facts`, with their per-execution and explicit forms, in the Lean
+# namespace `EndResults`. Two modules: `EndResults`, the file `lean/EndResults.lean`, holds
+# `constants_holds` and the explicit forms, and `EndResults.ExistentialForms`, the file
+# `lean/EndResults/ExistentialForms.lean`, the forms `…_holds` and `…_holds_perExecution`; both
+# import pages of `Model` and `Proofs`. Same `leanOptions` as `Proofs`, where the first file was
+# until 2026-10-15. Not a default target: `lake build EndResults`.
+[[lean_lib]]
+name = "EndResults"
+srcDir = "lean"
+globs = ["EndResults", "EndResults.+"]
+leanOptions = { pp.unicode.fun = true, relaxedAutoImplicit = false, maxSynthPendingDepth = 3 }

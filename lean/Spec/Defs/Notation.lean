@@ -3,15 +3,16 @@ import Spec.Defs.FinsetM
 import Spec.Defs.Raise
 
 /-!
-# Notation for rendering the protocol's figures as pseudocode
+# Notation for writing the protocol's routines as pseudocode
 
 **This file is not a specification.** It holds no protocol content — no state, no routine,
 nothing that can be checked against the protocol. It is the notation layer that lets the
-figure files carry the protocol's own assignment statements — `σ.h ← σ.h + 1`,
-`σ.target_participation, σ.progress ← false^V` — its cardinality bars, `|votes|`, its
-set-builders whose condition raises, `{x ∈ᴹ s | p}`, and its destructuring assignment,
-`fp, Σ ← decide_finality_vote(Σ)`, written `let {vote := fp, state ← S} := …` with each
-field wearing the arrow of what happens to it.
+routine files of `Spec` carry assignment statements — `σ.h ← σ.h + 1`,
+`σ.target_participation, σ.progress ← ∅` (`advance_height`) — cardinality bars,
+`|raw_equivocators votes| + |supporters|`, set-builders whose condition raises,
+`{x ∈ᴹ s | p}`, and a destructuring assignment,
+`let {fst ← signingHistory, snd := a} := create_attestation …` (`create`), with each field
+wearing the arrow of what happens to it.
 
 The macros are protocol-free — nothing here names anything from the protocol — and
 `scoped`, active only inside this namespace. The decisions:
@@ -19,13 +20,12 @@ The macros are protocol-free — nothing here names anything from the protocol �
 **A routine is a plain `def … : T := Id.run do`.** No `function` command that would default
 the result type from the state binder: the type is worth having visible at the declaration.
 
-**No `while` or `repeat` macro.** Lean 4.32.2's `Lean.Loop.forIn` is `whileM`
-(`Init/While.lean`), a least fixed point, so a figure's `while` would be written directly
-with no bound. Proving anything about a routine written that way needs the `lean-proof-idioms`
+**No `while` or `repeat` macro.** Lean 4.32.2's `Lean.Loop.forIn` is `whileM`, a least fixed point,
+so a routine's `while` would be written directly with no bound. Proving anything about a routine written that way needs the `lean-proof-idioms`
 skill; writing one does not.
 
-**The assignment macros claim bare identifiers as well as dotted ones.** So a figure's
-`σ ← process_attestation(σ, a)` is written with the same arrow as its `σ.s ← B.slot`,
+**The assignment macros claim bare identifiers as well as dotted ones.** So a routine's
+`n ← record_awake n t` is written with the same arrow as its `st.t ← t` (`tick`),
 rather than the two spellings sitting side by side. What that costs is
 `x ← someMonadicAction`, Lean's monadic reassignment of a mutable variable, which becomes
 unwritable while this namespace is open. Nothing here wants it: the routines are all
@@ -35,7 +35,7 @@ another monad is untouched. A mistake is a type error, never a silent one.
 ## `←` renders as `←` only where it re-assigns
 
 The protocol writes `←` both for introducing a name and for overwriting one. Lean
-distinguishes them, and so do the figure files:
+distinguishes them, and so do the routine files:
 
 * **introduces** a name → `let x := e`, or `let mut x := e` when a later line overwrites it;
 * **re-assigns** an existing one → `x ← e`, the macros below.
@@ -44,18 +44,18 @@ distinguishes them, and so do the figure files:
 
 The protocol's arrow says nothing about whether the routine on its right picks, raises or
 merely returns; here that difference is worth seeing, so an assignment fed by a
-computation wears a second arrowhead — `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, `H ⇐ arg max`.
+computation wears a second arrowhead — `st ⇐ propose_block C P X n.v st` (`tick`).
 The distinction is Lean's, not the protocol's: the extracted document writes one arrow for
-both, as the draft does, so a figure shows `←` wherever a routine writes either.
+both, so it shows `←` wherever a routine writes either.
 It binds the value and writes it, and the `Option` a field wraps is supplied by coercion,
-so no `some` is written. Three arrows, then, each saying one thing: `←` re-assigns a
-value, `⇐` binds a computation's, `←ᵖ` picks (`Nondet.lean`).
+so no `some` is written. Two arrows, then, each saying one thing: `←` re-assigns a
+value, `⇐` binds a computation's.
 
 The alternative — teaching `←` itself to accept either — was built and measured: a class
 dispatching on the right-hand side works where that side types itself, and breaks where
-the *assignment* is what types it, which is how two of the protocol's own lines
-elaborate (`σ.nj ← …` through the `Decidable` coercion, `σ.progress ← fun _ => false`
-through the field). Repairing those would have put ascriptions into the figures.
+the *assignment* is what types it, which is how two lines of an earlier version of the routines
+elaborated (`σ.nj ← …` through the `Decidable` coercion, `σ.progress ← fun _ => false`
+through the field). Repairing those would have put ascriptions into the routines.
 
 ## Hazard
 
@@ -89,7 +89,7 @@ macro_rules
         `(doElem| $v:ident := { $v with $f:ident := $e })
 
 /-- `σ.f, σ.g ← e`, the protocol's simultaneous assignment, as in `advance_height`'s
-    `σ.target_participation, σ.progress ← false^V`. Both sides get the same `e`, which is
+    `σ.target_participation, σ.progress ← ∅`. Both sides get the same `e`, which is
     what that line means. -/
 scoped syntax (name := pairAssign) (priority := high) ident ", " ident " ← " term : doElem
 
@@ -100,8 +100,7 @@ macro_rules
           $y:ident ← $e)
 
 /-- `σ.arr[i] ← e`, an indexed write to a function-valued field, and `x[i] ← e` to a
-    function-valued local. `σ.target_participation[i] ← true` is the case
-    `process_attestation` needs. -/
+    function-valued local, as in `on_goldfish_vote`'s `st.timestamp_vote[vote] ← st.t`. -/
 scoped syntax (name := idxAssign) (priority := high) ident noWs "[" term "]" " ← " term :
   doElem
 
@@ -137,37 +136,18 @@ macro_rules
             let val ← ($e)
             $v:ident := { $v with $f:ident := val })
 
-/-- `σ.arr[i] ⇐ e`, the indexed write whose value computes, and `x[i] ⇐ e` to a
-    function-valued local: `Σ.sg_root[r] ⇐ get_sg_root(Σ, r)`, the healing tick's line.
-    An `Option`-valued field takes the bound value through the coercion, no `some`. -/
-scoped syntax (name := idxAssignBind) (priority := high)
-  ident noWs "[" term "]" " ⇐ " term : doElem
-
-macro_rules
-  | `(doElem| $x:ident[$i] ⇐ $e) => do
-      let n := x.getId
-      let pre := n.getPrefix
-      if pre.isAnonymous then
-        `(doElem| do
-            let val ← ($e)
-            $x:ident := Function.update $x:ident $i val)
-      else
-        let v := mkIdent pre
-        let f := mkIdent (Name.mkSimple n.getString!)
-        `(doElem| do
-            let val ← ($e)
-            $v:ident := { $v with $f:ident := Function.update (($v).$f:ident) $i val })
-
 /-! ## The destructuring assignment: each field wears its own arrow
 
-The protocol writes `fp, Σ ← decide_finality_vote(Σ)` — one line that introduces `fp` and
-overwrites `Σ` from the two components a routine returns. Lean's `let`-pattern cannot
+A pseudocode line such as `signingHistory, a ← create_attestation(signingHistory, …)` introduces
+`a` and overwrites `signingHistory` from the two components a routine returns. Lean's `let`-pattern cannot
 re-assign a `mut` variable (a pattern only binds new names), which used to force a
 temporary: bind `S'`, then `S ← S'` on the next line. The form below is that line
 restored, under the file's own doctrine applied at field granularity — `:=` introduces a
 name, `←` re-assigns an existing `mut` one:
 
-    let {vote := fp, state ← S} := S.decideFinalityVote
+    let {fst ← signingHistory, snd := a} := create_attestation signingHistory …
+
+(`create`, `lean/Spec/Protocol/ValidatorClient.lean`).
 
 The producer is evaluated exactly once, into a hygienic temporary, **before** any
 re-assignment — the same order as the two-line spelling it replaces — and each written
@@ -177,10 +157,7 @@ computes, exactly as `⇐` relates to `←` in the assignment arrows above.
 
 An all-`:=` line also parses here and expands to bindings equivalent to the core
 `let`-pattern it would otherwise be; anything this grammar does not accept — a nested or
-parenthesized pattern — backtracks to core untouched. **The expansions are checked
-against their hand-written spellings by kernel-decided equalities in
-`Analysis/NotationEquivalence.lean`**: the macro's whole competence is routing, and the
-routing is certified there rather than trusted. -/
+parenthesized pattern — backtracks to core untouched. -/
 
 declare_syntax_cat destructField
 
@@ -236,33 +213,21 @@ macro_rules
     a store map with the raising bracket has no monad to fail into; this form expands to
     `s.filterM (fun x => do return p)`, and a `(← …)` inside `p` lifts into that inner `do`
     `ᴹ` says monadic. The spelling is distinct from the pure builder's on purpose:
-    overloading `∈` would make every pure filter ambiguous. The expansion pins the filter's
-    monad to `DRE` — this is the *raising* builder — so that inside an `NDRE`
-    block the filter still runs at the raising monad and lifts whole, rather than demanding
-    fold instances the stack rightly lacks (a pick with no outcomes does not commute with an
-    error; measured 2026-08-23).
+    overloading `∈` would make every pure filter ambiguous. The expansion pins the filter's monad to
+    `DRE` — this is the *raising* builder — so that inside an `NDRE` block the filter still runs at
+    the raising monad and lifts whole, rather than demanding fold instances the stack rightly lacks
+    (a pick with no outcomes does not commute with an error).
 
-    **It must be a `doElem`, claiming the whole `let … ← {…}` statement** — measured
-    2026-08-23, and it is the recorded term-versus-doElem trap hit live: as a *term* macro
-    the enclosing `do` scans the bind's right side before the macro expands, lifts the
-    user's `(← …)` out of the builder, and the bound variable escapes its binder ("Unknown
-    identifier `vote`"). As a `doElem` the macro owns the statement, so the arrow lands
+    **It must be a `doElem`, claiming the whole `let … ← {…}` statement**: as a *term* macro the
+    enclosing `do` scans the bind's right side before the macro expands, lifts the user's `(← …)`
+    out of the builder, and the bound variable escapes its binder ("Unknown identifier `vote`"). As a `doElem` the macro owns the statement, so the arrow lands
     inside the `do` the expansion itself emits, which shields it. -/
 scoped syntax (name := filterMBind) (priority := high)
   "let " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
 
-/-- The `let mut` form of the raising set-builder. No current use — `goldfish_vote`'s
-    freeze filter was the case until the stored votes carried their own times — kept as
-    part of the builder's vocabulary. -/
-scoped syntax (name := filterMBindMut) (priority := high)
-  "let " "mut " ident " ← " "{" ident " ∈ᴹ " term " | " term "}" : doElem
-
 macro_rules
   | `(doElem| let $y:ident ← {$x:ident ∈ᴹ $s | $p}) =>
       `(doElem| let $y:ident ←
-          (Finset.filterM (fun $x => do return $p) $s : DRE _))
-  | `(doElem| let mut $y:ident ← {$x:ident ∈ᴹ $s | $p}) =>
-      `(doElem| let mut $y:ident ←
           (Finset.filterM (fun $x => do return $p) $s : DRE _))
 
 /-- `{f x | x ∈ s}`, the image comprehension — `s.map' fun x => f x` — and its

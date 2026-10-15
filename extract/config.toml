@@ -13,5 +13,5 @@ title = "Decoupled Consensus"
 #   ["A", "B", "*"]    the listed files in place, every other file alphabetically at
 #                      the "*".
 [order]
-Defs = ["Model", "Store", "*"]
+Defs = ["Model", "*"]
 "." = ["*"]

@@ -2,118 +2,205 @@ import Spec
 import StsMultisetLog
 
 /-!
-# The protocol as a transition system
+# `Spec`'s node as a transition system
 
-The boundary between `Spec/` and the sts framework (`deps/lean-sts`, the `StsMultisetLog`
-flavour). Nothing here is protocol content: `Spec/` says what a validator does, and this file
-says when it does it, in the shape the framework's `Protocol` wants — an `init`, and a step
-relation over the framework's events.
+The boundary between `Spec` (the library of the same name, whose node is the routines
+`Spec.initial`, `Spec.tick`, `Spec.receive_block`,
+`Spec.receive_goldfish_vote` and `Spec.receive_attestation`) and the sts
+framework (`deps/lean-sts`, the
+`StsMultisetLog` flavour). Nothing here is protocol content: `Spec` says what a validator
+does, and this file says when it does it, in the shape the framework's
+`Framework.StsMultisetLog.Protocol` wants: an `init`, and a step relation over the framework's
+events.
 
-**Nothing in `Spec/` imports this**, and nothing here changes a definition there. The
-extractor does not read it either, so no line of it reaches the document.
+Nothing in `Spec` imports this file, and nothing here changes a definition there.
+
+## The objects a validator re-sends
+
+`relayedObjects`, declared here, is the multiset of objects a validator re-sends when it is
+delivered one: the object itself and, for a block, the Goldfish votes and the attestations the
+block includes. The objects are values of the type `NamedObject`
+(`lean/Spec/Objects.lean`).
+
+## The setup
+
+`Setup V` is what the wiring is given: the node's parameters `C : Config`
+(`lean/Spec/Config.lean`), the values `P : Provisional V` that the node is given for now
+(the proposer of each slot, the committees, the weights), and the values `X : External V` that
+another piece of software supplies (the root of each new block). The node state carries its
+validator `v`. The setup holds no instant after which delivery is bounded: neither the node's
+routines nor this file read one.
+
+## The node state and `init`
+
+The state the framework keeps per validator is `Spec.NodeState V`: the validator, the
+store, the signing history and `awakeSince`, the instant since which the node has been awake without
+interruption. `init p` is `initial S.C p`, the node state of the validator `p`. Its
+`awakeSince` is one delay before the first cutoff of round `0`'s grade-2 result, so a validator
+awake from the start passes every duty's wake test.
 
 ## The three events, and what runs on each
 
-`tick` runs `on_tick` (`11_Duties.lean`): it sets the clock and runs whatever the schedule
-puts at that instant.
+`tick` runs `Spec.tick` when the reading is a whole multiple of
+`S.C.Δ`, and not otherwise. At a reading that is not such a multiple the state is unchanged and
+nothing is sent. The section "## The clock" says why. The node's `tick` takes the parameters `C` and
+the values `P` and `X`; the reaction passes `S.C`, `S.P` and `S.X`, and the node state carries its
+validator. The tick runs in the monad `DREB` of `lean/Spec/Broadcast.lean`: its duties
+broadcast what they send. The reaction runs it with nothing sent (`.run []`), which gives either an
+answer (a new node state paired with the list of objects the tick broadcast, in the order broadcast)
+or the failure. When it answers, the step's new state and its `send` are that node state and that
+list. When it fails, the failure is not a step: the state is unchanged and nothing is sent, a
+fallback that exists only so that the protocol is never stuck.
 
-`recv m` runs the handler for the kind of message that arrived, which is what makes the
-handlers handlers: `process_block`, `process_goldfish_vote`, `process_sg_vote`. They are the
-routines of `Spec/` that take a wire object and fold it into the store, and each is reached
-here and nowhere else — no duty calls one after this file exists.
+`recv m` runs `receive` with `S.C` and `S.P` on `m.msg`: this file's one dispatch, which maps
+each kind of object to the node's routine for it (`receive_block`,
+`receive_goldfish_vote`, `receive_attestation`). The step's `send` is
+`relayedObjects m.msg`: the delivered payload and, when it is a block, every Goldfish vote and
+every attestation the block includes, whether or not the block is admitted. The framework signs
+each re-sent object with the receiver's name.
 
-`wake` does nothing. A validator that has slept holds a store whose clock is behind, and the
-next `tick` moves it; nothing in this protocol is owed at the moment of waking.
-
-## Where an attestation goes
-
-There is no standalone SG-vote message: the SG vote is a projection of the combined
-attestation, and the pool holds whole attestations (`05_SGDuty.lean`). So an arriving
-attestation runs `process_sg_vote` on itself. The one handler call outside this file is
-the tick's own: the attestation step processes what it broadcasts, as the protocol
-writes it.
+`wake` runs `Spec.wake` (`lean/Spec/NodeState.lean`), which sets `awakeSince` to
+`none` and keeps the store and the signing history. Nothing is sent. The next `tick` the
+validator runs writes its own instant into `awakeSince`, and every duty is tested against that
+value.
 
 ## The clock
 
-The framework hands a reaction `r`, the validator's own clock reading, a `Nat` counting its
-ticks. This spec's `Σ.t` is an `Int`, `0` initially, moving to whatever `on_tick`
-is given, and all of its scheduled instants — `t_s`, `t_s + Δ`, `Γ_j`, the round's action
-instant — are values of that clock. So a tick reading `r` is the instant `r` itself:
-one tick per unit of the spec's time.
+The framework hands a reaction `r`, the validator's own clock reading, a `Nat`. `Spec`'s
+time is `Spec.Time`, which is `Int`. So a reading `r` is the
+instant `(r : Int)`: one framework instant per unit of the node's time.
 
-Nothing here says the instants are multiples of `Δ`, which the protocol's own schedule does
-say. Putting the ticks on a `Δ` grid instead would be a stronger model, and would also miss
-`sgfg_voting i r`, which `SGSchedule` bounds but does not place.
+A framework tick at the reading `r` runs the node's `tick` only when `(r : Int) % S.C.Δ = 0`.
+The store's own clock is advanced by the node's tick and by nothing else, so between two
+instants that are whole multiples of `S.C.Δ` it holds the earlier of the two, and an object
+delivered at a reading that is not such a multiple is stamped with that earlier multiple.
+Deliveries and wakes are not restricted: a `recv m` or a `wake` step may sit at any reading.
 
-## A raise is not a step
+## Awakeness
 
-A `Spec/` routine raises when it reads a store that does not record what it asks for — a
-block outside `Σ.σ`, say. Those outcomes are not reactions: the step relation holds of the
-successful ones. A configuration with no successful outcome at all would leave the protocol
-stuck, which the framework forbids, so the relation admits one fallback there — the store
-unchanged, nothing sent. `total` is what that fallback discharges; on a store the protocol
-can actually reach, no branch of it is taken.
+The framework has its own notion of sleep, in its `Schedule`: a sleeping validator takes no tick
+and receives nothing. `Spec`'s wake rule reads `awakeSince`, which this file's `wake` event
+sets to `none`. Sleep is those two alone.
+
+## Nothing is stated here
+
+This file defines the `Framework.StsMultisetLog.Protocol` value and nothing else. Its one proof
+is the `total` field, which the `Protocol` structure cannot exist without.
 -/
 
 set_option autoImplicit false
 
-namespace DC
+namespace Spec.Sts
 
 open Framework.StsMultisetLog
+open Spec (NamedObject)
+open Spec (NodeState Config Provisional External wake initial tick
+  receive_block receive_goldfish_vote receive_attestation)
 
-variable {Validator : Type} [BlockIds] [BlockIdentity Validator]
-  [DecidableEq Validator] [Electorate Validator] [Committees Validator]
-  [Proposers Validator] [Params] [SGSchedule Validator]
+variable {V : Type} [DecidableEq V] [Fintype V]
 
-/-- The handler that runs when `m` arrives: the store routine of `Spec/` for that kind of
-    wire object — a block to `process_block`, a Goldfish vote to `process_goldfish_vote`,
-    an attestation to `process_sg_vote`. `NDRE`, because `process_block`'s drain picks —
-    the other two arms are deterministic and lift by `pure`. -/
-def Store.receive (S : Store Validator) (m : Message Validator) : NDRE (Store Validator) :=
-  match m with
-  | .block B => S.processBlock B
-  | .gfVote vote => pure (S.processGoldfishVote vote)
-  | .attestation a => pure (S.processSGVote a)
+/-- What the wiring is given: the node's parameters `C`, the values `P` given to the node for now
+(the proposer of each slot, the committees, the weights), and the values `X` another piece of
+software supplies (the root of each new block).
 
-/-- The reactions a validator may have to `e`, holding store `S` with its clock about to
-    read `t`: each an answer, so a raised outcome is no reaction. A `tick` may pick, so this
-    is a set; the other events are deterministic and it is a singleton or empty. -/
-def reactions (S : Store Validator) (t : Int)
-    (e : Event Validator (Message Validator) Empty) :
-    Set (NodeStepResult (Store Validator) (Message Validator)) :=
+Read aloud: a setup is a choice of parameters, of the values given for now, and of the values
+supplied from outside. -/
+structure Setup (V : Type) [DecidableEq V] [Fintype V] where
+  /-- The node's parameters. -/
+  C : Config
+  /-- The values given to the node for now. -/
+  P : Provisional V
+  /-- The values another piece of software supplies to the node. -/
+  X : External V
+
+/-- What the node state `n` becomes when the object `o` is delivered to it: a block goes to
+`receive_block`, a Goldfish vote to `receive_goldfish_vote`, an
+attestation to `receive_attestation`, each with the parameters `C` and the values `P`
+it reads. This is the wiring's map from each wire object to the routine that receives it.
+
+Read aloud: the node receives the object with the routine of its kind. -/
+def receive (C : Config) (P : Provisional V) (n : NodeState V) (o : NamedObject V) :
+    NodeState V :=
+  match o with
+  | .block B => receive_block C P n B
+  | .gfVote vote => receive_goldfish_vote P n vote
+  | .attest a => receive_attestation C n a
+
+/-- The objects a validator re-sends when the object `o` is delivered to it: `o` itself and, when
+`o` is a block `B`, every Goldfish vote `B` includes and every attestation `B` includes, each as
+an object of its own.
+
+Read aloud: the re-sent objects of a block are the block, its Goldfish votes and its
+attestations; of any other object, the object alone. -/
+def relayedObjects (o : NamedObject V) : Multiset (NamedObject V) :=
+  match o with
+  | .block B => {NamedObject.block B}
+      + (B.gf_votes.map NamedObject.gfVote : Multiset _)
+      + (B.attestations.map NamedObject.attest : Multiset _)
+  | o => {o}
+
+/-- The reaction of a validator holding the node state `n` to the event `e` at the clock
+    reading `t`.
+
+    A function, not a relation: each of the three events has exactly one reaction.
+
+    - `tick`: when `t % S.C.Δ = 0`, the node's `tick` at `t`, applied to the setup's
+      parameters `S.C` and its values `S.P` and `S.X`, and run with nothing sent
+      (`.run []`). If it answers with a node
+      state and the list of objects it broadcast, the reaction's state is that node state and its
+      `send` is that list. If it fails, the reaction keeps `n` and sends nothing; the failure is
+      not a step, and this branch exists only so that the protocol is never stuck. When `t` is
+      not a multiple of `S.C.Δ`, the reaction keeps `n` and sends nothing.
+    - `recv m`: `receive` with `S.C` and `S.P` on the delivered object `m.msg`, at any
+      reading;
+      the reaction re-sends `relayedObjects m.msg`.
+    - `wake`: `wake` of `lean/Spec/NodeState.lean`, which sets `awakeSince` to `none`;
+      nothing is sent.
+
+    Read aloud: at a tick on a multiple of the delay bound, the node ticks and, when the tick
+    succeeds, the validator takes the tick's state and sends what it broadcast, and when it fails,
+    stays where it was and sends nothing; at any other tick it stays where it was and sends
+    nothing; on a delivery it processes the object and re-sends it, with a block's Goldfish
+    votes and attestations; on a wake it forgets the instant it had been awake since and sends
+    nothing. -/
+def reaction (S : Setup V) (n : NodeState V) (t : Int)
+    (e : Event V (NamedObject V) Empty) :
+    NodeStepResult (NodeState V) (NamedObject V) :=
   match e with
   | .tick =>
-      { res | ∃ d ∈ (S.onTick t).outcomes,
-          ∃ r : DutyResult Validator, d = .ok r ∧
-            res = { state := r.state, send := r.send.val } }
-  | .recv m =>
-      { res | ∃ S', .ok S' ∈ (S.receive m.msg).run ∧ res = { state := S', send := 0 } }
-  | .wake => { res | res = { state := S, send := 0 } }
+      if t % S.C.Δ = 0 then
+        match (tick S.C S.P S.X n t).run [] with
+        | Except.ok (n', sent) => { state := n', send := (sent : Multiset (NamedObject V)) }
+        | Except.error _ => { state := n, send := 0 }
+      else { state := n, send := 0 }
+  | .recv m => { state := receive S.C S.P n m.msg,
+                 send := relayedObjects m.msg }
+  | .wake => { state := wake n, send := 0 }
   | .custom ev => ev.elim
 
-/-- The protocol, in the framework's shape.
+/-- `Spec`'s node, in the framework's shape.
 
-    `init i` is `Σ.gen i`, the initial store of the validator running that node — which is
-    where `Σ.id` comes from, and why no reaction reads the framework's `p`.
+    Parametrised by the `Setup`, because the node's routines read `S.C`, `S.P` and `S.X`: the
+    parameters, the values given for now and the values supplied from outside.
 
-    The step relation is `reactions`, plus the one fallback that keeps the protocol from
-    being stuck when nothing succeeds. `Ev := Empty`: every instant this protocol acts at is
-    a time, so the framework's own `tick` carries them all and there is no protocol-specific
-    event to enable. -/
-def protocol :
-    Protocol Validator (Message Validator) (Store Validator) Empty where
-  init i := Store.gen i
-  step _p r _view S e res :=
-    res ∈ reactions S (r : Int) e ∨
-      (reactions S (r : Int) e = ∅ ∧ res = { state := S, send := 0 })
+    `init p` is `initial S.C p`: the validator `p`, the initial store, the initial
+    signing history, and `awakeSince` one delay before the first cutoff of round `0`'s grade-2
+    result.
+
+    The step relation is the graph of `reaction`, so `total` is the function itself. `Ev :=
+    Empty`: every instant this protocol acts at is a time, so the framework's own `tick` carries
+    them all and there is no protocol-specific event to enable.
+
+    Read aloud: every validator starts from `Spec`'s initial node state, and a step of
+    validator `p` at reading `r` on event `e` is exactly `reaction S n r e`: the node state
+    carries the validator, so the reaction does not take `p`. -/
+def protocol (S : Setup V) :
+    Framework.StsMultisetLog.Protocol V (NamedObject V) (NodeState V) Empty where
+  init p := initial S.C p
+  step _ r _view n e res := res = reaction S n (r : Int) e
   total := by
-    classical
-    intro _p r _view S e
-    by_cases h : (reactions S (r : Int) e).Nonempty
-    · obtain ⟨res, hres⟩ := h
-      exact ⟨res, Or.inl hres⟩
-    · exact ⟨{ state := S, send := 0 },
-        Or.inr ⟨Set.not_nonempty_iff_eq_empty.mp h, rfl⟩⟩
+    intro _ r _view n e
+    exact ⟨reaction S n (r : Int) e, rfl⟩
   enabled _ _ ev := ev.elim
 
-end DC
+end Spec.Sts
