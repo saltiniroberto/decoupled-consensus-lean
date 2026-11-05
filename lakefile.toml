@@ -1,0 +1,72 @@
+name = "decoupled-consensus-lean"
+version = "0.1.0"
+defaultTargets = ["GoldilocksCorrectness", "GoldilocksVariant", "LARuns"]
+
+# The protocol-independent framework (a git submodule).
+[[require]]
+name = "sts-framework"
+path = "deps/lean-sts"
+
+# Mathlib's rev must match `lean-toolchain` (Lean 4.32.2) and the rev `deps/lean-sts` requires.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.32.2"
+
+# Definitions shared with the protocol specification: notation, finite sets, the error monad.
+[[lean_lib]]
+name = "Spec2"
+srcDir = "experiments"
+globs = ["Spec2.+"]
+
+# Goldilocks: the protocol's specification.
+[[lean_lib]]
+name = "Goldilocks"
+srcDir = "experiments/goldilocks"
+globs = ["Goldilocks", "Goldilocks.+"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# Goldilocks's node as a protocol of the framework's `StsMultisetLog` flavour.
+[[lean_lib]]
+name = "GoldilocksSts"
+srcDir = "experiments/goldilocks"
+globs = ["GoldilocksSts"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# Refinement between two protocols of the framework.
+[[lean_lib]]
+name = "StsRefinement"
+srcDir = "experiments/refinement"
+globs = ["StsRefinement", "StsRefinement.+"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# Goldilocks's correctness: the model `M` with its facts, and the statements and their proofs
+# on abstract traces with a clock per node and real times.
+[[lean_lib]]
+name = "GoldilocksCorrectness"
+srcDir = "experiments/goldilocks"
+globs = ["GoldilocksCorrectness.+"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# The real-time framework: a clock per node moved by its own environment step, real-time
+# stamps on configurations, multicast sends.
+[[lean_lib]]
+name = "RStsVariant2"
+srcDir = "experiments/r-sts-variant-2"
+globs = ["RStsVariant2", "RStsVariant2.+"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# Goldilocks's node as a protocol of `RStsVariant2`, and the instance of the abstract-trace
+# statements on its runs.
+[[lean_lib]]
+name = "GoldilocksVariant"
+srcDir = "experiments/goldilocks"
+globs = ["GoldilocksVariant.+"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+# Protocol-agnostic statements on the runs of any protocol of `RStsVariant2`, and Goldilocks's
+# claims that its runs satisfy them.
+[[lean_lib]]
+name = "LARuns"
+srcDir = "experiments/la-runs"
+globs = ["LARuns", "LARuns.+"]

@@ -1,0 +1,3 @@
+[submodule "lean-sts"]
+	path = deps/lean-sts
+	url = https://github.com/saltiniroberto/lean-sts.git
