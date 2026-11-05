@@ -16,27 +16,27 @@ rev = "v4.32.2"
 # Definitions shared with the protocol specification: notation, finite sets, the error monad.
 [[lean_lib]]
 name = "Spec2"
-srcDir = "experiments"
+srcDir = "lean"
 globs = ["Spec2.+"]
 
 # Goldilocks: the protocol's specification.
 [[lean_lib]]
 name = "Goldilocks"
-srcDir = "experiments/goldilocks"
+srcDir = "lean"
 globs = ["Goldilocks", "Goldilocks.+"]
 leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
 # Goldilocks's node as a protocol of the framework's `StsMultisetLog` flavour.
 [[lean_lib]]
 name = "GoldilocksSts"
-srcDir = "experiments/goldilocks"
+srcDir = "lean"
 globs = ["GoldilocksSts"]
 leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
 # Refinement between two protocols of the framework.
 [[lean_lib]]
 name = "StsRefinement"
-srcDir = "experiments/refinement"
+srcDir = "lean"
 globs = ["StsRefinement", "StsRefinement.+"]
 leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
@@ -44,7 +44,7 @@ leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 # on abstract traces with a clock per node and real times.
 [[lean_lib]]
 name = "GoldilocksCorrectness"
-srcDir = "experiments/goldilocks"
+srcDir = "lean"
 globs = ["GoldilocksCorrectness.+"]
 leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
@@ -52,7 +52,7 @@ leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 # stamps on configurations, multicast sends.
 [[lean_lib]]
 name = "RStsVariant2"
-srcDir = "experiments/r-sts-variant-2"
+srcDir = "lean"
 globs = ["RStsVariant2", "RStsVariant2.+"]
 leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
@@ -60,7 +60,7 @@ leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 # statements on its runs.
 [[lean_lib]]
 name = "GoldilocksVariant"
-srcDir = "experiments/goldilocks"
+srcDir = "lean"
 globs = ["GoldilocksVariant.+"]
 leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 
@@ -68,5 +68,5 @@ leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
 # claims that its runs satisfy them.
 [[lean_lib]]
 name = "LARuns"
-srcDir = "experiments/la-runs"
+srcDir = "lean"
 globs = ["LARuns", "LARuns.+"]
